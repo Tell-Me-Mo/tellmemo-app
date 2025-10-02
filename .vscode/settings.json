@@ -1,0 +1,8 @@
+{
+    "dart.flutterRunAdditionalArgs": [
+        "--web-port=8100",
+        "--web-hostname=localhost"
+    ],
+    "dart.previewFlutterUiGuides": true,
+    "dart.previewFlutterUiGuidesCustomTracking": true
+}

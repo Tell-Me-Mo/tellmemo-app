@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentation - TellMeMo | Installation & User Guide</title>
+    <meta name="description" content="Complete guide for installing TellMeMo on-premise and using the AI-powered meeting intelligence platform.">
+    <link rel="canonical" href="https://tellmemo.io/documentation.html">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://tellmemo.io/documentation.html">
+    <meta property="og:title" content="Documentation - TellMeMo">
+    <meta property="og:description" content="Complete guide for installing TellMeMo on-premise and using the platform.">
+    <meta property="og:image" content="https://tellmemo.io/assets/og-image.png">
+    <meta property="og:site_name" content="TellMeMo">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Documentation - TellMeMo">
+    <meta name="twitter:description" content="Complete guide for installing TellMeMo on-premise and using the platform.">
+    <meta name="twitter:image" content="https://tellmemo.io/assets/og-image.png">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/docs.css">
+
+    <!-- Firebase Analytics -->
+    <script type="module">
+      import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js';
+      import { getAnalytics, logEvent } from 'https://www.gstatic.com/firebasejs/12.3.0/firebase-analytics.js';
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyBKRXhR8Zyrj1hToqzTpNMh4r1BdcnCqO0",
+        authDomain: "tellmemo-6dfa2.firebaseapp.com",
+        projectId: "tellmemo-6dfa2",
+        storageBucket: "tellmemo-6dfa2.firebasestorage.app",
+        messagingSenderId: "341249025817",
+        appId: "1:341249025817:web:766f2a0869c2728c1b0788",
+        measurementId: "G-CB9VTQS4KR"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const analytics = getAnalytics(app);
+
+      logEvent(analytics, 'page_view', {
+        page_title: document.title,
+        page_location: window.location.href,
+        page_path: window.location.pathname
+      });
+    </script>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-content">
+                <a href="/" class="logo" aria-label="TellMeMo Homepage">
+                    <svg width="40" height="40" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="TellMeMo Logo">
+                        <title>TellMeMo Logo</title>
+                        <defs>
+                            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#6366F1"/>
+                                <stop offset="100%" stop-color="#8B5CF6"/>
+                            </linearGradient>
+                        </defs>
+                        <circle cx="100" cy="100" r="80" fill="url(#gradient)"/>
+                        <circle cx="100" cy="100" r="15" fill="white"/>
+                        <ellipse cx="100" cy="100" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6" transform="rotate(0 100 100)"/>
+                        <ellipse cx="100" cy="100" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6" transform="rotate(60 100 100)"/>
+                        <ellipse cx="100" cy="100" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6" transform="rotate(120 100 100)"/>
+                        <circle cx="100" cy="70" r="5" fill="white"/>
+                        <circle cx="130" cy="100" r="5" fill="white"/>
+                        <circle cx="100" cy="130" r="5" fill="white"/>
+                        <circle cx="70" cy="100" r="5" fill="white"/>
+                    </svg>
+                    <span>TellMeMo</span>
+                </a>
+                <button class="mobile-menu-toggle" aria-label="Toggle menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <div class="nav-links">
+                    <a href="index.html">Home</a>
+                    <a href="index.html#features">Features</a>
+                    <a href="index.html#how-it-works">How it works</a>
+                    <a href="blog.html">Blog</a>
+                    <a href="documentation.html" class="active">Docs</a>
+                    <a href="https://app.tellmemo.io" class="btn-primary" target="_blank" rel="noopener noreferrer">Get Started</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Documentation Header -->
+    <section class="docs-hero">
+        <div class="container">
+            <h1>Documentation</h1>
+            <p>Everything you need to install, configure, and use TellMeMo</p>
+        </div>
+    </section>
+
+    <!-- Documentation Content -->
+    <section class="docs-content">
+        <div class="container">
+            <div class="docs-layout">
+                <!-- Sidebar -->
+                <aside class="docs-sidebar">
+                    <nav class="docs-nav">
+                        <div class="docs-nav-section">
+                            <h4>Getting Started</h4>
+                            <a href="#overview">Overview</a>
+                            <a href="#comparison">TellMeMo vs Alternatives</a>
+                            <a href="#architecture">Architecture</a>
+                            <a href="#deployment-options">Deployment Options</a>
+                            <a href="#prerequisites">Prerequisites</a>
+                            <a href="#quick-start">Quick Start</a>
+                        </div>
+                        <div class="docs-nav-section">
+                            <h4>Installation</h4>
+                            <a href="#installation">Installation Steps</a>
+                            <a href="#configuration">Configuration</a>
+                            <a href="#running">Running the App</a>
+                        </div>
+                        <div class="docs-nav-section">
+                            <h4>User Guide</h4>
+                            <a href="#first-time-setup">First-Time Setup</a>
+                            <a href="#use-cases">Common Use Cases</a>
+                            <a href="#uploading-content">Uploading Content</a>
+                            <a href="#querying">Querying with RAG</a>
+                            <a href="#summaries">Generating Summaries</a>
+                        </div>
+                        <div class="docs-nav-section">
+                            <h4>Reference</h4>
+                            <a href="#troubleshooting">Troubleshooting</a>
+                            <a href="#backup">Backup & Security</a>
+                            <a href="#api">API Reference</a>
+                        </div>
+                    </nav>
+                </aside>
+
+                <!-- Main Content -->
+                <main class="docs-main">
+                    <!-- Overview -->
+                    <article id="overview" class="docs-article">
+                        <h2>Overview</h2>
+                        <p>TellMeMo is an open-source AI-powered Meeting Intelligence and Project Management Platform that uses RAG (Retrieval Augmented Generation) to help teams extract insights from meeting transcripts, emails, and documents.</p>
+
+                        <div class="info-box">
+                            <h4>💡 What You'll Learn</h4>
+                            <ul>
+                                <li>How to install TellMeMo on your own servers (on-premise)</li>
+                                <li>How to configure the application for your environment</li>
+                                <li>How to use the platform's key features</li>
+                                <li>Best practices for deployment and security</li>
+                            </ul>
+                        </div>
+                    </article>
+
+                    <!-- Comparison Table -->
+                    <article id="comparison" class="docs-article">
+                        <h2>TellMeMo vs Alternatives</h2>
+                        <p>The key differences that matter:</p>
+
+                        <table class="docs-table">
+                            <thead>
+                                <tr>
+                                    <th>Feature</th>
+                                    <th>TellMeMo</th>
+                                    <th>Otter.ai</th>
+                                    <th>Notion AI</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Open Source</strong></td>
+                                    <td>✅ Yes</td>
+                                    <td>❌ No</td>
+                                    <td>❌ No</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Self-Hosted</strong></td>
+                                    <td>✅ Full control</td>
+                                    <td>❌ Cloud only</td>
+                                    <td>❌ Cloud only</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>AI Conversations</strong></td>
+                                    <td>✅ Multi-turn with context</td>
+                                    <td>❌ Basic search</td>
+                                    <td>✅ Yes</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Project Hierarchy</strong></td>
+                                    <td>✅ Portfolio→Program→Project</td>
+                                    <td>❌ No</td>
+                                    <td>⚠️ Basic</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Cost</strong></td>
+                                    <td>💰 Free</td>
+                                    <td>💰💰 $20-40/user/mo</td>
+                                    <td>💰💰 $10-18/user/mo</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="info-box">
+                            <h4>🎯 Why TellMeMo?</h4>
+                            <ul>
+                                <li><strong>Your Data:</strong> Never leaves your infrastructure</li>
+                                <li><strong>Your Code:</strong> Customize anything you want</li>
+                                <li><strong>Your Cost:</strong> Free to self-host</li>
+                            </ul>
+                        </div>
+                    </article>
+
+                    <!-- Architecture with Visual Diagram -->
+                    <article id="architecture" class="docs-article">
+                        <h2>Architecture Overview</h2>
+                        <p>TellMeMo runs as a microservices architecture with 12 Docker containers + local backend:</p>
+
+                        <!-- ASCII Architecture Diagram -->
+                        <div class="code-block" style="background: var(--bg-secondary);">
+                            <pre style="color: var(--text-primary); line-height: 1.6;"><code>┌─────────────────────────────────────────────────────────────────────────┐
+│                           <span style="color: #8B5CF6;">TellMeMo Architecture</span>                            │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────┐         ┌──────────────┐         ┌──────────────┐
+│   <span style="color: #6366F1;">Flutter</span>    │◄────────┤   <span style="color: #6366F1;">FastAPI</span>    │◄────────┤  <span style="color: #6366F1;">PostgreSQL</span> │
+│   Frontend   │  HTTP   │   Backend    │  SQL    │   (Docker)   │
+│  (Docker)    │         │   (Local)    │         │   Port 5432  │
+│   Port 8100  │         │   Port 8000  │         └──────────────┘
+└──────────────┘         └──────┬───────┘
+                                │
+                ┌───────────────┼──────────────────┐
+                │               │                  │
+        ┌───────▼──────┐ ┌─────▼──────┐   ┌──────▼─────┐
+        │   <span style="color: #10b981;">Qdrant</span>    │ │  <span style="color: #10b981;">Langfuse</span>  │   │    <span style="color: #10b981;">ELK</span>      │
+        │   Vector     │ │ Worker+Web │   │   Stack    │
+        │   Port 6333  │ │  Port 3000 │   │ Port 5601  │
+        └──────────────┘ └─────┬──────┘   └────────────┘
+                               │
+           ┌───────────────────┼─────────────────┐
+           │                   │                 │
+    ┌──────▼──────┐    ┌──────▼──────┐   ┌─────▼──────┐
+    │ ClickHouse  │    │    Redis    │   │   MinIO    │
+    │+Zookeeper   │    │  Port 6379  │   │ Port 9000  │
+    │  Port 8123  │    └─────────────┘   └────────────┘
+    └─────────────┘
+
+<span style="color: #f59e0b;">External Services (Optional):</span>
+  • LLM APIs: Claude or OpenAI (switchable via UI)
+  • Supabase (authentication only)
+  • Sentry (error tracking)
+  • Firebase Analytics (usage analytics)</code></pre>
+                        </div>
+
+                        <h3>Service Communication Flow</h3>
+                        <ol>
+                            <li><strong>User →</strong> Flutter Frontend (Docker container, port 8100)</li>
+                            <li><strong>Frontend →</strong> FastAPI Backend (Local Python app, port 8000)</li>
+                            <li><strong>Backend →</strong> PostgreSQL (Docker container, metadata storage)</li>
+                            <li><strong>Backend →</strong> Qdrant (Docker container, vector embeddings)</li>
+                            <li><strong>Backend →</strong> LLM API (Claude or OpenAI, switchable in UI)</li>
+                            <li><strong>Backend →</strong> Langfuse (Docker container, LLM observability)</li>
+                            <li><strong>Backend →</strong> ELK Stack (Docker containers, logging)</li>
+                            <li><strong>Frontend →</strong> Supabase (authentication)</li>
+                            <li><strong>Frontend →</strong> Firebase Analytics (usage tracking)</li>
+                            <li><strong>Backend →</strong> Sentry (error reporting)</li>
+                        </ol>
+
+                        <h3>All Services (12 Docker + 1 Local)</h3>
+                        <table class="docs-table">
+                            <thead>
+                                <tr>
+                                    <th>Service</th>
+                                    <th>Type</th>
+                                    <th>Port</th>
+                                    <th>Purpose</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>FastAPI Backend</td>
+                                    <td>Local Python</td>
+                                    <td>8000</td>
+                                    <td>REST API & WebSocket server</td>
+                                </tr>
+                                <tr>
+                                    <td>Flutter Frontend</td>
+                                    <td>Docker</td>
+                                    <td>8100</td>
+                                    <td>Web application</td>
+                                </tr>
+                                <tr>
+                                    <td>PostgreSQL</td>
+                                    <td>Docker</td>
+                                    <td>5432</td>
+                                    <td>Primary database</td>
+                                </tr>
+                                <tr>
+                                    <td>Qdrant</td>
+                                    <td>Docker</td>
+                                    <td>6333</td>
+                                    <td>Vector database</td>
+                                </tr>
+                                <tr>
+                                    <td>Langfuse Worker</td>
+                                    <td>Docker</td>
+                                    <td>-</td>
+                                    <td>LLM observability worker</td>
+                                </tr>
+                                <tr>
+                                    <td>Langfuse Web</td>
+                                    <td>Docker</td>
+                                    <td>3000</td>
+                                    <td>LLM observability dashboard</td>
+                                </tr>
+                                <tr>
+                                    <td>Elasticsearch</td>
+                                    <td>Docker</td>
+                                    <td>9200</td>
+                                    <td>Log storage</td>
+                                </tr>
+                                <tr>
+                                    <td>Logstash</td>
+                                    <td>Docker</td>
+                                    <td>8080</td>
+                                    <td>Log processing</td>
+                                </tr>
+                                <tr>
+                                    <td>Kibana</td>
+                                    <td>Docker</td>
+                                    <td>5601</td>
+                                    <td>Log visualization</td>
+                                </tr>
+                                <tr>
+                                    <td>Redis</td>
+                                    <td>Docker</td>
+                                    <td>6379</td>
+                                    <td>Queue & caching</td>
+                                </tr>
+                                <tr>
+                                    <td>ClickHouse</td>
+                                    <td>Docker</td>
+                                    <td>8123</td>
+                                    <td>Analytics database</td>
+                                </tr>
+                                <tr>
+                                    <td>Zookeeper</td>
+                                    <td>Docker</td>
+                                    <td>2181</td>
+                                    <td>ClickHouse coordination</td>
+                                </tr>
+                                <tr>
+                                    <td>MinIO</td>
+                                    <td>Docker</td>
+                                    <td>9000</td>
+                                    <td>S3-compatible storage</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="info-box">
+                            <h4>💡 Note</h4>
+                            <p>Backend runs locally (not in Docker) for easier development. For production, you can containerize it using the commented-out backend service in docker-compose.yml</p>
+                        </div>
+                    </article>
+
+                    <!-- Deployment Options -->
+                    <article id="deployment-options" class="docs-article">
+                        <h2>Deployment Options</h2>
+                        <p>TellMeMo supports multiple deployment strategies based on your needs:</p>
+
+                        <h3>Option 1: Docker Compose (Recommended)</h3>
+                        <p><strong>Best for:</strong> Development, small teams, on-premise deployments</p>
+
+                        <div class="success-box">
+                            <h4>✅ Advantages</h4>
+                            <ul>
+                                <li>Simple one-command setup</li>
+                                <li>All services containerized</li>
+                                <li>Easy to update and maintain</li>
+                                <li>Built-in service health checks</li>
+                                <li>Persistent data volumes</li>
+                            </ul>
+                        </div>
+
+                        <div class="code-block">
+                            <pre><code># Clone repository
+git clone https://github.com/the-harpia-io/pm_master_v2.git
+cd pm_master_v2
+
+# Configure environment
+cp .env.example .env
+nano .env  # Add your API keys
+
+# Start all services
+docker-compose up -d
+
+# Check status
+docker-compose ps</code></pre>
+                        </div>
+
+                        <p><strong>Resource Requirements:</strong></p>
+                        <ul>
+                            <li>RAM: 8GB minimum (16GB recommended)</li>
+                            <li>Disk: 20GB minimum</li>
+                            <li>CPU: 4+ cores recommended</li>
+                        </ul>
+
+                        <h3>Option 2: Hybrid (Docker + Local Apps)</h3>
+                        <p><strong>Best for:</strong> Development, debugging, custom modifications</p>
+
+                        <div class="info-box">
+                            <h4>💡 How It Works</h4>
+                            <ul>
+                                <li>Infrastructure services run in Docker (databases, etc.)</li>
+                                <li>Backend runs locally with Python</li>
+                                <li>Frontend runs locally with Flutter</li>
+                                <li>Easier for development and debugging</li>
+                            </ul>
+                        </div>
+
+                        <div class="code-block">
+                            <pre><code># Start infrastructure only
+docker-compose up -d postgres qdrant redis elasticsearch logstash kibana
+
+# Terminal 1: Run backend
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload
+
+# Terminal 2: Run frontend
+flutter run -d chrome --web-port 8100</code></pre>
+                        </div>
+
+                        <h3>Option 3: Production Deployment</h3>
+                        <p><strong>Best for:</strong> Production workloads, enterprise deployments</p>
+
+                        <p><strong>Recommended Architecture:</strong></p>
+                        <ul>
+                            <li><strong>Database:</strong> Managed PostgreSQL (Supabase, AWS RDS, Google Cloud SQL)</li>
+                            <li><strong>Vector DB:</strong> Qdrant Cloud or self-hosted with backups</li>
+                            <li><strong>Backend:</strong> Docker container on Hetzner VPS, AWS EC2, or Google Compute Engine</li>
+                            <li><strong>Frontend:</strong> Static hosting (Firebase Hosting, Vercel, Netlify, Cloudflare Pages)</li>
+                            <li><strong>Monitoring:</strong> Sentry for errors, Langfuse for LLM observability</li>
+                        </ul>
+
+                        <div class="code-block">
+                            <pre><code># Production Docker Compose
+docker-compose -f docker-compose.prod.yml up -d --build
+
+# With managed database
+docker-compose -f docker-compose.prod.yml \
+  -e POSTGRES_HOST=your-supabase-db.com \
+  -e POSTGRES_PORT=5432 \
+  up -d</code></pre>
+                        </div>
+
+                        <h3>Option 4: Kubernetes (Not Available)</h3>
+                        <div class="warning-box">
+                            <h4>⚠️ Kubernetes Not Currently Supported</h4>
+                            <p>Kubernetes deployment manifests are not included in the current release. For enterprise Kubernetes deployments, you'll need to create your own manifests based on the Docker Compose configuration.</p>
+                            <p>Planned for future release: Helm charts and k8s manifests will be added in v2.0</p>
+                        </div>
+
+                        <h3>Deployment Comparison</h3>
+                        <table class="docs-table">
+                            <thead>
+                                <tr>
+                                    <th>Feature</th>
+                                    <th>Docker Compose</th>
+                                    <th>Hybrid</th>
+                                    <th>Production</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Setup Time</strong></td>
+                                    <td>5 minutes</td>
+                                    <td>15 minutes</td>
+                                    <td>1-2 hours</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Complexity</strong></td>
+                                    <td>Low</td>
+                                    <td>Medium</td>
+                                    <td>High</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Performance</strong></td>
+                                    <td>Good</td>
+                                    <td>Excellent</td>
+                                    <td>Excellent</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Debugging</strong></td>
+                                    <td>Moderate</td>
+                                    <td>Easy</td>
+                                    <td>Moderate</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Scalability</strong></td>
+                                    <td>Limited</td>
+                                    <td>Limited</td>
+                                    <td>High</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Cost</strong></td>
+                                    <td>Low</td>
+                                    <td>Low</td>
+                                    <td>Medium-High</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </article>
+
+                    <!-- Prerequisites -->
+                    <article id="prerequisites" class="docs-article">
+                        <h2>Prerequisites</h2>
+
+                        <h3>Required Software</h3>
+                        <ul>
+                            <li><strong>Docker</strong> ≥20.10 & <strong>Docker Compose</strong> ≥2.0</li>
+                            <li><strong>Python</strong> ≥3.13 (for backend)</li>
+                            <li><strong>Flutter SDK</strong> ≥3.9.0 (for frontend)</li>
+                            <li><strong>Git</strong> (for cloning repository)</li>
+                        </ul>
+
+                        <h3>System Requirements</h3>
+                        <ul>
+                            <li><strong>RAM:</strong> 8GB minimum (16GB recommended)</li>
+                            <li><strong>Disk Space:</strong> 20GB minimum</li>
+                            <li><strong>CPU:</strong> 4+ cores recommended</li>
+                            <li><strong>OS:</strong> Linux, macOS, or Windows with WSL2</li>
+                        </ul>
+
+                        <h3>API Keys & Integrations</h3>
+                        <ul>
+                            <li><strong>LLM API Key</strong> (choose one):
+                                <ul>
+                                    <li>Anthropic Claude (<a href="https://console.anthropic.com/" target="_blank" rel="noopener">Get key</a>)</li>
+                                    <li>OpenAI (<a href="https://platform.openai.com/" target="_blank" rel="noopener">Get key</a>)</li>
+                                    <li>Switchable via UI integrations</li>
+                                </ul>
+                            </li>
+                            <li><strong>Supabase</strong> (optional) - Authentication only (<a href="https://supabase.com/" target="_blank" rel="noopener">Sign up</a>)</li>
+                            <li><strong>Firebase</strong> (optional) - Analytics tracking (<a href="https://console.firebase.google.com/" target="_blank" rel="noopener">Set up</a>)</li>
+                            <li><strong>Sentry</strong> (optional) - Error tracking (<a href="https://sentry.io/" target="_blank" rel="noopener">Sign up</a>)</li>
+                        </ul>
+                    </article>
+
+                    <!-- Quick Start -->
+                    <article id="quick-start" class="docs-article">
+                        <h2>Quick Start</h2>
+                        <p>Get TellMeMo running in 5 minutes:</p>
+
+                        <div class="code-block">
+                            <pre><code># Clone the repository
+git clone https://github.com/the-harpia-io/pm_master_v2.git
+cd pm_master_v2
+
+# Copy environment file
+cp .env.example .env
+
+# Edit .env and add your Anthropic API key
+nano .env
+
+# Start infrastructure
+docker-compose up -d
+
+# In a new terminal: Start backend
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload
+
+# In another terminal: Start frontend
+flutter run -d chrome --web-port 8100</code></pre>
+                        </div>
+
+                        <p>Access the app at <code>http://localhost:8100</code></p>
+                    </article>
+
+                    <!-- Installation -->
+                    <article id="installation" class="docs-article">
+                        <h2>Installation Steps</h2>
+
+                        <h3>Step 1: Clone Repository</h3>
+                        <div class="code-block">
+                            <pre><code>git clone https://github.com/the-harpia-io/pm_master_v2.git
+cd pm_master_v2</code></pre>
+                        </div>
+
+                        <h3>Step 2: Configure Environment</h3>
+                        <div class="code-block">
+                            <pre><code># Copy example configuration
+cp .env.example .env
+
+# Edit .env file
+nano .env</code></pre>
+                        </div>
+
+                        <p>Add your Anthropic API key and other required variables:</p>
+                        <div class="code-block">
+                            <pre><code>ANTHROPIC_API_KEY=sk-ant-api03-your-api-key-here
+POSTGRES_PASSWORD=your-secure-password
+REDIS_PASSWORD=your-redis-password
+LANGFUSE_SECRET=$(openssl rand -hex 32)
+LANGFUSE_SALT=$(openssl rand -hex 32)</code></pre>
+                        </div>
+
+                        <h3>Step 3: Start Docker Infrastructure</h3>
+                        <div class="code-block">
+                            <pre><code># Start all services
+docker-compose up -d
+
+# Check status
+docker-compose ps</code></pre>
+                        </div>
+
+                        <h3>Step 4: Set Up Backend</h3>
+                        <div class="code-block">
+                            <pre><code>cd backend
+
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Start backend
+uvicorn main:app --reload --host 0.0.0.0 --port 8000</code></pre>
+                        </div>
+
+                        <h3>Step 5: Set Up Frontend</h3>
+                        <div class="code-block">
+                            <pre><code># Get dependencies
+flutter pub get
+
+# Run application
+flutter run -d chrome --web-port 8100</code></pre>
+                        </div>
+
+                        <div class="success-box">
+                            <h4>✅ Installation Complete!</h4>
+                            <p>Your TellMeMo instance is now running at:</p>
+                            <ul>
+                                <li>Frontend: <code>http://localhost:8100</code></li>
+                                <li>Backend API: <code>http://localhost:8000/docs</code></li>
+                                <li>Langfuse: <code>http://localhost:3000</code></li>
+                            </ul>
+                        </div>
+                    </article>
+
+                    <!-- Configuration -->
+                    <article id="configuration" class="docs-article">
+                        <h2>Configuration</h2>
+
+                        <h3>Environment Variables</h3>
+                        <p>Key configuration options in <code>.env</code> file:</p>
+
+                        <h4>AI/LLM Settings</h4>
+                        <div class="code-block">
+                            <pre><code>ANTHROPIC_API_KEY=sk-ant-api03-xxx
+LLM_MODEL=claude-3-5-haiku-latest
+MAX_TOKENS=4096
+TEMPERATURE=0.7
+EMBEDDING_MODEL=google/embeddinggemma-300m</code></pre>
+                        </div>
+
+                        <h4>Database Settings</h4>
+                        <div class="code-block">
+                            <pre><code>POSTGRES_USER=pm_master
+POSTGRES_PASSWORD=your-secure-password
+POSTGRES_DB=pm_master_db
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+
+QDRANT_HOST=localhost
+QDRANT_PORT=6333</code></pre>
+                        </div>
+
+                        <h4>Security Settings</h4>
+                        <div class="code-block">
+                            <pre><code>LANGFUSE_SECRET=$(openssl rand -hex 32)
+LANGFUSE_SALT=$(openssl rand -hex 32)
+CORS_ORIGINS=http://localhost:8100,http://localhost:3000</code></pre>
+                        </div>
+
+                        <div class="warning-box">
+                            <h4>⚠️ Security Warning</h4>
+                            <p>Never commit <code>.env</code> file to version control. Always change default passwords before production deployment.</p>
+                        </div>
+                    </article>
+
+                    <!-- Running -->
+                    <article id="running" class="docs-article">
+                        <h2>Running the Application</h2>
+
+                        <h3>Development Mode</h3>
+                        <div class="code-block">
+                            <pre><code># Terminal 1: Infrastructure
+docker-compose up -d
+
+# Terminal 2: Backend
+cd backend
+source venv/bin/activate
+uvicorn main:app --reload
+
+# Terminal 3: Frontend
+flutter run -d chrome --web-port 8100</code></pre>
+                        </div>
+
+                        <h3>Production Mode</h3>
+                        <div class="code-block">
+                            <pre><code># Build and start all services
+docker-compose -f docker-compose.prod.yml up -d --build
+
+# Services will be available at:
+# Frontend: http://localhost
+# Backend: http://localhost:8000</code></pre>
+                        </div>
+
+                        <h3>Useful Commands</h3>
+                        <div class="code-block">
+                            <pre><code># View logs
+docker-compose logs -f [service_name]
+
+# Restart services
+docker-compose restart
+
+# Stop all services
+docker-compose down
+
+# Connect to database
+docker exec -it pm_master_postgres psql -U pm_master</code></pre>
+                        </div>
+                    </article>
+
+                    <!-- First-Time Setup -->
+                    <article id="first-time-setup" class="docs-article">
+                        <h2>First-Time Setup</h2>
+
+                        <ol>
+                            <li><strong>Access the Application</strong><br>Open <code>http://localhost:8100</code> in your browser</li>
+                            <li><strong>Create an Account</strong><br>Sign up with email/password (if Supabase auth enabled)</li>
+                            <li><strong>Create an Organization</strong><br>Set up your workspace and invite team members</li>
+                            <li><strong>Set Up Project Hierarchy</strong>
+                                <ul>
+                                    <li>Create Portfolio (top level)</li>
+                                    <li>Create Programs under Portfolio</li>
+                                    <li>Create Projects under Programs</li>
+                                </ul>
+                            </li>
+                        </ol>
+                    </article>
+
+                    <!-- Common Use Cases -->
+                    <article id="use-cases" class="docs-article">
+                        <h2>Common Use Cases</h2>
+                        <p>Real-world examples of how teams use TellMeMo based on actual API capabilities:</p>
+
+                        <h3>1. Portfolio-Level Reporting</h3>
+                        <div class="info-box">
+                            <h4>Scenario</h4>
+                            <p>Executive needs a weekly summary of all projects across the portfolio to present to the board.</p>
+                        </div>
+
+                        <p><strong>Solution:</strong></p>
+                        <ul>
+                            <li>Create Portfolio hierarchy with multiple Programs and Projects</li>
+                            <li>Upload weekly meeting transcripts, status reports, and emails to each Project</li>
+                            <li>Generate Portfolio-level Executive Summary (aggregates all child content)</li>
+                            <li>Export as PDF for board presentation</li>
+                        </ul>
+
+                        <p><strong>API Endpoint:</strong> <code>POST /api/v1/summaries/generate</code></p>
+                        <div class="code-block">
+                            <pre><code>{
+  "summary_type": "executive",
+  "hierarchy_id": "portfolio-abc-123",
+  "hierarchy_type": "portfolio",
+  "include_child_content": true
+}</code></pre>
+                        </div>
+
+                        <h3>2. Risk Detection & Tracking</h3>
+                        <div class="info-box">
+                            <h4>Scenario</h4>
+                            <p>PM needs to identify and track all risks mentioned across project meetings.</p>
+                        </div>
+
+                        <p><strong>Solution:</strong></p>
+                        <ul>
+                            <li>Upload all meeting transcripts to the Project</li>
+                            <li>AI automatically extracts risks during content processing</li>
+                            <li>Query: "What are all the risks mentioned in this quarter?"</li>
+                            <li>Generate Technical Summary focusing on risk mitigation</li>
+                        </ul>
+
+                        <p><strong>API Endpoint:</strong> <code>POST /api/v1/queries</code></p>
+                        <div class="code-block">
+                            <pre><code>{
+  "query": "What are all the risks mentioned in Q4 meetings?",
+  "project_id": "project-xyz-456",
+  "use_rag": true,
+  "conversation_id": null
+}</code></pre>
+                        </div>
+
+                        <h3>3. Multi-Turn Context-Aware Q&A</h3>
+                        <div class="info-box">
+                            <h4>Scenario</h4>
+                            <p>Team member wants to have a conversation about decisions made in past meetings.</p>
+                        </div>
+
+                        <p><strong>Solution:</strong></p>
+                        <ul>
+                            <li>Start conversation: "What was decided about the API redesign?"</li>
+                            <li>Follow-up: "Who raised concerns about backward compatibility?"</li>
+                            <li>Follow-up: "When is the migration deadline?"</li>
+                            <li>System maintains conversation context across all queries</li>
+                        </ul>
+
+                        <p><strong>First Query:</strong></p>
+                        <div class="code-block">
+                            <pre><code>POST /api/v1/queries
+{
+  "query": "What was decided about the API redesign?",
+  "project_id": "project-xyz-456",
+  "conversation_id": null  // Creates new conversation
+}</code></pre>
+                        </div>
+
+                        <p><strong>Follow-up Query:</strong></p>
+                        <div class="code-block">
+                            <pre><code>POST /api/v1/queries
+{
+  "query": "Who raised concerns about it?",
+  "project_id": "project-xyz-456",
+  "conversation_id": "conv-789"  // Maintains context
+}</code></pre>
+                        </div>
+
+                        <h3>4. Real-Time Meeting Transcription</h3>
+                        <div class="info-box">
+                            <h4>Scenario</h4>
+                            <p>Team wants live transcription during remote meetings.</p>
+                        </div>
+
+                        <p><strong>Solution:</strong></p>
+                        <ul>
+                            <li>Connect to WebSocket: <code>ws://localhost:8000/ws/audio</code></li>
+                            <li>Stream audio chunks in real-time</li>
+                            <li>Receive transcription updates as they're processed</li>
+                            <li>Automatically save transcript to Project when meeting ends</li>
+                        </ul>
+
+                        <p><strong>WebSocket Channels:</strong></p>
+                        <ul>
+                            <li><code>/ws/audio</code> - Real-time audio streaming & transcription</li>
+                            <li><code>/ws/jobs</code> - Job status updates (processing, embedding, summary generation)</li>
+                            <li><code>/ws/notifications</code> - User notifications</li>
+                            <li><code>/ws/support-tickets</code> - Support ticket updates</li>
+                        </ul>
+
+                        <h3>5. Cross-Project Insights</h3>
+                        <div class="info-box">
+                            <h4>Scenario</h4>
+                            <p>CTO wants to understand how authentication is being discussed across all engineering projects.</p>
+                        </div>
+
+                        <p><strong>Solution:</strong></p>
+                        <ul>
+                            <li>Query at Program or Portfolio level</li>
+                            <li>Ask: "How are different teams approaching authentication?"</li>
+                            <li>RAG searches across all child Projects</li>
+                            <li>Provides unified answer with citations from each Project</li>
+                        </ul>
+
+                        <p><strong>API Endpoint:</strong> <code>POST /api/v1/queries</code></p>
+                        <div class="code-block">
+                            <pre><code>{
+  "query": "How are teams approaching authentication?",
+  "program_id": "program-engineering-001",
+  "search_child_projects": true,
+  "use_rag": true
+}</code></pre>
+                        </div>
+
+                        <h3>6. Automated Action Item Tracking</h3>
+                        <div class="info-box">
+                            <h4>Scenario</h4>
+                            <p>Scrum master needs to track all action items and task assignments from sprint meetings.</p>
+                        </div>
+
+                        <p><strong>Solution:</strong></p>
+                        <ul>
+                            <li>Upload sprint meeting transcripts</li>
+                            <li>AI automatically extracts tasks with assignees and due dates</li>
+                            <li>View all tasks via API: <code>GET /api/v1/tasks?project_id={id}</code></li>
+                            <li>Update task status as work progresses</li>
+                        </ul>
+
+                        <p><strong>Task Extraction (Automatic):</strong></p>
+                        <div class="code-block">
+                            <pre><code>// When content is uploaded, tasks are auto-extracted
+POST /api/v1/content
+{
+  "project_id": "project-xyz-456",
+  "content_type": "transcript",
+  "content_text": "John will update the API docs by Friday..."
+}
+
+// System automatically creates:
+{
+  "task": "Update API docs",
+  "assigned_to": "John",
+  "due_date": "2025-01-10",
+  "status": "pending"
+}</code></pre>
+                        </div>
+
+                        <div class="success-box">
+                            <h4>✅ Summary Types Available</h4>
+                            <ul>
+                                <li><strong>General:</strong> Comprehensive overview for all audiences</li>
+                                <li><strong>Executive:</strong> High-level strategic summary with key decisions and risks</li>
+                                <li><strong>Technical:</strong> Detailed technical decisions, architecture, and implementation notes</li>
+                                <li><strong>Stakeholder:</strong> Impact analysis, timelines, and resource requirements</li>
+                            </ul>
+                        </div>
+                    </article>
+
+                    <!-- Uploading Content -->
+                    <article id="uploading-content" class="docs-article">
+                        <h2>Uploading Content</h2>
+
+                        <ol>
+                            <li>Navigate to a Project</li>
+                            <li>Click "Upload Content"</li>
+                            <li>Select files to upload:
+                                <ul>
+                                    <li>Audio files (for transcription)</li>
+                                    <li>Text transcripts</li>
+                                    <li>Documents (PDF, TXT)</li>
+                                    <li>Emails</li>
+                                </ul>
+                            </li>
+                            <li>Content is automatically:
+                                <ul>
+                                    <li>Transcribed (if audio)</li>
+                                    <li>Chunked and embedded</li>
+                                    <li>Stored in vector database</li>
+                                </ul>
+                            </li>
+                        </ol>
+                    </article>
+
+                    <!-- Querying -->
+                    <article id="querying" class="docs-article">
+                        <h2>Querying with RAG</h2>
+
+                        <p>Ask natural language questions about your content:</p>
+
+                        <ol>
+                            <li>Navigate to "Ask a Question" or "Query"</li>
+                            <li>Enter your question in plain English</li>
+                            <li>System performs:
+                                <ul>
+                                    <li>Semantic search across all content</li>
+                                    <li>Retrieves relevant chunks</li>
+                                    <li>Generates AI answer with Claude</li>
+                                    <li>Provides source citations</li>
+                                </ul>
+                            </li>
+                        </ol>
+
+                        <div class="info-box">
+                            <h4>💡 Example Questions</h4>
+                            <ul>
+                                <li>"What were the main decisions from last week's sprint planning?"</li>
+                                <li>"What risks were mentioned in the Q4 review meetings?"</li>
+                                <li>"Who is responsible for the authentication feature?"</li>
+                                <li>"Summarize all feedback about the new UI design"</li>
+                            </ul>
+                        </div>
+                    </article>
+
+                    <!-- Summaries -->
+                    <article id="summaries" class="docs-article">
+                        <h2>Generating Summaries</h2>
+
+                        <ol>
+                            <li>Select a Project, Program, or Portfolio</li>
+                            <li>Click "Generate Summary"</li>
+                            <li>Choose summary type:
+                                <ul>
+                                    <li>General Summary</li>
+                                    <li>Executive Summary</li>
+                                    <li>Technical Summary</li>
+                                    <li>Stakeholder Summary</li>
+                                </ul>
+                            </li>
+                            <li>AI generates summary based on all content</li>
+                            <li>Export as PDF, CSV, or share with team</li>
+                        </ol>
+                    </article>
+
+                    <!-- Troubleshooting -->
+                    <article id="troubleshooting" class="docs-article">
+                        <h2>Troubleshooting</h2>
+
+                        <h3>Docker Services Won't Start</h3>
+                        <div class="warning-box">
+                            <h4>⚠️ Common Issue</h4>
+                            <p>Port conflicts with existing services running on your machine.</p>
+                        </div>
+
+                        <p><strong>Solution:</strong></p>
+                        <div class="code-block">
+                            <pre><code># Check which services are using ports
+lsof -i :5432  # PostgreSQL
+lsof -i :6333  # Qdrant
+lsof -i :8000  # Backend
+lsof -i :8100  # Frontend
+
+# Stop conflicting services or change ports in docker-compose.yml
+docker-compose down
+docker-compose up -d</code></pre>
+                        </div>
+
+                        <h3>Backend Startup Error: "Database Connection Failed"</h3>
+                        <div class="warning-box">
+                            <h4>⚠️ Error Message</h4>
+                            <p><code>sqlalchemy.exc.OperationalError: could not connect to server</code></p>
+                        </div>
+
+                        <p><strong>Possible Causes:</strong></p>
+                        <ul>
+                            <li>PostgreSQL container not running</li>
+                            <li>Incorrect database credentials in .env</li>
+                            <li>Database not initialized</li>
+                        </ul>
+
+                        <p><strong>Solution:</strong></p>
+                        <div class="code-block">
+                            <pre><code># Check PostgreSQL is running
+docker-compose ps postgres
+
+# Check logs
+docker-compose logs postgres
+
+# Verify .env settings
+cat .env | grep POSTGRES
+
+# Restart database
+docker-compose restart postgres
+
+# Wait 10 seconds for DB to be ready
+sleep 10
+
+# Restart backend
+cd backend
+source venv/bin/activate
+uvicorn main:app --reload</code></pre>
+                        </div>
+
+                        <h3>Qdrant Connection Error: "Vector Database Unavailable"</h3>
+                        <div class="warning-box">
+                            <h4>⚠️ Error Message</h4>
+                            <p><code>QdrantException: Service unavailable</code></p>
+                        </div>
+
+                        <p><strong>Solution:</strong></p>
+                        <div class="code-block">
+                            <pre><code># Check Qdrant container
+docker-compose ps qdrant
+
+# Check Qdrant logs
+docker-compose logs qdrant
+
+# Restart Qdrant
+docker-compose restart qdrant
+
+# Verify Qdrant is accessible
+curl http://localhost:6333/collections</code></pre>
+                        </div>
+
+                        <h3>Anthropic API Error: "Invalid API Key"</h3>
+                        <div class="warning-box">
+                            <h4>⚠️ Error Message</h4>
+                            <p><code>anthropic.AuthenticationError: Invalid API key</code></p>
+                        </div>
+
+                        <p><strong>Solution:</strong></p>
+                        <div class="code-block">
+                            <pre><code># Verify API key in .env
+cat .env | grep ANTHROPIC_API_KEY
+
+# Format should be: sk-ant-api03-xxxxx
+# Get your key at: https://console.anthropic.com/
+
+# After updating .env, restart backend
+cd backend
+source venv/bin/activate
+uvicorn main:app --reload</code></pre>
+                        </div>
+
+                        <h3>Flutter Build Fails: "Target file not found"</h3>
+                        <div class="warning-box">
+                            <h4>⚠️ Error Message</h4>
+                            <p><code>Target file "lib/main.dart" not found</code></p>
+                        </div>
+
+                        <p><strong>Solution:</strong></p>
+                        <div class="code-block">
+                            <pre><code># Clean build cache
+flutter clean
+
+# Get dependencies
+flutter pub get
+
+# Rebuild
+flutter run -d chrome --web-port 8100</code></pre>
+                        </div>
+
+                        <h3>WebSocket Connection Fails</h3>
+                        <div class="warning-box">
+                            <h4>⚠️ Error Message</h4>
+                            <p><code>WebSocket connection to 'ws://localhost:8000/ws/audio' failed</code></p>
+                        </div>
+
+                        <p><strong>Possible Causes:</strong></p>
+                        <ul>
+                            <li>Backend not running</li>
+                            <li>CORS configuration blocking WebSocket</li>
+                            <li>Incorrect WebSocket endpoint</li>
+                        </ul>
+
+                        <p><strong>Solution:</strong></p>
+                        <div class="code-block">
+                            <pre><code># Verify backend is running
+curl http://localhost:8000/
+
+# Check CORS settings in .env
+cat .env | grep CORS_ORIGINS
+# Should include: http://localhost:8100
+
+# Test WebSocket with wscat
+npm install -g wscat
+wscat -c ws://localhost:8000/ws/audio</code></pre>
+                        </div>
+
+                        <h3>Embedding Generation Slow or Fails</h3>
+                        <div class="warning-box">
+                            <h4>⚠️ Issue</h4>
+                            <p>Content upload hangs or embedding generation takes too long.</p>
+                        </div>
+
+                        <p><strong>Possible Causes:</strong></p>
+                        <ul>
+                            <li>Large content files (>10MB)</li>
+                            <li>Embedding model not loaded</li>
+                            <li>Insufficient system resources</li>
+                        </ul>
+
+                        <p><strong>Solution:</strong></p>
+                        <div class="code-block">
+                            <pre><code># Check backend logs for embedding errors
+docker-compose logs backend | grep embedding
+
+# Verify embedding model in .env
+cat .env | grep EMBEDDING_MODEL
+# Default: google/embeddinggemma-300m
+
+# Check system resources
+docker stats
+
+# If needed, increase Docker memory limit:
+# Docker Desktop → Settings → Resources → Memory (16GB recommended)</code></pre>
+                        </div>
+
+                        <h3>Langfuse Dashboard Not Accessible</h3>
+                        <div class="warning-box">
+                            <h4>⚠️ Error</h4>
+                            <p><code>http://localhost:3000</code> not loading</p>
+                        </div>
+
+                        <p><strong>Solution:</strong></p>
+                        <div class="code-block">
+                            <pre><code># Check Langfuse container
+docker-compose ps langfuse
+
+# Check logs
+docker-compose logs langfuse
+
+# Verify environment variables
+cat .env | grep LANGFUSE
+
+# Restart Langfuse
+docker-compose restart langfuse
+
+# Wait for startup (can take 30-60 seconds)
+sleep 30
+curl http://localhost:3000</code></pre>
+                        </div>
+
+                        <h3>ELK Stack (Elasticsearch/Kibana) Issues</h3>
+                        <div class="warning-box">
+                            <h4>⚠️ Common Issues</h4>
+                            <ul>
+                                <li>Elasticsearch fails with "max virtual memory areas vm.max_map_count too low"</li>
+                                <li>Kibana shows "Kibana server is not ready yet"</li>
+                            </ul>
+                        </div>
+
+                        <p><strong>Solution for vm.max_map_count error:</strong></p>
+                        <div class="code-block">
+                            <pre><code># Linux/macOS
+sudo sysctl -w vm.max_map_count=262144
+
+# Make permanent (Linux)
+echo 'vm.max_map_count=262144' | sudo tee -a /etc/sysctl.conf
+
+# Docker Desktop (macOS/Windows)
+# Settings → Resources → Advanced → Memory: 4GB minimum</code></pre>
+                        </div>
+
+                        <p><strong>Solution for Kibana not ready:</strong></p>
+                        <div class="code-block">
+                            <pre><code># Kibana needs Elasticsearch to be fully up first
+docker-compose restart elasticsearch
+sleep 60  # Wait for Elasticsearch to be ready
+
+docker-compose restart kibana
+sleep 30  # Wait for Kibana startup
+
+# Check status
+curl http://localhost:5601/api/status</code></pre>
+                        </div>
+
+                        <h3>Performance Issues: Slow Query Responses</h3>
+                        <div class="info-box">
+                            <h4>💡 Optimization Tips</h4>
+                            <ul>
+                                <li>Reduce MAX_TOKENS in .env (default: 4096, try 2048 for faster responses)</li>
+                                <li>Use Claude 3.5 Haiku instead of Sonnet (faster, cheaper)</li>
+                                <li>Limit search scope to specific Project instead of Portfolio</li>
+                                <li>Enable caching in Redis for frequently asked queries</li>
+                            </ul>
+                        </div>
+
+                        <h3>Docker Compose: "Network Error" During Build</h3>
+                        <div class="warning-box">
+                            <h4>⚠️ Error Message</h4>
+                            <p><code>failed to solve: error getting credentials</code></p>
+                        </div>
+
+                        <p><strong>Solution:</strong></p>
+                        <div class="code-block">
+                            <pre><code># Clear Docker build cache
+docker builder prune -a
+
+# Rebuild without cache
+docker-compose build --no-cache
+
+# Start services
+docker-compose up -d</code></pre>
+                        </div>
+
+                        <h3>Still Having Issues?</h3>
+                        <div class="info-box">
+                            <h4>🔍 Debug Checklist</h4>
+                            <ol>
+                                <li>Check all containers are running: <code>docker-compose ps</code></li>
+                                <li>Review logs for errors: <code>docker-compose logs -f</code></li>
+                                <li>Verify .env file has all required variables</li>
+                                <li>Ensure API keys are valid and have correct permissions</li>
+                                <li>Check system resources (RAM, disk space, CPU)</li>
+                                <li>Verify network ports are not blocked by firewall</li>
+                                <li>Review backend logs in Kibana: <code>http://localhost:5601</code></li>
+                            </ol>
+                        </div>
+
+                        <p><strong>Get Help:</strong></p>
+                        <ul>
+                            <li><a href="https://github.com/the-harpia-io/pm_master_v2/issues" target="_blank" rel="noopener noreferrer">Report a Bug</a></li>
+                            <li><a href="https://github.com/the-harpia-io/pm_master_v2/discussions" target="_blank" rel="noopener noreferrer">Community Discussions</a></li>
+                            <li>Check backend API docs: <code>http://localhost:8000/docs</code></li>
+                        </ul>
+                    </article>
+
+                    <!-- Backup & Security -->
+                    <article id="backup" class="docs-article">
+                        <h2>Backup & Security</h2>
+
+                        <h3>Database Backup</h3>
+                        <div class="code-block">
+                            <pre><code># Backup PostgreSQL
+docker exec pm_master_postgres pg_dump -U pm_master pm_master_db > backup.sql
+
+# Restore
+docker exec -i pm_master_postgres psql -U pm_master pm_master_db < backup.sql</code></pre>
+                        </div>
+
+                        <h3>Security Checklist</h3>
+                        <ul>
+                            <li>✅ Change all default passwords</li>
+                            <li>✅ Generate secure encryption keys</li>
+                            <li>✅ Enable HTTPS with SSL/TLS</li>
+                            <li>✅ Configure firewall to restrict ports</li>
+                            <li>✅ Set up automated backups</li>
+                            <li>✅ Enable Sentry error tracking</li>
+                            <li>✅ Review CORS origins</li>
+                        </ul>
+                    </article>
+
+                    <!-- API Reference -->
+                    <article id="api" class="docs-article">
+                        <h2>API Reference</h2>
+
+                        <p>The backend API is available at <code>http://localhost:8000</code></p>
+
+                        <h3>Interactive API Documentation</h3>
+                        <ul>
+                            <li><strong>Swagger UI:</strong> <a href="http://localhost:8000/docs" target="_blank">http://localhost:8000/docs</a></li>
+                            <li><strong>ReDoc:</strong> <a href="http://localhost:8000/redoc" target="_blank">http://localhost:8000/redoc</a></li>
+                        </ul>
+
+                        <h3>Example API Request</h3>
+                        <div class="code-block">
+                            <pre><code>curl -X GET "http://localhost:8000/api/v1/projects" \
+  -H "Authorization: Bearer &lt;token&gt;" \
+  -H "Content-Type: application/json"</code></pre>
+                        </div>
+                    </article>
+
+                    <!-- Support -->
+                    <div class="docs-cta">
+                        <h3>Need Help?</h3>
+                        <p>Can't find what you're looking for? We're here to help.</p>
+                        <div class="docs-cta-buttons">
+                            <a href="https://github.com/the-harpia-io/pm_master_v2/issues" class="btn-primary" target="_blank" rel="noopener noreferrer">Report an Issue</a>
+                            <a href="https://github.com/the-harpia-io/pm_master_v2" class="btn-secondary" target="_blank" rel="noopener noreferrer">View on GitHub</a>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="logo">
+                        <svg width="40" height="40" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="TellMeMo Logo">
+                            <title>TellMeMo Logo</title>
+                            <defs>
+                                <linearGradient id="gradient-footer" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#6366F1"/>
+                                    <stop offset="100%" stop-color="#8B5CF6"/>
+                                </linearGradient>
+                            </defs>
+                            <circle cx="100" cy="100" r="80" fill="url(#gradient-footer)"/>
+                            <circle cx="100" cy="100" r="15" fill="white"/>
+                            <ellipse cx="100" cy="100" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6" transform="rotate(0 100 100)"/>
+                            <ellipse cx="100" cy="100" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6" transform="rotate(60 100 100)"/>
+                            <ellipse cx="100" cy="100" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6" transform="rotate(120 100 100)"/>
+                            <circle cx="100" cy="70" r="5" fill="white"/>
+                            <circle cx="130" cy="100" r="5" fill="white"/>
+                            <circle cx="100" cy="130" r="5" fill="white"/>
+                            <circle cx="70" cy="100" r="5" fill="white"/>
+                        </svg>
+                        <span>TellMeMo</span>
+                    </div>
+                    <p>AI-powered meeting intelligence for modern teams.</p>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-column">
+                        <h4>Product</h4>
+                        <a href="index.html#features">Features</a>
+                        <a href="index.html#how-it-works">How it works</a>
+                        <a href="index.html#open-source">Open Source</a>
+                        <a href="https://app.tellmemo.io" target="_blank" rel="noopener noreferrer">Launch App</a>
+                    </div>
+                    <div class="footer-column">
+                        <h4>Developers</h4>
+                        <a href="https://github.com/the-harpia-io/pm_master_v2" target="_blank" rel="noopener noreferrer">GitHub</a>
+                        <a href="https://github.com/the-harpia-io/pm_master_v2/issues" target="_blank" rel="noopener noreferrer">Issues</a>
+                        <a href="https://github.com/the-harpia-io/pm_master_v2/pulls" target="_blank" rel="noopener noreferrer">Pull Requests</a>
+                        <a href="documentation.html">Documentation</a>
+                    </div>
+                    <div class="footer-column">
+                        <h4>Resources</h4>
+                        <a href="blog.html">Blog</a>
+                        <a href="https://github.com/the-harpia-io/pm_master_v2/blob/main/README.md" target="_blank" rel="noopener noreferrer">Getting Started</a>
+                        <a href="https://github.com/the-harpia-io/pm_master_v2/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing</a>
+                    </div>
+                    <div class="footer-column">
+                        <h4>Legal</h4>
+                        <a href="privacy.html">Privacy</a>
+                        <a href="terms.html">Terms</a>
+                        <a href="https://github.com/the-harpia-io/pm_master_v2/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">License</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 TellMeMo. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/script.js"></script>
+    <script src="js/docs.js"></script>
+</body>
+</html>

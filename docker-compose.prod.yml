@@ -1,0 +1,448 @@
+services:
+  # PostgreSQL 17.6 - Main database for project metadata
+  postgres:
+    image: postgres:17.6
+    container_name: pm_master_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pm_master}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pm_master_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-pm_master_db}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pm_master} -d ${POSTGRES_DB:-pm_master_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pm_network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Qdrant v1.15.3 - Vector database for semantic search
+  qdrant:
+    image: qdrant/qdrant:v1.15.4
+    container_name: pm_master_qdrant
+    restart: unless-stopped
+    environment:
+      QDRANT__SERVICE__HTTP_PORT: 6333
+      QDRANT__SERVICE__GRPC_PORT: 6334
+      QDRANT__LOG_LEVEL: INFO
+      QDRANT__STORAGE__STORAGE_PATH: /qdrant/storage
+      QDRANT__STORAGE__SNAPSHOTS_PATH: /qdrant/snapshots
+      QDRANT__TELEMETRY_DISABLED: true
+      QDRANT__SERVICE__ENABLE_TLS: false
+      # Optimize for accuracy - using higher memory threshold
+      QDRANT__STORAGE__OPTIMIZERS__MEMMAP_THRESHOLD: 50000
+    ports:
+      - "6333:6333"  # HTTP API & Web UI
+      - "6334:6334"  # gRPC API
+    volumes:
+      - qdrant_data:/qdrant/storage
+      - qdrant_snapshots:/qdrant/snapshots
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /proc/1/cmdline || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - pm_network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Redis 7 - Required for Langfuse v3 queue and caching
+  redis:
+    image: redis:7-alpine
+    container_name: pm_master_redis
+    restart: unless-stopped
+    command: >
+      --requirepass ${REDIS_PASSWORD:-redispassword123}
+      --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redispassword123}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pm_network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # MinIO - S3-compatible storage for Langfuse v3
+  minio:
+    image: minio/minio:latest
+    container_name: pm_master_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    ports:
+      - "9000:9000"  # API
+      - "9001:9001"  # Console
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pm_network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Zookeeper - Required for ClickHouse clustering
+  zookeeper:
+    image: zookeeper:3.9
+    container_name: pm_master_zookeeper
+    restart: unless-stopped
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_SERVERS: server.1=zookeeper:2888:3888;2181
+      ZOO_4LW_COMMANDS_WHITELIST: mntr,conf,ruok
+    ports:
+      - "2181:2181"
+    volumes:
+      - zookeeper_data:/data
+      - zookeeper_logs:/datalog
+    healthcheck:
+      test: ["CMD-SHELL", "echo ruok | nc localhost 2181 | grep imok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pm_network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ClickHouse - Required for Langfuse v3 analytics (with clustering support)
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.3-alpine
+    container_name: pm_master_clickhouse
+    restart: unless-stopped
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhousepass123}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    ports:
+      - "8123:8123"  # HTTP interface
+      - "9009:9000"  # Native protocol (changed from 9000 to avoid conflict)
+      - "9010:9009"  # Interserver HTTP port
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./backend/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml:ro
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD-SHELL", "clickhouse-client --password ${CLICKHOUSE_PASSWORD:-clickhousepass123} --query 'SELECT 1'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - pm_network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Langfuse v3 Worker - Background processing
+  langfuse-worker:
+    image: langfuse/langfuse-worker:latest
+    container_name: pm_master_langfuse_worker
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      # Database
+      DATABASE_URL: postgresql://${POSTGRES_USER:-pm_master}:${POSTGRES_PASSWORD:-pm_master_pass}@postgres:5432/${LANGFUSE_DB:-langfuse_db}
+
+      # Security
+      SALT: ${LANGFUSE_SALT:-your-salt-at-least-32-chars-long-change-in-production}
+      ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
+
+      # ClickHouse
+      CLICKHOUSE_URL: http://default:${CLICKHOUSE_PASSWORD:-clickhousepass123}@clickhouse:8123
+      CLICKHOUSE_MIGRATION_URL: clickhouse://default:${CLICKHOUSE_PASSWORD:-clickhousepass123}@clickhouse:9000
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhousepass123}
+
+      # Redis
+      REDIS_CONNECTION_STRING: redis://:${REDIS_PASSWORD:-redispassword123}@redis:6379
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_AUTH: ${REDIS_PASSWORD:-redispassword123}
+
+      # MinIO/S3
+      LANGFUSE_S3_EVENT_UPLOAD_ENABLED: true
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: us-east-1
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: true
+
+      LANGFUSE_S3_MEDIA_UPLOAD_ENABLED: true
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
+      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse-media
+      LANGFUSE_S3_MEDIA_UPLOAD_REGION: us-east-1
+      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: true
+    networks:
+      - pm_network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Langfuse v3 Web - Main application
+  langfuse-web:
+    image: langfuse/langfuse:latest
+    container_name: pm_master_langfuse
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      langfuse-worker:
+        condition: service_started
+    environment:
+      # Database
+      DATABASE_URL: postgresql://${POSTGRES_USER:-pm_master}:${POSTGRES_PASSWORD:-pm_master_pass}@postgres:5432/${LANGFUSE_DB:-langfuse_db}
+
+      # Auth & Security
+      NEXTAUTH_URL: ${LANGFUSE_URL:-http://localhost:3000}
+      NEXTAUTH_SECRET: ${LANGFUSE_SECRET:-your-secret-key-at-least-32-chars-long-change-in-production}
+      SALT: ${LANGFUSE_SALT:-your-salt-at-least-32-chars-long-change-in-production}
+      ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
+
+      # ClickHouse
+      CLICKHOUSE_URL: http://default:${CLICKHOUSE_PASSWORD:-clickhousepass123}@clickhouse:8123
+      CLICKHOUSE_MIGRATION_URL: clickhouse://default:${CLICKHOUSE_PASSWORD:-clickhousepass123}@clickhouse:9000
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhousepass123}
+
+      # Redis
+      REDIS_CONNECTION_STRING: redis://:${REDIS_PASSWORD:-redispassword123}@redis:6379
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_AUTH: ${REDIS_PASSWORD:-redispassword123}
+
+      # MinIO/S3
+      LANGFUSE_S3_EVENT_UPLOAD_ENABLED: true
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: us-east-1
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: true
+
+      LANGFUSE_S3_MEDIA_UPLOAD_ENABLED: true
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
+      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse-media
+      LANGFUSE_S3_MEDIA_UPLOAD_REGION: us-east-1
+      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: true
+
+      # Features
+      TELEMETRY_ENABLED: ${LANGFUSE_TELEMETRY:-false}
+      LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: true
+      NODE_ENV: ${NODE_ENV:-production}
+
+      # Auth settings
+      AUTH_DISABLE_LOGIN: ${LANGFUSE_AUTH_DISABLE:-false}
+      AUTH_DISABLE_SIGNUP: ${LANGFUSE_AUTH_DISABLE_SIGNUP:-false}
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /proc/1/cmdline || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    networks:
+      - pm_network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ===== ELK STACK =====
+  # Elasticsearch - Search and analytics engine
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    container_name: pm_master_elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - cluster.name=pm-master-cluster
+      - node.name=pm-master-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - xpack.security.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+      - xpack.license.self_generated.type=basic
+      - indices.id_field_data.enabled=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"  # REST API
+      - "9300:9300"  # Node communication
+    networks:
+      - pm_network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Logstash - Data processing pipeline
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.15.3
+    container_name: pm_master_logstash
+    restart: unless-stopped
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      - "LS_JAVA_OPTS=-Xms512m -Xmx512m"
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - xpack.monitoring.enabled=false
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - ./logstash/templates:/usr/share/logstash/templates:ro
+      - logstash_data:/usr/share/logstash/data
+    ports:
+      - "5000:5000"  # TCP input for application logs
+      - "9600:9600"  # Monitoring API
+      - "12201:12201/udp"  # GELF UDP input for Docker containers
+    networks:
+      - pm_network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    command: logstash -f /usr/share/logstash/pipeline/logstash.conf
+
+  # Kibana - Visualization and exploration
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.15.3
+    container_name: pm_master_kibana
+    restart: unless-stopped
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - SERVER_NAME=pm-master-kibana
+      - SERVER_HOST=0.0.0.0
+      - xpack.security.enabled=false
+      - xpack.monitoring.ui.container.elasticsearch.enabled=false
+      - TELEMETRY_ENABLED=false
+    ports:
+      - "5601:5601"  # Kibana UI
+    networks:
+      - pm_network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+networks:
+  pm_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  qdrant_data:
+    driver: local
+  qdrant_snapshots:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local
+  clickhouse_data:
+    driver: local
+  zookeeper_data:
+    driver: local
+  zookeeper_logs:
+    driver: local
+  # ELK Stack volumes
+  elasticsearch_data:
+    driver: local
+  logstash_data:
+    driver: local

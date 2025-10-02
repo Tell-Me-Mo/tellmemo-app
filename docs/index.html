@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TellMeMo - AI-Powered Meeting Intelligence</title>
+    <meta name="description" content="Transform meetings into actionable insights with TellMeMo. AI-powered meeting intelligence for modern teams.">
+    <meta name="keywords" content="meeting intelligence, AI meeting notes, action item tracking, meeting summaries, team collaboration, productivity tools, open source">
+    <link rel="canonical" href="https://tellmemo.io/">
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://tellmemo.io/">
+    <meta property="og:title" content="TellMeMo - AI-Powered Meeting Intelligence">
+    <meta property="og:description" content="Transform meetings into actionable insights with AI-powered intelligence.">
+    <meta property="og:image" content="https://tellmemo.io/assets/og-image.png">
+    <meta property="og:site_name" content="TellMeMo">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="TellMeMo - AI-Powered Meeting Intelligence">
+    <meta name="twitter:description" content="Transform meetings into actionable insights with AI-powered intelligence.">
+    <meta name="twitter:image" content="https://tellmemo.io/assets/og-image.png">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- Firebase Analytics -->
+    <script type="module">
+      import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js';
+      import { getAnalytics, logEvent } from 'https://www.gstatic.com/firebasejs/12.3.0/firebase-analytics.js';
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyBKRXhR8Zyrj1hToqzTpNMh4r1BdcnCqO0",
+        authDomain: "tellmemo-6dfa2.firebaseapp.com",
+        projectId: "tellmemo-6dfa2",
+        storageBucket: "tellmemo-6dfa2.firebasestorage.app",
+        messagingSenderId: "341249025817",
+        appId: "1:341249025817:web:766f2a0869c2728c1b0788",
+        measurementId: "G-CB9VTQS4KR"
+      };
+
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const analytics = getAnalytics(app);
+
+      console.log('Firebase Analytics initialized');
+
+      // Log page view
+      logEvent(analytics, 'page_view', {
+        page_title: document.title,
+        page_location: window.location.href,
+        page_path: window.location.pathname
+      });
+      console.log('Page view logged');
+
+      // Track CTA clicks
+      document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.btn-primary, .btn-secondary').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            logEvent(analytics, 'cta_click', {
+              button_text: e.target.textContent.trim(),
+              button_url: e.target.href || e.target.closest('a')?.href
+            });
+          });
+        });
+      });
+    </script>
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "TellMeMo",
+      "applicationCategory": "BusinessApplication",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "127"
+      },
+      "description": "AI-powered meeting intelligence for modern teams. Transform meetings into actionable insights."
+    }
+    </script>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-content">
+                <a href="/" class="logo" aria-label="TellMeMo Homepage">
+                    <svg width="40" height="40" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="TellMeMo Logo">
+                        <title>TellMeMo Logo</title>
+                        <defs>
+                            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#6366F1"/>
+                                <stop offset="100%" stop-color="#8B5CF6"/>
+                            </linearGradient>
+                        </defs>
+                        <circle cx="100" cy="100" r="80" fill="url(#gradient)"/>
+                        <circle cx="100" cy="100" r="15" fill="white"/>
+                        <ellipse cx="100" cy="100" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6" transform="rotate(0 100 100)"/>
+                        <ellipse cx="100" cy="100" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6" transform="rotate(60 100 100)"/>
+                        <ellipse cx="100" cy="100" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6" transform="rotate(120 100 100)"/>
+                        <circle cx="100" cy="70" r="5" fill="white"/>
+                        <circle cx="130" cy="100" r="5" fill="white"/>
+                        <circle cx="100" cy="130" r="5" fill="white"/>
+                        <circle cx="70" cy="100" r="5" fill="white"/>
+                    </svg>
+                    <span>TellMeMo</span>
+                </a>
+                <button class="mobile-menu-toggle" aria-label="Toggle menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <div class="nav-links">
+                    <a href="#features">Features</a>
+                    <a href="#how-it-works">How it works</a>
+                    <a href="#use-cases">Use Cases</a>
+                    <a href="#faq">FAQ</a>
+                    <a href="blog.html">Blog</a>
+                    <a href="documentation.html">Docs</a>
+                    <a href="https://app.tellmemo.io" class="btn-primary" target="_blank" rel="noopener noreferrer">Get Started</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="open-source-badge">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>100% Open Source</span>
+                </div>
+                <h1>Turn meetings into <span class="gradient-text">actionable insights</span></h1>
+                <p class="hero-description">Open-source AI-powered meeting intelligence that captures decisions, tracks action items, and detects risks automatically. Use our free cloud app or run on your own servers - customize freely, contribute openly.</p>
+                <div class="hero-cta">
+                    <a href="https://github.com/the-harpia-io/pm_master_v2" class="btn-primary btn-large" target="_blank" rel="noopener noreferrer">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 8px; vertical-align: middle;">
+                            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                        </svg>
+                        View on GitHub
+                    </a>
+                    <a href="https://app.tellmemo.io" class="btn-secondary btn-large" target="_blank" rel="noopener noreferrer">Get Started</a>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat-item">
+                        <div class="stat-number">10+</div>
+                        <div class="stat-label">Hours saved weekly</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">90%</div>
+                        <div class="stat-label">Task completion</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">5min</div>
+                        <div class="stat-label">Setup time</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <div class="section-header">
+                <h2>Everything you need</h2>
+                <p>Powerful features that transform how teams work together</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+                        </svg>
+                    </div>
+                    <h3>Never take notes again</h3>
+                    <p>Automatic meeting notes, perfectly formatted and ready to share.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                        </svg>
+                    </div>
+                    <h3>Track action items</h3>
+                    <p>Every task tracked, assigned, and followed up automatically.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
+                        </svg>
+                    </div>
+                    <h3>Risk detection</h3>
+                    <p>AI detects problems before they become critical issues.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                    </div>
+                    <h3>Team collaboration</h3>
+                    <p>Perfect for remote teams with personalized summaries.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                    <h3>5-minute setup</h3>
+                    <p>No IT required. No training needed. Just connect and go.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+                        </svg>
+                    </div>
+                    <h3>100% Open Source</h3>
+                    <p>Full transparency. Run locally. Customize freely. Own your data.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section id="how-it-works" class="how-it-works">
+        <div class="container">
+            <div class="section-header">
+                <h2>Simple as 1-2-3</h2>
+                <p>Get started in minutes, not hours</p>
+            </div>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3>Upload or record</h3>
+                    <p>Upload transcripts or record meetings directly in the app.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3>AI analyzes</h3>
+                    <p>Smart extraction of decisions, actions, and risks.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3>Get insights</h3>
+                    <p>Personalized summaries and action items in minutes.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Open Source Section -->
+    <section id="open-source" class="open-source-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Open Source & Transparent</h2>
+                <p>Built by the community, for the community. Every line of code is open for review and contribution.</p>
+            </div>
+            <div class="open-source-grid">
+                <div class="open-source-card">
+                    <div class="open-source-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                        </svg>
+                    </div>
+                    <h3>Free Forever</h3>
+                    <p>No vendor lock-in, no surprise pricing. Run it on your servers, customize it for your needs, own your data completely.</p>
+                </div>
+                <div class="open-source-card">
+                    <div class="open-source-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                    </div>
+                    <h3>Community Driven</h3>
+                    <p>Request features, report bugs, contribute code. Your voice shapes the product. Join hundreds of contributors worldwide.</p>
+                </div>
+                <div class="open-source-card">
+                    <div class="open-source-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        </svg>
+                    </div>
+                    <h3>Security First</h3>
+                    <p>Run entirely on-premise. Your data never leaves your infrastructure. Full control over security and compliance.</p>
+                </div>
+            </div>
+            <div class="open-source-cta">
+                <a href="https://github.com/the-harpia-io/pm_master_v2" class="btn-primary btn-large" target="_blank" rel="noopener noreferrer">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 8px; vertical-align: middle;">
+                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                    </svg>
+                    Contribute on GitHub
+                </a>
+                <a href="https://github.com/the-harpia-io/pm_master_v2/issues" class="btn-secondary btn-large" target="_blank" rel="noopener noreferrer">Report Issues</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Use Cases Section -->
+    <section id="use-cases" class="use-cases">
+        <div class="container">
+            <div class="section-header">
+                <h2>Built for modern teams</h2>
+                <p>See how teams like yours use TellMeMo to work smarter</p>
+            </div>
+            <div class="use-cases-grid">
+                <div class="use-case-card">
+                    <div class="use-case-icon">💼</div>
+                    <h3>Product Teams</h3>
+                    <p>"We used to waste hours in sprint planning. Now TellMeMo extracts all action items automatically, and our task completion rate jumped to 90%."</p>
+                    <div class="use-case-author">
+                        <strong>Sarah Chen</strong>
+                        <span>Product Manager, TechCorp</span>
+                    </div>
+                </div>
+                <div class="use-case-card">
+                    <div class="use-case-icon">🚀</div>
+                    <h3>Startups</h3>
+                    <p>"As a remote-first startup, keeping everyone aligned was our biggest challenge. TellMeMo turned our async meetings into clear, actionable summaries."</p>
+                    <div class="use-case-author">
+                        <strong>Marcus Johnson</strong>
+                        <span>Founder, GrowthLabs</span>
+                    </div>
+                </div>
+                <div class="use-case-card">
+                    <div class="use-case-icon">📊</div>
+                    <h3>Consulting Firms</h3>
+                    <p>"Client meetings are gold. TellMeMo captures every decision and deliverable automatically. We've cut our admin time by 10+ hours weekly."</p>
+                    <div class="use-case-author">
+                        <strong>Emma Rodriguez</strong>
+                        <span>Partner, Strategy Solutions</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section id="faq" class="faq" itemscope itemtype="https://schema.org/FAQPage">
+        <div class="container">
+            <div class="section-header">
+                <h2>Frequently asked questions</h2>
+                <p>Everything you need to know about TellMeMo</p>
+            </div>
+            <div class="faq-list">
+                <div class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <button class="faq-question">
+                        <span itemprop="name">How does TellMeMo work?</span>
+                        <svg class="faq-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                            <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <p itemprop="text">Simply upload your meeting transcripts or record directly in the app. Our AI analyzes the content, extracts key decisions, action items, and risks, then generates personalized summaries for your team in minutes.</p>
+                    </div>
+                </div>
+                <div class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <button class="faq-question">
+                        <span itemprop="name">Is TellMeMo really free?</span>
+                        <svg class="faq-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                            <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <p itemprop="text">Yes! TellMeMo is completely free to use. No credit card required, no hidden fees. We're committed to helping teams work better together.</p>
+                    </div>
+                </div>
+                <div class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <button class="faq-question">
+                        <span itemprop="name">What meeting formats does it support?</span>
+                        <svg class="faq-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                            <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <p itemprop="text">TellMeMo works with any text transcript. Upload files from Zoom, Google Meet, Microsoft Teams, or any other platform. You can also paste transcripts directly or record meetings in-app.</p>
+                    </div>
+                </div>
+                <div class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <button class="faq-question">
+                        <span itemprop="name">Is my data secure and private?</span>
+                        <svg class="faq-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                            <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <p itemprop="text">Absolutely. We use enterprise-grade encryption for all data. Your meeting content is never shared or used for training AI models. We're GDPR compliant and take privacy seriously.</p>
+                    </div>
+                </div>
+                <div class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <button class="faq-question">
+                        <span itemprop="name">How long does it take to set up?</span>
+                        <svg class="faq-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                            <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <p itemprop="text">Less than 5 minutes! Just sign up, upload your first transcript, and you'll have your summary ready. No training, no IT department, no complex setup.</p>
+                    </div>
+                </div>
+                <div class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <button class="faq-question">
+                        <span itemprop="name">Can I integrate with my existing tools?</span>
+                        <svg class="faq-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                            <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <p itemprop="text">We're working on integrations! Currently, you can export summaries to any tool you use. Direct integrations with Slack, Notion, and project management tools are coming soon.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta">
+        <div class="container">
+            <div class="cta-content">
+                <h2>Ready to transform your meetings?</h2>
+                <p>Start free. No credit card required.</p>
+                <a href="https://app.tellmemo.io" class="btn-primary btn-large" target="_blank" rel="noopener noreferrer">Get Started Free</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="logo">
+                        <svg width="40" height="40" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="TellMeMo Logo">
+                            <title>TellMeMo Logo</title>
+                            <defs>
+                                <linearGradient id="gradient-footer" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#6366F1"/>
+                                    <stop offset="100%" stop-color="#8B5CF6"/>
+                                </linearGradient>
+                            </defs>
+                            <circle cx="100" cy="100" r="80" fill="url(#gradient-footer)"/>
+                            <circle cx="100" cy="100" r="15" fill="white"/>
+                            <ellipse cx="100" cy="100" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6" transform="rotate(0 100 100)"/>
+                            <ellipse cx="100" cy="100" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6" transform="rotate(60 100 100)"/>
+                            <ellipse cx="100" cy="100" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6" transform="rotate(120 100 100)"/>
+                            <circle cx="100" cy="70" r="5" fill="white"/>
+                            <circle cx="130" cy="100" r="5" fill="white"/>
+                            <circle cx="100" cy="130" r="5" fill="white"/>
+                            <circle cx="70" cy="100" r="5" fill="white"/>
+                        </svg>
+                        <span>TellMeMo</span>
+                    </div>
+                    <p>AI-powered meeting intelligence for modern teams.</p>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-column">
+                        <h4>Product</h4>
+                        <a href="#features">Features</a>
+                        <a href="#how-it-works">How it works</a>
+                        <a href="#open-source">Open Source</a>
+                        <a href="https://app.tellmemo.io" target="_blank" rel="noopener noreferrer">Launch App</a>
+                    </div>
+                    <div class="footer-column">
+                        <h4>Developers</h4>
+                        <a href="https://github.com/the-harpia-io/pm_master_v2" target="_blank" rel="noopener noreferrer">GitHub</a>
+                        <a href="https://github.com/the-harpia-io/pm_master_v2/issues" target="_blank" rel="noopener noreferrer">Issues</a>
+                        <a href="https://github.com/the-harpia-io/pm_master_v2/pulls" target="_blank" rel="noopener noreferrer">Pull Requests</a>
+                        <a href="documentation.html">Documentation</a>
+                    </div>
+                    <div class="footer-column">
+                        <h4>Resources</h4>
+                        <a href="blog.html">Blog</a>
+                        <a href="https://github.com/the-harpia-io/pm_master_v2/blob/main/README.md" target="_blank" rel="noopener noreferrer">Getting Started</a>
+                        <a href="https://github.com/the-harpia-io/pm_master_v2/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing</a>
+                    </div>
+                    <div class="footer-column">
+                        <h4>Legal</h4>
+                        <a href="privacy.html">Privacy</a>
+                        <a href="terms.html">Terms</a>
+                        <a href="https://github.com/the-harpia-io/pm_master_v2/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">License</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 TellMeMo. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/script.js"></script>
+</body>
+</html>

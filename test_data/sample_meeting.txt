@@ -1,0 +1,21 @@
+Meeting Transcript - Sprint Planning
+Date: 2024-01-15
+Attendees: John Doe, Jane Smith, Bob Johnson
+
+Agenda:
+1. Review previous sprint
+2. Plan upcoming sprint  
+3. Discuss blockers
+
+Discussion:
+John: We completed 8 out of 10 stories last sprint. The authentication feature is ready for testing.
+Jane: Great progress. I'll start testing the auth feature today.
+Bob: We need to prioritize the payment integration for this sprint.
+John: Agreed. Let's allocate 3 developers to that.
+
+Action Items:
+- Jane to complete auth testing by EOD
+- Bob to create payment integration design doc
+- Schedule follow-up meeting for Thursday
+
+Next Meeting: Thursday at 2 PM

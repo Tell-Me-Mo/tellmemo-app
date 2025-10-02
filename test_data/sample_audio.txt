@@ -1,0 +1,3 @@
+This is a placeholder for audio file testing.
+In actual testing, replace this with a real .mp3 or .wav file.
+You can use any small audio file for testing transcription.

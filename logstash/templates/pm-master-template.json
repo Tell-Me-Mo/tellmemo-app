@@ -1,0 +1,156 @@
+{
+  "index_patterns": ["pm-master-*"],
+  "template": {
+    "settings": {
+      "number_of_shards": 2,
+      "number_of_replicas": 0,
+      "index.refresh_interval": "5s"
+    },
+    "mappings": {
+      "properties": {
+        "@timestamp": {
+          "type": "date"
+        },
+        "timestamp": {
+          "type": "date"
+        },
+        "message": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "log_level": {
+          "type": "keyword"
+        },
+        "service": {
+          "type": "keyword"
+        },
+        "container_name": {
+          "type": "keyword"
+        },
+        "container_id": {
+          "type": "keyword"
+        },
+        "project": {
+          "type": "keyword"
+        },
+        "version": {
+          "type": "keyword"
+        },
+        "environment": {
+          "type": "keyword"
+        },
+        "type": {
+          "type": "keyword"
+        },
+        "app_log": {
+          "type": "object",
+          "properties": {
+            "user_id": {
+              "type": "keyword"
+            },
+            "project_id": {
+              "type": "keyword"
+            },
+            "meeting_id": {
+              "type": "keyword"
+            },
+            "workflow_id": {
+              "type": "keyword"
+            },
+            "task_id": {
+              "type": "keyword"
+            },
+            "action": {
+              "type": "keyword"
+            },
+            "duration_ms": {
+              "type": "long"
+            },
+            "status": {
+              "type": "keyword"
+            },
+            "error": {
+              "type": "text"
+            },
+            "stack_trace": {
+              "type": "text"
+            }
+          }
+        },
+        "temporal": {
+          "type": "object",
+          "properties": {
+            "workflow_id": {
+              "type": "keyword"
+            },
+            "workflow_type": {
+              "type": "keyword"
+            },
+            "task_queue": {
+              "type": "keyword"
+            },
+            "namespace": {
+              "type": "keyword"
+            },
+            "activity_type": {
+              "type": "keyword"
+            }
+          }
+        },
+        "request": {
+          "type": "object",
+          "properties": {
+            "method": {
+              "type": "keyword"
+            },
+            "path": {
+              "type": "keyword"
+            },
+            "status_code": {
+              "type": "integer"
+            },
+            "duration_ms": {
+              "type": "long"
+            },
+            "ip": {
+              "type": "ip"
+            }
+          }
+        },
+        "rag": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "text"
+            },
+            "chunks_retrieved": {
+              "type": "integer"
+            },
+            "relevance_score": {
+              "type": "float"
+            },
+            "llm_model": {
+              "type": "keyword"
+            },
+            "tokens_used": {
+              "type": "integer"
+            },
+            "response_time_ms": {
+              "type": "long"
+            }
+          }
+        }
+      }
+    }
+  },
+  "priority": 200,
+  "version": 1,
+  "_meta": {
+    "description": "PM Master application logging template"
+  }
+}
