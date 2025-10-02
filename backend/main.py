@@ -2,6 +2,7 @@ import os
 # Set environment variable to suppress tokenizers parallelism warning
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -55,23 +56,37 @@ async def lifespan(app: FastAPI):
 
         # Run Alembic migrations automatically on startup
         try:
-            from alembic import command
-            from alembic.config import Config
             import os
-
-            # Get the directory where main.py is located
-            backend_dir = os.path.dirname(os.path.abspath(__file__))
-            alembic_ini_path = os.path.join(backend_dir, "alembic.ini")
-
-            alembic_cfg = Config(alembic_ini_path)
-            # Set the script location relative to backend directory
-            alembic_cfg.set_main_option("script_location", os.path.join(backend_dir, "alembic"))
-
             logger.info("Running database migrations...")
-            command.upgrade(alembic_cfg, "head")
-            logger.info("Database migrations completed successfully")
+
+            # Run migrations in a subprocess to avoid async deadlock
+            # Alembic's env.py uses asyncio.run() which conflicts with FastAPI's event loop
+            backend_dir = os.path.dirname(os.path.abspath(__file__))
+            result = await asyncio.create_subprocess_exec(
+                'alembic', 'upgrade', 'head',
+                cwd=backend_dir,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await result.communicate()
+
+            if result.returncode == 0:
+                logger.info("✅ Database migrations completed successfully")
+                if stdout:
+                    logger.debug(f"Migration output: {stdout.decode()}")
+            else:
+                logger.error(f"❌ Migration failed with return code {result.returncode}")
+                if stderr:
+                    logger.error(f"Migration error: {stderr.decode()}")
+                logger.warning("⚠️ Continuing startup - migrations may have already been applied")
+
+        except FileNotFoundError:
+            logger.warning("⚠️ Alembic not found in PATH - skipping automatic migrations")
+            logger.info("💡 Run migrations manually with: cd backend && alembic upgrade head")
         except Exception as migration_error:
-            logger.error(f"Failed to run database migrations: {migration_error}")
+            logger.error(f"❌ Failed to run database migrations: {migration_error}")
+            import traceback
+            logger.error(f"Migration traceback: {traceback.format_exc()}")
             # Continue running - migrations might have already been applied
 
     except Exception as e:
