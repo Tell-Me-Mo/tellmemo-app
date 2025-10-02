@@ -19,6 +19,9 @@ COPY web ./web
 COPY assets ./assets
 COPY analysis_options.yaml ./
 
+# Create a dummy .env file for build (real config injected at runtime)
+RUN echo "# Placeholder - config injected at runtime" > .env
+
 # Build the web app without environment config (will be injected at runtime)
 RUN flutter build web --release --dart-define=PLACEHOLDER_BUILD=true
 
