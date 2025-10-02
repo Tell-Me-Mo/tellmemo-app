@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Community Support
+    url: https://github.com/yourusername/pm_master_v2/discussions
+    about: Please ask and answer questions here
+  - name: Documentation
+    url: https://tellmemo.app/docs
+    about: Check our documentation for answers
+  - name: Discord Community
+    url: https://discord.gg/tellmemo
+    about: Join our Discord for real-time discussion
+  - name: Security Issues
+    url: mailto:security@tellmemo.app
+    about: Please report security vulnerabilities via email

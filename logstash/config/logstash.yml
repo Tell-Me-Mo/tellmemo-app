@@ -1,0 +1,23 @@
+http.host: "0.0.0.0"
+xpack.monitoring.enabled: false
+
+# Pipeline settings
+pipeline.workers: 2
+pipeline.batch.size: 125
+pipeline.batch.delay: 50
+
+# Queue settings
+queue.type: persisted
+queue.max_bytes: 1gb
+queue.checkpoint.writes: 1024
+
+# Dead letter queue
+dead_letter_queue.enable: true
+dead_letter_queue.max_bytes: 1gb
+
+# Log level
+log.level: info
+
+# Path settings
+path.data: /usr/share/logstash/data
+path.logs: /usr/share/logstash/logs

@@ -1,0 +1,136 @@
+filebeat.config:
+  modules:
+    path: ${path.config}/modules.d/*.yml
+    reload.enabled: false
+
+# Autodiscover Docker containers
+filebeat.autodiscover:
+  providers:
+    - type: docker
+      hints.enabled: true
+      hints.default_config:
+        type: container
+        paths:
+          - /var/lib/docker/containers/${data.docker.container.id}/*.log
+        fields_under_root: true
+        fields:
+          container_name: ${data.docker.container.name}
+          container_id: ${data.docker.container.id}
+          container_image: ${data.docker.container.image}
+          container_labels: ${data.docker.container.labels}
+
+# Specific configurations for PM Master services
+filebeat.inputs:
+  # FastAPI application logs
+  - type: container
+    enabled: true
+    paths:
+      - '/var/lib/docker/containers/*/*.log'
+    processors:
+      - add_docker_metadata:
+          host: "unix:///var/run/docker.sock"
+      - decode_json_fields:
+          fields: ["message"]
+          target: "json"
+          overwrite_keys: true
+          process_array: false
+          max_depth: 1
+    multiline.pattern: '^\d{4}-\d{2}-\d{2}'
+    multiline.negate: true
+    multiline.match: after
+    include_lines: ['ERROR', 'WARNING', 'INFO', 'DEBUG']
+    
+  # Temporal workflow logs
+  - type: container
+    enabled: true
+    stream: all
+    containers.ids:
+      - "*temporal*"
+    processors:
+      - add_fields:
+          target: ''
+          fields:
+            service: temporal
+            log_type: workflow
+            
+  # PostgreSQL logs
+  - type: container
+    enabled: true
+    stream: all
+    containers.ids:
+      - "*postgres*"
+    processors:
+      - add_fields:
+          target: ''
+          fields:
+            service: postgres
+            log_type: database
+            
+  # Qdrant vector database logs
+  - type: container
+    enabled: true
+    stream: all
+    containers.ids:
+      - "*qdrant*"
+    processors:
+      - add_fields:
+          target: ''
+          fields:
+            service: qdrant
+            log_type: vector_db
+
+# Processors
+processors:
+  - add_host_metadata:
+      when.not.contains:
+        tags: forwarded
+  - add_docker_metadata: ~
+  - add_fields:
+      target: ''
+      fields:
+        environment: ${NODE_ENV:development}
+        project: pm_master
+  - drop_event:
+      when:
+        or:
+          - contains:
+              message: "healthcheck"
+          - contains:
+              message: "ping"
+          - regexp:
+              message: "^$"
+
+# Output to Logstash
+output.logstash:
+  enabled: true
+  hosts: ["logstash:5044"]
+  loadbalance: false
+  index: filebeat
+  bulk_max_size: 2048
+  timeout: 90s
+  
+# Alternative: Direct output to Elasticsearch (comment out Logstash output first)
+# output.elasticsearch:
+#   enabled: true
+#   hosts: ["elasticsearch:9200"]
+#   protocol: "http"
+#   index: "filebeat-pm-master-%{+yyyy.MM.dd}"
+#   template.name: "filebeat-pm-master"
+#   template.pattern: "filebeat-pm-master-*"
+#   template.settings:
+#     index.number_of_shards: 1
+#     index.number_of_replicas: 0
+
+# Logging
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /usr/share/filebeat/logs
+  name: filebeat
+  keepfiles: 7
+  permissions: 0644
+
+# Monitoring (optional)
+monitoring.enabled: false
+# monitoring.elasticsearch:
+#   hosts: ["elasticsearch:9200"]
