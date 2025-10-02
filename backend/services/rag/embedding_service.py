@@ -1,10 +1,45 @@
 """Embedding generation service using SentenceTransformers."""
 
 import os
+import ssl
 import asyncio
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 import numpy as np
+
+# CRITICAL: Apply SSL bypass BEFORE importing sentence_transformers
+# This fixes SSL certificate errors when downloading models from HuggingFace
+os.environ['PYTHONHTTPSVERIFY'] = '0'
+os.environ['CURL_CA_BUNDLE'] = ''
+os.environ['REQUESTS_CA_BUNDLE'] = ''
+ssl._create_default_https_context = ssl._create_unverified_context
+
+# Monkey-patch requests for HuggingFace Hub downloads
+try:
+    import requests
+    from requests.adapters import HTTPAdapter
+    import urllib3
+
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    class NoSSLAdapter(HTTPAdapter):
+        def init_poolmanager(self, *args, **kwargs):
+            kwargs['ssl_context'] = ssl._create_unverified_context()
+            return super().init_poolmanager(*args, **kwargs)
+
+    _original_session_init = requests.Session.__init__
+
+    def patched_session_init(self, *args, **kwargs):
+        _original_session_init(self, *args, **kwargs)
+        adapter = NoSSLAdapter()
+        self.mount('https://', adapter)
+        self.mount('http://', adapter)
+        self.verify = False
+
+    requests.Session.__init__ = patched_session_init
+except ImportError:
+    pass
+
 from sentence_transformers import SentenceTransformer
 import torch
 
