@@ -204,222 +204,370 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                   child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Project Header Row
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        // Back button
-                        IconButton(
-                          icon: Icon(
-                            Icons.arrow_back,
-                            size: 22,
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                          onPressed: () => Navigator.of(context).pop(),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                            minWidth: 40,
-                            minHeight: 40,
-                          ),
-                        ),
-
-                        const SizedBox(width: 8),
-
-                        // PROJECT badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: Colors.purple.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: Colors.purple.withValues(alpha: 0.3),
-                              width: 1,
+                    // Project Header - Mobile Optimized
+                    if (!isDesktop && !isTablet) ...[
+                      // Single row: Back button + Title + Metadata + Menu
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          IconButton(
+                            icon: Icon(
+                              Icons.arrow_back,
+                              size: 22,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                            onPressed: () => Navigator.of(context).pop(),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                              minWidth: 40,
+                              minHeight: 40,
                             ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.folder_outlined,
-                                size: 14,
-                                color: Colors.purple[600],
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  project.name,
+                                  style: theme.textTheme.headlineSmall?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 12,
+                                  runSpacing: 4,
+                                  children: [
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.calendar_today_outlined, size: 12, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          _formatFullDate(project.createdAt),
+                                          style: textTheme.bodySmall?.copyWith(
+                                            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.access_time, size: 12, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          DateTimeUtils.formatTimeAgo(project.createdAt),
+                                          style: textTheme.bodySmall?.copyWith(
+                                            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          PopupMenuButton<String>(
+                            icon: Icon(Icons.more_horiz, color: colorScheme.onSurfaceVariant),
+                            onSelected: (value) => _handleMenuAction(context, value, project),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            itemBuilder: (context) => [
+                              PopupMenuItem(
+                                value: 'activities',
+                                height: 40,
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.timeline_outlined,
+                                      size: 18,
+                                      color: Colors.teal,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Text('View Activities'),
+                                  ],
+                                ),
                               ),
-                              const SizedBox(width: 6),
-                              Text(
-                                'PROJECT',
-                                style: TextStyle(
-                                  color: Colors.purple[600],
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.5,
+                              const PopupMenuDivider(),
+                              PopupMenuItem(
+                                value: 'edit',
+                                height: 40,
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.edit_outlined,
+                                      size: 18,
+                                      color: colorScheme.primary,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Text('Edit Project'),
+                                  ],
+                                ),
+                              ),
+                              PopupMenuItem(
+                                value: project.status == ProjectStatus.active ? 'archive' : 'activate',
+                                height: 40,
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      project.status == ProjectStatus.active ? Icons.archive_outlined : Icons.unarchive_outlined,
+                                      size: 18,
+                                      color: Colors.orange,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(project.status == ProjectStatus.active ? 'Archive' : 'Activate'),
+                                  ],
+                                ),
+                              ),
+                              const PopupMenuDivider(),
+                              PopupMenuItem(
+                                value: 'delete',
+                                height: 40,
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.delete_outline,
+                                      size: 18,
+                                      color: Colors.red,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Text('Delete', style: TextStyle(color: Colors.red)),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
-                        ),
+                        ],
+                      ),
+                    ] else ...[
+                      // Desktop/Tablet Header (original layout)
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // Back button
+                          IconButton(
+                            icon: Icon(
+                              Icons.arrow_back,
+                              size: 22,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                            onPressed: () => Navigator.of(context).pop(),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                              minWidth: 40,
+                              minHeight: 40,
+                            ),
+                          ),
 
-                        const SizedBox(width: 12),
+                          const SizedBox(width: 8),
 
-                        // Project title
-                        Expanded(
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  project.name,
-                                  style: theme.textTheme.headlineMedium?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                          // PROJECT badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: Colors.purple.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: Colors.purple.withValues(alpha: 0.3),
+                                width: 1,
                               ),
-                              const SizedBox(width: 12),
-                              // Project status badge
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.folder_outlined,
+                                  size: 14,
+                                  color: Colors.purple[600],
                                 ),
-                                decoration: BoxDecoration(
-                                  color: project.status == ProjectStatus.active
-                                      ? Colors.green.withValues(alpha: 0.2)
-                                      : Colors.orange.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                    color: project.status == ProjectStatus.active
-                                        ? Colors.green.withValues(alpha: 0.4)
-                                        : Colors.orange.withValues(alpha: 0.4),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Text(
-                                  project.status == ProjectStatus.active ? 'ACTIVE' : 'ARCHIVED',
+                                const SizedBox(width: 6),
+                                Text(
+                                  'PROJECT',
                                   style: TextStyle(
-                                    color: project.status == ProjectStatus.active
-                                        ? Colors.green[700]
-                                        : Colors.orange[700],
-                                    fontSize: 10,
+                                    color: Colors.purple[600],
+                                    fontSize: 11,
                                     fontWeight: FontWeight.w600,
                                     letterSpacing: 0.5,
                                   ),
                                 ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(width: 12),
+
+                          // Project title
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    project.name,
+                                    style: theme.textTheme.headlineMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                // Project status badge
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: project.status == ProjectStatus.active
+                                        ? Colors.green.withValues(alpha: 0.2)
+                                        : Colors.orange.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: project.status == ProjectStatus.active
+                                          ? Colors.green.withValues(alpha: 0.4)
+                                          : Colors.orange.withValues(alpha: 0.4),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    project.status == ProjectStatus.active ? 'ACTIVE' : 'ARCHIVED',
+                                    style: TextStyle(
+                                      color: project.status == ProjectStatus.active
+                                          ? Colors.green[700]
+                                          : Colors.orange[700],
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Menu button
+                          PopupMenuButton<String>(
+                            icon: Icon(Icons.more_horiz, color: colorScheme.onSurfaceVariant),
+                            onSelected: (value) => _handleMenuAction(context, value, project),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            itemBuilder: (context) => [
+                              PopupMenuItem(
+                                value: 'activities',
+                                height: 40,
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.timeline_outlined,
+                                      size: 18,
+                                      color: Colors.teal,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Text('View Activities'),
+                                  ],
+                                ),
+                              ),
+                              const PopupMenuDivider(),
+                              PopupMenuItem(
+                                value: 'edit',
+                                height: 40,
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.edit_outlined,
+                                      size: 18,
+                                      color: colorScheme.primary,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Text('Edit Project'),
+                                  ],
+                                ),
+                              ),
+                              PopupMenuItem(
+                                value: project.status == ProjectStatus.active ? 'archive' : 'activate',
+                                height: 40,
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      project.status == ProjectStatus.active ? Icons.archive_outlined : Icons.unarchive_outlined,
+                                      size: 18,
+                                      color: Colors.orange,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(project.status == ProjectStatus.active ? 'Archive' : 'Activate'),
+                                  ],
+                                ),
+                              ),
+                              const PopupMenuDivider(),
+                              PopupMenuItem(
+                                value: 'delete',
+                                height: 40,
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.delete_outline,
+                                      size: 18,
+                                      color: Colors.red,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Text('Delete', style: TextStyle(color: Colors.red)),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
-                        ),
+                        ],
+                      ),
 
-                        // Menu button
-                        PopupMenuButton<String>(
-                          icon: Icon(Icons.more_horiz, color: colorScheme.onSurfaceVariant),
-                          onSelected: (value) => _handleMenuAction(context, value, project),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          itemBuilder: (context) => [
-                            PopupMenuItem(
-                              value: 'activities',
-                              height: 40,
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.timeline_outlined,
-                                    size: 18,
-                                    color: Colors.teal,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  const Text('View Activities'),
-                                ],
+                      const SizedBox(height: 8),
+
+                      // Metadata row (date, time, user)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 56),
+                        child: Row(
+                          children: [
+                            Icon(Icons.calendar_today_outlined, size: 14, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+                            const SizedBox(width: 4),
+                            Text(
+                              _formatFullDate(project.createdAt),
+                              style: textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
                               ),
                             ),
-                            const PopupMenuDivider(),
-                            PopupMenuItem(
-                              value: 'edit',
-                              height: 40,
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.edit_outlined,
-                                    size: 18,
-                                    color: colorScheme.primary,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  const Text('Edit Project'),
-                                ],
+                            const SizedBox(width: 16),
+                            Icon(Icons.access_time, size: 14, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+                            const SizedBox(width: 4),
+                            Text(
+                              DateTimeUtils.formatTimeAgo(project.createdAt),
+                              style: textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
                               ),
                             ),
-                            PopupMenuItem(
-                              value: project.status == ProjectStatus.active ? 'archive' : 'activate',
-                              height: 40,
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    project.status == ProjectStatus.active ? Icons.archive_outlined : Icons.unarchive_outlined,
-                                    size: 18,
-                                    color: Colors.orange,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Text(project.status == ProjectStatus.active ? 'Archive' : 'Activate'),
-                                ],
-                              ),
-                            ),
-                            const PopupMenuDivider(),
-                            PopupMenuItem(
-                              value: 'delete',
-                              height: 40,
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.delete_outline,
-                                    size: 18,
-                                    color: Colors.red,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  const Text('Delete', style: TextStyle(color: Colors.red)),
-                                ],
+                            const SizedBox(width: 16),
+                            Icon(Icons.person_outline, size: 14, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+                            const SizedBox(width: 4),
+                            Text(
+                              'User',
+                              style: textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
                               ),
                             ),
                           ],
                         ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // Metadata row (date, time, user)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 56),
-                      child: Row(
-                        children: [
-                          Icon(Icons.calendar_today_outlined, size: 14, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
-                          const SizedBox(width: 4),
-                          Text(
-                            _formatFullDate(project.createdAt),
-                            style: textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Icon(Icons.access_time, size: 14, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
-                          const SizedBox(width: 4),
-                          Text(
-                            DateTimeUtils.formatTimeAgo(project.createdAt),
-                            style: textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Icon(Icons.person_outline, size: 14, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
-                          const SizedBox(width: 4),
-                          Text(
-                            'User',
-                            style: textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
-                            ),
-                          ),
-                        ],
                       ),
-                    ),
+                    ],
 
                     // Divider after header
                     const SizedBox(height: 20),
