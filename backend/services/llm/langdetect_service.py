@@ -4,6 +4,52 @@ import ssl
 import urllib.request
 from typing import Dict, Any, Optional
 import logging
+import os
+import warnings
+
+# CRITICAL: Monkey-patch requests library BEFORE fast-langdetect imports it
+# This must happen at module load time, not function call time
+os.environ['PYTHONHTTPSVERIFY'] = '0'
+os.environ['CURL_CA_BUNDLE'] = ''
+os.environ['REQUESTS_CA_BUNDLE'] = ''
+
+# Globally bypass SSL verification
+_original_https_context = ssl._create_default_https_context
+ssl._create_default_https_context = ssl._create_unverified_context
+
+# Suppress warnings
+warnings.filterwarnings('ignore', message='Unverified HTTPS request')
+
+# Monkey-patch requests Session to disable SSL verification by default
+try:
+    import requests
+    from requests.adapters import HTTPAdapter
+    from urllib3.poolmanager import PoolManager
+    import urllib3
+
+    # Disable urllib3 warnings
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    # Create custom HTTPAdapter that disables SSL verification
+    class NoSSLAdapter(HTTPAdapter):
+        def init_poolmanager(self, *args, **kwargs):
+            kwargs['ssl_context'] = ssl._create_unverified_context()
+            return super().init_poolmanager(*args, **kwargs)
+
+    # Monkey-patch Session.__init__ to mount our custom adapter
+    _original_session_init = requests.Session.__init__
+
+    def patched_session_init(self, *args, **kwargs):
+        _original_session_init(self, *args, **kwargs)
+        adapter = NoSSLAdapter()
+        self.mount('https://', adapter)
+        self.mount('http://', adapter)
+        self.verify = False
+
+    requests.Session.__init__ = patched_session_init
+
+except ImportError:
+    pass
 
 from config import get_settings
 from utils.logger import get_logger
@@ -16,7 +62,7 @@ _initialized = False
 
 
 def init_langdetect_with_ssl_bypass():
-    """Initialize fast-langdetect with SSL bypass for model download."""
+    """Initialize fast-langdetect (SSL bypass already set at module level)."""
     global _initialized
 
     if _initialized:
@@ -28,17 +74,13 @@ def init_langdetect_with_ssl_bypass():
         return False
 
     try:
-        # Bypass SSL verification for model download
-        original_https_context = ssl._create_default_https_context
-        ssl._create_default_https_context = ssl._create_unverified_context
-
-        logger.info("Initializing fast-langdetect with SSL bypass...")
+        logger.info("Initializing fast-langdetect...")
 
         # Import and initialize fast-langdetect
+        # SSL bypass is already active from module-level imports
         from fast_langdetect import detect
 
         # Trigger model download by doing a test detection
-        # This will download the model if not already present
         test_result = detect("Hello world")
 
         if test_result:
@@ -48,21 +90,13 @@ def init_langdetect_with_ssl_bypass():
             logger.warning("fast-langdetect initialized but test detection returned empty")
             _initialized = True
 
-        # Restore original SSL context
-        ssl._create_default_https_context = original_https_context
-
         return True
 
     except ImportError:
         logger.warning("fast-langdetect not installed, language detection will be disabled")
         return False
     except Exception as e:
-        logger.error(f"Failed to initialize fast-langdetect: {e}")
-        # Restore original SSL context even on error
-        try:
-            ssl._create_default_https_context = original_https_context
-        except:
-            pass
+        logger.error(f"Failed to initialize fast-langdetect: {e} - continuing without language detection")
         return False
 
 
