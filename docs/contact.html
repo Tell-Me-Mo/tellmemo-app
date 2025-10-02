@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Us - TellMeMo</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-content">
+                <a href="index.html" class="nav-brand">
+                    <svg class="logo" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="appGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#673AB7"/>
+                                <stop offset="100%" style="stop-color:#9C27B0"/>
+                            </linearGradient>
+                        </defs>
+                        <circle cx="100" cy="100" r="80" fill="url(#appGradient)"/>
+                        <circle cx="100" cy="100" r="15" fill="white"/>
+                        <ellipse cx="100" cy="100" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6" transform="rotate(0 100 100)"/>
+                        <ellipse cx="100" cy="100" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6" transform="rotate(60 100 100)"/>
+                        <ellipse cx="100" cy="100" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6" transform="rotate(120 100 100)"/>
+                        <circle cx="100" cy="70" r="5" fill="white"/>
+                        <circle cx="130" cy="100" r="5" fill="white"/>
+                        <circle cx="100" cy="130" r="5" fill="white"/>
+                        <circle cx="70" cy="100" r="5" fill="white"/>
+                    </svg>
+                    <span class="logo-text">TellMeMo</span>
+                </a>
+                <a href="index.html" class="nav-link">← Back to Home</a>
+            </div>
+        </div>
+    </nav>
+
+    <section class="page-content">
+        <div class="container">
+            <div class="content-wrapper">
+                <h1>Contact Us</h1>
+                <p class="lead">Have questions? We'd love to hear from you. Send us a message and we'll respond as soon as possible.</p>
+
+                <div class="contact-grid">
+                    <div class="contact-info">
+                        <h3>Get in Touch</h3>
+                        <p>Email: <a href="mailto:hello@tellmemo.com">hello@tellmemo.com</a></p>
+                        <p>Support: <a href="mailto:support@tellmemo.com">support@tellmemo.com</a></p>
+
+                        <h3 style="margin-top: 2rem;">Follow Us</h3>
+                        <div class="social-links">
+                            <a href="#" aria-label="Twitter">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z"/>
+                                </svg>
+                            </a>
+                            <a href="#" aria-label="LinkedIn">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/>
+                                    <circle cx="4" cy="4" r="2"/>
+                                </svg>
+                            </a>
+                            <a href="#" aria-label="GitHub">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="contact-form">
+                        <form action="https://formspree.io/f/YOUR_FORM_ID" method="POST">
+                            <div class="form-group">
+                                <label for="name">Name *</label>
+                                <input type="text" id="name" name="name" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="email">Email *</label>
+                                <input type="email" id="email" name="email" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="subject">Subject *</label>
+                                <input type="text" id="subject" name="subject" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="message">Message *</label>
+                                <textarea id="message" name="message" rows="6" required></textarea>
+                            </div>
+
+                            <button type="submit" class="cta-button primary">Send Message</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <div class="footer-brand">
+                        <svg class="logo" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="appGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#673AB7"/>
+                                <stop offset="100%" style="stop-color:#9C27B0"/>
+                            </linearGradient>
+                        </defs>
+                        <circle cx="100" cy="100" r="80" fill="url(#appGradient)"/>
+                        <circle cx="100" cy="100" r="15" fill="white"/>
+                        <ellipse cx="100" cy="100" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6" transform="rotate(0 100 100)"/>
+                        <ellipse cx="100" cy="100" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6" transform="rotate(60 100 100)"/>
+                        <ellipse cx="100" cy="100" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6" transform="rotate(120 100 100)"/>
+                        <circle cx="100" cy="70" r="5" fill="white"/>
+                        <circle cx="130" cy="100" r="5" fill="white"/>
+                        <circle cx="100" cy="130" r="5" fill="white"/>
+                        <circle cx="70" cy="100" r="5" fill="white"/>
+                    </svg>
+                        <span class="logo-text">TellMeMo</span>
+                    </div>
+                    <p class="footer-description">AI-powered meeting intelligence and project management platform for modern teams.</p>
+                </div>
+
+                <div class="footer-section">
+                    <h4>Product</h4>
+                    <ul>
+                        <li><a href="index.html#features">Features</a></li>
+                        <li><a href="index.html#how-it-works">How It Works</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-section">
+                    <h4>Resources</h4>
+                    <ul>
+                        <li><a href="blog.html">Blog</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-section">
+                    <h4>Company</h4>
+                    <ul>
+                        <li><a href="contact.html">Contact</a></li>
+                        <li><a href="privacy.html">Privacy Policy</a></li>
+                        <li><a href="terms.html">Terms of Service</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>&copy; 2024 TellMeMo. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

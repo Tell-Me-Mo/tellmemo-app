@@ -1,0 +1,70 @@
+# PM Master V2 Backend Dependencies
+# Python 3.13 compatible versions
+
+# Core Framework
+fastapi==0.117.1
+uvicorn[standard]==0.37.0
+gunicorn==23.0.0
+python-multipart==0.0.20
+websockets==15.0.1
+
+# Database
+asyncpg==0.30.0
+sqlalchemy[asyncio]==2.0.43
+alembic==1.16.5
+
+# Validation & Settings
+pydantic==2.11.9
+pydantic-settings==2.10.1
+email-validator==2.3.0
+python-dotenv==1.1.1
+
+# Vector Database
+qdrant-client==1.15.1
+
+# Embeddings & ML
+sentence-transformers==5.1.1
+torch==2.8.0  # CPU version
+numpy==2.3.3
+
+# Audio Processing & Transcription
+faster-whisper==1.2.0
+pyaudio==0.2.14
+soundfile==0.13.1
+
+# NLP & Text Processing
+spacy==3.8.7
+scikit-learn==1.7.2
+nltk==3.9.1
+transformers==4.56.2
+rank-bm25==0.2.2
+fast-langdetect==1.0.0
+
+# LLM Integration
+anthropic==0.68.0
+openai==1.109.1
+
+# Observability
+langfuse==3.5.0
+sentry-sdk[fastapi]==2.39.0
+
+# Authentication
+supabase==2.20.0
+gotrue==2.12.4
+pyjwt==2.10.1
+
+# Utilities
+httpx>=0.26,<0.28
+aiofiles==24.1.0
+aiohttp==3.11.18
+python-jose[cryptography]==3.3.0
+
+# Scheduling
+apscheduler==3.11.0
+
+# Development & Testing
+pytest==8.4.2
+pytest-asyncio==0.25.0
+black==25.1.0
+ruff==0.9.1
+cryptography>=46.0.1

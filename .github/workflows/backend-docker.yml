@@ -1,0 +1,104 @@
+name: Backend Docker Build
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-docker.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/**'
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  IMAGE_NAME: tellmemo-backend
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version
+        id: version
+        run: |
+          # Get the latest backend tag or start at 0.0.0
+          LATEST_TAG=$(git tag -l "backend-v*" --sort=-v:refname | head -1 | sed 's/backend-v//' || echo "0.0.0")
+
+          # Increment patch version
+          IFS='.' read -ra VER <<< "$LATEST_TAG"
+          MAJOR=${VER[0]:-0}
+          MINOR=${VER[1]:-0}
+          PATCH=${VER[2]:-0}
+          PATCH=$((PATCH + 1))
+          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "Building backend version: $NEW_VERSION"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.ref == 'refs/heads/main' && 'latest' || 'develop' }}
+            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Create git tag
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag -a "backend-v${{ steps.version.outputs.version }}" -m "Backend release ${{ steps.version.outputs.version }}"
+          git push origin "backend-v${{ steps.version.outputs.version }}"
+
+      - name: Create GitHub Release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tagName = `backend-v${{ steps.version.outputs.version }}`;
+            const releaseName = `Backend v${{ steps.version.outputs.version }}`;
+            const branch = '${{ github.ref }}' === 'refs/heads/main' ? 'main' : 'develop';
+
+            await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tagName,
+              name: releaseName,
+              body: `## Backend Release v${{ steps.version.outputs.version }}
+
+            **Branch:** ${branch}
+            **Commit:** ${{ github.sha }}
+
+            ### Docker Images
+            - \`${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}\`
+            - \`${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${branch === 'main' ? 'latest' : 'develop'}\`
+            - \`${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}\`
+
+            ### Changes
+            ${{ github.event.head_commit.message }}`,
+              draft: false,
+              prerelease: branch !== 'main'
+            });

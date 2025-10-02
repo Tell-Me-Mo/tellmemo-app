@@ -1,0 +1,27 @@
+{
+  "mcpServers": {
+    "flutter-docs": {
+      "command": "python3",
+      "args": [
+        "-m",
+        "flutter_mcp",
+        "--transport",
+        "stdio"
+      ]
+    },
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--project-ref=ingpaxqdjivbovuigzva"
+      ],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "sbp_v0_8cabb0c0cc916c58e36b9a030786634add7c26b8"
+      }
+    },
+    "Sentry": {
+      "url": "https://mcp.sentry.dev/mcp/visieasy/tellmemo"
+    }
+  }
+}

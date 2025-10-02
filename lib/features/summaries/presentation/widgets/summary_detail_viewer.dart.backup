@@ -1,0 +1,2449 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:intl/intl.dart';
+import '../../data/models/summary_model.dart';
+import 'sentiment_analysis_widget.dart';
+import 'risks_blockers_widget.dart';
+import 'enhanced_action_items_widget.dart';
+import 'enhanced_decisions_widget.dart';
+import 'communication_insights_widget.dart';
+
+class SummaryDetailViewer extends StatefulWidget {
+  final SummaryModel summary;
+  final VoidCallback? onExport;
+  final VoidCallback? onPrint;
+  final VoidCallback? onShare;
+  final VoidCallback? onEdit;
+
+  const SummaryDetailViewer({
+    super.key,
+    required this.summary,
+    this.onExport,
+    this.onPrint,
+    this.onShare,
+    this.onEdit,
+  });
+
+  @override
+  State<SummaryDetailViewer> createState() => _SummaryDetailViewerState();
+}
+
+class _SummaryDetailViewerState extends State<SummaryDetailViewer> with TickerProviderStateMixin {
+  TabController? _tabController;
+  bool _isExpanded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // TabController will be created lazily in _buildTabSection
+  }
+
+  @override
+  void dispose() {
+    _tabController?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final dateFormat = DateFormat('MMM dd, yyyy');
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > 900;
+    final isTablet = screenWidth > 600 && screenWidth <= 900;
+    
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: EdgeInsets.all(isDesktop ? 24 : 16),
+          child: Center(
+            child: Container(
+              constraints: BoxConstraints(
+                maxWidth: isDesktop ? 1200 : double.infinity,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Modern Hero Header
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          _getTypeColor(context).withValues(alpha: 0.1),
+                          _getTypeColor(context).withValues(alpha: 0.05),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                        width: 1,
+                      ),
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.all(isDesktop ? 32 : isTablet ? 24 : 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Type Badge and Actions Row
+                          Wrap(
+                            alignment: WrapAlignment.spaceBetween,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 16,
+                            runSpacing: 16,
+                            children: [
+                              _buildModernTypeBadge(context),
+                              _buildActionButtons(context, isDesktop),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          // Title
+                          Text(
+                            widget.summary.subject,
+                            style: theme.textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              height: 1.2,
+                              fontSize: isDesktop ? null : 24,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          // Metadata Grid
+                          _buildMetadataGrid(context, dateFormat, isDesktop, isTablet),
+                        ],
+                      ),
+                    ),
+                  ),
+                  
+                  // Quick Stats Cards
+                  if (_hasQuickStats()) ...[
+                    const SizedBox(height: 24),
+                    _buildQuickStatsSection(context, isDesktop, isTablet),
+                  ],
+
+                  // Main Content Area with Tabs
+                  const SizedBox(height: 24),
+                  _buildTabSection(context, isDesktop, isTablet),
+                  
+                  // Full Summary Section
+                  const SizedBox(height: 32),
+                  _buildFullSummarySection(context, isDesktop),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Color _getTypeColor(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    switch (widget.summary.summaryType) {
+      case SummaryType.project:
+        return colorScheme.primary;
+      case SummaryType.meeting:
+        return colorScheme.secondary;
+      case SummaryType.program:
+        return colorScheme.tertiary;
+      case SummaryType.portfolio:
+        return Colors.deepPurple;
+    }
+  }
+
+  Widget _buildModernTypeBadge(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = _getTypeColor(context);
+
+    IconData icon;
+    String label;
+    switch (widget.summary.summaryType) {
+      case SummaryType.project:
+        icon = Icons.calendar_view_week;
+        label = 'Project Report';
+        break;
+      case SummaryType.meeting:
+        icon = Icons.groups;
+        label = 'Meeting Summary';
+        break;
+      case SummaryType.program:
+        icon = Icons.folder;
+        label = 'Program Summary';
+        break;
+      case SummaryType.portfolio:
+        icon = Icons.business_center;
+        label = 'Portfolio Summary';
+        break;
+    }
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [color.withValues(alpha: 0.15), color.withValues(alpha: 0.1)],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 20, color: color),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButtons(BuildContext context, bool isDesktop) {
+    if (isDesktop) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildActionButton(context, Icons.copy, 'Copy', () => _copyToClipboard(context)),
+          if (widget.onExport != null)
+            _buildActionButton(context, Icons.download, 'Export', widget.onExport!),
+          if (widget.onShare != null)
+            _buildActionButton(context, Icons.share, 'Share', widget.onShare!),
+        ],
+      );
+    } else {
+      return PopupMenuButton<String>(
+        icon: const Icon(Icons.more_vert),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        onSelected: (value) {
+          switch (value) {
+            case 'copy':
+              _copyToClipboard(context);
+              break;
+            case 'export':
+              widget.onExport?.call();
+              break;
+            case 'share':
+              widget.onShare?.call();
+              break;
+          }
+        },
+        itemBuilder: (context) => [
+          const PopupMenuItem(value: 'copy', child: Row(
+            children: [Icon(Icons.copy, size: 20), SizedBox(width: 12), Text('Copy')],
+          )),
+          if (widget.onExport != null)
+            const PopupMenuItem(value: 'export', child: Row(
+              children: [Icon(Icons.download, size: 20), SizedBox(width: 12), Text('Export')],
+            )),
+          if (widget.onShare != null)
+            const PopupMenuItem(value: 'share', child: Row(
+              children: [Icon(Icons.share, size: 20), SizedBox(width: 12), Text('Share')],
+            )),
+        ],
+      );
+    }
+  }
+
+  Widget _buildActionButton(BuildContext context, IconData icon, String tooltip, VoidCallback onPressed) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(left: 8),
+      child: Material(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: onPressed,
+          child: Tooltip(
+            message: tooltip,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              child: Icon(icon, size: 20, color: colorScheme.onSurfaceVariant),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMetadataGrid(BuildContext context, DateFormat dateFormat, bool isDesktop, bool isTablet) {
+    final items = <Widget>[];
+    
+    // Date
+    items.add(_buildMetadataCard(
+      context,
+      icon: Icons.calendar_today,
+      label: 'Date',
+      value: widget.summary.summaryType == SummaryType.project
+          ? '${dateFormat.format(widget.summary.dateRangeStart ?? widget.summary.createdAt)} - ${dateFormat.format(widget.summary.dateRangeEnd ?? widget.summary.createdAt)}'
+          : dateFormat.format(widget.summary.createdAt),
+      color: Colors.blue,
+    ));
+
+    // Created by
+    if (widget.summary.createdBy != null) {
+      items.add(_buildMetadataCard(
+        context,
+        icon: Icons.person,
+        label: 'Created by',
+        value: widget.summary.createdBy!,
+        color: Colors.green,
+      ));
+    }
+
+    // Performance metrics
+    if (widget.summary.generationTimeMs != null) {
+      items.add(_buildMetadataCard(
+        context,
+        icon: Icons.speed,
+        label: 'Generation',
+        value: '${(widget.summary.generationTimeMs! / 1000).toStringAsFixed(1)}s',
+        color: Colors.orange,
+      ));
+    }
+
+    // Cost
+    if (widget.summary.tokenCount != null || widget.summary.llmCost != null) {
+      items.add(_buildMetadataCard(
+        context,
+        icon: Icons.analytics,
+        label: 'Usage',
+        value: widget.summary.tokenCount != null 
+          ? '${widget.summary.tokenCount} tokens'
+          : '\$${widget.summary.llmCost!.toStringAsFixed(4)}',
+        color: Colors.purple,
+      ));
+    }
+
+    if (isDesktop || isTablet) {
+      return Wrap(
+        spacing: 16,
+        runSpacing: 16,
+        children: items,
+      );
+    } else {
+      return Column(
+        children: items.map((item) => Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: item,
+        )).toList(),
+      );
+    }
+  }
+
+  Widget _buildMetadataCard(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 400;
+    
+    return Container(
+      constraints: BoxConstraints(
+        minWidth: isSmallScreen ? double.infinity : 200,
+        maxWidth: isSmallScreen ? double.infinity : 400,
+      ),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: isSmallScreen ? MainAxisSize.max : MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 20, color: color),
+          ),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                Text(
+                  value,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool _hasQuickStats() {
+    return (widget.summary.keyPoints != null && widget.summary.keyPoints!.isNotEmpty) ||
+           (widget.summary.decisions != null && widget.summary.decisions!.isNotEmpty) ||
+           (widget.summary.actionItems != null && widget.summary.actionItems!.isNotEmpty) ||
+           (widget.summary.risksAndBlockers != null && widget.summary.risksAndBlockers!.isNotEmpty);
+  }
+
+  Widget _buildQuickStatsSection(BuildContext context, bool isDesktop, bool isTablet) {
+    final stats = <Widget>[];
+    
+    if (widget.summary.keyPoints != null && widget.summary.keyPoints!.isNotEmpty) {
+      stats.add(_buildStatCard(
+        context,
+        title: 'Key Points',
+        count: widget.summary.keyPoints!.length,
+        icon: Icons.lightbulb,
+        color: Colors.amber,
+      ));
+    }
+    
+    if (widget.summary.decisions != null && widget.summary.decisions!.isNotEmpty) {
+      stats.add(_buildStatCard(
+        context,
+        title: 'Decisions',
+        count: widget.summary.decisions!.length,
+        icon: Icons.check_circle,
+        color: Colors.green,
+      ));
+    }
+    
+    if (widget.summary.actionItems != null && widget.summary.actionItems!.isNotEmpty) {
+      stats.add(_buildStatCard(
+        context,
+        title: 'Action Items',
+        count: widget.summary.actionItems!.length,
+        icon: Icons.assignment_turned_in,
+        color: Colors.blue,
+      ));
+    }
+    
+    if (widget.summary.risksAndBlockers != null && widget.summary.risksAndBlockers!.isNotEmpty) {
+      final risks = widget.summary.risksAndBlockers!['risks'] as List<dynamic>? ?? [];
+      final blockers = widget.summary.risksAndBlockers!['blockers'] as List<dynamic>? ?? [];
+      final totalCount = risks.length + blockers.length;
+      
+      if (totalCount > 0) {
+        stats.add(_buildStatCard(
+          context,
+          title: 'Risks & Blockers',
+          count: totalCount,
+          icon: Icons.warning_amber_rounded,
+          color: Colors.orange,
+        ));
+      }
+    }
+
+    if (isDesktop) {
+      return Row(
+        children: stats.map((stat) => Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: stat,
+          ),
+        )).toList(),
+      );
+    } else if (isTablet) {
+      return GridView.count(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisCount: 2,
+        childAspectRatio: 2,
+        mainAxisSpacing: 16,
+        crossAxisSpacing: 16,
+        children: stats,
+      );
+    } else {
+      return SizedBox(
+        height: 120,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: stats.length,
+          separatorBuilder: (context, index) => const SizedBox(width: 12),
+          itemBuilder: (context, index) => SizedBox(
+            width: 160,
+            child: stats[index],
+          ),
+        ),
+      );
+    }
+  }
+
+  Widget _buildStatCard(
+    BuildContext context, {
+    required String title,
+    required int count,
+    required IconData icon,
+    required Color color,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              color.withValues(alpha: 0.05),
+              color.withValues(alpha: 0.02),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Icon(icon, size: 20, color: color),
+                Text(
+                  count.toString(),
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                    fontSize: 20,
+                  ),
+                ),
+              ],
+            ),
+            Text(
+              title,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabSection(BuildContext context, bool isDesktop, bool isTablet) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    
+    final tabs = <Tab>[];
+    final tabViews = <Widget>[];
+    
+    // Overview tab (always present)
+    tabs.add(Tab(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.dashboard, size: 18),
+          if (isDesktop || isTablet) ...[
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                'Overview',
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ),
+          ],
+        ],
+      ),
+    ));
+    tabViews.add(_buildOverviewTab(context));
+    
+    // Key Points tab
+    if (widget.summary.keyPoints != null && widget.summary.keyPoints!.isNotEmpty) {
+      tabs.add(Tab(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.lightbulb_outline, size: 18),
+            if (isDesktop || isTablet) ...[
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'Key Points',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ));
+      tabViews.add(_buildListTab(context, widget.summary.keyPoints!, Colors.amber));
+    }
+    
+    // Decisions tab
+    if (widget.summary.decisions != null && widget.summary.decisions!.isNotEmpty) {
+      tabs.add(Tab(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_circle_outline, size: 18),
+            if (isDesktop || isTablet) ...[
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'Decisions',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ));
+      tabViews.add(EnhancedDecisionsWidget(decisions: widget.summary.decisions!));
+    }
+    
+    // Action Items tab
+    if (widget.summary.actionItems != null && widget.summary.actionItems!.isNotEmpty) {
+      tabs.add(Tab(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.assignment_outlined, size: 18),
+            if (isDesktop || isTablet) ...[
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'Actions',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ));
+      tabViews.add(EnhancedActionItemsWidget(actionItems: widget.summary.actionItems!));
+    }
+    
+    // Next Meeting Agenda tab
+    if (widget.summary.nextMeetingAgenda != null && 
+        widget.summary.nextMeetingAgenda!.isNotEmpty) {
+      tabs.add(Tab(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.event_note, size: 18),
+            if (isDesktop || isTablet) ...[
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  widget.summary.summaryType == SummaryType.project
+                    ? 'Next Week' 
+                    : 'Next Agenda',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ));
+      tabViews.add(_buildAgendaTab(context));
+    }
+    
+    // Sentiment Analysis tab
+    if (widget.summary.sentimentAnalysis != null && widget.summary.sentimentAnalysis!.isNotEmpty) {
+      tabs.add(Tab(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.psychology, size: 18),
+            if (isDesktop || isTablet) ...[
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'Sentiment',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ));
+      tabViews.add(_buildSentimentTab(context));
+    }
+    
+    // Communication Insights tab
+    if (widget.summary.communicationInsights != null) {
+      tabs.add(Tab(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.insights, size: 18),
+            if (isDesktop || isTablet) ...[
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'Insights',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ));
+      tabViews.add(_buildCommunicationInsightsTab(context));
+    }
+    
+    // Risks & Blockers tab
+    if (widget.summary.risksAndBlockers != null && widget.summary.risksAndBlockers!.isNotEmpty) {
+      tabs.add(Tab(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.warning_amber_rounded, size: 18),
+            if (isDesktop || isTablet) ...[
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'Risks & Blockers',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ));
+      tabViews.add(_buildRisksBlockersTab(context));
+    }
+
+    // Cross-Project Dependencies tab (for Program and Portfolio summaries)
+    if ((widget.summary.summaryType == SummaryType.program ||
+         widget.summary.summaryType == SummaryType.portfolio) &&
+        widget.summary.crossMeetingInsights != null) {
+      tabs.add(Tab(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.link, size: 18),
+            if (isDesktop || isTablet) ...[
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'Dependencies',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ));
+      tabViews.add(_buildDependenciesTab(context));
+    }
+
+    // Program Health tab (for Program summaries)
+    if (widget.summary.summaryType == SummaryType.program &&
+        widget.summary.crossMeetingInsights != null) {
+      tabs.add(Tab(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.health_and_safety, size: 18),
+            if (isDesktop || isTablet) ...[
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'Program Health',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ));
+      tabViews.add(_buildProgramHealthTab(context));
+    }
+
+    // Portfolio Metrics tab (for Portfolio summaries)
+    if (widget.summary.summaryType == SummaryType.portfolio &&
+        widget.summary.crossMeetingInsights != null &&
+        widget.summary.crossMeetingInsights!['portfolio_metrics'] != null) {
+      print('[DEBUG] Adding Portfolio Metrics tab - data: ${widget.summary.crossMeetingInsights!['portfolio_metrics']}');
+      tabs.add(Tab(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.analytics, size: 18),
+            if (isDesktop || isTablet) ...[
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'Portfolio Metrics',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ));
+      tabViews.add(_buildPortfolioMetricsTab(context));
+    }
+
+    // Executive Dashboard tab (for Portfolio summaries)
+    if (widget.summary.summaryType == SummaryType.portfolio &&
+        widget.summary.crossMeetingInsights != null &&
+        widget.summary.crossMeetingInsights!['executive_dashboard'] != null) {
+      print('[DEBUG] Adding Executive Dashboard tab - data: ${widget.summary.crossMeetingInsights!['executive_dashboard']}');
+      tabs.add(Tab(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.dashboard_customize, size: 18),
+            if (isDesktop || isTablet) ...[
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'Executive View',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ));
+      tabViews.add(_buildExecutiveDashboardTab(context));
+    }
+
+    // Governance tab (for Portfolio summaries)
+    if (widget.summary.summaryType == SummaryType.portfolio &&
+        widget.summary.crossMeetingInsights != null &&
+        widget.summary.crossMeetingInsights!['governance_items'] != null &&
+        (widget.summary.crossMeetingInsights!['governance_items'] as List).isNotEmpty) {
+      tabs.add(Tab(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.gavel, size: 18),
+            if (isDesktop || isTablet) ...[
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'Governance',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ));
+      tabViews.add(_buildGovernanceTab(context));
+    }
+
+    // Create or update tab controller if needed
+    if (_tabController == null || _tabController!.length != tabs.length) {
+      _tabController?.dispose();
+      _tabController = TabController(length: tabs.length, vsync: this);
+    }
+    
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              tabs: tabs,
+              labelColor: colorScheme.primary,
+              unselectedLabelColor: colorScheme.onSurfaceVariant,
+              indicatorColor: colorScheme.primary,
+              indicatorWeight: 3,
+              labelPadding: EdgeInsets.symmetric(
+                horizontal: isDesktop ? 24 : isTablet ? 16 : 8,
+              ),
+              isScrollable: true,
+            ),
+          ),
+          SizedBox(
+            height: 400,
+            child: TabBarView(
+              controller: _tabController,
+              children: tabViews,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOverviewTab(BuildContext context) {
+    final theme = Theme.of(context);
+    final sections = <Widget>[];
+    
+    if (widget.summary.keyPoints != null && widget.summary.keyPoints!.isNotEmpty) {
+      sections.add(_buildOverviewSection(
+        context,
+        title: 'Top Key Points',
+        icon: Icons.lightbulb,
+        color: Colors.amber,
+        items: widget.summary.keyPoints!.take(3).toList(),
+      ));
+    }
+    
+    if (widget.summary.decisions != null && widget.summary.decisions!.isNotEmpty) {
+      sections.add(_buildOverviewSection(
+        context,
+        title: 'Key Decisions',
+        icon: Icons.check_circle,
+        color: Colors.green,
+        items: widget.summary.decisions!.take(3).toList(),
+      ));
+    }
+    
+    if (widget.summary.actionItems != null && widget.summary.actionItems!.isNotEmpty) {
+      sections.add(_buildOverviewSection(
+        context,
+        title: 'Priority Actions',
+        icon: Icons.assignment_turned_in,
+        color: Colors.blue,
+        items: widget.summary.actionItems!.take(3).toList(),
+      ));
+    }
+    
+    if (sections.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.info_outline, size: 48, color: theme.colorScheme.onSurfaceVariant),
+            const SizedBox(height: 16),
+            Text(
+              'No structured content available',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    return ListView.separated(
+      padding: const EdgeInsets.all(20),
+      itemCount: sections.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 20),
+      itemBuilder: (context, index) => sections[index],
+    );
+  }
+
+  Widget _buildOverviewSection(
+    BuildContext context, {
+    required String title,
+    required IconData icon,
+    required Color color,
+    required List<dynamic> items,
+  }) {
+    final theme = Theme.of(context);
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Icon(icon, size: 18, color: color),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              title,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ...items.map((item) => Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 6),
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.6),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  item is String ? item : (item is Decision ? item.description : (item is ActionItem ? item.description : item.toString())),
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ),
+            ],
+          ),
+        )),
+      ],
+    );
+  }
+
+  Widget _buildListTab(BuildContext context, List<String> items, Color color) {
+    final theme = Theme.of(context);
+    
+    return ListView.builder(
+      padding: const EdgeInsets.all(20),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        return Card(
+          elevation: 0,
+          margin: const EdgeInsets.only(bottom: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: color.withValues(alpha: 0.2)),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  color.withValues(alpha: 0.05),
+                  color.withValues(alpha: 0.02),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${index + 1}',
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    items[index],
+                    style: theme.textTheme.bodyLarge,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAgendaTab(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final agendaItems = widget.summary.nextMeetingAgenda ?? [];
+    
+    return ListView.builder(
+      padding: const EdgeInsets.all(20),
+      itemCount: agendaItems.length,
+      itemBuilder: (context, index) {
+        final item = agendaItems[index];
+        final priorityColor = _getPriorityColor(item.priority, colorScheme);
+        final categoryIcon = _getCategoryIcon(item.category);
+        
+        return Card(
+          elevation: 0,
+          margin: const EdgeInsets.only(bottom: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: priorityColor.withValues(alpha: 0.3)),
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  priorityColor.withValues(alpha: 0.08),
+                  priorityColor.withValues(alpha: 0.02),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: ExpansionTile(
+              tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              leading: Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: priorityColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  categoryIcon,
+                  color: priorityColor,
+                  size: 24,
+                ),
+              ),
+              title: Text(
+                item.title,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: Row(
+                children: [
+                  Icon(Icons.timer_outlined, size: 14, color: colorScheme.onSurfaceVariant),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${item.estimatedTime} min',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: priorityColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      item.priority.toUpperCase(),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: priorityColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  if (item.presenter != null) ...[
+                    const SizedBox(width: 12),
+                    Icon(Icons.person_outline, size: 14, color: colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 4),
+                    Text(
+                      item.presenter!,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.description,
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                    if (item.relatedActionItems.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.link,
+                                  size: 16,
+                                  color: colorScheme.primary,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Related Action Items',
+                                  style: theme.textTheme.labelMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: colorScheme.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            ...item.relatedActionItems.map((actionItem) => Padding(
+                              padding: const EdgeInsets.only(left: 24, top: 4),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('• ', style: theme.textTheme.bodySmall),
+                                  Expanded(
+                                    child: Text(
+                                      actionItem,
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+  
+  Color _getPriorityColor(String priority, ColorScheme colorScheme) {
+    switch (priority.toLowerCase()) {
+      case 'critical':
+        return colorScheme.error;
+      case 'high':
+        return Colors.orange;
+      case 'medium':
+        return colorScheme.primary;
+      case 'low':
+        return colorScheme.tertiary;
+      default:
+        return colorScheme.onSurfaceVariant;
+    }
+  }
+  
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'follow-up':
+        return Icons.replay;
+      case 'review':
+        return Icons.rate_review;
+      case 'decision':
+        return Icons.gavel;
+      case 'discussion':
+        return Icons.forum;
+      case 'presentation':
+        return Icons.present_to_all;
+      default:
+        return Icons.topic;
+    }
+  }
+
+  Widget _buildFullSummarySection(BuildContext context, bool isDesktop) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: () => setState(() => _isExpanded = !_isExpanded),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.vertical(
+                  top: const Radius.circular(16),
+                  bottom: Radius.circular(_isExpanded ? 0 : 16),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.description,
+                    color: colorScheme.primary,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Full Summary',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: _isExpanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(
+                      Icons.expand_more,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: Container(
+              padding: const EdgeInsets.all(20),
+              constraints: BoxConstraints(
+                maxHeight: isDesktop ? 600 : 400,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: MarkdownBody(
+                        data: widget.summary.body,
+                        selectable: true,
+                        styleSheet: MarkdownStyleSheet(
+                          p: theme.textTheme.bodyLarge?.copyWith(height: 1.6),
+                          h1: theme.textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            height: 1.3,
+                          ),
+                          h2: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            height: 1.3,
+                          ),
+                          h3: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            height: 1.3,
+                          ),
+                          listBullet: theme.textTheme.bodyLarge,
+                          blockquote: theme.textTheme.bodyLarge?.copyWith(
+                            fontStyle: FontStyle.italic,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          code: theme.textTheme.bodyMedium?.copyWith(
+                            fontFamily: 'monospace',
+                            backgroundColor: colorScheme.surfaceContainerHighest,
+                          ),
+                          codeblockDecoration: BoxDecoration(
+                            color: colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          blockSpacing: 16,
+                          listIndent: 24,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            crossFadeState: _isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 200),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _copyToClipboard(BuildContext context) {
+    final buffer = StringBuffer();
+    buffer.writeln('# ${widget.summary.subject}');
+    buffer.writeln();
+    
+    if (widget.summary.keyPoints != null && widget.summary.keyPoints!.isNotEmpty) {
+      buffer.writeln('## Key Points');
+      for (final point in widget.summary.keyPoints!) {
+        buffer.writeln('- $point');
+      }
+      buffer.writeln();
+    }
+    
+    if (widget.summary.decisions != null && widget.summary.decisions!.isNotEmpty) {
+      buffer.writeln('## Decisions');
+      for (final decision in widget.summary.decisions!) {
+        final desc = decision.description;
+        buffer.writeln('- $desc');
+      }
+      buffer.writeln();
+    }
+    
+    if (widget.summary.actionItems != null && widget.summary.actionItems!.isNotEmpty) {
+      buffer.writeln('## Action Items');
+      for (final item in widget.summary.actionItems!) {
+        final desc = item.description;
+        buffer.writeln('- $desc');
+      }
+      buffer.writeln();
+    }
+    
+    buffer.writeln('## Full Summary');
+    buffer.writeln(widget.summary.body);
+    
+    Clipboard.setData(ClipboardData(text: buffer.toString()));
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Summary copied to clipboard'),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
+  
+  Widget _buildSentimentTab(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: SentimentAnalysisWidget(
+        sentimentData: widget.summary.sentimentAnalysis,
+      ),
+    );
+  }
+  
+  Widget _buildCommunicationInsightsTab(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: CommunicationInsightsWidget(
+        communicationInsights: widget.summary.communicationInsights,
+      ),
+    );
+  }
+  
+  Widget _buildRisksBlockersTab(BuildContext context) {
+    return RisksBlockersWidget(
+      risksBlockersData: widget.summary.risksAndBlockers,
+    );
+  }
+
+  Widget _buildDependenciesTab(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final dependencies = widget.summary.crossMeetingInsights?['cross_project_dependencies'] as List<dynamic>? ?? [];
+
+    if (dependencies.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.link_off, size: 48, color: colorScheme.onSurfaceVariant),
+            const SizedBox(height: 16),
+            Text(
+              'No cross-project dependencies identified',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(20),
+      itemCount: dependencies.length,
+      itemBuilder: (context, index) {
+        final dep = dependencies[index] as Map<String, dynamic>;
+        final status = dep['status'] ?? 'unknown';
+        final impact = dep['impact'] ?? 'medium';
+
+        Color statusColor;
+        IconData statusIcon;
+        switch (status.toLowerCase()) {
+          case 'active':
+            statusColor = Colors.green;
+            statusIcon = Icons.check_circle;
+            break;
+          case 'blocked':
+            statusColor = Colors.red;
+            statusIcon = Icons.block;
+            break;
+          case 'pending':
+            statusColor = Colors.orange;
+            statusIcon = Icons.pending;
+            break;
+          default:
+            statusColor = colorScheme.onSurfaceVariant;
+            statusIcon = Icons.help_outline;
+        }
+
+        Color impactColor;
+        switch (impact.toLowerCase()) {
+          case 'high':
+            impactColor = Colors.red;
+            break;
+          case 'medium':
+            impactColor = Colors.orange;
+            break;
+          case 'low':
+            impactColor = Colors.green;
+            break;
+          default:
+            impactColor = colorScheme.tertiary;
+        }
+
+        return Card(
+          elevation: 0,
+          margin: const EdgeInsets.only(bottom: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: statusColor.withValues(alpha: 0.3)),
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  statusColor.withValues(alpha: 0.05),
+                  statusColor.withValues(alpha: 0.02),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(statusIcon, color: statusColor, size: 24),
+              ),
+              title: Text(
+                '${dep['from_project'] ?? 'Unknown'} → ${dep['to_project'] ?? 'Unknown'}',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 4),
+                  Text(
+                    'Type: ${dep['dependency_type'] ?? 'Unknown'}',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: statusColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          status.toUpperCase(),
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: statusColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: impactColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'Impact: ${impact.toUpperCase()}',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: impactColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildProgramHealthTab(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final health = widget.summary.crossMeetingInsights?['program_health'] as Map<String, dynamic>? ?? {};
+    final metrics = widget.summary.crossMeetingInsights?['resource_metrics'] as Map<String, dynamic>? ?? {};
+
+    final overallStatus = health['overall_status'] ?? 'unknown';
+    final confidenceScore = health['confidence_score'] ?? 0;
+
+    Color statusColor;
+    IconData statusIcon;
+    switch (overallStatus.toLowerCase()) {
+      case 'on-track':
+        statusColor = Colors.green;
+        statusIcon = Icons.check_circle;
+        break;
+      case 'at-risk':
+        statusColor = Colors.orange;
+        statusIcon = Icons.warning;
+        break;
+      case 'delayed':
+        statusColor = Colors.red;
+        statusIcon = Icons.error;
+        break;
+      default:
+        statusColor = colorScheme.onSurfaceVariant;
+        statusIcon = Icons.help_outline;
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Overall Health Card
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: statusColor.withValues(alpha: 0.3)),
+            ),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    statusColor.withValues(alpha: 0.1),
+                    statusColor.withValues(alpha: 0.05),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                children: [
+                  Icon(statusIcon, size: 48, color: statusColor),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Program Status',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    overallStatus.toUpperCase().replaceAll('-', ' '),
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      color: statusColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  LinearProgressIndicator(
+                    value: confidenceScore / 100,
+                    backgroundColor: colorScheme.surfaceContainerHighest,
+                    valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Confidence: $confidenceScore%',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Resource Metrics
+          if (metrics.isNotEmpty) ...[
+            Text(
+              'Resource Metrics',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildMetricCard(
+              context,
+              'Utilization Rate',
+              metrics['utilization_rate'] ?? 0,
+              Icons.speed,
+              Colors.blue,
+            ),
+            _buildMetricCard(
+              context,
+              'Team Capacity',
+              metrics['team_capacity'] ?? 0,
+              Icons.people,
+              Colors.green,
+            ),
+            _buildMetricCard(
+              context,
+              'Budget Status',
+              metrics['budget_status'] ?? 0,
+              Icons.attach_money,
+              Colors.orange,
+            ),
+            _buildMetricCard(
+              context,
+              'Timeline Status',
+              metrics['timeline_status'] ?? 0,
+              Icons.schedule,
+              Colors.purple,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetricCard(
+    BuildContext context,
+    String label,
+    dynamic value,
+    IconData icon,
+    Color color,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    // Handle different value types
+    String displayValue;
+    double progressValue = 0;
+
+    if (value is num) {
+      displayValue = '$value%';
+      progressValue = value / 100;
+    } else if (value is String) {
+      displayValue = value;
+      // Try to extract percentage if present
+      final match = RegExp(r'(\d+)').firstMatch(value);
+      if (match != null) {
+        progressValue = int.parse(match.group(1)!) / 100;
+      }
+    } else {
+      displayValue = value.toString();
+    }
+
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    displayValue,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (progressValue > 0) ...[
+                    const SizedBox(height: 8),
+                    LinearProgressIndicator(
+                      value: progressValue.clamp(0, 1),
+                      backgroundColor: colorScheme.surfaceContainerHighest,
+                      valueColor: AlwaysStoppedAnimation<Color>(color),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _getRiskColor(String riskLevel) {
+    switch (riskLevel.toLowerCase()) {
+      case 'critical':
+      case 'high':
+        return Colors.red;
+      case 'moderate':
+      case 'medium':
+        return Colors.orange;
+      case 'low':
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Color _getTimelineColor(String status) {
+    final statusLower = status.toLowerCase();
+    if (statusLower.contains('ahead') || statusLower.contains('on track')) {
+      return Colors.green;
+    } else if (statusLower.contains('at risk') || statusLower.contains('delayed')) {
+      return Colors.orange;
+    } else if (statusLower.contains('critical') || statusLower.contains('blocked')) {
+      return Colors.red;
+    }
+    return Colors.grey;
+  }
+
+  Widget _buildMetricRow(BuildContext context, String label, String value, IconData icon, Color color) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 24, color: color),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildExecutiveDashboardTab(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final dashboard = widget.summary.crossMeetingInsights?['executive_dashboard'] as Map<String, dynamic>? ?? {};
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // KPI Cards Grid
+          Text(
+            'Key Performance Indicators',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 16),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 2,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 1.5,
+            children: [
+              _buildKPICard(
+                context,
+                'Health Score',
+                '${((dashboard['portfolio_health_score'] ?? 0) * 100).toStringAsFixed(0)}%',
+                Icons.health_and_safety,
+                Colors.green,
+              ),
+              _buildKPICard(
+                context,
+                'Strategic Alignment',
+                '${((dashboard['strategic_alignment_score'] ?? 0) * 100).toStringAsFixed(0)}%',
+                Icons.track_changes,
+                Colors.blue,
+              ),
+              _buildKPICard(
+                context,
+                'Risk Level',
+                dashboard['risk_level'] ?? 'N/A',
+                Icons.warning,
+                _getRiskColor(dashboard['risk_level'] ?? 'Unknown'),
+              ),
+              _buildKPICard(
+                context,
+                'Milestones',
+                '${(dashboard['upcoming_milestones'] as List?)?.length ?? 0} Upcoming',
+                Icons.flag,
+                Colors.purple,
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 24),
+
+          // Key Highlights
+          if (dashboard['key_highlights'] != null && (dashboard['key_highlights'] as List).isNotEmpty) ...[
+            Text(
+              'Key Highlights',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...(dashboard['key_highlights'] as List).map((highlight) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.check_circle, size: 20, color: colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      highlight.toString(),
+                      style: theme.textTheme.bodyLarge,
+                    ),
+                  ),
+                ],
+              ),
+            )).toList(),
+            const SizedBox(height: 24),
+          ],
+
+          // Upcoming Milestones
+          if (dashboard['upcoming_milestones'] != null && (dashboard['upcoming_milestones'] as List).isNotEmpty) ...[
+            Text(
+              'Upcoming Milestones',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...(dashboard['upcoming_milestones'] as List).map((milestone) => Card(
+              elevation: 0,
+              margin: const EdgeInsets.only(bottom: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(color: colorScheme.outlineVariant),
+              ),
+              child: ListTile(
+                leading: Icon(Icons.flag, color: colorScheme.primary),
+                title: Text(milestone.toString()),
+              ),
+            )).toList(),
+            const SizedBox(height: 24),
+          ],
+
+          // Executive Summary (keeping for backward compatibility)
+          if (dashboard['executive_summary'] != null) ...[
+            Text(
+              'Executive Summary',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  dashboard['executive_summary'].toString(),
+                  style: theme.textTheme.bodyLarge,
+                ),
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 24),
+
+          // Critical Items
+          if (dashboard['critical_items'] != null && (dashboard['critical_items'] as List).isNotEmpty) ...[
+            Text(
+              'Critical Items for Executive Attention',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...(dashboard['critical_items'] as List).map((item) {
+              return Card(
+                elevation: 0,
+                margin: const EdgeInsets.only(bottom: 8),
+                color: colorScheme.errorContainer.withValues(alpha: 0.3),
+                child: ListTile(
+                  leading: Icon(Icons.priority_high, color: colorScheme.error),
+                  title: Text(item.toString()),
+                ),
+              );
+            }),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildKPICard(
+    BuildContext context,
+    String label,
+    dynamic value,
+    IconData icon,
+    Color color,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              color.withValues(alpha: 0.1),
+              color.withValues(alpha: 0.05),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value.toString(),
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: color,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGovernanceTab(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final governanceItems = widget.summary.crossMeetingInsights?['governance_items'] as List<dynamic>? ?? [];
+    final boardItems = widget.summary.crossMeetingInsights?['board_items'] as List<dynamic>? ?? [];
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Governance Items
+          if (governanceItems.isNotEmpty) ...[
+            Text(
+              'Governance Items',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...governanceItems.map((item) {
+              final gov = item as Map<String, dynamic>;
+              final priority = gov['priority'] ?? 'medium';
+              Color priorityColor = priority == 'high' ? Colors.red : priority == 'medium' ? Colors.orange : Colors.green;
+
+              return Card(
+                elevation: 0,
+                margin: const EdgeInsets.only(bottom: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: priorityColor.withValues(alpha: 0.3)),
+                ),
+                child: ExpansionTile(
+                  tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: priorityColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.gavel, color: priorityColor, size: 20),
+                  ),
+                  title: Text(
+                    gov['title'] ?? 'Governance Item',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  subtitle: Text(
+                    'Status: ${gov['status'] ?? 'Pending'}',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (gov['description'] != null) ...[
+                            Text(
+                              gov['description'].toString(),
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                          if (gov['owner'] != null) ...[
+                            Row(
+                              children: [
+                                Icon(Icons.person, size: 16, color: colorScheme.onSurfaceVariant),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Owner: ${gov['owner']}',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                          if (gov['due_date'] != null) ...[
+                            Row(
+                              children: [
+                                Icon(Icons.calendar_today, size: 16, color: colorScheme.onSurfaceVariant),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Due: ${gov['due_date']}',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+
+          // Board Items
+          if (boardItems.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            Text(
+              'Board Reporting Items',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...boardItems.map((item) {
+              final board = item as Map<String, dynamic>;
+              return Card(
+                elevation: 0,
+                margin: const EdgeInsets.only(bottom: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: colorScheme.primary.withValues(alpha: 0.3)),
+                ),
+                child: ListTile(
+                  leading: Icon(Icons.business_center, color: colorScheme.primary),
+                  title: Text(
+                    board['title'] ?? 'Board Item',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  subtitle: Text(
+                    board['description'] ?? '',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                  trailing: board['status'] != null
+                      ? Chip(
+                          label: Text(
+                            board['status'].toString(),
+                            style: theme.textTheme.labelSmall,
+                          ),
+                          backgroundColor: colorScheme.secondaryContainer,
+                        )
+                      : null,
+                ),
+              );
+            }),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPortfolioMetricsTab(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final metrics = widget.summary.crossMeetingInsights?['portfolio_metrics'] as Map<String, dynamic>? ?? {};
+    final initiatives = widget.summary.crossMeetingInsights?['strategic_initiatives'] as List<dynamic>? ?? [];
+    final performance = widget.summary.crossMeetingInsights?['program_performance'] as List<dynamic>? ?? [];
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Portfolio Metrics
+          if (metrics.isNotEmpty) ...[
+            Text(
+              'Portfolio Overview',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Display the actual fields that Claude returns
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: colorScheme.outlineVariant),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    _buildMetricRow(
+                      context,
+                      'Timeline Status',
+                      metrics['overall_timeline_status']?.toString() ?? 'Unknown',
+                      Icons.schedule,
+                      _getTimelineColor(metrics['overall_timeline_status']?.toString() ?? ''),
+                    ),
+                    const Divider(height: 24),
+                    _buildMetricRow(
+                      context,
+                      'Resource Allocation',
+                      metrics['resource_allocation']?.toString() ?? 'Not specified',
+                      Icons.people,
+                      colorScheme.primary,
+                    ),
+                    if (metrics['total_budget'] != null) ...[
+                      const Divider(height: 24),
+                      _buildMetricRow(
+                        context,
+                        'Total Budget',
+                        metrics['total_budget'].toString(),
+                        Icons.attach_money,
+                        Colors.green,
+                      ),
+                    ],
+                    if (metrics['budget_consumed'] != null) ...[
+                      const Divider(height: 24),
+                      _buildMetricRow(
+                        context,
+                        'Budget Consumed',
+                        metrics['budget_consumed'].toString(),
+                        Icons.money_off,
+                        Colors.orange,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+
+          // Strategic Initiatives
+          if (initiatives.isNotEmpty) ...[
+            Text(
+              'Strategic Initiatives',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...initiatives.map((initiative) {
+              final init = initiative as Map<String, dynamic>;
+              return Card(
+                elevation: 0,
+                margin: const EdgeInsets.only(bottom: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: colorScheme.primary.withValues(alpha: 0.3)),
+                ),
+                child: ListTile(
+                  leading: Icon(Icons.flag, color: colorScheme.primary),
+                  title: Text(
+                    init['name'] ?? 'Initiative',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  subtitle: Text(
+                    'Status: ${init['status'] ?? 'Unknown'}',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                  trailing: Text(
+                    '${init['progress'] ?? 0}%',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              );
+            }),
+            const SizedBox(height: 20),
+          ],
+
+          // Program Performance
+          if (performance.isNotEmpty) ...[
+            Text(
+              'Program Performance',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...performance.map((prog) {
+              final p = prog as Map<String, dynamic>;
+              final score = p['score'] ?? 0;
+              Color scoreColor = score >= 80 ? Colors.green : score >= 60 ? Colors.orange : Colors.red;
+
+              return Card(
+                elevation: 0,
+                margin: const EdgeInsets.only(bottom: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: scoreColor.withValues(alpha: 0.3)),
+                ),
+                child: ListTile(
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: scoreColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Text(
+                        '$score',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: scoreColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  title: Text(
+                    p['program_name'] ?? 'Program',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  subtitle: Text(
+                    p['assessment'] ?? '',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ),
+              );
+            }),
+          ],
+        ],
+      ),
+    );
+  }
+}
