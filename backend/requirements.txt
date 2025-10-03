@@ -36,7 +36,7 @@ soundfile==0.13.1
 spacy==3.8.7
 en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
 scikit-learn==1.7.2
-nltk==3.9.1
+nltk==3.9.2
 transformers==4.56.2
 rank-bm25==0.2.2
 fast-langdetect==1.0.0
