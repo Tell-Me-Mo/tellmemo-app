@@ -59,7 +59,7 @@ dependencies:
   flutter_dotenv: ^6.0.0
   
   # Authentication
-  supabase_flutter: ^2.10.1
+  supabase_flutter: ^2.10.2
 
   # Utils
   web: ^1.1.0
