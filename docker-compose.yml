@@ -21,11 +21,6 @@ services:
       retries: 5
     networks:
       - pm_network
-    logging:
-      driver: gelf
-      options:
-        gelf-address: "udp://host.docker.internal:12201"
-        tag: "postgres"
 
   # Qdrant v1.15.3 - Vector database for semantic search
   qdrant:
@@ -56,11 +51,6 @@ services:
       start_period: 20s
     networks:
       - pm_network
-    logging:
-      driver: gelf
-      options:
-        gelf-address: "udp://host.docker.internal:12201"
-        tag: "qdrant"
 
   # Redis 7 - Required for Langfuse v3 queue and caching (optional)
   redis:
@@ -83,11 +73,6 @@ services:
       retries: 5
     networks:
       - pm_network
-    logging:
-      driver: gelf
-      options:
-        gelf-address: "udp://host.docker.internal:12201"
-        tag: "redis"
 
   # MinIO - S3-compatible storage for Langfuse v3 (optional)
   minio:
@@ -112,11 +97,6 @@ services:
       retries: 5
     networks:
       - pm_network
-    logging:
-      driver: gelf
-      options:
-        gelf-address: "udp://host.docker.internal:12201"
-        tag: "minio"
 
   # Zookeeper - Required for ClickHouse clustering (optional - only for Langfuse)
   zookeeper:
@@ -141,11 +121,6 @@ services:
       retries: 5
     networks:
       - pm_network
-    logging:
-      driver: gelf
-      options:
-        gelf-address: "udp://host.docker.internal:12201"
-        tag: "zookeeper"
 
   # ClickHouse - Required for Langfuse v3 analytics (with clustering support) (optional)
   clickhouse:
@@ -181,11 +156,6 @@ services:
       start_period: 60s
     networks:
       - pm_network
-    logging:
-      driver: gelf
-      options:
-        gelf-address: "udp://host.docker.internal:12201"
-        tag: "clickhouse"
 
   # Langfuse v3 Worker - Background processing (optional)
   langfuse-worker:
@@ -241,11 +211,6 @@ services:
       LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: true
     networks:
       - pm_network
-    logging:
-      driver: gelf
-      options:
-        gelf-address: "udp://host.docker.internal:12201"
-        tag: "langfuse-worker"
 
   # Langfuse v3 Web - Main application (optional)
   langfuse-web:
@@ -322,115 +287,6 @@ services:
       start_period: 40s
     networks:
       - pm_network
-    logging:
-      driver: gelf
-      options:
-        gelf-address: "udp://host.docker.internal:12201"
-        tag: "langfuse-web"
-
-  # ===== ELK STACK =====
-  # Elasticsearch - Search and analytics engine
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
-    container_name: pm_master_elasticsearch
-    restart: unless-stopped
-    environment:
-      - discovery.type=single-node
-      - cluster.name=pm-master-cluster
-      - node.name=pm-master-node
-      - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
-      - xpack.security.enabled=false
-      - xpack.security.http.ssl.enabled=false
-      - xpack.security.transport.ssl.enabled=false
-      - xpack.license.self_generated.type=basic
-      - indices.id_field_data.enabled=true
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-      nofile:
-        soft: 65536
-        hard: 65536
-    volumes:
-      - elasticsearch_data:/usr/share/elasticsearch/data
-    ports:
-      - "9200:9200"  # REST API
-      - "9300:9300"  # Node communication
-    networks:
-      - pm_network
-    logging:
-      driver: gelf
-      options:
-        gelf-address: "udp://host.docker.internal:12201"
-        tag: "elasticsearch"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-
-  # Logstash - Data processing pipeline
-  logstash:
-    image: docker.elastic.co/logstash/logstash:8.15.3
-    container_name: pm_master_logstash
-    restart: unless-stopped
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-    environment:
-      - "LS_JAVA_OPTS=-Xms512m -Xmx512m"
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-      - xpack.monitoring.enabled=false
-    volumes:
-      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
-      - ./logstash/templates:/usr/share/logstash/templates:ro
-      - logstash_data:/usr/share/logstash/data
-    ports:
-      - "8080:8080"  # HTTP input for application logs
-      - "9600:9600"  # Monitoring API
-      - "12201:12201/udp"  # GELF UDP input for Docker containers
-    networks:
-      - pm_network
-    logging:
-      driver: gelf
-      options:
-        gelf-address: "udp://host.docker.internal:12201"
-        tag: "logstash"
-    command: logstash -f /usr/share/logstash/pipeline/logstash.conf
-
-  # Kibana - Visualization and exploration
-  kibana:
-    image: docker.elastic.co/kibana/kibana:8.15.3
-    container_name: pm_master_kibana
-    restart: unless-stopped
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-    environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-      - ELASTICSEARCH_URL=http://elasticsearch:9200
-      - SERVER_NAME=pm-master-kibana
-      - SERVER_HOST=0.0.0.0
-      - xpack.security.enabled=false
-      - xpack.monitoring.ui.container.elasticsearch.enabled=false
-      - TELEMETRY_ENABLED=false
-    ports:
-      - "5601:5601"  # Kibana UI
-    networks:
-      - pm_network
-    logging:
-      driver: gelf
-      options:
-        gelf-address: "udp://host.docker.internal:12201"
-        tag: "kibana"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
 
   # ===== APPLICATION SERVICES =====
   # Backend - FastAPI application
@@ -481,11 +337,6 @@ services:
       - backend_logs:/app/logs
     networks:
       - pm_network
-    logging:
-      driver: gelf
-      options:
-        gelf-address: "udp://host.docker.internal:12201"
-        tag: "backend"
     healthcheck:
       test: ["CMD-SHELL", "python -c 'import httpx; httpx.get(\"http://localhost:8000/health\")' || exit 1"]
       interval: 30s
@@ -516,11 +367,6 @@ services:
       - "80:80"
     networks:
       - pm_network
-    logging:
-      driver: gelf
-      options:
-        gelf-address: "udp://host.docker.internal:12201"
-        tag: "frontend"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost/ || exit 1"]
       interval: 30s
@@ -548,11 +394,6 @@ volumes:
   zookeeper_data:
     driver: local
   zookeeper_logs:
-    driver: local
-  # ELK Stack volumes
-  elasticsearch_data:
-    driver: local
-  logstash_data:
     driver: local
   # Application volumes
   backend_uploads:
