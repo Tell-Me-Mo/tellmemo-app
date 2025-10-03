@@ -1,6 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../auth/domain/auth_interface.dart';
 import '../../domain/entities/user_profile.dart';
 
 part 'user_profile_provider.g.dart';
@@ -15,8 +15,8 @@ class UserProfileController extends _$UserProfileController {
     return _mapUserToProfile(user);
   }
 
-  UserProfile _mapUserToProfile(User user) {
-    final metadata = user.userMetadata ?? {};
+  UserProfile _mapUserToProfile(AppAuthUser user) {
+    final metadata = user.metadata ?? {};
 
     return UserProfile(
       id: user.id,
@@ -24,8 +24,12 @@ class UserProfileController extends _$UserProfileController {
       name: metadata['name'] as String?,
       avatarUrl: metadata['avatar_url'] as String?,
       bio: metadata['bio'] as String?,
-      createdAt: DateTime.tryParse(user.createdAt) ?? DateTime.now(),
-      updatedAt: DateTime.tryParse(user.updatedAt ?? user.createdAt) ?? DateTime.now(),
+      createdAt: metadata['created_at'] != null
+          ? DateTime.tryParse(metadata['created_at'] as String) ?? DateTime.now()
+          : DateTime.now(),
+      updatedAt: metadata['updated_at'] != null
+          ? DateTime.tryParse(metadata['updated_at'] as String) ?? DateTime.now()
+          : DateTime.now(),
       preferences: metadata['preferences'] as Map<String, dynamic>?,
       userMetadata: metadata,
     );

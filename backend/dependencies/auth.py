@@ -17,6 +17,7 @@ from models.organization import Organization
 from models.organization_member import OrganizationMember
 from middleware.auth_middleware import jwt_bearer
 from services.auth.auth_service import auth_service
+from services.auth.native_auth_service import native_auth_service
 
 
 async def get_current_user(
@@ -197,6 +198,7 @@ async def get_optional_current_user(
 ) -> Optional[User]:
     """
     Get the current user if authenticated, otherwise return None
+    Supports both Supabase and native authentication
 
     Args:
         request: FastAPI request object
@@ -216,8 +218,14 @@ async def get_optional_current_user(
 
     token = authorization[7:]  # Remove "Bearer " prefix
 
-    # Try to get user from token
+    # Try to get user from token - try both auth methods
     try:
+        # Try native auth first
+        user = await native_auth_service.get_user_from_token(db, token)
+        if user:
+            return user
+
+        # Fallback to Supabase auth
         user = await auth_service.get_user_from_token(db, token)
         return user
     except Exception:
@@ -249,3 +257,7 @@ async def get_optional_organization(
 
     # Otherwise get user's organization
     return await auth_service.get_user_organization(db, user)
+
+
+# Alias for backward compatibility
+get_current_user_optional = get_optional_current_user

@@ -1,22 +1,34 @@
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../storage/secure_storage.dart';
 import '../storage/secure_storage_factory.dart';
+import './env_config.dart';
 
 class SupabaseConfig {
-  static late final Supabase _instance;
+  static Supabase? _instance;
   static final SecureStorage _secureStorage = SecureStorageFactory.create();
 
-  static Supabase get instance => _instance;
-  static SupabaseClient get client => _instance.client;
+  static Supabase get instance {
+    if (_instance == null) {
+      throw Exception('Supabase not initialized. Call initialize() first or check AUTH_PROVIDER setting.');
+    }
+    return _instance!;
+  }
+
+  static SupabaseClient get client => instance.client;
   static SecureStorage get secureStorage => _secureStorage;
 
+  /// Initialize Supabase (only if using Supabase auth)
   static Future<void> initialize() async {
-    final supabaseUrl = dotenv.env['SUPABASE_URL'] ?? '';
-    final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+    // Skip initialization if not using Supabase
+    if (!EnvConfig.useSupabaseAuth) {
+      return;
+    }
+
+    final supabaseUrl = EnvConfig.supabaseUrl;
+    final supabaseAnonKey = EnvConfig.supabaseAnonKey;
 
     if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
-      throw Exception('Supabase configuration is missing in .env file');
+      throw Exception('Supabase configuration is missing. Set SUPABASE_URL and SUPABASE_ANON_KEY in .env file.');
     }
 
     _instance = await Supabase.initialize(

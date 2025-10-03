@@ -1,5 +1,5 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 
 // Conditional import for web-specific functionality
 import '_env_config_stub.dart'
@@ -35,7 +35,16 @@ class EnvConfig {
   static Future<void> initialize() async {
     try {
       await dotenv.load(fileName: ".env");
+      if (kDebugMode) {
+        print('✅ EnvConfig: .env file loaded successfully');
+        print('✅ EnvConfig: AUTH_PROVIDER = ${_getConfig('AUTH_PROVIDER', 'backend')}');
+        print('✅ EnvConfig: API_BASE_URL = ${_getConfig('API_BASE_URL', 'http://localhost:8000')}');
+      }
     } catch (e) {
+      if (kDebugMode) {
+        print('⚠️ EnvConfig: Failed to load .env file: $e');
+        print('⚠️ EnvConfig: Will use runtime config or defaults');
+      }
       // In production/Docker, .env might not exist - that's OK
       // We'll use runtime config instead
     }
@@ -93,4 +102,24 @@ class EnvConfig {
         'FLUTTER_FIREBASE_ANALYTICS_ENABLED',
         'false',
       ).toLowerCase() == 'true';
+
+  // Authentication
+  static String get authProvider => _getConfig(
+        'AUTH_PROVIDER',
+        'backend',
+      ).toLowerCase();
+
+  static bool get useSupabaseAuth => authProvider == 'supabase';
+  static bool get useBackendAuth => authProvider == 'backend';
+
+  // Supabase Configuration (only needed if using Supabase auth)
+  static String get supabaseUrl => _getConfig(
+        'SUPABASE_URL',
+        '',
+      );
+
+  static String get supabaseAnonKey => _getConfig(
+        'SUPABASE_ANON_KEY',
+        '',
+      );
 }

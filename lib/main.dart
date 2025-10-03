@@ -47,7 +47,7 @@ Future<void> _runApp() async {
     await FirebaseAnalyticsService().logAppOpen();
   }
 
-  // Initialize Supabase
+  // Initialize Supabase (only if using Supabase auth)
   await SupabaseConfig.initialize();
 
   // Wrap in SentryWidget only if Sentry is enabled

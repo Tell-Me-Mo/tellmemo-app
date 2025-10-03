@@ -1,13 +1,14 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../config/api_config.dart';
+import '../services/auth_service.dart';
 import 'interceptors.dart';
 import 'organization_interceptor.dart';
 
 class DioClient {
   static Dio? _dio;
 
-  static Dio get instance {
+  static Dio getInstance({required AuthService authService}) {
     if (_dio == null) {
       final baseOptions = BaseOptions(
         baseUrl: ApiConfig.baseUrl,
@@ -15,25 +16,33 @@ class DioClient {
         receiveTimeout: ApiConfig.timeout,
         headers: ApiConfig.defaultHeaders,
       );
-      
+
       // Only set sendTimeout for non-web platforms to avoid warning
       // On web, sendTimeout is only used for requests with a body
       if (!kIsWeb) {
         baseOptions.sendTimeout = ApiConfig.timeout;
       }
-      
+
       _dio = Dio(baseOptions);
 
       // Add interceptors
       _dio!.interceptors.addAll([
         HeaderInterceptor(),
-        AuthInterceptor(),
+        AuthInterceptor(authService),
         OrganizationInterceptor(),
         LoggingInterceptor(),
         if (kIsWeb) WebRequestInterceptor(),
       ]);
     }
 
+    return _dio!;
+  }
+
+  // Legacy getter for backward compatibility
+  static Dio get instance {
+    if (_dio == null) {
+      throw Exception('DioClient not initialized. Call getInstance(authService: authService) first.');
+    }
     return _dio!;
   }
 

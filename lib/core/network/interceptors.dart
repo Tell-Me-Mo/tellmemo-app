@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import '../config/env_config.dart';
 import '../config/supabase_config.dart';
+import '../services/auth_service.dart';
 
 class LoggingInterceptor extends Interceptor {
   @override
@@ -70,12 +71,24 @@ class HeaderInterceptor extends Interceptor {
 }
 
 class AuthInterceptor extends Interceptor {
+  final AuthService _authService;
+
+  AuthInterceptor(this._authService);
+
   @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    // Add authentication token from Supabase
-    final session = SupabaseConfig.client.auth.currentSession;
-    if (session?.accessToken != null) {
-      options.headers['Authorization'] = 'Bearer ${session!.accessToken}';
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
+    if (EnvConfig.useSupabaseAuth) {
+      // Add authentication token from Supabase
+      final session = SupabaseConfig.client.auth.currentSession;
+      if (session?.accessToken != null) {
+        options.headers['Authorization'] = 'Bearer ${session!.accessToken}';
+      }
+    } else {
+      // For backend auth, get token from auth service
+      final token = await _authService.getToken();
+      if (token != null && token.isNotEmpty) {
+        options.headers['Authorization'] = 'Bearer $token';
+      }
     }
 
     super.onRequest(options, handler);
@@ -83,8 +96,8 @@ class AuthInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
-    if (err.response?.statusCode == 401) {
-      // Try to refresh the token
+    if (err.response?.statusCode == 401 && EnvConfig.useSupabaseAuth) {
+      // Try to refresh the token (only for Supabase auth)
       try {
         final response = await SupabaseConfig.client.auth.refreshSession();
         if (response.session?.accessToken != null) {

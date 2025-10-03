@@ -3,13 +3,13 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:pm_master_v2/features/support_tickets/models/support_ticket.dart';
-import 'package:pm_master_v2/features/auth/data/repositories/auth_repository.dart';
+import 'package:pm_master_v2/features/auth/domain/auth_interface.dart';
 import 'package:pm_master_v2/core/config/api_config.dart';
 
 class SupportTicketService {
-  final AuthRepository _authRepository;
+  final AuthInterface _authRepository;
 
-  SupportTicketService({required AuthRepository authRepository})
+  SupportTicketService({required AuthInterface authRepository})
       : _authRepository = authRepository;
 
   Future<Map<String, String>> _getHeaders() async {

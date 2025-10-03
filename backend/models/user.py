@@ -20,8 +20,16 @@ class User(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
-    # Supabase auth fields
-    supabase_id = Column(String, nullable=False, unique=True)  # Maps to Supabase Auth UID
+    # Auth provider ('supabase' or 'native')
+    auth_provider = Column(String, nullable=False, default='native')
+
+    # Supabase auth fields (nullable for native auth users)
+    supabase_id = Column(String, nullable=True, unique=True)  # Maps to Supabase Auth UID
+
+    # Native auth fields (nullable for Supabase users)
+    password_hash = Column(String, nullable=True)  # Bcrypt password hash for native auth
+
+    # Common fields
     email = Column(String, nullable=False, unique=True)
 
     # Profile fields

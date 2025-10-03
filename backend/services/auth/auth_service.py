@@ -31,15 +31,45 @@ class AuthService:
     """Service for managing authentication with Supabase"""
 
     def __init__(self):
-        """Initialize Supabase client with service role key for admin operations"""
-        if not settings.supabase_url or not settings.supabase_service_role_key:
+        """Initialize Supabase clients with anon key for auth and service role for admin operations"""
+        if not settings.supabase_url or not settings.supabase_anon_key:
             logger.warning("Supabase configuration not found. Authentication will be disabled.")
             self.client = None
+            self.admin_client = None
         else:
+            # Create HTTP client with SSL verification disabled for corporate proxies
+            import httpx
+            import warnings
+            # Suppress SSL warnings when verification is disabled
+            warnings.filterwarnings('ignore', message='Unverified HTTPS request')
+
+            http_client = httpx.Client(verify=False)
+
+            # Import ClientOptions from supabase
+            from supabase import ClientOptions
+
+            # Client for auth operations (uses anon key)
             self.client: Client = create_client(
                 settings.supabase_url,
-                settings.supabase_service_role_key
+                settings.supabase_anon_key,
+                options=ClientOptions(
+                    httpx_client=http_client
+                )
             )
+
+            # Admin client for admin operations (uses service role key)
+            if settings.supabase_service_role_key:
+                admin_http_client = httpx.Client(verify=False)
+                self.admin_client: Client = create_client(
+                    settings.supabase_url,
+                    settings.supabase_service_role_key,
+                    options=ClientOptions(
+                        httpx_client=admin_http_client
+                    )
+                )
+            else:
+                self.admin_client = None
+
             self.jwt_secret = settings.supabase_jwt_secret
 
     def verify_jwt_token(self, token: str) -> Optional[Dict[str, Any]]:
@@ -116,8 +146,8 @@ class AuthService:
             # Update supabase_id if it was missing (for users created before Supabase integration)
             if not user.supabase_id:
                 user.supabase_id = supabase_id
-            # Update last login time
-            user.updated_at = datetime.now(timezone.utc)
+            # Update last login time (use timezone-naive datetime for PostgreSQL)
+            user.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
             await db.commit()
             return user
 

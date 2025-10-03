@@ -1,27 +1,35 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../data/repositories/auth_repository.dart';
+import '../../domain/auth_interface.dart';
+import '../../data/repositories/auth_repository_factory.dart';
+import '../../../../core/network/dio_client.dart';
+import '../../../../core/services/auth_service.dart';
 
 part 'auth_provider.g.dart';
 
 @riverpod
-AuthRepository authRepository(Ref ref) {
-  return AuthRepository();
+AuthInterface authRepository(Ref ref) {
+  final authService = ref.watch(authServiceProvider);
+  // Initialize DioClient with authService for token management
+  final dio = DioClient.getInstance(authService: authService);
+  return AuthRepositoryFactory.getInstance(
+    dio: dio,
+    authService: authService,
+  );
 }
 
 @riverpod
-Stream<AuthState> authStateChanges(Ref ref) {
+Stream<AuthStateChange> authStateChanges(Ref ref) {
   final repository = ref.watch(authRepositoryProvider);
   return repository.authStateChanges;
 }
 
 @riverpod
 class AuthController extends _$AuthController {
-  late final AuthRepository _repository;
+  late final AuthInterface _repository;
 
   @override
-  FutureOr<User?> build() async {
+  FutureOr<AppAuthUser?> build() async {
     _repository = ref.watch(authRepositoryProvider);
 
     // Try to recover session on initialization
@@ -42,7 +50,7 @@ class AuthController extends _$AuthController {
         // Only update state if we're not already in an error state
         // This prevents auth errors from overwriting the current state
         if (!state.hasError) {
-          state = AsyncData(authState.session?.user);
+          state = AsyncData(authState.user);
         }
       });
     });
@@ -58,12 +66,12 @@ class AuthController extends _$AuthController {
     // Don't set loading state here to avoid triggering navigation
     // The UI will handle its own loading state
     final result = await AsyncValue.guard(() async {
-      final response = await _repository.signUp(
+      final authResult = await _repository.signUp(
         email: email,
         password: password,
         metadata: name != null ? {'name': name} : null,
       );
-      return response.user;
+      return authResult.user;
     });
 
     // Only update state if successful
@@ -82,11 +90,11 @@ class AuthController extends _$AuthController {
     // Don't set loading state here to avoid triggering navigation
     // The UI will handle its own loading state
     final result = await AsyncValue.guard(() async {
-      final response = await _repository.signIn(
+      final authResult = await _repository.signIn(
         email: email,
         password: password,
       );
-      return response.user;
+      return authResult.user;
     });
 
     // Only update state if successful
