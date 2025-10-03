@@ -1,0 +1,30 @@
+name: Task
+description: Create a development task
+title: "[TASK] "
+labels: ["task"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What needs to be done?
+      placeholder: Implement feature X, fix bug Y, etc.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - [ ] Criterion 1
+        - [ ] Criterion 2
+    validations:
+      required: false
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Technical notes
+      placeholder: Any implementation details or dependencies
+    validations:
+      required: false

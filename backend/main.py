@@ -48,7 +48,8 @@ async def lifespan(app: FastAPI):
     logger.info("Starting PM Master V2 Backend...")
     logger.info(f"Environment: {settings.api_env}")
     logger.info(f"API running at http://{settings.api_host}:{settings.api_port}")
-    logger.info(f"Docs available at http://{settings.api_host}:{settings.api_port}/docs")
+    if settings.api_env != "production":
+        logger.info(f"Docs available at http://{settings.api_host}:{settings.api_port}/docs")
     
     # Initialize database connections
     try:
@@ -209,8 +210,8 @@ app = FastAPI(
     title="PM Master V2 - Meeting RAG System",
     description="A streamlined meeting intelligence platform using RAG for project insights",
     version="0.1.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url=None if settings.api_env == "production" else "/docs",  # Disable docs in production
+    redoc_url=None if settings.api_env == "production" else "/redoc",  # Disable redoc in production
     lifespan=lifespan
 )
 
@@ -276,15 +277,16 @@ if settings.enable_reset_endpoint and settings.is_development:
     logger.warning("Database reset endpoint is enabled (DEVELOPMENT MODE)")
 
 
-@app.get("/")
-async def root():
-    return {
-        "name": "PM Master V2 API",
-        "version": "0.1.0",
-        "status": "running",
-        "environment": settings.api_env,
-        "docs": f"http://{settings.api_host}:{settings.api_port}/docs"
-    }
+# Root endpoint disabled for security - was exposing environment details
+# @app.get("/")
+# async def root():
+#     return {
+#         "name": "PM Master V2 API",
+#         "version": "0.1.0",
+#         "status": "running",
+#         "environment": settings.api_env,
+#         "docs": f"http://{settings.api_host}:{settings.api_port}/docs"
+#     }
 
 
 if __name__ == "__main__":

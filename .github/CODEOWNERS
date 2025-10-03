@@ -1,0 +1,27 @@
+# CODEOWNERS file for tellmemo-app
+# This file defines individuals or teams responsible for code in this repository.
+# Code owners are automatically requested for review when someone opens a pull request.
+
+# Default owners for everything in the repo
+* @Tell-Me-Mo/core-team
+
+# Backend code
+/backend/ @Tell-Me-Mo/backend-team
+
+# Frontend Flutter code
+/lib/ @Tell-Me-Mo/frontend-team
+/test/ @Tell-Me-Mo/frontend-team
+
+# Infrastructure and DevOps
+/docker-compose.yml @Tell-Me-Mo/devops-team
+/Dockerfile @Tell-Me-Mo/devops-team
+/.github/ @Tell-Me-Mo/devops-team
+
+# Documentation
+*.md @Tell-Me-Mo/core-team
+/docs/ @Tell-Me-Mo/core-team
+
+# Configuration files
+/.env.example @Tell-Me-Mo/devops-team
+/pubspec.yaml @Tell-Me-Mo/frontend-team
+/requirements.txt @Tell-Me-Mo/backend-team
