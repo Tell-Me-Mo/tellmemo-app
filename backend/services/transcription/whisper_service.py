@@ -63,7 +63,7 @@ class WhisperTranscriptionService:
         if self.device == "cuda":
             self.compute_type = "float16"  # Best for NVIDIA GPUs
         elif torch.backends.mps.is_available():
-            self.compute_type = "float32"  # Apple Silicon optimization
+            self.compute_type = "int8"  # INT8 quantization for faster inference on Apple Silicon
         else:
             self.compute_type = "int8"  # Best for regular CPU
             
