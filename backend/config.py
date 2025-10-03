@@ -151,6 +151,13 @@ class Settings(BaseSettings):
     sentry_environment: str = Field(default="development", env="SENTRY_ENVIRONMENT")
     sentry_traces_sample_rate: float = Field(default=1.0, env="SENTRY_TRACES_SAMPLE_RATE")
     sentry_profile_sample_rate: float = Field(default=1.0, env="SENTRY_PROFILE_SAMPLE_RATE")
+
+    # Transcription Service Configuration (Defaults - can be overridden by UI integration settings)
+    # Options: "whisper" (local) or "salad" (Salad API)
+    default_transcription_service: str = Field(default="whisper", env="DEFAULT_TRANSCRIPTION_SERVICE")
+    # Salad API credentials (only needed if using Salad as default)
+    salad_api_key: str = Field(default="", env="SALAD_API_KEY")
+    salad_organization_name: str = Field(default="", env="SALAD_ORGANIZATION_NAME")
     
     class Config:
         # Look for .env in parent directory (root of project)
