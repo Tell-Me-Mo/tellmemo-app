@@ -178,6 +178,7 @@ async def process_audio_transcription(
                         # Use AI to match transcription to project
                         match_result = await project_matcher_service.match_transcript_to_project(
                             session=db,
+                            organization_id=organization_id,
                             transcript=transcription_text,
                             meeting_title=meeting_title or f"Recording - {datetime.now().strftime('%Y-%m-%d %H:%M')}",
                             meeting_date=datetime.now(),
