@@ -81,17 +81,13 @@ class SummaryService:
             format_type=format_type,
             correlation_id=correlation_id
         )
-        
-        # Check if Langfuse client supports context managers
+
+        # Get Langfuse client (will be NoOpClient if disabled)
         langfuse_client = langfuse_service.client
-        if not langfuse_client or not hasattr(langfuse_client, 'start_as_current_span'):
-            # Fallback to simpler implementation
-            return await self._generate_meeting_summary_fallback(
-                session, project_id, content_id, created_by, job_id
-            )
-        
+
         try:
             # Use Langfuse v3 context manager for proper span nesting
+            # If Langfuse is disabled, this will be a no-op context manager
             with langfuse_client.start_as_current_span(
                 name="generate_meeting_summary",
                 input={
@@ -396,20 +392,16 @@ class SummaryService:
         """Generate a project summary with proper Langfuse v3 context managers."""
         start_time = time.time()
         
-        # Check if Langfuse client supports context managers
+        # Get Langfuse client (will be NoOpClient if disabled)
         langfuse_client = langfuse_service.client
-        if not langfuse_client or not hasattr(langfuse_client, 'start_as_current_span'):
-            # Fallback to simpler implementation
-            return await self._generate_project_summary_fallback(
-                session, project_id, week_start, week_end, created_by, format_type
-            )
-        
+
         try:
             # Use provided week_end or default to 7 days after start
             if week_end is None:
                 week_end = week_start + timedelta(days=7)
-            
+
             # Use Langfuse v3 context manager
+            # If Langfuse is disabled, this will be a no-op context manager
             with langfuse_client.start_as_current_span(
                 name="generate_project_summary",
                 input={
@@ -2399,31 +2391,6 @@ class SummaryService:
         except Exception as e:
             logger.error(f"Failed to process Claude risks and blockers: {e}")
             return None
-    
-    async def _generate_meeting_summary_fallback(
-        self,
-        session: AsyncSession,
-        project_id: uuid.UUID,
-        content_id: uuid.UUID,
-        created_by: Optional[str] = None,
-        job_id: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """Fallback implementation without context managers."""
-        logger.error("Langfuse context managers not available for meeting summary generation")
-        raise ValueError("Summary generation service is not properly configured. Please contact support.")
-    
-    async def _generate_project_summary_fallback(
-        self,
-        session: AsyncSession,
-        project_id: uuid.UUID,
-        week_start: datetime,
-        week_end: Optional[datetime] = None,
-        created_by: Optional[str] = None,
-        format_type: str = "general"
-    ) -> Dict[str, Any]:
-        """Fallback implementation without context managers."""
-        logger.error("Langfuse context managers not available for project summary generation")
-        raise ValueError("Summary generation service is not properly configured. Please contact support.")
 
 
 # Global service instance
