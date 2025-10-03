@@ -15,8 +15,6 @@ class _OrganizationWizardScreenState extends ConsumerState<OrganizationWizardScr
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final List<String> _invitedEmails = [];
-  final _emailController = TextEditingController();
   bool _isLoading = false;
 
   @override
@@ -35,19 +33,17 @@ class _OrganizationWizardScreenState extends ConsumerState<OrganizationWizardScr
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
-    _emailController.dispose();
     super.dispose();
   }
 
   Future<void> _createOrganization() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final memberCount = _invitedEmails.length;
     final hasDescription = _descriptionController.text.trim().isNotEmpty;
 
     // Log organization creation attempt
     await FirebaseAnalyticsService().logOrgCreationAttempt(
-      memberCount: memberCount,
+      memberCount: 0,
       hasDescription: hasDescription,
     );
 
@@ -59,11 +55,6 @@ class _OrganizationWizardScreenState extends ConsumerState<OrganizationWizardScr
         ..updateName(_nameController.text)
         ..updateDescription(_descriptionController.text);
 
-      // Add invited emails
-      for (final email in _invitedEmails) {
-        ref.read(organizationWizardProvider.notifier).addInvitedEmail(email);
-      }
-
       // Build and send request
       final request = ref.read(organizationWizardProvider.notifier).buildRequest();
       final orgResponse = await ref
@@ -73,7 +64,7 @@ class _OrganizationWizardScreenState extends ConsumerState<OrganizationWizardScr
       // Log successful organization creation
       await FirebaseAnalyticsService().logOrgCreationSuccess(
         orgId: orgResponse.id,
-        memberCount: memberCount,
+        memberCount: 0,
         hasDescription: hasDescription,
       );
 
@@ -103,24 +94,6 @@ class _OrganizationWizardScreenState extends ConsumerState<OrganizationWizardScr
     }
   }
 
-  void _addEmail() {
-    final email = _emailController.text.trim();
-    if (email.isNotEmpty && _isValidEmail(email) && !_invitedEmails.contains(email)) {
-      setState(() {
-        _invitedEmails.add(email);
-        _emailController.clear();
-      });
-
-      // Log member invitation
-      FirebaseAnalyticsService().logOrgMemberInvited(
-        emailCount: _invitedEmails.length,
-      );
-    }
-  }
-
-  bool _isValidEmail(String email) {
-    return RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(email);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -195,102 +168,6 @@ class _OrganizationWizardScreenState extends ConsumerState<OrganizationWizardScr
                               ],
                             ),
                           ),
-
-                          // Divider before Team Members Section
-                          Container(
-                            height: 1,
-                            color: colorScheme.outline.withValues(alpha: 0.08),
-                          ),
-
-                          // Team Members Section
-                          _buildSection(
-                            context,
-                            title: 'Invite Team Members (Optional)',
-                            icon: Icons.people_outline,
-                            child: Column(
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: _buildTextField(
-                                        controller: _emailController,
-                                        label: 'Email Address',
-                                        hint: 'colleague@example.com',
-                                        icon: Icons.email_outlined,
-                                        onFieldSubmitted: (_) => _addEmail(),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    FilledButton.tonal(
-                                      onPressed: _addEmail,
-                                      style: FilledButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 20,
-                                          vertical: 20,
-                                        ),
-                                      ),
-                                      child: const Text('Add'),
-                                    ),
-                                  ],
-                                ),
-                                if (_invitedEmails.isNotEmpty) ...[
-                                  const SizedBox(height: 12),
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: colorScheme.outline.withValues(alpha: 0.08),
-                                      ),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: _invitedEmails.map((email) =>
-                                        Padding(
-                                          padding: const EdgeInsets.only(bottom: 8),
-                                          child: Row(
-                                            children: [
-                                              Icon(
-                                                Icons.person_outline,
-                                                size: 16,
-                                                color: colorScheme.onSurfaceVariant,
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Expanded(
-                                                child: Text(
-                                                  email,
-                                                  style: theme.textTheme.bodyMedium,
-                                                ),
-                                              ),
-                                              IconButton(
-                                                icon: Icon(
-                                                  Icons.close,
-                                                  size: 16,
-                                                  color: colorScheme.error,
-                                                ),
-                                                onPressed: () {
-                                                  setState(() {
-                                                    _invitedEmails.remove(email);
-                                                  });
-                                                  // Log member removal
-                                                  FirebaseAnalyticsService().logOrgMemberRemoved(
-                                                    remainingCount: _invitedEmails.length,
-                                                  );
-                                                },
-                                                padding: EdgeInsets.zero,
-                                                constraints: const BoxConstraints(),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ).toList(),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
                         ],
                       ),
                     ),
@@ -322,8 +199,7 @@ class _OrganizationWizardScreenState extends ConsumerState<OrganizationWizardScr
                                     onPressed: () {
                                       // Log cancellation
                                       final hadProgress = _nameController.text.isNotEmpty ||
-                                          _descriptionController.text.isNotEmpty ||
-                                          _invitedEmails.isNotEmpty;
+                                          _descriptionController.text.isNotEmpty;
                                       FirebaseAnalyticsService().logOrgCreationCancelled(
                                         hadProgress: hadProgress,
                                       );

@@ -12,6 +12,10 @@
 .swiftpm/
 migrate_working_dir/
 
+# IDE and Editor files
+.mcp.json
+.metadata
+
 # IntelliJ related
 *.iml
 *.ipr

@@ -57,52 +57,59 @@ Unsure where to begin? Look for issues labeled:
 
 ### Prerequisites
 
-- **Flutter SDK** ≥3.9.0
-- **Dart SDK** ≥3.9.0
-- **Python** 3.9+
-- **Docker** & Docker Compose
-- **PostgreSQL** (via Docker)
+- **Docker** ≥20.10
+- **Docker Compose** ≥2.0
 - **Git**
+
+For local development (optional):
+- **Flutter SDK** ≥3.9.0
+- **Python** 3.9+
 
 ### Initial Setup
 
 ```bash
 # Clone your fork
-git clone https://github.com/YOUR_USERNAME/pm_master_v2.git
-cd pm_master_v2
+git clone https://github.com/YOUR_USERNAME/tellmemo-app.git
+cd tellmemo-app
 
 # Add upstream remote
-git remote add upstream https://github.com/ORIGINAL_OWNER/pm_master_v2.git
-
-# Install Flutter dependencies
-flutter pub get
+git remote add upstream https://github.com/Tell-Me-Mo/tellmemo-app.git
 
 # Set up environment variables
 cp .env.example .env
-cp backend/.env.example backend/.env
-# Edit .env files with your configuration
+# Edit .env with your API keys (ANTHROPIC_API_KEY, HF_TOKEN)
 
-# Start Docker services (PostgreSQL, Qdrant, Langfuse)
-docker-compose up -d
+# Start all services with Docker
+docker compose up -d
 
-# Set up Python backend
+# Access the application at http://localhost:8100
+```
+
+### Development Setup (Optional)
+
+If you want to run frontend/backend locally for development:
+
+```bash
+# For Flutter frontend development
+flutter pub get
+flutter run -d chrome --web-port 8100
+
+# For Python backend development
 cd backend
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
-
-# Run database migrations
-python db/init_db.py
-
-# Start backend server
 uvicorn main:app --reload --port 8000
 ```
 
 ### Running the App
 
 ```bash
-# Run Flutter app (in separate terminal)
-flutter run -d chrome  # Web
+# Using Docker (recommended)
+docker compose up -d
+
+# Or run locally for development
+flutter run -d chrome --web-port 8100  # Web
 flutter run -d macos   # macOS
 flutter run -d ios     # iOS
 ```
@@ -273,7 +280,7 @@ Fixes #456
 ## Project Structure
 
 ```
-pm_master_v2/
+tellmemo-app/
 ├── lib/                    # Flutter source code
 │   ├── core/              # Core utilities and constants
 │   ├── features/          # Feature-based modules
@@ -287,8 +294,8 @@ pm_master_v2/
 │   ├── db/               # Database models
 │   └── main.py           # Backend entry point
 ├── test/                  # Flutter tests
-├── docs/                  # Landing page
-└── docker-compose.yml    # Docker services
+├── docs/                  # Documentation website
+└── docker-compose.yml    # Docker services configuration
 ```
 
 ## Questions?

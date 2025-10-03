@@ -1,268 +1,214 @@
-# TellMeMo (PM Master V2)
+# TellMeMo
 
-**TellMeMo** is an AI-powered Meeting Intelligence and Project Management Platform that uses RAG (Retrieval Augmented Generation) to help teams extract insights from meeting transcripts and emails, generate summaries, and track project progress.
+**TellMeMo** is an AI-powered Meeting Intelligence platform that uses RAG (Retrieval Augmented Generation) to help teams extract insights from meeting transcripts, generate summaries, track action items, and detect risks automatically.
 
-## 📋 Project Overview
+## ✨ Features
 
-- **Frontend**: Flutter (cross-platform: Web, iOS, Android, macOS, Windows)
-- **Backend**: FastAPI (Python)
+- 🎙️ **Meeting Intelligence** - Transform meeting transcripts into actionable insights
+- 📝 **Auto Summaries** - Generate executive, technical, and stakeholder summaries
+- ✅ **Action Item Tracking** - Automatically extract and track tasks from meetings
+- ⚠️ **Risk Detection** - AI identifies risks and concerns mentioned in discussions
+- 💬 **Context-Aware Chat** - Ask questions about your meetings with full context
+- 🔍 **Semantic Search** - Find information across all your meeting content
+- 📊 **Project Hierarchy** - Organize by Portfolio → Programs → Projects
+
+## 🏗️ Architecture
+
+- **Frontend**: Flutter Web (port 8100)
+- **Backend**: FastAPI with built-in authentication (port 8000)
 - **Databases**: PostgreSQL (metadata), Qdrant (vector search)
-- **AI/ML**: Claude 3.5 Haiku (LLM), SentenceTransformers (embeddings)
-- **Monitoring**: Langfuse (LLM observability)
+- **AI/LLM**: Claude 3.5 Haiku via Anthropic API
+- **Embeddings**: Google EmbeddingGemma-300m (local)
 
-## 🌐 Landing Website
-
-The project includes a production-ready landing website located in the `docs/` folder.
-
-### Landing Site Structure
-
-```
-docs/
-├── index.html          # Main landing page
-├── blog.html           # Blog index
-├── blog/
-│   └── rag-revolution.html
-├── css/
-│   ├── style.css       # Main styles
-│   └── blog.css        # Blog styles
-├── js/
-│   ├── script.js       # Main JavaScript
-│   └── blog.js         # Blog JavaScript
-├── assets/
-│   ├── favicon-16x16.png
-│   ├── favicon-32x32.png
-│   ├── apple-touch-icon.png
-│   ├── og-image.png    # Social sharing (1200x630)
-│   └── twitter-card.png # Twitter card (1200x600)
-├── sitemap.xml         # SEO sitemap
-└── robots.txt          # Search engine rules
-```
-
-### Features
-
-✅ **Modern Design**: Material Design 3 inspired, gradient backgrounds, smooth animations
-✅ **Fully Responsive**: Mobile, tablet, and desktop optimized
-✅ **Performance Optimized**: Lazy loading, optimized animations, fast load times
-✅ **SEO Ready**: Meta tags, OpenGraph, Twitter Cards, sitemap, robots.txt
-✅ **Contact Form**: Integrated modal with Formspree support
-✅ **CTA Tracking**: Google Analytics ready (placeholder)
-✅ **Accessibility**: ARIA labels, keyboard navigation, semantic HTML
-
-## 🚀 Deploying the Landing Site
-
-### Option 1: GitHub Pages (Free)
-
-1. **Enable GitHub Pages**:
-   - Go to your repository settings
-   - Navigate to "Pages" section
-   - Set source to "Deploy from a branch"
-   - Select branch: `main` (or `master`)
-   - Select folder: `/docs`
-   - Click "Save"
-
-2. **Configure Custom Domain** (Optional):
-   - Create a `CNAME` file in `docs/`:
-     ```bash
-     echo "tellmemo.app" > docs/CNAME
-     ```
-   - Update your DNS settings:
-     - Add a CNAME record pointing to `yourusername.github.io`
-   - Update URLs in `docs/index.html` to match your domain
-
-3. **Access your site**:
-   - GitHub Pages URL: `https://yourusername.github.io/pm_master_v2/`
-   - Custom domain: `https://tellmemo.app/`
-
-### Option 2: Netlify (Recommended)
-
-1. **Deploy to Netlify**:
-   - Go to [netlify.com](https://netlify.com)
-   - Click "Add new site" → "Import an existing project"
-   - Connect your GitHub repository
-   - Set build settings:
-     - Base directory: `docs`
-     - Build command: *(leave empty)*
-     - Publish directory: `.` (current directory)
-   - Click "Deploy site"
-
-2. **Configure Custom Domain**:
-   - Go to Site settings → Domain management
-   - Click "Add custom domain"
-   - Follow DNS configuration instructions
-
-3. **Enable HTTPS**: Automatic with Netlify
-
-### Option 3: Vercel
-
-1. **Deploy to Vercel**:
-   - Go to [vercel.com](https://vercel.com)
-   - Click "New Project"
-   - Import your repository
-   - Override settings:
-     - Root Directory: `docs`
-     - Build Command: *(leave empty)*
-     - Output Directory: `.`
-   - Click "Deploy"
-
-2. **Custom Domain**: Similar to Netlify
-
-### Option 4: Custom Server (VPS/Cloud)
-
-1. **Upload files**:
-   ```bash
-   # Using SCP
-   scp -r docs/* user@your-server.com:/var/www/tellmemo/
-
-   # Or use rsync
-   rsync -avz docs/ user@your-server.com:/var/www/tellmemo/
-   ```
-
-2. **Configure Nginx**:
-   ```nginx
-   server {
-       listen 80;
-       server_name tellmemo.app www.tellmemo.app;
-       root /var/www/tellmemo;
-       index index.html;
-
-       location / {
-           try_files $uri $uri/ /index.html;
-       }
-   }
-   ```
-
-3. **Enable HTTPS** with Let's Encrypt:
-   ```bash
-   sudo certbot --nginx -d tellmemo.app -d www.tellmemo.app
-   ```
-
-## ⚙️ Configuration
-
-### 1. Google Analytics
-
-Replace `GA_MEASUREMENT_ID` in `docs/index.html` with your Google Analytics ID:
-
-```javascript
-gtag('config', 'YOUR_GA_MEASUREMENT_ID');
-```
-
-### 2. Contact Form (Formspree)
-
-1. Sign up at [formspree.io](https://formspree.io)
-2. Create a new form
-3. Replace `YOUR_FORM_ID` in `docs/index.html`:
-   ```html
-   <form action="https://formspree.io/f/YOUR_FORM_ID" method="POST">
-   ```
-
-### 3. Social Media Links
-
-Update social media links in footer of `docs/index.html`:
-```html
-<a href="https://twitter.com/tellmemo" aria-label="Twitter">
-<a href="https://linkedin.com/company/tellmemo" aria-label="LinkedIn">
-<a href="https://github.com/yourusername/pm_master_v2" aria-label="GitHub">
-```
-
-### 4. Demo Video
-
-Update the demo video URL in `docs/js/script.js`:
-```javascript
-window.open('YOUR_DEMO_VIDEO_URL', '_blank');
-```
-
-## 🛠️ Development Setup
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- **Flutter SDK** ≥3.9.0
-- **Dart SDK** ≥3.9.0
-- **Python** 3.9+
-- **Docker** & Docker Compose (for PostgreSQL, Qdrant, Langfuse)
-- **Node.js** (for Langfuse frontend)
+- **Docker** ≥20.10
+- **Docker Compose** ≥2.0
 
-### Quick Start
+That's it! Everything else runs in containers.
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/pm_master_v2.git
-   cd pm_master_v2
-   ```
-
-2. **Set up environment variables**
-   ```bash
-   # Root environment
-   cp .env.example .env
-
-   # Backend environment
-   cp backend/.env.example backend/.env
-
-   # Edit both .env files with your API keys and configuration
-   ```
-
-3. **Start Docker services**
-   ```bash
-   docker-compose up -d
-   ```
-
-4. **Set up Python backend**
-   ```bash
-   cd backend
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   pip install -r requirements.txt
-
-   # Initialize database
-   python db/init_db.py
-
-   # Start backend server
-   uvicorn main:app --reload --port 8000
-   ```
-
-5. **Run Flutter app** (in separate terminal)
-   ```bash
-   flutter pub get
-   flutter run -d chrome  # Web (default: http://localhost:8100)
-   flutter run -d macos   # macOS desktop
-   ```
-
-### Code Quality
+### Installation
 
 ```bash
-# Analyze code
-flutter analyze
+# 1. Clone the repository
+git clone https://github.com/Tell-Me-Mo/tellmemo-app.git
+cd tellmemo-app
 
-# Format code
-dart format .
+# 2. Create .env file with your API keys
+cat > .env << EOF
+ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
+HF_TOKEN=your-huggingface-token-here
+EOF
 
-# Run tests
-flutter test
+# 3. Start all services
+docker compose up -d
 
-# Python tests
-cd backend && pytest
-
-# Python linting
-cd backend && flake8 . && black --check .
+# 4. Access the application
+# Open http://localhost:8100 in your browser
 ```
 
-## 📚 Documentation
+### Getting API Keys
 
-- **High-Level Design**: See [HLD_MVP.md](HLD_MVP.md)
-- **User Journey**: See [USER_JOURNEY_MVP.md](USER_JOURNEY_MVP.md)
-- **Claude Instructions**: See [CLAUDE.md](CLAUDE.md)
+**ANTHROPIC_API_KEY** (Required):
+1. Visit [console.anthropic.com](https://console.anthropic.com/)
+2. Sign up or log in
+3. Go to API Keys section
+4. Create a new key (starts with `sk-ant-api03-`)
+
+**HF_TOKEN** (Required):
+1. Visit [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
+2. Sign up or log in
+3. Create a new token with "Read" permission
+4. Used for downloading embedding models
+
+### Useful Commands
+
+```bash
+# View running containers
+docker compose ps
+
+# View logs
+docker compose logs -f
+
+# Stop all services
+docker compose down
+
+# Restart services
+docker compose restart
+
+# Update to latest version
+git pull
+docker compose pull
+docker compose up -d
+```
+
+## 📖 Documentation
+
+Full documentation is available at:
+- **Online**: [tellmemo.io/documentation](https://tellmemo.io/documentation)
+- **Local**: Open `docs/documentation.html` in a browser
+
+### Key Documentation Sections
+
+- **Installation** - Detailed setup instructions
+- **Configuration** - All environment variables and options
+- **User Guide** - How to use TellMeMo's features
+- **Troubleshooting** - Common issues and solutions
+- **API Reference** - Backend API documentation
+
+## 🛠️ Development
+
+For development and customization:
+
+```bash
+# Clone repository
+git clone https://github.com/Tell-Me-Mo/tellmemo-app.git
+cd tellmemo-app
+
+# Set up environment
+cp .env.example .env
+# Edit .env with your configuration
+
+# Start services
+docker compose up -d
+
+# For frontend development (Flutter)
+cd frontend
+flutter pub get
+flutter run -d chrome --web-port 8100
+
+# For backend development (Python)
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
+```
+
+### Project Structure
+
+```
+tellmemo-app/
+├── frontend/          # Flutter web application
+├── backend/           # FastAPI backend
+├── docs/              # Documentation website
+├── docker-compose.yml # Docker services configuration
+├── .env.example       # Environment variables template
+└── README.md          # This file
+```
+
+## 🔧 Configuration
+
+TellMeMo is highly configurable via environment variables. The most common options:
+
+```bash
+# Required
+ANTHROPIC_API_KEY=sk-ant-api03-xxx
+HF_TOKEN=hf_xxx
+
+# Authentication (optional, has defaults)
+JWT_SECRET=your-secret-here
+
+# Optional features
+SENTRY_ENABLED=false
+FLUTTER_FIREBASE_ANALYTICS_ENABLED=false
+```
+
+See `.env.example` for all available configuration options.
+
+## 📚 Key Documents
+
+- **[CLAUDE.md](CLAUDE.md)** - Instructions for Claude Code (AI assistant)
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history and changes
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - How to contribute
+- **[SECURITY.md](SECURITY.md)** - Security policy and reporting
+- **[LICENSE](LICENSE)** - MIT License
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to get started.
+We welcome contributions! Here's how to get started:
 
-Quick start:
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit your changes: `git commit -m 'Add amazing feature'`
-4. Push to the branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
+3. Make your changes
+4. Run tests: `flutter test` and `pytest`
+5. Commit your changes: `git commit -m 'Add amazing feature'`
+6. Push to the branch: `git push origin feature/amazing-feature`
+7. Open a Pull Request
 
-## 📝 License
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Services won't start:**
+```bash
+# Check ports are not in use
+lsof -i :5432  # PostgreSQL
+lsof -i :6333  # Qdrant
+lsof -i :8000  # Backend
+lsof -i :8100  # Frontend
+
+# Restart Docker
+docker compose down
+docker compose up -d
+```
+
+**Database connection errors:**
+```bash
+# Check PostgreSQL logs
+docker compose logs postgres
+
+# Restart database
+docker compose restart postgres
+```
+
+For more help, see the [Troubleshooting section](docs/documentation.html#troubleshooting) in the documentation.
+
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
@@ -270,12 +216,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 If you discover a security vulnerability, please see [SECURITY.md](SECURITY.md) for reporting instructions.
 
-## 📧 Contact
+## 🌐 Links
 
-- Website: [https://tellmemo.app](https://tellmemo.app)
-- Email: contact@tellmemo.app
-- Twitter: [@tellmemo](https://twitter.com/tellmemo)
+- **Website**: [tellmemo.io](https://tellmemo.io)
+- **Documentation**: [tellmemo.io/documentation](https://tellmemo.io/documentation)
+- **Repository**: [github.com/Tell-Me-Mo/tellmemo-app](https://github.com/Tell-Me-Mo/tellmemo-app)
+- **Issues**: [github.com/Tell-Me-Mo/tellmemo-app/issues](https://github.com/Tell-Me-Mo/tellmemo-app/issues)
 
 ---
 
-Built with ❤️ using Flutter and AI
+Built with ❤️ using Flutter, FastAPI, and AI
