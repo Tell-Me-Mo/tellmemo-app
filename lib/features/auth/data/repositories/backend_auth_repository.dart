@@ -53,10 +53,14 @@ class BackendAuthRepository implements AuthInterface {
 
       final data = response.data;
       final token = data['access_token'] as String;
+      final refreshToken = data['refresh_token'] as String?;
       final userId = data['user_id'] as String;
 
-      // Store token and user info
+      // Store tokens and user info
       await _authService.setToken(token);
+      if (refreshToken != null) {
+        await _authService.setRefreshToken(refreshToken);
+      }
       await _authService.setUserId(userId);
 
       if (data['organization_id'] != null) {
@@ -109,10 +113,14 @@ class BackendAuthRepository implements AuthInterface {
 
       final data = response.data;
       final token = data['access_token'] as String;
+      final refreshToken = data['refresh_token'] as String?;
       final userId = data['user_id'] as String;
 
-      // Store token and user info
+      // Store tokens and user info
       await _authService.setToken(token);
+      if (refreshToken != null) {
+        await _authService.setRefreshToken(refreshToken);
+      }
       await _authService.setUserId(userId);
 
       if (data['organization_id'] != null) {
