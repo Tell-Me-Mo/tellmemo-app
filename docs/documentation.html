@@ -122,15 +122,13 @@
                             <a href="#overview">Overview</a>
                             <a href="#comparison">TellMeMo vs Alternatives</a>
                             <a href="#architecture">Architecture</a>
-                            <a href="#deployment-options">Deployment Options</a>
+                            <a href="#deployment-options">Deployment</a>
                             <a href="#prerequisites">Prerequisites</a>
                             <a href="#quick-start">Quick Start</a>
                         </div>
                         <div class="docs-nav-section">
-                            <h4>Installation</h4>
-                            <a href="#installation">Installation Steps</a>
+                            <h4>Usage</h4>
                             <a href="#configuration">Configuration</a>
-                            <a href="#running">Running the App</a>
                         </div>
                         <div class="docs-nav-section">
                             <h4>User Guide</h4>
@@ -228,7 +226,7 @@
                     <!-- Architecture with Visual Diagram -->
                     <article id="architecture" class="docs-article">
                         <h2>Architecture Overview</h2>
-                        <p>TellMeMo runs as a microservices architecture with 12 Docker containers + local backend:</p>
+                        <p>TellMeMo runs as a containerized microservices architecture with all services running in Docker:</p>
 
                         <!-- ASCII Architecture Diagram -->
                         <div class="code-block" style="background: var(--bg-secondary);">
@@ -236,297 +234,123 @@
 │                           <span style="color: #8B5CF6;">TellMeMo Architecture</span>                            │
 └─────────────────────────────────────────────────────────────────────────┘
 
-┌──────────────┐         ┌──────────────┐         ┌──────────────┐
-│   <span style="color: #6366F1;">Flutter</span>    │◄────────┤   <span style="color: #6366F1;">FastAPI</span>    │◄────────┤  <span style="color: #6366F1;">PostgreSQL</span> │
-│   Frontend   │  HTTP   │   Backend    │  SQL    │   (Docker)   │
-│  (Docker)    │         │   (Local)    │         │   Port 5432  │
-│   Port 8100  │         │   Port 8000  │         └──────────────┘
-└──────────────┘         └──────┬───────┘
-                                │
-                ┌───────────────┼──────────────────┐
-                │               │                  │
-        ┌───────▼──────┐ ┌─────▼──────┐   ┌──────▼─────┐
-        │   <span style="color: #10b981;">Qdrant</span>    │ │  <span style="color: #10b981;">Langfuse</span>  │   │    <span style="color: #10b981;">ELK</span>      │
-        │   Vector     │ │ Worker+Web │   │   Stack    │
-        │   Port 6333  │ │  Port 3000 │   │ Port 5601  │
-        └──────────────┘ └─────┬──────┘   └────────────┘
-                               │
-           ┌───────────────────┼─────────────────┐
-           │                   │                 │
-    ┌──────▼──────┐    ┌──────▼──────┐   ┌─────▼──────┐
-    │ ClickHouse  │    │    Redis    │   │   MinIO    │
-    │+Zookeeper   │    │  Port 6379  │   │ Port 9000  │
-    │  Port 8123  │    └─────────────┘   └────────────┘
-    └─────────────┘
+                        ┌──────────────────┐
+                        │      <span style="color: #6366F1;">User</span>        │
+                        │    (Browser)     │
+                        └────────┬─────────┘
+                                 │ HTTP
+                                 ▼
+                        ┌──────────────────┐
+                        │   <span style="color: #6366F1;">Flutter</span>       │
+                        │   Frontend       │
+                        │   (Docker)       │
+                        │   Port 8100      │
+                        └────────┬─────────┘
+                                 │ HTTP/WebSocket
+                                 ▼
+                        ┌──────────────────┐
+                        │   <span style="color: #6366F1;">FastAPI</span>       │
+                        │   Backend        │
+                        │   (Docker)       │
+                        │   Port 8000      │
+                        │                  │
+                        │ • REST API       │
+                        │ • WebSocket      │
+                        │ • Authentication │
+                        │ • RAG Processing │
+                        └────────┬─────────┘
+                                 │
+                ┌────────────────┼────────────────┐
+                │                │                │
+                ▼                ▼                ▼
+        ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+        │ <span style="color: #10b981;">PostgreSQL</span> │ │   <span style="color: #10b981;">Qdrant</span>    │ │ <span style="color: #10b981;">Anthropic</span>  │
+        │   (Docker)   │ │   (Docker)   │ │    Claude    │
+        │  Port 5432   │ │  Port 6333   │ │   API Key    │
+        │              │ │              │ │              │
+        │ • Users      │ │ • Vectors    │ │ • LLM        │
+        │ • Projects   │ │ • Embeddings │ │ • Reasoning  │
+        │ • Content    │ │ • Search     │ │ • Summaries  │
+        └──────────────┘ └──────────────┘ └──────────────┘
 
-<span style="color: #f59e0b;">External Services (Optional):</span>
-  • LLM APIs: Claude or OpenAI (switchable via UI)
-  • Supabase (authentication only)
-  • Sentry (error tracking)
-  • Firebase Analytics (usage analytics)</code></pre>
+<span style="color: #f59e0b;">Optional Services:</span>
+  • Sentry (error tracking - configured via backend .env)
+  • Firebase Analytics (usage tracking - configured via frontend)</code></pre>
                         </div>
 
-                        <h3>Service Communication Flow</h3>
+                        <h3>Core Components</h3>
                         <ol>
-                            <li><strong>User →</strong> Flutter Frontend (Docker container, port 8100)</li>
-                            <li><strong>Frontend →</strong> FastAPI Backend (Local Python app, port 8000)</li>
-                            <li><strong>Backend →</strong> PostgreSQL (Docker container, metadata storage)</li>
-                            <li><strong>Backend →</strong> Qdrant (Docker container, vector embeddings)</li>
-                            <li><strong>Backend →</strong> LLM API (Claude or OpenAI, switchable in UI)</li>
-                            <li><strong>Backend →</strong> Langfuse (Docker container, LLM observability)</li>
-                            <li><strong>Backend →</strong> ELK Stack (Docker containers, logging)</li>
-                            <li><strong>Frontend →</strong> Supabase (authentication)</li>
-                            <li><strong>Frontend →</strong> Firebase Analytics (usage tracking)</li>
-                            <li><strong>Backend →</strong> Sentry (error reporting)</li>
+                            <li><strong>Frontend (Flutter Web):</strong> User interface running in Docker container on port 8100</li>
+                            <li><strong>Backend (FastAPI):</strong> REST API, WebSocket server, authentication, and RAG processing in Docker</li>
+                            <li><strong>PostgreSQL:</strong> Primary database for users, projects, content metadata, and conversations</li>
+                            <li><strong>Qdrant:</strong> Vector database for semantic search and embeddings</li>
+                            <li><strong>Claude API:</strong> Anthropic's LLM for AI reasoning and summary generation</li>
                         </ol>
 
-                        <h3>All Services (12 Docker + 1 Local)</h3>
+                        <h3>Core Services</h3>
                         <table class="docs-table">
                             <thead>
                                 <tr>
                                     <th>Service</th>
-                                    <th>Type</th>
                                     <th>Port</th>
                                     <th>Purpose</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td>FastAPI Backend</td>
-                                    <td>Local Python</td>
-                                    <td>8000</td>
-                                    <td>REST API & WebSocket server</td>
-                                </tr>
-                                <tr>
-                                    <td>Flutter Frontend</td>
-                                    <td>Docker</td>
+                                    <td><strong>Flutter Frontend</strong></td>
                                     <td>8100</td>
-                                    <td>Web application</td>
+                                    <td>Web application UI</td>
                                 </tr>
                                 <tr>
-                                    <td>PostgreSQL</td>
-                                    <td>Docker</td>
+                                    <td><strong>FastAPI Backend</strong></td>
+                                    <td>8000</td>
+                                    <td>REST API, WebSocket, Authentication, RAG</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>PostgreSQL</strong></td>
                                     <td>5432</td>
-                                    <td>Primary database</td>
+                                    <td>Primary database (metadata, users, projects)</td>
                                 </tr>
                                 <tr>
-                                    <td>Qdrant</td>
-                                    <td>Docker</td>
+                                    <td><strong>Qdrant</strong></td>
                                     <td>6333</td>
-                                    <td>Vector database</td>
-                                </tr>
-                                <tr>
-                                    <td>Langfuse Worker</td>
-                                    <td>Docker</td>
-                                    <td>-</td>
-                                    <td>LLM observability worker</td>
-                                </tr>
-                                <tr>
-                                    <td>Langfuse Web</td>
-                                    <td>Docker</td>
-                                    <td>3000</td>
-                                    <td>LLM observability dashboard</td>
-                                </tr>
-                                <tr>
-                                    <td>Elasticsearch</td>
-                                    <td>Docker</td>
-                                    <td>9200</td>
-                                    <td>Log storage</td>
-                                </tr>
-                                <tr>
-                                    <td>Logstash</td>
-                                    <td>Docker</td>
-                                    <td>8080</td>
-                                    <td>Log processing</td>
-                                </tr>
-                                <tr>
-                                    <td>Kibana</td>
-                                    <td>Docker</td>
-                                    <td>5601</td>
-                                    <td>Log visualization</td>
-                                </tr>
-                                <tr>
-                                    <td>Redis</td>
-                                    <td>Docker</td>
-                                    <td>6379</td>
-                                    <td>Queue & caching</td>
-                                </tr>
-                                <tr>
-                                    <td>ClickHouse</td>
-                                    <td>Docker</td>
-                                    <td>8123</td>
-                                    <td>Analytics database</td>
-                                </tr>
-                                <tr>
-                                    <td>Zookeeper</td>
-                                    <td>Docker</td>
-                                    <td>2181</td>
-                                    <td>ClickHouse coordination</td>
-                                </tr>
-                                <tr>
-                                    <td>MinIO</td>
-                                    <td>Docker</td>
-                                    <td>9000</td>
-                                    <td>S3-compatible storage</td>
+                                    <td>Vector database (embeddings, semantic search)</td>
                                 </tr>
                             </tbody>
                         </table>
 
                         <div class="info-box">
-                            <h4>💡 Note</h4>
-                            <p>Backend runs locally (not in Docker) for easier development. For production, you can containerize it using the commented-out backend service in docker-compose.yml</p>
+                            <h4>💡 Authentication</h4>
+                            <p>TellMeMo includes built-in authentication handled by the FastAPI backend. No external authentication service (like Supabase) is required.</p>
+                        </div>
+
+                        <div class="info-box">
+                            <h4>📊 Optional Integrations</h4>
+                            <ul>
+                                <li><strong>Sentry:</strong> Add <code>SENTRY_DSN</code> to backend .env for error tracking</li>
+                                <li><strong>Firebase Analytics:</strong> Configure in frontend for usage analytics</li>
+                            </ul>
+                            <p>These are completely optional and TellMeMo works fully without them.</p>
                         </div>
                     </article>
 
                     <!-- Deployment Options -->
                     <article id="deployment-options" class="docs-article">
-                        <h2>Deployment Options</h2>
-                        <p>TellMeMo supports multiple deployment strategies based on your needs:</p>
-
-                        <h3>Option 1: Docker Compose (Recommended)</h3>
-                        <p><strong>Best for:</strong> Development, small teams, on-premise deployments</p>
-
-                        <div class="success-box">
-                            <h4>✅ Advantages</h4>
-                            <ul>
-                                <li>Simple one-command setup</li>
-                                <li>All services containerized</li>
-                                <li>Easy to update and maintain</li>
-                                <li>Built-in service health checks</li>
-                                <li>Persistent data volumes</li>
-                            </ul>
-                        </div>
-
-                        <div class="code-block">
-                            <pre><code># Clone repository
-git clone https://github.com/the-harpia-io/pm_master_v2.git
-cd pm_master_v2
-
-# Configure environment
-cp .env.example .env
-nano .env  # Add your API keys
-
-# Start all services
-docker-compose up -d
-
-# Check status
-docker-compose ps</code></pre>
-                        </div>
-
-                        <p><strong>Resource Requirements:</strong></p>
-                        <ul>
-                            <li>RAM: 8GB minimum (16GB recommended)</li>
-                            <li>Disk: 20GB minimum</li>
-                            <li>CPU: 4+ cores recommended</li>
-                        </ul>
-
-                        <h3>Option 2: Hybrid (Docker + Local Apps)</h3>
-                        <p><strong>Best for:</strong> Development, debugging, custom modifications</p>
+                        <h2>Deployment</h2>
+                        <p>TellMeMo uses Docker and Docker Compose for easy, consistent deployment across all environments.</p>
 
                         <div class="info-box">
-                            <h4>💡 How It Works</h4>
+                            <h4>💡 What Gets Deployed</h4>
+                            <p>When you run <code>docker compose up -d</code>, the following core services start automatically:</p>
                             <ul>
-                                <li>Infrastructure services run in Docker (databases, etc.)</li>
-                                <li>Backend runs locally with Python</li>
-                                <li>Frontend runs locally with Flutter</li>
-                                <li>Easier for development and debugging</li>
+                                <li><strong>Frontend UI</strong> - Flutter web app on port 8100</li>
+                                <li><strong>Backend API</strong> - FastAPI with authentication & RAG on port 8000</li>
+                                <li><strong>PostgreSQL</strong> - Primary database on port 5432</li>
+                                <li><strong>Qdrant</strong> - Vector database on port 6333</li>
                             </ul>
+                            <p>All services are containerized and managed by Docker Compose. No manual setup required!</p>
                         </div>
-
-                        <div class="code-block">
-                            <pre><code># Start infrastructure only
-docker-compose up -d postgres qdrant redis elasticsearch logstash kibana
-
-# Terminal 1: Run backend
-cd backend
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-uvicorn main:app --reload
-
-# Terminal 2: Run frontend
-flutter run -d chrome --web-port 8100</code></pre>
-                        </div>
-
-                        <h3>Option 3: Production Deployment</h3>
-                        <p><strong>Best for:</strong> Production workloads, enterprise deployments</p>
-
-                        <p><strong>Recommended Architecture:</strong></p>
-                        <ul>
-                            <li><strong>Database:</strong> Managed PostgreSQL (Supabase, AWS RDS, Google Cloud SQL)</li>
-                            <li><strong>Vector DB:</strong> Qdrant Cloud or self-hosted with backups</li>
-                            <li><strong>Backend:</strong> Docker container on Hetzner VPS, AWS EC2, or Google Compute Engine</li>
-                            <li><strong>Frontend:</strong> Static hosting (Firebase Hosting, Vercel, Netlify, Cloudflare Pages)</li>
-                            <li><strong>Monitoring:</strong> Sentry for errors, Langfuse for LLM observability</li>
-                        </ul>
-
-                        <div class="code-block">
-                            <pre><code># Production Docker Compose
-docker-compose -f docker-compose.prod.yml up -d --build
-
-# With managed database
-docker-compose -f docker-compose.prod.yml \
-  -e POSTGRES_HOST=your-supabase-db.com \
-  -e POSTGRES_PORT=5432 \
-  up -d</code></pre>
-                        </div>
-
-                        <h3>Option 4: Kubernetes (Not Available)</h3>
-                        <div class="warning-box">
-                            <h4>⚠️ Kubernetes Not Currently Supported</h4>
-                            <p>Kubernetes deployment manifests are not included in the current release. For enterprise Kubernetes deployments, you'll need to create your own manifests based on the Docker Compose configuration.</p>
-                            <p>Planned for future release: Helm charts and k8s manifests will be added in v2.0</p>
-                        </div>
-
-                        <h3>Deployment Comparison</h3>
-                        <table class="docs-table">
-                            <thead>
-                                <tr>
-                                    <th>Feature</th>
-                                    <th>Docker Compose</th>
-                                    <th>Hybrid</th>
-                                    <th>Production</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>Setup Time</strong></td>
-                                    <td>5 minutes</td>
-                                    <td>15 minutes</td>
-                                    <td>1-2 hours</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Complexity</strong></td>
-                                    <td>Low</td>
-                                    <td>Medium</td>
-                                    <td>High</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Performance</strong></td>
-                                    <td>Good</td>
-                                    <td>Excellent</td>
-                                    <td>Excellent</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Debugging</strong></td>
-                                    <td>Moderate</td>
-                                    <td>Easy</td>
-                                    <td>Moderate</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Scalability</strong></td>
-                                    <td>Limited</td>
-                                    <td>Limited</td>
-                                    <td>High</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Cost</strong></td>
-                                    <td>Low</td>
-                                    <td>Low</td>
-                                    <td>Medium-High</td>
-                                </tr>
-                            </tbody>
-                        </table>
                     </article>
 
                     <!-- Prerequisites -->
@@ -535,11 +359,18 @@ docker-compose -f docker-compose.prod.yml \
 
                         <h3>Required Software</h3>
                         <ul>
-                            <li><strong>Docker</strong> ≥20.10 & <strong>Docker Compose</strong> ≥2.0</li>
-                            <li><strong>Python</strong> ≥3.13 (for backend)</li>
-                            <li><strong>Flutter SDK</strong> ≥3.9.0 (for frontend)</li>
-                            <li><strong>Git</strong> (for cloning repository)</li>
+                            <li><strong>Docker</strong> ≥20.10</li>
+                            <li><strong>Docker Compose</strong> ≥2.0</li>
                         </ul>
+
+                        <div class="info-box">
+                            <h4>💡 Installing Docker & Docker Compose</h4>
+                            <ul>
+                                <li><strong>macOS:</strong> <a href="https://docs.docker.com/desktop/install/mac-install/" target="_blank" rel="noopener">Docker Desktop for Mac</a></li>
+                                <li><strong>Windows:</strong> <a href="https://docs.docker.com/desktop/install/windows-install/" target="_blank" rel="noopener">Docker Desktop for Windows</a></li>
+                                <li><strong>Linux:</strong> <a href="https://docs.docker.com/engine/install/" target="_blank" rel="noopener">Docker Engine</a> + <a href="https://docs.docker.com/compose/install/" target="_blank" rel="noopener">Docker Compose</a></li>
+                            </ul>
+                        </div>
 
                         <h3>System Requirements</h3>
                         <ul>
@@ -549,18 +380,23 @@ docker-compose -f docker-compose.prod.yml \
                             <li><strong>OS:</strong> Linux, macOS, or Windows with WSL2</li>
                         </ul>
 
-                        <h3>API Keys & Integrations</h3>
+                        <h3>Required API Keys</h3>
                         <ul>
-                            <li><strong>LLM API Key</strong> (choose one):
+                            <li><strong>Anthropic API Key</strong> - Get it from <a href="https://console.anthropic.com/" target="_blank" rel="noopener">Anthropic Console</a>
                                 <ul>
-                                    <li>Anthropic Claude (<a href="https://console.anthropic.com/" target="_blank" rel="noopener">Get key</a>)</li>
-                                    <li>OpenAI (<a href="https://platform.openai.com/" target="_blank" rel="noopener">Get key</a>)</li>
-                                    <li>Switchable via UI integrations</li>
+                                    <li>Sign up for an account</li>
+                                    <li>Navigate to API Keys section</li>
+                                    <li>Create a new API key (starts with <code>sk-ant-api03-</code>)</li>
                                 </ul>
                             </li>
-                            <li><strong>Supabase</strong> (optional) - Authentication only (<a href="https://supabase.com/" target="_blank" rel="noopener">Sign up</a>)</li>
-                            <li><strong>Firebase</strong> (optional) - Analytics tracking (<a href="https://console.firebase.google.com/" target="_blank" rel="noopener">Set up</a>)</li>
-                            <li><strong>Sentry</strong> (optional) - Error tracking (<a href="https://sentry.io/" target="_blank" rel="noopener">Sign up</a>)</li>
+                            <li><strong>Hugging Face Token</strong> (Optional) - Get it from <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener">Hugging Face Settings</a>
+                                <ul>
+                                    <li>Sign up for a Hugging Face account</li>
+                                    <li>Go to Settings → Access Tokens</li>
+                                    <li>Create a new token with "read" permissions</li>
+                                    <li>Used for downloading AI models</li>
+                                </ul>
+                            </li>
                         </ul>
                     </article>
 
@@ -570,187 +406,182 @@ docker-compose -f docker-compose.prod.yml \
                         <p>Get TellMeMo running in 5 minutes:</p>
 
                         <div class="code-block">
-                            <pre><code># Clone the repository
-git clone https://github.com/the-harpia-io/pm_master_v2.git
-cd pm_master_v2
+                            <pre><code># 1. Make sure Docker and Docker Compose are installed
+docker --version
+docker compose version
 
-# Copy environment file
-cp .env.example .env
+# 2. Clone the repository
+git clone https://github.com/Tell-Me-Mo/tellmemo-app.git
+cd tellmemo-app
 
-# Edit .env and add your Anthropic API key
-nano .env
+# 3. Create .env file with your API keys
+cat > .env << EOF
+ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
+HF_TOKEN=your-huggingface-token-here
+EOF
 
-# Start infrastructure
-docker-compose up -d
+# 4. Start all services
+docker compose up -d
 
-# In a new terminal: Start backend
-cd backend
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-uvicorn main:app --reload
-
-# In another terminal: Start frontend
-flutter run -d chrome --web-port 8100</code></pre>
-                        </div>
-
-                        <p>Access the app at <code>http://localhost:8100</code></p>
-                    </article>
-
-                    <!-- Installation -->
-                    <article id="installation" class="docs-article">
-                        <h2>Installation Steps</h2>
-
-                        <h3>Step 1: Clone Repository</h3>
-                        <div class="code-block">
-                            <pre><code>git clone https://github.com/the-harpia-io/pm_master_v2.git
-cd pm_master_v2</code></pre>
-                        </div>
-
-                        <h3>Step 2: Configure Environment</h3>
-                        <div class="code-block">
-                            <pre><code># Copy example configuration
-cp .env.example .env
-
-# Edit .env file
-nano .env</code></pre>
-                        </div>
-
-                        <p>Add your Anthropic API key and other required variables:</p>
-                        <div class="code-block">
-                            <pre><code>ANTHROPIC_API_KEY=sk-ant-api03-your-api-key-here
-POSTGRES_PASSWORD=your-secure-password
-REDIS_PASSWORD=your-redis-password
-LANGFUSE_SECRET=$(openssl rand -hex 32)
-LANGFUSE_SALT=$(openssl rand -hex 32)</code></pre>
-                        </div>
-
-                        <h3>Step 3: Start Docker Infrastructure</h3>
-                        <div class="code-block">
-                            <pre><code># Start all services
-docker-compose up -d
-
-# Check status
-docker-compose ps</code></pre>
-                        </div>
-
-                        <h3>Step 4: Set Up Backend</h3>
-                        <div class="code-block">
-                            <pre><code>cd backend
-
-# Create virtual environment
-python3 -m venv venv
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Start backend
-uvicorn main:app --reload --host 0.0.0.0 --port 8000</code></pre>
-                        </div>
-
-                        <h3>Step 5: Set Up Frontend</h3>
-                        <div class="code-block">
-                            <pre><code># Get dependencies
-flutter pub get
-
-# Run application
-flutter run -d chrome --web-port 8100</code></pre>
+# 5. Access the application
+# UI will be available at http://localhost:8100</code></pre>
                         </div>
 
                         <div class="success-box">
-                            <h4>✅ Installation Complete!</h4>
-                            <p>Your TellMeMo instance is now running at:</p>
-                            <ul>
-                                <li>Frontend: <code>http://localhost:8100</code></li>
-                                <li>Backend API: <code>http://localhost:8000/docs</code></li>
-                                <li>Langfuse: <code>http://localhost:3000</code></li>
-                            </ul>
+                            <h4>✅ That's it!</h4>
+                            <p>Your TellMeMo instance is now running at <code>http://localhost:8100</code></p>
                         </div>
                     </article>
 
                     <!-- Configuration -->
                     <article id="configuration" class="docs-article">
                         <h2>Configuration</h2>
+                        <p>TellMeMo is configured via environment variables in the <code>.env</code> file. The basic installation only requires two API keys - everything else has sensible defaults.</p>
 
-                        <h3>Environment Variables</h3>
-                        <p>Key configuration options in <code>.env</code> file:</p>
+                        <h3>🔴 Required Configuration</h3>
+                        <p>These are the only variables you <strong>must</strong> configure:</p>
 
-                        <h4>AI/LLM Settings</h4>
                         <div class="code-block">
-                            <pre><code>ANTHROPIC_API_KEY=sk-ant-api03-xxx
-LLM_MODEL=claude-3-5-haiku-latest
-MAX_TOKENS=4096
-TEMPERATURE=0.7
-EMBEDDING_MODEL=google/embeddinggemma-300m</code></pre>
+                            <pre><code># Required - Anthropic API Key
+ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
+
+# Required - Hugging Face Token (for embedding model)
+HF_TOKEN=your-huggingface-token-here</code></pre>
                         </div>
 
-                        <h4>Database Settings</h4>
+                        <div class="warning-box">
+                            <h4>⚠️ Important for Production</h4>
+                            <p>For production deployments, you should also set a secure JWT secret:</p>
+                            <div class="code-block">
+                                <pre><code># Generate with: openssl rand -hex 32
+JWT_SECRET=your-jwt-secret-generate-with-openssl-rand-hex-32</code></pre>
+                            </div>
+                            <p>If not provided, the backend will automatically generate a temporary JWT secret on startup. This works for development but should not be used in production (tokens won't persist across restarts).</p>
+                        </div>
+
+                        <h3>🟢 Auto-Configured (No Changes Needed)</h3>
+                        <p>These work out of the box with Docker Compose:</p>
+
                         <div class="code-block">
-                            <pre><code>POSTGRES_USER=pm_master
-POSTGRES_PASSWORD=your-secure-password
+                            <pre><code># Database Configuration
+POSTGRES_USER=pm_master
+POSTGRES_PASSWORD=pm_master_pass
 POSTGRES_DB=pm_master_db
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
 
+# Vector Database
 QDRANT_HOST=localhost
-QDRANT_PORT=6333</code></pre>
+QDRANT_PORT=6333
+
+# Backend API
+API_HOST=0.0.0.0
+API_PORT=8000
+
+# Frontend
+FRONTEND_URL=http://localhost:8100
+API_BASE_URL=http://localhost:8000</code></pre>
                         </div>
 
-                        <h4>Security Settings</h4>
+                        <h3>🟡 Optional Features</h3>
+
+                        <h4>Authentication Provider</h4>
                         <div class="code-block">
-                            <pre><code>LANGFUSE_SECRET=$(openssl rand -hex 32)
-LANGFUSE_SALT=$(openssl rand -hex 32)
-CORS_ORIGINS=http://localhost:8100,http://localhost:3000</code></pre>
+                            <pre><code># Choose: 'backend' (default) or 'supabase'
+AUTH_PROVIDER=backend
+
+# Only if using Supabase:
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-supabase-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+SUPABASE_JWT_SECRET=your-jwt-secret</code></pre>
+                        </div>
+
+                        <h4>Error Tracking (Sentry)</h4>
+                        <div class="code-block">
+                            <pre><code># Backend error tracking
+SENTRY_ENABLED=false
+SENTRY_DSN=your-sentry-dsn-here
+
+# Frontend error tracking
+FLUTTER_SENTRY_ENABLED=false
+FLUTTER_SENTRY_DSN=your-flutter-sentry-dsn-here</code></pre>
+                        </div>
+
+                        <h4>Analytics (Firebase)</h4>
+                        <div class="code-block">
+                            <pre><code>FLUTTER_FIREBASE_ANALYTICS_ENABLED=false</code></pre>
+                        </div>
+
+                        <h4>LLM Observability (Langfuse)</h4>
+                        <div class="code-block">
+                            <pre><code># Requires additional Docker services (Redis, ClickHouse, MinIO)
+LANGFUSE_ENABLED=false</code></pre>
+                        </div>
+
+                        <h4>Logging (ELK Stack)</h4>
+                        <div class="code-block">
+                            <pre><code># Requires Elasticsearch, Logstash, Kibana
+ENABLE_LOGSTASH=false</code></pre>
+                        </div>
+
+                        <h4>Transcription Service</h4>
+                        <div class="code-block">
+                            <pre><code># Choose: "whisper" (local) or "salad" (Salad API)
+DEFAULT_TRANSCRIPTION_SERVICE=whisper
+
+# Only if using Salad:
+SALAD_API_KEY=your-salad-api-key
+SALAD_ORGANIZATION_NAME=your-org-name</code></pre>
+                        </div>
+
+                        <h3>⚙️ Advanced Settings</h3>
+
+                        <h4>LLM Configuration</h4>
+                        <div class="code-block">
+                            <pre><code>LLM_MODEL=claude-3-5-haiku-latest
+MAX_TOKENS=4096
+TEMPERATURE=0.7</code></pre>
+                        </div>
+
+                        <h4>Embedding Model</h4>
+                        <div class="code-block">
+                            <pre><code># Choose: all-MiniLM-L6-v2 (lightweight) or google/embeddinggemma-300m (better quality)
+EMBEDDING_MODEL=google/embeddinggemma-300m
+EMBEDDING_DIMENSION=768</code></pre>
+                        </div>
+
+                        <h4>RAG Settings</h4>
+                        <div class="code-block">
+                            <pre><code>CHUNK_SIZE_WORDS=300
+CHUNK_OVERLAP_WORDS=50
+TOP_K_CHUNKS=5</code></pre>
+                        </div>
+
+                        <h4>File Upload</h4>
+                        <div class="code-block">
+                            <pre><code>MAX_FILE_SIZE_MB=10</code></pre>
+                        </div>
+
+                        <h4>Multilingual Support</h4>
+                        <div class="code-block">
+                            <pre><code>ENABLE_MULTILINGUAL=true
+DETECT_LANGUAGE=true</code></pre>
+                        </div>
+
+                        <div class="info-box">
+                            <h4>💡 Full Configuration Reference</h4>
+                            <p>For all available configuration options, see the <code>.env.example</code> file in the repository.</p>
                         </div>
 
                         <div class="warning-box">
                             <h4>⚠️ Security Warning</h4>
-                            <p>Never commit <code>.env</code> file to version control. Always change default passwords before production deployment.</p>
-                        </div>
-                    </article>
-
-                    <!-- Running -->
-                    <article id="running" class="docs-article">
-                        <h2>Running the Application</h2>
-
-                        <h3>Development Mode</h3>
-                        <div class="code-block">
-                            <pre><code># Terminal 1: Infrastructure
-docker-compose up -d
-
-# Terminal 2: Backend
-cd backend
-source venv/bin/activate
-uvicorn main:app --reload
-
-# Terminal 3: Frontend
-flutter run -d chrome --web-port 8100</code></pre>
-                        </div>
-
-                        <h3>Production Mode</h3>
-                        <div class="code-block">
-                            <pre><code># Build and start all services
-docker-compose -f docker-compose.prod.yml up -d --build
-
-# Services will be available at:
-# Frontend: http://localhost
-# Backend: http://localhost:8000</code></pre>
-                        </div>
-
-                        <h3>Useful Commands</h3>
-                        <div class="code-block">
-                            <pre><code># View logs
-docker-compose logs -f [service_name]
-
-# Restart services
-docker-compose restart
-
-# Stop all services
-docker-compose down
-
-# Connect to database
-docker exec -it pm_master_postgres psql -U pm_master</code></pre>
+                            <ul>
+                                <li>Never commit <code>.env</code> file to version control</li>
+                                <li>Always change default passwords before production deployment</li>
+                                <li>Generate secure JWT secrets using: <code>openssl rand -hex 32</code></li>
+                                <li>Use strong passwords for database credentials</li>
+                            </ul>
                         </div>
                     </article>
 
@@ -760,8 +591,8 @@ docker exec -it pm_master_postgres psql -U pm_master</code></pre>
 
                         <ol>
                             <li><strong>Access the Application</strong><br>Open <code>http://localhost:8100</code> in your browser</li>
-                            <li><strong>Create an Account</strong><br>Sign up with email/password (if Supabase auth enabled)</li>
-                            <li><strong>Create an Organization</strong><br>Set up your workspace and invite team members</li>
+                            <li><strong>Create an Account</strong><br>Sign up with email/password</li>
+                            <li><strong>Create an Organization</strong><br>Set up your workspace</li>
                             <li><strong>Set Up Project Hierarchy</strong>
                                 <ul>
                                     <li>Create Portfolio (top level)</li>
@@ -775,178 +606,146 @@ docker exec -it pm_master_postgres psql -U pm_master</code></pre>
                     <!-- Common Use Cases -->
                     <article id="use-cases" class="docs-article">
                         <h2>Common Use Cases</h2>
-                        <p>Real-world examples of how teams use TellMeMo based on actual API capabilities:</p>
+                        <p>Real-world examples of how teams use TellMeMo in their daily workflows:</p>
 
-                        <h3>1. Portfolio-Level Reporting</h3>
+                        <h3>1. Weekly Executive Reporting</h3>
                         <div class="info-box">
-                            <h4>Scenario</h4>
-                            <p>Executive needs a weekly summary of all projects across the portfolio to present to the board.</p>
+                            <h4>📊 Scenario</h4>
+                            <p>An executive needs to prepare a weekly summary of all projects across the portfolio for the board meeting.</p>
                         </div>
 
-                        <p><strong>Solution:</strong></p>
-                        <ul>
-                            <li>Create Portfolio hierarchy with multiple Programs and Projects</li>
-                            <li>Upload weekly meeting transcripts, status reports, and emails to each Project</li>
-                            <li>Generate Portfolio-level Executive Summary (aggregates all child content)</li>
-                            <li>Export as PDF for board presentation</li>
-                        </ul>
-
-                        <p><strong>API Endpoint:</strong> <code>POST /api/v1/summaries/generate</code></p>
-                        <div class="code-block">
-                            <pre><code>{
-  "summary_type": "executive",
-  "hierarchy_id": "portfolio-abc-123",
-  "hierarchy_type": "portfolio",
-  "include_child_content": true
-}</code></pre>
-                        </div>
-
-                        <h3>2. Risk Detection & Tracking</h3>
-                        <div class="info-box">
-                            <h4>Scenario</h4>
-                            <p>PM needs to identify and track all risks mentioned across project meetings.</p>
-                        </div>
-
-                        <p><strong>Solution:</strong></p>
-                        <ul>
-                            <li>Upload all meeting transcripts to the Project</li>
-                            <li>AI automatically extracts risks during content processing</li>
-                            <li>Query: "What are all the risks mentioned in this quarter?"</li>
-                            <li>Generate Technical Summary focusing on risk mitigation</li>
-                        </ul>
-
-                        <p><strong>API Endpoint:</strong> <code>POST /api/v1/queries</code></p>
-                        <div class="code-block">
-                            <pre><code>{
-  "query": "What are all the risks mentioned in Q4 meetings?",
-  "project_id": "project-xyz-456",
-  "use_rag": true,
-  "conversation_id": null
-}</code></pre>
-                        </div>
-
-                        <h3>3. Multi-Turn Context-Aware Q&A</h3>
-                        <div class="info-box">
-                            <h4>Scenario</h4>
-                            <p>Team member wants to have a conversation about decisions made in past meetings.</p>
-                        </div>
-
-                        <p><strong>Solution:</strong></p>
-                        <ul>
-                            <li>Start conversation: "What was decided about the API redesign?"</li>
-                            <li>Follow-up: "Who raised concerns about backward compatibility?"</li>
-                            <li>Follow-up: "When is the migration deadline?"</li>
-                            <li>System maintains conversation context across all queries</li>
-                        </ul>
-
-                        <p><strong>First Query:</strong></p>
-                        <div class="code-block">
-                            <pre><code>POST /api/v1/queries
-{
-  "query": "What was decided about the API redesign?",
-  "project_id": "project-xyz-456",
-  "conversation_id": null  // Creates new conversation
-}</code></pre>
-                        </div>
-
-                        <p><strong>Follow-up Query:</strong></p>
-                        <div class="code-block">
-                            <pre><code>POST /api/v1/queries
-{
-  "query": "Who raised concerns about it?",
-  "project_id": "project-xyz-456",
-  "conversation_id": "conv-789"  // Maintains context
-}</code></pre>
-                        </div>
-
-                        <h3>4. Real-Time Meeting Transcription</h3>
-                        <div class="info-box">
-                            <h4>Scenario</h4>
-                            <p>Team wants live transcription during remote meetings.</p>
-                        </div>
-
-                        <p><strong>Solution:</strong></p>
-                        <ul>
-                            <li>Connect to WebSocket: <code>ws://localhost:8000/ws/audio</code></li>
-                            <li>Stream audio chunks in real-time</li>
-                            <li>Receive transcription updates as they're processed</li>
-                            <li>Automatically save transcript to Project when meeting ends</li>
-                        </ul>
-
-                        <p><strong>WebSocket Channels:</strong></p>
-                        <ul>
-                            <li><code>/ws/audio</code> - Real-time audio streaming & transcription</li>
-                            <li><code>/ws/jobs</code> - Job status updates (processing, embedding, summary generation)</li>
-                            <li><code>/ws/notifications</code> - User notifications</li>
-                            <li><code>/ws/support-tickets</code> - Support ticket updates</li>
-                        </ul>
-
-                        <h3>5. Cross-Project Insights</h3>
-                        <div class="info-box">
-                            <h4>Scenario</h4>
-                            <p>CTO wants to understand how authentication is being discussed across all engineering projects.</p>
-                        </div>
-
-                        <p><strong>Solution:</strong></p>
-                        <ul>
-                            <li>Query at Program or Portfolio level</li>
-                            <li>Ask: "How are different teams approaching authentication?"</li>
-                            <li>RAG searches across all child Projects</li>
-                            <li>Provides unified answer with citations from each Project</li>
-                        </ul>
-
-                        <p><strong>API Endpoint:</strong> <code>POST /api/v1/queries</code></p>
-                        <div class="code-block">
-                            <pre><code>{
-  "query": "How are teams approaching authentication?",
-  "program_id": "program-engineering-001",
-  "search_child_projects": true,
-  "use_rag": true
-}</code></pre>
-                        </div>
-
-                        <h3>6. Automated Action Item Tracking</h3>
-                        <div class="info-box">
-                            <h4>Scenario</h4>
-                            <p>Scrum master needs to track all action items and task assignments from sprint meetings.</p>
-                        </div>
-
-                        <p><strong>Solution:</strong></p>
-                        <ul>
-                            <li>Upload sprint meeting transcripts</li>
-                            <li>AI automatically extracts tasks with assignees and due dates</li>
-                            <li>View all tasks via API: <code>GET /api/v1/tasks?project_id={id}</code></li>
-                            <li>Update task status as work progresses</li>
-                        </ul>
-
-                        <p><strong>Task Extraction (Automatic):</strong></p>
-                        <div class="code-block">
-                            <pre><code>// When content is uploaded, tasks are auto-extracted
-POST /api/v1/content
-{
-  "project_id": "project-xyz-456",
-  "content_type": "transcript",
-  "content_text": "John will update the API docs by Friday..."
-}
-
-// System automatically creates:
-{
-  "task": "Update API docs",
-  "assigned_to": "John",
-  "due_date": "2025-01-10",
-  "status": "pending"
-}</code></pre>
-                        </div>
+                        <p><strong>How to do it in TellMeMo:</strong></p>
+                        <ol>
+                            <li>Create your Portfolio hierarchy: Portfolio → Programs → Projects</li>
+                            <li>Throughout the week, upload meeting transcripts and status reports to each Project</li>
+                            <li>On Friday, navigate to your Portfolio in the sidebar</li>
+                            <li>Click <strong>"Generate Summary"</strong> button</li>
+                            <li>Select <strong>"Executive Summary"</strong> type</li>
+                            <li>Review the AI-generated summary that aggregates insights from all projects</li>
+                            <li>Click <strong>"Export as PDF"</strong> for your board presentation</li>
+                        </ol>
 
                         <div class="success-box">
-                            <h4>✅ Summary Types Available</h4>
-                            <ul>
-                                <li><strong>General:</strong> Comprehensive overview for all audiences</li>
-                                <li><strong>Executive:</strong> High-level strategic summary with key decisions and risks</li>
-                                <li><strong>Technical:</strong> Detailed technical decisions, architecture, and implementation notes</li>
-                                <li><strong>Stakeholder:</strong> Impact analysis, timelines, and resource requirements</li>
-                            </ul>
+                            <h4>✅ What you get</h4>
+                            <p>A high-level summary with key decisions, risks, milestones, and strategic insights from across your entire portfolio.</p>
                         </div>
+
+                        <h3>2. Finding Risks Across Projects</h3>
+                        <div class="info-box">
+                            <h4>⚠️ Scenario</h4>
+                            <p>A project manager needs to identify and track all risks mentioned in quarterly meetings.</p>
+                        </div>
+
+                        <p><strong>How to do it in TellMeMo:</strong></p>
+                        <ol>
+                            <li>Upload all your Q4 meeting transcripts to the Project</li>
+                            <li>Go to the <strong>Chat</strong> or <strong>Query</strong> section</li>
+                            <li>Type: <em>"What are all the risks mentioned in this quarter?"</em></li>
+                            <li>Review the AI response with citations to specific meetings</li>
+                            <li>For deeper analysis, generate a <strong>Technical Summary</strong> focused on risk mitigation</li>
+                            <li>Export the risk list to share with stakeholders</li>
+                        </ol>
+
+                        <div class="success-box">
+                            <h4>✅ What you get</h4>
+                            <p>A comprehensive list of all identified risks with references to when and where they were mentioned.</p>
+                        </div>
+
+                        <h3>3. Having Conversations About Past Decisions</h3>
+                        <div class="info-box">
+                            <h4>💬 Scenario</h4>
+                            <p>A team member needs to understand the context and reasoning behind a decision made weeks ago.</p>
+                        </div>
+
+                        <p><strong>How to do it in TellMeMo:</strong></p>
+                        <ol>
+                            <li>Navigate to your Project</li>
+                            <li>Open the <strong>Chat</strong> interface</li>
+                            <li>Start a conversation: <em>"What was decided about the API redesign?"</em></li>
+                            <li>Ask follow-up questions: <em>"Who raised concerns about backward compatibility?"</em></li>
+                            <li>Continue the conversation: <em>"When is the migration deadline?"</em></li>
+                            <li>The system remembers the context across all your questions</li>
+                        </ol>
+
+                        <div class="success-box">
+                            <h4>✅ What you get</h4>
+                            <p>A natural conversation where you can dig deeper into topics without repeating context. Each answer includes citations to source documents.</p>
+                        </div>
+
+                        <h3>4. Understanding Trends Across Multiple Projects</h3>
+                        <div class="info-box">
+                            <h4>🔍 Scenario</h4>
+                            <p>A CTO wants to understand how different teams are approaching the same technical challenge.</p>
+                        </div>
+
+                        <p><strong>How to do it in TellMeMo:</strong></p>
+                        <ol>
+                            <li>Navigate to your Program (which contains multiple Projects)</li>
+                            <li>Open the <strong>Chat</strong> interface at the Program level</li>
+                            <li>Ask: <em>"How are different teams approaching authentication?"</em></li>
+                            <li>TellMeMo searches across all Projects under this Program</li>
+                            <li>Review the unified answer with citations from each team</li>
+                            <li>Identify best practices and inconsistencies across teams</li>
+                        </ol>
+
+                        <div class="success-box">
+                            <h4>✅ What you get</h4>
+                            <p>Cross-project insights that help identify patterns, best practices, and opportunities for alignment.</p>
+                        </div>
+
+                        <h3>5. Tracking Action Items from Meetings</h3>
+                        <div class="info-box">
+                            <h4>✅ Scenario</h4>
+                            <p>A scrum master needs to track all action items and task assignments from sprint meetings.</p>
+                        </div>
+
+                        <p><strong>How to do it in TellMeMo:</strong></p>
+                        <ol>
+                            <li>Upload your sprint meeting transcript to the Project</li>
+                            <li>TellMeMo automatically extracts tasks, assignees, and due dates</li>
+                            <li>Navigate to the <strong>Tasks</strong> tab to see all action items</li>
+                            <li>Filter by assignee, status, or due date</li>
+                            <li>Mark tasks as complete as work progresses</li>
+                            <li>Ask questions like: <em>"What are John's pending tasks?"</em></li>
+                        </ol>
+
+                        <div class="success-box">
+                            <h4>✅ What you get</h4>
+                            <p>Automatic task extraction with no manual entry required. All action items are linked to the source meeting transcript.</p>
+                        </div>
+
+                        <h3>Available Summary Types</h3>
+                        <table class="docs-table">
+                            <thead>
+                                <tr>
+                                    <th>Summary Type</th>
+                                    <th>Best For</th>
+                                    <th>What It Includes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>General</strong></td>
+                                    <td>All audiences</td>
+                                    <td>Comprehensive overview of all content</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Executive</strong></td>
+                                    <td>Leadership, stakeholders</td>
+                                    <td>High-level decisions, risks, milestones, strategic insights</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Technical</strong></td>
+                                    <td>Engineering teams</td>
+                                    <td>Technical decisions, architecture, implementation details</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Stakeholder</strong></td>
+                                    <td>Project stakeholders</td>
+                                    <td>Impact analysis, timelines, resource requirements</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </article>
 
                     <!-- Uploading Content -->
@@ -1043,8 +842,8 @@ lsof -i :8000  # Backend
 lsof -i :8100  # Frontend
 
 # Stop conflicting services or change ports in docker-compose.yml
-docker-compose down
-docker-compose up -d</code></pre>
+docker compose down
+docker compose up -d</code></pre>
                         </div>
 
                         <h3>Backend Startup Error: "Database Connection Failed"</h3>
@@ -1063,16 +862,16 @@ docker-compose up -d</code></pre>
                         <p><strong>Solution:</strong></p>
                         <div class="code-block">
                             <pre><code># Check PostgreSQL is running
-docker-compose ps postgres
+docker compose ps postgres
 
 # Check logs
-docker-compose logs postgres
+docker compose logs postgres
 
 # Verify .env settings
 cat .env | grep POSTGRES
 
 # Restart database
-docker-compose restart postgres
+docker compose restart postgres
 
 # Wait 10 seconds for DB to be ready
 sleep 10
@@ -1092,13 +891,13 @@ uvicorn main:app --reload</code></pre>
                         <p><strong>Solution:</strong></p>
                         <div class="code-block">
                             <pre><code># Check Qdrant container
-docker-compose ps qdrant
+docker compose ps qdrant
 
 # Check Qdrant logs
-docker-compose logs qdrant
+docker compose logs qdrant
 
 # Restart Qdrant
-docker-compose restart qdrant
+docker compose restart qdrant
 
 # Verify Qdrant is accessible
 curl http://localhost:6333/collections</code></pre>
@@ -1185,7 +984,7 @@ wscat -c ws://localhost:8000/ws/audio</code></pre>
                         <p><strong>Solution:</strong></p>
                         <div class="code-block">
                             <pre><code># Check backend logs for embedding errors
-docker-compose logs backend | grep embedding
+docker compose logs backend | grep embedding
 
 # Verify embedding model in .env
 cat .env | grep EMBEDDING_MODEL
@@ -1198,65 +997,6 @@ docker stats
 # Docker Desktop → Settings → Resources → Memory (16GB recommended)</code></pre>
                         </div>
 
-                        <h3>Langfuse Dashboard Not Accessible</h3>
-                        <div class="warning-box">
-                            <h4>⚠️ Error</h4>
-                            <p><code>http://localhost:3000</code> not loading</p>
-                        </div>
-
-                        <p><strong>Solution:</strong></p>
-                        <div class="code-block">
-                            <pre><code># Check Langfuse container
-docker-compose ps langfuse
-
-# Check logs
-docker-compose logs langfuse
-
-# Verify environment variables
-cat .env | grep LANGFUSE
-
-# Restart Langfuse
-docker-compose restart langfuse
-
-# Wait for startup (can take 30-60 seconds)
-sleep 30
-curl http://localhost:3000</code></pre>
-                        </div>
-
-                        <h3>ELK Stack (Elasticsearch/Kibana) Issues</h3>
-                        <div class="warning-box">
-                            <h4>⚠️ Common Issues</h4>
-                            <ul>
-                                <li>Elasticsearch fails with "max virtual memory areas vm.max_map_count too low"</li>
-                                <li>Kibana shows "Kibana server is not ready yet"</li>
-                            </ul>
-                        </div>
-
-                        <p><strong>Solution for vm.max_map_count error:</strong></p>
-                        <div class="code-block">
-                            <pre><code># Linux/macOS
-sudo sysctl -w vm.max_map_count=262144
-
-# Make permanent (Linux)
-echo 'vm.max_map_count=262144' | sudo tee -a /etc/sysctl.conf
-
-# Docker Desktop (macOS/Windows)
-# Settings → Resources → Advanced → Memory: 4GB minimum</code></pre>
-                        </div>
-
-                        <p><strong>Solution for Kibana not ready:</strong></p>
-                        <div class="code-block">
-                            <pre><code># Kibana needs Elasticsearch to be fully up first
-docker-compose restart elasticsearch
-sleep 60  # Wait for Elasticsearch to be ready
-
-docker-compose restart kibana
-sleep 30  # Wait for Kibana startup
-
-# Check status
-curl http://localhost:5601/api/status</code></pre>
-                        </div>
-
                         <h3>Performance Issues: Slow Query Responses</h3>
                         <div class="info-box">
                             <h4>💡 Optimization Tips</h4>
@@ -1264,7 +1004,7 @@ curl http://localhost:5601/api/status</code></pre>
                                 <li>Reduce MAX_TOKENS in .env (default: 4096, try 2048 for faster responses)</li>
                                 <li>Use Claude 3.5 Haiku instead of Sonnet (faster, cheaper)</li>
                                 <li>Limit search scope to specific Project instead of Portfolio</li>
-                                <li>Enable caching in Redis for frequently asked queries</li>
+                                <li>Reduce CHUNK_SIZE_WORDS for faster embedding processing</li>
                             </ul>
                         </div>
 
@@ -1280,30 +1020,30 @@ curl http://localhost:5601/api/status</code></pre>
 docker builder prune -a
 
 # Rebuild without cache
-docker-compose build --no-cache
+docker compose build --no-cache
 
 # Start services
-docker-compose up -d</code></pre>
+docker compose up -d</code></pre>
                         </div>
 
                         <h3>Still Having Issues?</h3>
                         <div class="info-box">
                             <h4>🔍 Debug Checklist</h4>
                             <ol>
-                                <li>Check all containers are running: <code>docker-compose ps</code></li>
-                                <li>Review logs for errors: <code>docker-compose logs -f</code></li>
-                                <li>Verify .env file has all required variables</li>
+                                <li>Check all containers are running: <code>docker compose ps</code></li>
+                                <li>Review logs for errors: <code>docker compose logs -f</code></li>
+                                <li>Verify .env file has all required variables (ANTHROPIC_API_KEY, HF_TOKEN)</li>
                                 <li>Ensure API keys are valid and have correct permissions</li>
                                 <li>Check system resources (RAM, disk space, CPU)</li>
                                 <li>Verify network ports are not blocked by firewall</li>
-                                <li>Review backend logs in Kibana: <code>http://localhost:5601</code></li>
+                                <li>Review backend logs: <code>docker compose logs backend</code></li>
                             </ol>
                         </div>
 
                         <p><strong>Get Help:</strong></p>
                         <ul>
-                            <li><a href="https://github.com/the-harpia-io/pm_master_v2/issues" target="_blank" rel="noopener noreferrer">Report a Bug</a></li>
-                            <li><a href="https://github.com/the-harpia-io/pm_master_v2/discussions" target="_blank" rel="noopener noreferrer">Community Discussions</a></li>
+                            <li><a href="https://github.com/Tell-Me-Mo/tellmemo-app/issues" target="_blank" rel="noopener noreferrer">Report a Bug</a></li>
+                            <li><a href="https://github.com/Tell-Me-Mo/tellmemo-app/discussions" target="_blank" rel="noopener noreferrer">Community Discussions</a></li>
                             <li>Check backend API docs: <code>http://localhost:8000/docs</code></li>
                         </ul>
                     </article>
@@ -1358,8 +1098,8 @@ docker exec -i pm_master_postgres psql -U pm_master pm_master_db < backup.sql</c
                         <h3>Need Help?</h3>
                         <p>Can't find what you're looking for? We're here to help.</p>
                         <div class="docs-cta-buttons">
-                            <a href="https://github.com/the-harpia-io/pm_master_v2/issues" class="btn-primary" target="_blank" rel="noopener noreferrer">Report an Issue</a>
-                            <a href="https://github.com/the-harpia-io/pm_master_v2" class="btn-secondary" target="_blank" rel="noopener noreferrer">View on GitHub</a>
+                            <a href="https://github.com/Tell-Me-Mo/tellmemo-app/issues" class="btn-primary" target="_blank" rel="noopener noreferrer">Report an Issue</a>
+                            <a href="https://github.com/Tell-Me-Mo/tellmemo-app" class="btn-secondary" target="_blank" rel="noopener noreferrer">View on GitHub</a>
                         </div>
                     </div>
                 </main>
@@ -1405,22 +1145,22 @@ docker exec -i pm_master_postgres psql -U pm_master pm_master_db < backup.sql</c
                     </div>
                     <div class="footer-column">
                         <h4>Developers</h4>
-                        <a href="https://github.com/the-harpia-io/pm_master_v2" target="_blank" rel="noopener noreferrer">GitHub</a>
-                        <a href="https://github.com/the-harpia-io/pm_master_v2/issues" target="_blank" rel="noopener noreferrer">Issues</a>
-                        <a href="https://github.com/the-harpia-io/pm_master_v2/pulls" target="_blank" rel="noopener noreferrer">Pull Requests</a>
+                        <a href="https://github.com/Tell-Me-Mo/tellmemo-app" target="_blank" rel="noopener noreferrer">GitHub</a>
+                        <a href="https://github.com/Tell-Me-Mo/tellmemo-app/issues" target="_blank" rel="noopener noreferrer">Issues</a>
+                        <a href="https://github.com/Tell-Me-Mo/tellmemo-app/pulls" target="_blank" rel="noopener noreferrer">Pull Requests</a>
                         <a href="documentation.html">Documentation</a>
                     </div>
                     <div class="footer-column">
                         <h4>Resources</h4>
                         <a href="blog.html">Blog</a>
-                        <a href="https://github.com/the-harpia-io/pm_master_v2/blob/main/README.md" target="_blank" rel="noopener noreferrer">Getting Started</a>
-                        <a href="https://github.com/the-harpia-io/pm_master_v2/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing</a>
+                        <a href="https://github.com/Tell-Me-Mo/tellmemo-app/blob/main/README.md" target="_blank" rel="noopener noreferrer">Getting Started</a>
+                        <a href="https://github.com/Tell-Me-Mo/tellmemo-app/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing</a>
                     </div>
                     <div class="footer-column">
                         <h4>Legal</h4>
                         <a href="privacy.html">Privacy</a>
                         <a href="terms.html">Terms</a>
-                        <a href="https://github.com/the-harpia-io/pm_master_v2/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">License</a>
+                        <a href="https://github.com/Tell-Me-Mo/tellmemo-app/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">License</a>
                     </div>
                 </div>
             </div>
