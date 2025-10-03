@@ -5,9 +5,10 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 import sentry_sdk
 
 from config import get_settings, configure_logging
@@ -22,6 +23,7 @@ from services.observability.langfuse_service import langfuse_service
 from services.llm.multi_llm_client import get_multi_llm_client
 from middleware.langfuse_middleware import add_langfuse_middleware
 from middleware.auth_middleware import AuthMiddleware
+from middleware.security_headers_middleware import SecurityHeadersMiddleware
 
 settings = get_settings()
 configure_logging(settings)
@@ -209,8 +211,9 @@ app = FastAPI(
     title="PM Master V2 - Meeting RAG System",
     description="A streamlined meeting intelligence platform using RAG for project insights",
     version="0.1.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url=None,  # Disable default docs
+    redoc_url=None,  # Disable default redoc
+    openapi_url=None,  # Disable default openapi.json
     lifespan=lifespan
 )
 
@@ -221,6 +224,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add Security Headers middleware (first for all responses)
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Add Authentication middleware
 app.add_middleware(AuthMiddleware)
@@ -281,10 +287,47 @@ async def root():
     return {
         "name": "PM Master V2 API",
         "version": "0.1.0",
-        "status": "running",
-        "environment": settings.api_env,
-        "docs": f"http://{settings.api_host}:{settings.api_port}/docs"
+        "status": "running"
     }
+
+
+@app.get("/docs", include_in_schema=False)
+async def get_documentation(request: Request):
+    """Protected API documentation - requires authentication"""
+    # Check if user is authenticated via middleware
+    if not hasattr(request.state, 'user'):
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"detail": "Authentication required to access API documentation"}
+        )
+
+    return get_swagger_ui_html(openapi_url="/openapi.json", title="API Documentation")
+
+
+@app.get("/redoc", include_in_schema=False)
+async def get_redoc(request: Request):
+    """Protected ReDoc documentation - requires authentication"""
+    # Check if user is authenticated via middleware
+    if not hasattr(request.state, 'user'):
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"detail": "Authentication required to access API documentation"}
+        )
+
+    return get_redoc_html(openapi_url="/openapi.json", title="API Documentation")
+
+
+@app.get("/openapi.json", include_in_schema=False)
+async def get_openapi(request: Request):
+    """Protected OpenAPI schema - requires authentication"""
+    # Check if user is authenticated via middleware
+    if not hasattr(request.state, 'user'):
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"detail": "Authentication required to access API schema"}
+        )
+
+    return JSONResponse(app.openapi())
 
 
 if __name__ == "__main__":

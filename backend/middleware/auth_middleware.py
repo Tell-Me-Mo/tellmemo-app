@@ -37,9 +37,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
     # Paths that don't require authentication
     PUBLIC_PATHS = [
-        "/docs",
-        "/openapi.json",
-        "/redoc",
+        "/",  # Root endpoint
         "/health",
         "/api/health",
         # Supabase auth endpoints
@@ -258,6 +256,53 @@ class JWTBearer(HTTPBearer):
 
 # Create reusable security dependency
 jwt_bearer = JWTBearer()
+
+
+async def verify_token(token: str) -> bool:
+    """
+    Verify if a JWT token is valid.
+
+    Args:
+        token: JWT token to verify
+
+    Returns:
+        True if token is valid, False otherwise
+
+    Raises:
+        HTTPException: If token is invalid or expired
+    """
+    try:
+        settings = get_settings()
+
+        # Use auth service based on AUTH_PROVIDER setting
+        if settings.auth_provider == 'backend':
+            # Verify with native auth service
+            async with get_db_context() as db:
+                user = await native_auth_service.get_user_from_token(db, token)
+                if not user:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Invalid or expired token"
+                    )
+                return True
+        else:
+            # Verify with Supabase auth service
+            user_data = auth_service.verify_token(token)
+            if not user_data:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid or expired token"
+                )
+            return True
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error verifying token: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token"
+        )
 
 
 async def get_current_user_ws(token: str, db: AsyncSession) -> Optional[User]:
