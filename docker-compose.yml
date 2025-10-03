@@ -2,7 +2,7 @@ services:
   # PostgreSQL 17.6 - Main database for project metadata
   postgres:
     image: postgres:17.6
-    container_name: pm_master_postgres
+    container_name: tellmemo_postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-pm_master}
@@ -25,7 +25,7 @@ services:
   # Qdrant v1.15.3 - Vector database for semantic search
   qdrant:
     image: qdrant/qdrant:v1.15.4
-    container_name: pm_master_qdrant
+    container_name: tellmemo_qdrant
     restart: unless-stopped
     environment:
       QDRANT__SERVICE__HTTP_PORT: 6333
@@ -55,7 +55,7 @@ services:
   # Redis 7 - Required for Langfuse v3 queue and caching (optional)
   redis:
     image: redis:7-alpine
-    container_name: pm_master_redis
+    container_name: tellmemo_redis
     restart: unless-stopped
     profiles:
       - langfuse
@@ -77,7 +77,7 @@ services:
   # MinIO - S3-compatible storage for Langfuse v3 (optional)
   minio:
     image: minio/minio:latest
-    container_name: pm_master_minio
+    container_name: tellmemo_minio
     restart: unless-stopped
     profiles:
       - langfuse
@@ -101,7 +101,7 @@ services:
   # Zookeeper - Required for ClickHouse clustering (optional - only for Langfuse)
   zookeeper:
     image: zookeeper:3.9
-    container_name: pm_master_zookeeper
+    container_name: tellmemo_zookeeper
     restart: unless-stopped
     profiles:
       - langfuse
@@ -125,7 +125,7 @@ services:
   # ClickHouse - Required for Langfuse v3 analytics (with clustering support) (optional)
   clickhouse:
     image: clickhouse/clickhouse-server:24.3-alpine
-    container_name: pm_master_clickhouse
+    container_name: tellmemo_clickhouse
     restart: unless-stopped
     profiles:
       - langfuse
@@ -160,7 +160,7 @@ services:
   # Langfuse v3 Worker - Background processing (optional)
   langfuse-worker:
     image: langfuse/langfuse-worker:latest
-    container_name: pm_master_langfuse_worker
+    container_name: tellmemo_langfuse_worker
     restart: unless-stopped
     profiles:
       - langfuse
@@ -215,7 +215,7 @@ services:
   # Langfuse v3 Web - Main application (optional)
   langfuse-web:
     image: langfuse/langfuse:latest
-    container_name: pm_master_langfuse
+    container_name: tellmemo_langfuse
     restart: unless-stopped
     profiles:
       - langfuse
@@ -292,7 +292,7 @@ services:
   # Backend - FastAPI application
   backend:
     image: nkondratyk93/tellmemo-backend:latest
-    container_name: pm_master_backend
+    container_name: tellmemo_backend
     restart: unless-stopped
     depends_on:
       postgres:
@@ -351,7 +351,7 @@ services:
   # Note: Frontend config is injected at runtime via entrypoint script
   frontend:
     image: nkondratyk93/tellmemo-frontend:latest
-    container_name: pm_master_frontend
+    container_name: tellmemo_frontend
     restart: unless-stopped
     depends_on:
       backend:
