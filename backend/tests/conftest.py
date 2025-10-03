@@ -34,7 +34,7 @@ def test_settings():
     """Configuration settings using real services"""
     settings = Settings()
     settings.database_url = DATABASE_URL
-    settings.environment = os.getenv("ENVIRONMENT", "development")
+    settings.api_env = os.getenv("API_ENV", "development")
     # Use real Claude API key from environment
     settings.claude_api_key = os.getenv("CLAUDE_API_KEY", "")
     return settings
