@@ -53,6 +53,14 @@ app.*.map.json
 .env.local
 .env.*.local
 
+# Firebase configuration (contains API keys)
+lib/firebase_options.dart
+
+# Platform-specific directories
+ios/
+android/
+macos/
+
 # Python
 __pycache__/
 *.py[cod]
