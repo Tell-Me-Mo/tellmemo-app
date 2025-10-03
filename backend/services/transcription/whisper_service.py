@@ -182,17 +182,34 @@ class WhisperTranscriptionService:
             audio_path,
             language=language,
             initial_prompt=initial_prompt,  # Use provided prompt or None
-            beam_size=5,
-            best_of=5,
-            patience=1.0,
-            length_penalty=1.0,
-            temperature=0.0,
-            compression_ratio_threshold=2.4,
-            log_prob_threshold=-1.0,
-            no_speech_threshold=0.6,
-            condition_on_previous_text=True,
+
+            # Performance optimization
+            beam_size=5,  # Good balance of quality vs speed (use 1 for max speed)
+            best_of=5,  # Number of candidates to consider
+            patience=1.0,  # Beam search patience
+
+            # Quality improvements
+            temperature=0.0,  # Deterministic output (no randomness)
+            compression_ratio_threshold=2.4,  # Detect hallucinations in silent parts
+            log_prob_threshold=-1.0,  # Filter low-confidence segments
+            no_speech_threshold=0.6,  # Silence detection sensitivity (lower = more aggressive)
+
+            # Context and timestamps
+            condition_on_previous_text=True,  # Better context-aware transcription
             word_timestamps=True,  # Enable word-level timestamps
-            vad_filter=False,  # Disable VAD to transcribe everything
+
+            # VAD (Voice Activity Detection) - removes silence
+            vad_filter=True,  # Enable VAD to skip silent parts (2-3x faster)
+            vad_parameters={
+                "threshold": 0.5,  # Speech detection sensitivity (0.3-0.7 range)
+                "min_speech_duration_ms": 250,  # Minimum speech duration
+                "min_silence_duration_ms": 2000,  # Minimum silence to skip (2 seconds)
+                "speech_pad_ms": 400,  # Padding around speech segments
+            },
+
+            # Hallucination reduction
+            hallucination_silence_threshold=None,  # Auto-detect hallucinations
+            repetition_penalty=1.0,  # Prevent repetitive output
         )
         
         # Collect segments with real-time progress tracking
