@@ -37,8 +37,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   
   # State Management
-  flutter_riverpod: ^2.6.1
-  riverpod_annotation: ^2.6.1
+  flutter_riverpod: ^3.0.1
+  riverpod_annotation: ^3.0.1
   
   # Routing
   go_router: ^16.2.2
@@ -79,7 +79,7 @@ dependencies:
   
   # JSON & Serialization
   json_annotation: ^4.9.0
-  freezed_annotation: ^2.4.4
+  freezed_annotation: ^3.1.0
   equatable: ^2.0.7
 
   # PDF & Document Generation
@@ -104,14 +104,14 @@ dev_dependencies:
   flutter_launcher_icons: ^0.14.4
 
   # Code Generation
-  build_runner: ^2.4.13
-  riverpod_generator: ^2.6.2
-  retrofit_generator: ^9.1.4
-  json_serializable: ^6.8.0
-  freezed: ^2.5.2
+  build_runner: ^2.6.0
+  riverpod_generator: ^3.0.1
+  retrofit_generator: ^10.0.0
+  json_serializable: ^6.11.1
+  freezed: ^3.2.3
   
   # Testing
-  mockito: ^5.4.4
+  mockito: ^5.5.0
   integration_test:
     sdk: flutter
 
