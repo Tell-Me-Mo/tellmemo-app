@@ -55,7 +55,7 @@ gotrue==2.12.4
 pyjwt==2.10.1
 
 # Utilities
-httpx>=0.26,<0.28
+httpx>=0.26,<0.29
 aiofiles==24.1.0
 aiohttp==3.11.18
 python-jose[cryptography]==3.3.0
