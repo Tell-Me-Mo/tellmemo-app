@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.9.0
+  sdk: ^3.9.2
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -41,11 +41,11 @@ dependencies:
   riverpod_annotation: ^2.6.1
   
   # Routing
-  go_router: ^16.2.2
+  go_router: ^16.2.4
   
   # HTTP Client
   dio: ^5.9.0
-  retrofit: ^4.7.2
+  retrofit: ^4.7.3
   http: ^1.5.0
   
   # UI & Design
@@ -59,10 +59,10 @@ dependencies:
   flutter_dotenv: ^6.0.0
   
   # Authentication
-  supabase_flutter: ^2.10.1
+  supabase_flutter: ^2.10.2
 
   # Utils
-  web: ^1.1.0
+  web: ^1.1.1
   intl: ^0.20.2
   path_provider: ^2.1.5
   path: ^1.9.1
@@ -73,7 +73,7 @@ dependencies:
   firebase_analytics: ^12.0.2
   
   # Audio Recording & Streaming
-  record: ^6.1.1
+  record: ^6.1.2
   permission_handler: ^12.0.1
   web_socket_channel: ^3.0.3
   

@@ -598,10 +598,10 @@ packages:
     dependency: "direct main"
     description:
       name: go_router
-      sha256: b1488741c9ce37b72e026377c69a59c47378493156fc38efb5a54f6def3f92a3
+      sha256: c752e2d08d088bf83742cb05bf83003f3e9d276ff1519b5c92f9d5e60e5ddd23
       url: "https://pub.dev"
     source: hosted
-    version: "16.2.2"
+    version: "16.2.4"
   gotrue:
     dependency: transitive
     description:
@@ -1075,10 +1075,10 @@ packages:
     dependency: transitive
     description:
       name: postgrest
-      sha256: "10b81a23b1c829ccadf68c626b4d66666453a1474d24c563f313f5ca7851d575"
+      sha256: "57637e331af3863fa1f555907ff24c30d69c3ad3ff127d89320e70e8d5e585f5"
       url: "https://pub.dev"
     source: hosted
-    version: "2.4.2"
+    version: "2.5.0"
   printing:
     dependency: "direct main"
     description:
@@ -1139,34 +1139,34 @@ packages:
     dependency: transitive
     description:
       name: realtime_client
-      sha256: "025b7e690e8dcf27844f37d140cca47da5ab31d6fe8d78347fb16763f0a4beb6"
+      sha256: c0938faca85ff2bdcb8e97ebfca4ab1428661b441c1a414fb09c113e00cee2c6
       url: "https://pub.dev"
     source: hosted
-    version: "2.5.2"
+    version: "2.5.3"
   record:
     dependency: "direct main"
     description:
       name: record
-      sha256: "9dbc6ff3e784612f90a9b001373c45ff76b7a08abd2bd9fdf72c242320c8911c"
+      sha256: "6bad72fb3ea6708d724cf8b6c97c4e236cf9f43a52259b654efeb6fd9b737f1f"
       url: "https://pub.dev"
     source: hosted
-    version: "6.1.1"
+    version: "6.1.2"
   record_android:
     dependency: transitive
     description:
       name: record_android
-      sha256: "8361a791c9a3fa5c065f0b8b5adb10f12531f8538c86b19474cf7b56ea80d426"
+      sha256: f05677eeed074898327f890f232f9eb49cd99d1c20d0daaf22b5612f4b2301bb
       url: "https://pub.dev"
     source: hosted
-    version: "1.4.1"
+    version: "1.4.3"
   record_ios:
     dependency: transitive
     description:
       name: record_ios
-      sha256: "13e241ed9cbc220534a40ae6b66222e21288db364d96dd66fb762ebd3cb77c71"
+      sha256: "67ccec4b0026304f236e59076f90682ee1911cd28907a877367ce9d61cb13a80"
       url: "https://pub.dev"
     source: hosted
-    version: "1.1.2"
+    version: "1.1.3"
   record_linux:
     dependency: transitive
     description:
@@ -1179,10 +1179,10 @@ packages:
     dependency: transitive
     description:
       name: record_macos
-      sha256: "2849068bb59072f300ad63ed146e543d66afaef8263edba4de4834fc7c8d4d35"
+      sha256: "842ea4b7e95f4dd237aacffc686d1b0ff4277e3e5357865f8d28cd28bc18ed95"
       url: "https://pub.dev"
     source: hosted
-    version: "1.1.1"
+    version: "1.1.2"
   record_platform_interface:
     dependency: transitive
     description:
@@ -1211,10 +1211,10 @@ packages:
     dependency: "direct main"
     description:
       name: retrofit
-      sha256: "699cf44ec6c7fc7d248740932eca75d334e36bdafe0a8b3e9ff93100591c8a25"
+      sha256: be571b11e3d7c62d0894fc193d1199864f761fc84bf8ccca5efe0bb0b6b0c38b
       url: "https://pub.dev"
     source: hosted
-    version: "4.7.2"
+    version: "4.7.3"
   retrofit_generator:
     dependency: "direct dev"
     description:
@@ -1480,18 +1480,18 @@ packages:
     dependency: transitive
     description:
       name: supabase
-      sha256: "9c960828e1e92ce4a97c33b7b52d80ca643a11161d46c71deedf9def50797fc6"
+      sha256: b8991524ff1f4fcb50475847f100a399b96a7d347655bbbd1c7b51eea065f892
       url: "https://pub.dev"
     source: hosted
-    version: "2.9.1"
+    version: "2.9.2"
   supabase_flutter:
     dependency: "direct main"
     description:
       name: supabase_flutter
-      sha256: b45bf6dc109c65356022ceb81d0781c1ee2383cce2da17df3ed0deb77094088e
+      sha256: "389eeb18d2a0773da61a157df6f35761e1855567271df12665bb7ddeb2dda0f7"
       url: "https://pub.dev"
     source: hosted
-    version: "2.10.1"
+    version: "2.10.2"
   sync_http:
     dependency: transitive
     description:
@@ -1709,5 +1709,5 @@ packages:
     source: hosted
     version: "2.1.0"
 sdks:
-  dart: ">=3.9.0 <4.0.0"
+  dart: ">=3.9.2 <4.0.0"
   flutter: ">=3.35.0"
