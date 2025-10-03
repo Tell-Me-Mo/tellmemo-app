@@ -253,13 +253,65 @@ async def refresh_token(
     Raises:
         HTTPException: If refresh fails
     """
-    if not auth_service.client:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Authentication service not configured"
-        )
+    # Check which auth service is being used
+    from services.auth.native_auth_service import native_auth_service
 
     try:
+        # Try native auth first
+        payload = native_auth_service.verify_jwt_token(request.refresh_token)
+
+        if payload and payload.get('type') == 'refresh':
+            # Native auth refresh
+            user_id = payload.get('sub')
+            if not user_id:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid refresh token"
+                )
+
+            # Get user from database
+            from sqlalchemy import select
+            result = await db.execute(
+                select(User).where(User.id == user_id)
+            )
+            user = result.scalar_one_or_none()
+
+            if not user or not user.is_active:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="User not found or inactive"
+                )
+
+            # Create new tokens
+            new_access_token = native_auth_service.create_access_token(
+                str(user.id),
+                user.email,
+                str(user.last_active_organization_id) if user.last_active_organization_id else None
+            )
+            new_refresh_token = native_auth_service.create_refresh_token(str(user.id))
+
+            return AuthResponse(
+                access_token=new_access_token,
+                refresh_token=new_refresh_token,
+                expires_in=native_auth_service.access_token_expire_minutes * 60,
+                user={
+                    "id": str(user.id),
+                    "email": user.email,
+                    "name": user.name,
+                    "avatar_url": user.avatar_url,
+                    "email_verified": user.email_verified,
+                    "last_active_organization_id": str(user.last_active_organization_id)
+                        if user.last_active_organization_id else None
+                }
+            )
+
+        # Fall back to Supabase auth if native auth fails
+        if not auth_service.client:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Authentication service not configured"
+            )
+
         # Refresh the session
         response = auth_service.client.auth.refresh_session(request.refresh_token)
 

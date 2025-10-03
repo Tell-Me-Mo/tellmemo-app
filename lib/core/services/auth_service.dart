@@ -8,6 +8,7 @@ final authServiceProvider = Provider<AuthService>((ref) {
 
 class AuthService {
   static const _tokenKey = 'auth_token';
+  static const _refreshTokenKey = 'refresh_token';
   static const _userIdKey = 'user_id';
   static const _organizationIdKey = 'organization_id';
 
@@ -15,12 +16,18 @@ class AuthService {
 
   // Cache token in memory
   String? _cachedToken;
+  String? _cachedRefreshToken;
   String? _cachedUserId;
   String? _cachedOrganizationId;
 
   Future<String?> getToken() async {
     _cachedToken ??= await _storage.read(_tokenKey);
     return _cachedToken;
+  }
+
+  Future<String?> getRefreshToken() async {
+    _cachedRefreshToken ??= await _storage.read(_refreshTokenKey);
+    return _cachedRefreshToken;
   }
 
   Future<String?> getUserId() async {
@@ -38,6 +45,11 @@ class AuthService {
     await _storage.write(_tokenKey, token);
   }
 
+  Future<void> setRefreshToken(String refreshToken) async {
+    _cachedRefreshToken = refreshToken;
+    await _storage.write(_refreshTokenKey, refreshToken);
+  }
+
   Future<void> setUserId(String userId) async {
     _cachedUserId = userId;
     await _storage.write(_userIdKey, userId);
@@ -50,6 +62,7 @@ class AuthService {
 
   Future<void> clearAuth() async {
     _cachedToken = null;
+    _cachedRefreshToken = null;
     _cachedUserId = null;
     _cachedOrganizationId = null;
     await _storage.deleteAll();
