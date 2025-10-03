@@ -315,16 +315,19 @@ services:
       # Langfuse (only if enabled)
       LANGFUSE_ENABLED: ${LANGFUSE_ENABLED:-false}
       LANGFUSE_HOST: http://langfuse-web:3000
-      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY}
-      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
 
       # Supabase
-      SUPABASE_URL: ${SUPABASE_URL}
-      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
 
       # Anthropic
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+
+      # Hugging Face
+      HF_TOKEN: ${HF_TOKEN}
 
       # Application
       ENVIRONMENT: ${ENVIRONMENT:-development}
@@ -355,8 +358,8 @@ services:
         condition: service_healthy
     environment:
       # Runtime configuration (injected into JavaScript at startup)
-      SUPABASE_URL: ${SUPABASE_URL}
-      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
       API_BASE_URL: ${FRONTEND_URL:-http://localhost:8100}
 
       # Optional: Analytics & Error Tracking
