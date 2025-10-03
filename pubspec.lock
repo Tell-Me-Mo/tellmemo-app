@@ -1160,13 +1160,13 @@ packages:
     source: hosted
     version: "1.4.3"
   record_ios:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
       name: record_ios
-      sha256: "67ccec4b0026304f236e59076f90682ee1911cd28907a877367ce9d61cb13a80"
+      sha256: "13e241ed9cbc220534a40ae6b66222e21288db364d96dd66fb762ebd3cb77c71"
       url: "https://pub.dev"
     source: hosted
-    version: "1.1.3"
+    version: "1.1.2"
   record_linux:
     dependency: transitive
     description:
@@ -1709,5 +1709,5 @@ packages:
     source: hosted
     version: "2.1.0"
 sdks:
-  dart: ">=3.9.2 <4.0.0"
+  dart: ">=3.9.0 <4.0.0"
   flutter: ">=3.35.0"
