@@ -28,6 +28,7 @@ from services.integrations.integration_service import integration_service
 from services.intelligence.project_matcher_service import project_matcher_service
 from models.content import Content, ContentType
 from models.integration import Integration, IntegrationType, IntegrationStatus
+from config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +68,10 @@ async def process_audio_transcription(
                 step_description="Loading AI model..."
             )
 
-            # Check for transcription integration configuration
+            # Get settings for environment variable defaults
+            settings = get_settings()
+
+            # Check for transcription integration configuration (UI settings override env vars)
             transcription_config = await integration_service.get_integration_config(
                 db,
                 IntegrationType.TRANSCRIPTION,
@@ -75,11 +79,25 @@ async def process_audio_transcription(
             )
 
             # Determine which transcription service to use
+            # Priority: UI Integration settings > Environment variables > Default (whisper)
             use_salad = False
+            salad_api_key = None
+            salad_org = None
+
             if transcription_config:
+                # UI Integration settings take precedence
                 custom_settings = transcription_config.get('custom_settings', {})
                 service_type = custom_settings.get('service_type', 'whisper')
                 use_salad = (service_type == 'salad')
+                if use_salad:
+                    salad_api_key = transcription_config.get('api_key')
+                    salad_org = custom_settings.get('organization_name')
+            else:
+                # Fall back to environment variable configuration
+                use_salad = (settings.default_transcription_service.lower() == 'salad')
+                if use_salad:
+                    salad_api_key = settings.salad_api_key
+                    salad_org = settings.salad_organization_name
 
             # Create progress callback for transcription
             async def transcription_progress(progress: float, description: str):
@@ -97,12 +115,9 @@ async def process_audio_transcription(
             if use_salad:
                 # Use Salad transcription service
                 try:
-                    # Get decrypted API key from config
-                    salad_api_key = transcription_config.get('api_key')
-                    salad_org = transcription_config.get('custom_settings', {}).get('organization_name')
-
+                    # Validate Salad credentials
                     if not salad_api_key or not salad_org:
-                        raise ValueError("Salad API key and organization name are required")
+                        raise ValueError("Salad API key and organization name are required. Configure via UI Integration settings or environment variables (SALAD_API_KEY, SALAD_ORGANIZATION_NAME).")
 
                     salad_service = get_salad_service(
                         api_key=salad_api_key,
