@@ -180,14 +180,29 @@ class EmbeddingService:
                 )
                 logger.info("✅ Successfully loaded EmbeddingGemma from local cache")
             except Exception as local_error:
-                logger.warning(f"Failed to load from cache, trying with online check: {local_error}")
-                model = SentenceTransformer(
-                    self.model_name,
-                    device=device,
-                    cache_folder=str(self.cache_dir),
-                    token=hf_token,
-                    trust_remote_code=True
-                )
+                # Try loading with model name but still enforce local_files_only
+                # This handles cases where the cache path format changed
+                logger.warning(f"Failed to load from cache path, trying model name with local files only: {local_error}")
+                try:
+                    model = SentenceTransformer(
+                        self.model_name,
+                        device=device,
+                        cache_folder=str(self.cache_dir),
+                        local_files_only=True,  # Still don't go online
+                        trust_remote_code=True
+                    )
+                    logger.info("✅ Successfully loaded EmbeddingGemma from local cache using model name")
+                except Exception as retry_error:
+                    # Only now try online download if local loading completely failed
+                    logger.warning(f"Local cache loading failed completely: {retry_error}")
+                    logger.info("Attempting online download as last resort...")
+                    model = SentenceTransformer(
+                        self.model_name,
+                        device=device,
+                        cache_folder=str(self.cache_dir),
+                        token=hf_token,
+                        trust_remote_code=True
+                    )
         else:
             # Try to download with authentication token
             logger.info(f"Attempting to download model: {self.model_name}")

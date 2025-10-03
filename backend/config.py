@@ -151,6 +151,18 @@ class Settings(BaseSettings):
     sentry_environment: str = Field(default="development", env="SENTRY_ENVIRONMENT")
     sentry_traces_sample_rate: float = Field(default=1.0, env="SENTRY_TRACES_SAMPLE_RATE")
     sentry_profile_sample_rate: float = Field(default=1.0, env="SENTRY_PROFILE_SAMPLE_RATE")
+
+    # Logging Configuration
+    enable_logstash: bool = Field(default=False, env="ENABLE_LOGSTASH")
+    logstash_host: str = Field(default="localhost", env="LOGSTASH_HOST")
+    logstash_port: int = Field(default=8080, env="LOGSTASH_PORT")
+
+    # Transcription Service Configuration (Defaults - can be overridden by UI integration settings)
+    # Options: "whisper" (local) or "salad" (Salad API)
+    default_transcription_service: str = Field(default="whisper", env="DEFAULT_TRANSCRIPTION_SERVICE")
+    # Salad API credentials (only needed if using Salad as default)
+    salad_api_key: str = Field(default="", env="SALAD_API_KEY")
+    salad_organization_name: str = Field(default="", env="SALAD_ORGANIZATION_NAME")
     
     class Config:
         # Look for .env in parent directory (root of project)
@@ -223,21 +235,24 @@ def configure_logging(settings: Settings) -> None:
         force=True  # Force reconfiguration to avoid duplicates
     )
 
-    # Add Logstash handler for ELK stack integration
-    try:
-        from utils.logstash_handler import AsyncLogstashHandler
-        logstash_handler = AsyncLogstashHandler(
-            host='localhost',
-            port=8080,
-            app_name='pm_master',
-            environment=settings.api_env
-        )
-        logstash_handler.setLevel(logging.INFO)  # Send INFO and above to Logstash
-        logging.getLogger().addHandler(logstash_handler)
-        logging.info("Logstash handler configured successfully")
-    except Exception as e:
-        # Don't fail if Logstash is unavailable - log to console only
-        logging.warning(f"Failed to configure Logstash handler: {e}")
+    # Add Logstash handler for ELK stack integration (optional)
+    if settings.enable_logstash:
+        try:
+            from utils.logstash_handler import AsyncLogstashHandler
+            logstash_handler = AsyncLogstashHandler(
+                host=settings.logstash_host,
+                port=settings.logstash_port,
+                app_name='pm_master',
+                environment=settings.api_env
+            )
+            logstash_handler.setLevel(logging.INFO)  # Send INFO and above to Logstash
+            logging.getLogger().addHandler(logstash_handler)
+            logging.info("Logstash handler configured successfully")
+        except Exception as e:
+            # Don't fail if Logstash is unavailable - log to console only
+            logging.warning(f"Failed to configure Logstash handler: {e}")
+    else:
+        logging.info("Logstash logging disabled - using local file/console logging only")
 
     # Disable verbose HTTP logging
     logging.getLogger("httpcore").setLevel(logging.WARNING)
