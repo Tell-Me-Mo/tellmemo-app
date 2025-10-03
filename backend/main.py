@@ -57,13 +57,22 @@ async def lifespan(app: FastAPI):
         # Run Alembic migrations automatically on startup
         try:
             import os
+            import sys
             logger.info("Running database migrations...")
 
             # Run migrations in a subprocess to avoid async deadlock
             # Alembic's env.py uses asyncio.run() which conflicts with FastAPI's event loop
             backend_dir = os.path.dirname(os.path.abspath(__file__))
+
+            # Find alembic in venv or system PATH
+            # Check if running in venv and use venv's alembic
+            venv_alembic = os.path.join(sys.prefix, 'bin', 'alembic')
+            alembic_cmd = venv_alembic if os.path.exists(venv_alembic) else 'alembic'
+
+            logger.debug(f"Using alembic command: {alembic_cmd}")
+
             result = await asyncio.create_subprocess_exec(
-                'alembic', 'upgrade', 'head',
+                alembic_cmd, 'upgrade', 'head',
                 cwd=backend_dir,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
