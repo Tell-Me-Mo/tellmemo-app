@@ -2,6 +2,7 @@ import os
 # Set environment variable to suppress tokenizers parallelism warning
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -10,7 +11,7 @@ from fastapi.responses import JSONResponse
 import sentry_sdk
 
 from config import get_settings, configure_logging
-from routers import health, projects, content, queries, admin, scheduler, activities, websocket_audio, transcription, jobs, websocket_jobs, integrations, upload, portfolios, programs, hierarchy, hierarchy_summaries, content_availability, unified_summaries, risks_tasks, lessons_learned, auth, organizations, invitations, websocket_notifications, support_tickets, websocket_tickets, conversations, notifications
+from routers import health, projects, content, queries, admin, scheduler, activities, websocket_audio, transcription, jobs, websocket_jobs, integrations, upload, portfolios, programs, hierarchy, hierarchy_summaries, content_availability, unified_summaries, risks_tasks, lessons_learned, auth, native_auth, organizations, invitations, websocket_notifications, support_tickets, websocket_tickets, conversations, notifications
 from utils.logger import get_logger
 from db.database import init_database, close_database
 from db.multi_tenant_vector_store import multi_tenant_vector_store
@@ -55,23 +56,37 @@ async def lifespan(app: FastAPI):
 
         # Run Alembic migrations automatically on startup
         try:
-            from alembic import command
-            from alembic.config import Config
             import os
-
-            # Get the directory where main.py is located
-            backend_dir = os.path.dirname(os.path.abspath(__file__))
-            alembic_ini_path = os.path.join(backend_dir, "alembic.ini")
-
-            alembic_cfg = Config(alembic_ini_path)
-            # Set the script location relative to backend directory
-            alembic_cfg.set_main_option("script_location", os.path.join(backend_dir, "alembic"))
-
             logger.info("Running database migrations...")
-            command.upgrade(alembic_cfg, "head")
-            logger.info("Database migrations completed successfully")
+
+            # Run migrations in a subprocess to avoid async deadlock
+            # Alembic's env.py uses asyncio.run() which conflicts with FastAPI's event loop
+            backend_dir = os.path.dirname(os.path.abspath(__file__))
+            result = await asyncio.create_subprocess_exec(
+                'alembic', 'upgrade', 'head',
+                cwd=backend_dir,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await result.communicate()
+
+            if result.returncode == 0:
+                logger.info("✅ Database migrations completed successfully")
+                if stdout:
+                    logger.debug(f"Migration output: {stdout.decode()}")
+            else:
+                logger.error(f"❌ Migration failed with return code {result.returncode}")
+                if stderr:
+                    logger.error(f"Migration error: {stderr.decode()}")
+                logger.warning("⚠️ Continuing startup - migrations may have already been applied")
+
+        except FileNotFoundError:
+            logger.warning("⚠️ Alembic not found in PATH - skipping automatic migrations")
+            logger.info("💡 Run migrations manually with: cd backend && alembic upgrade head")
         except Exception as migration_error:
-            logger.error(f"Failed to run database migrations: {migration_error}")
+            logger.error(f"❌ Failed to run database migrations: {migration_error}")
+            import traceback
+            logger.error(f"Migration traceback: {traceback.format_exc()}")
             # Continue running - migrations might have already been applied
 
     except Exception as e:
@@ -126,6 +141,20 @@ async def lifespan(app: FastAPI):
         logger.error(f"Failed to start scheduler service: {e}")
         # Continue running even if scheduler fails
     
+    # Pre-load Whisper model at startup (optional - improves first transcription speed)
+    try:
+        from services.transcription.whisper_service import get_whisper_service
+        logger.info("Pre-loading Whisper transcription model...")
+        whisper_service = get_whisper_service()
+        if whisper_service.is_model_loaded():
+            logger.info("✅ Whisper model pre-loaded successfully")
+        else:
+            logger.warning("⚠️ Whisper model not loaded")
+    except Exception as e:
+        logger.warning(f"⚠️ Failed to pre-load Whisper model: {e}")
+        logger.info("Model will be loaded on first transcription request")
+        # Continue running - model will load on demand
+
     # Start upload job service
     try:
         upload_job_service.start()
@@ -204,6 +233,7 @@ async def global_exception_handler(request, exc):
 
 
 app.include_router(auth.router, tags=["auth"])
+app.include_router(native_auth.router, tags=["native-auth"])  # Native auth endpoints at /api/auth/*
 app.include_router(organizations.router, tags=["organizations"])
 app.include_router(invitations.router, tags=["invitations"])
 app.include_router(health.router, prefix="/api", tags=["health"])

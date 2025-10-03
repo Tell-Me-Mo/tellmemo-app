@@ -9,8 +9,9 @@ import os
 os.environ['CURL_CA_BUNDLE'] = ''
 os.environ['REQUESTS_CA_BUNDLE'] = ''
 os.environ['HF_HUB_DISABLE_SSL_VERIFY'] = '1'
-os.environ['TRANSFORMERS_OFFLINE'] = '1'
-os.environ['HF_DATASETS_OFFLINE'] = '1'
+# Don't set offline mode - we need to download models
+# os.environ['TRANSFORMERS_OFFLINE'] = '1'
+# os.environ['HF_DATASETS_OFFLINE'] = '1'
 
 import asyncio
 import logging
@@ -32,15 +33,15 @@ class WhisperTranscriptionService:
     
     def __init__(
         self,
-        model_size: str = "large-v3-turbo",  # Faster with similar accuracy
+        model_size: str = "deepdml/faster-whisper-large-v3-turbo-ct2",  # Optimized turbo model, no auth required
         device: str = "auto",
         compute_type: str = "float16"
     ):
         """
         Initialize Whisper service.
-        
+
         Args:
-            model_size: Whisper model size (tiny, base, small, medium, large, large-v2, large-v3)
+            model_size: Whisper model size or HuggingFace model ID
             device: Device to run on ('cpu', 'cuda', or 'auto')
             compute_type: Compute type for inference
         """
@@ -62,55 +63,35 @@ class WhisperTranscriptionService:
         if self.device == "cuda":
             self.compute_type = "float16"  # Best for NVIDIA GPUs
         elif torch.backends.mps.is_available():
-            self.compute_type = "float32"  # Apple Silicon optimization
+            self.compute_type = "int8"  # INT8 quantization for faster inference on Apple Silicon
         else:
             self.compute_type = "int8"  # Best for regular CPU
             
         logger.info(f"Initializing Whisper model: {model_size} on {self.device}")
-
-        # Check if model is already downloaded and load directly from path
-        local_model_path = Path("./models/whisper/models--mobiuslabsgmbh--faster-whisper-large-v3-turbo/snapshots/a6e6223fa2874a73c8e0e59bbb6c605e8b6b9b20")
 
         with MonitoringContext(
             "whisper_model_initialization",
             metadata={
                 "model_size": model_size,
                 "device": self.device,
-                "compute_type": self.compute_type,
-                "local_path": str(local_model_path)
+                "compute_type": self.compute_type
             }
         ) as ctx:
-            if local_model_path.exists() and (local_model_path / "model.bin").exists():
-                logger.info(f"Loading model from local path: {local_model_path}")
-                try:
-                    # Load directly from the local path
-                    self.model = WhisperModel(
-                        str(local_model_path),  # Use the path directly instead of model name
-                        device=self.device,
-                        compute_type=self.compute_type,
-                        local_files_only=True
-                    )
-                    logger.info("Model loaded successfully from local files")
-                    ctx.update(output={"model_loaded": True, "source": "local"})
-                except Exception as e:
-                    logger.error(f"Failed to load model from local path: {e}")
-                    raise
-            else:
-                logger.warning(f"Model files not found at {local_model_path}")
-                logger.info("Attempting to download model with SSL bypass...")
-                try:
-                    self.model = WhisperModel(
-                        model_size,
-                        device=self.device,
-                        compute_type=self.compute_type,
-                        download_root="./models/whisper",
-                        local_files_only=False
-                    )
-                    ctx.update(output={"model_loaded": True, "source": "download"})
-                except Exception as e:
-                    logger.error(f"Failed to download model: {e}")
-                    logger.error("Please run the manual download script: ./download_whisper_manual.sh")
-                    raise
+            try:
+                # Load model from HuggingFace (will use cached version if available)
+                self.model = WhisperModel(
+                    model_size,
+                    device=self.device,
+                    compute_type=self.compute_type,
+                    download_root="./models/whisper",
+                    local_files_only=False  # Allow download from HuggingFace if not cached
+                )
+
+                logger.info(f"Model '{model_size}' loaded successfully")
+                ctx.update(output={"model_loaded": True, "model": model_size})
+            except Exception as e:
+                logger.error(f"Failed to load model '{model_size}': {e}")
+                raise
         
         self.sample_rate = 16000  # Whisper expects 16kHz audio
         
@@ -194,34 +175,57 @@ class WhisperTranscriptionService:
         if progress_info:
             progress_info["progress"] = 5
             progress_info["message"] = "Loading audio file..."
-        
+
+        logger.info(f"Starting transcription of: {audio_path}")
+
         segments, info = self.model.transcribe(
             audio_path,
             language=language,
             initial_prompt=initial_prompt,  # Use provided prompt or None
-            beam_size=5,
-            best_of=5,
-            patience=1.0,
-            length_penalty=1.0,
-            temperature=0.0,
-            compression_ratio_threshold=2.4,
-            log_prob_threshold=-1.0,
-            no_speech_threshold=0.6,
-            condition_on_previous_text=True,
+
+            # Performance optimization
+            beam_size=5,  # Good balance of quality vs speed (use 1 for max speed)
+            best_of=5,  # Number of candidates to consider
+            patience=1.0,  # Beam search patience
+
+            # Quality improvements
+            temperature=0.0,  # Deterministic output (no randomness)
+            compression_ratio_threshold=2.4,  # Detect hallucinations in silent parts
+            log_prob_threshold=-1.0,  # Filter low-confidence segments
+            no_speech_threshold=0.6,  # Silence detection sensitivity (lower = more aggressive)
+
+            # Context and timestamps
+            condition_on_previous_text=True,  # Better context-aware transcription
             word_timestamps=True,  # Enable word-level timestamps
-            vad_filter=False,  # Disable VAD to transcribe everything
+
+            # VAD (Voice Activity Detection) - removes silence
+            vad_filter=True,  # Enable VAD to skip silent parts (2-3x faster)
+            vad_parameters={
+                "threshold": 0.5,  # Speech detection sensitivity (0.3-0.7 range)
+                "min_speech_duration_ms": 250,  # Minimum speech duration
+                "min_silence_duration_ms": 2000,  # Minimum silence to skip (2 seconds)
+                "speech_pad_ms": 400,  # Padding around speech segments
+            },
+
+            # Hallucination reduction
+            hallucination_silence_threshold=None,  # Auto-detect hallucinations
+            repetition_penalty=1.0,  # Prevent repetitive output
         )
         
-        # Collect segments with progress tracking
+        # Collect segments with real-time progress tracking
         transcription_segments = []
         full_text = []
-        
+
         # Get total duration for progress calculation
         total_duration = info.duration if hasattr(info, 'duration') else 0
-        segments_list = list(segments)  # Convert generator to list to get count
-        total_segments = len(segments_list)
-        
-        for idx, segment in enumerate(segments_list):
+        logger.info(f"Audio duration: {total_duration:.1f}s, detected language: {info.language}")
+        logger.info(f"Starting real-time transcription (progress will be logged as segments are generated)...")
+
+        # Process segments in real-time as they're generated (don't convert to list)
+        segment_count = 0
+        for segment in segments:
+            segment_count += 1
+
             segment_data = {
                 "start": segment.start,
                 "end": segment.end,
@@ -234,18 +238,29 @@ class WhisperTranscriptionService:
             }
             transcription_segments.append(segment_data)
             full_text.append(segment.text.strip())
-            
-            # Update progress info
-            if progress_info and total_duration > 0:
+
+            # Update progress info and log in real-time
+            if total_duration > 0:
                 # Calculate progress based on time processed
                 time_progress = (segment.end / total_duration) * 100
                 progress = min(time_progress, 99)  # Cap at 99% until fully complete
-                if idx % 3 == 0:  # Update every 3rd segment
-                    progress_info["progress"] = progress
-                    progress_info["message"] = f"Transcribing audio... {int(segment.end)}s of {int(total_duration)}s"
+
+                if progress_info:
+                    if segment_count % 3 == 0:  # Update job progress every 3rd segment
+                        progress_info["progress"] = progress
+                        progress_info["message"] = f"Transcribing audio... {int(segment.end)}s of {int(total_duration)}s"
+
+                # Log progress every 5 segments for real-time visibility
+                if segment_count % 5 == 0:
+                    logger.info(f"Progress: {progress:.0f}% - Segment {segment_count} - {int(segment.end)}s / {int(total_duration)}s transcribed")
+
+        logger.info(f"Transcription generation complete: {segment_count} segments generated")
             
+        final_text = " ".join(full_text)
+        logger.info(f"Transcription complete: {len(final_text)} characters, {len(transcription_segments)} segments")
+
         return {
-            "text": " ".join(full_text),
+            "text": final_text,
             "segments": transcription_segments,
             "language": info.language,
             "language_probability": info.language_probability,

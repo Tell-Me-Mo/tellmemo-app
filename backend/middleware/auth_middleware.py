@@ -18,6 +18,8 @@ import jwt
 from jwt import ExpiredSignatureError
 
 from services.auth.auth_service import auth_service
+from services.auth.native_auth_service import native_auth_service
+from config import get_settings
 from db import get_db_context
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -39,11 +41,19 @@ class AuthMiddleware(BaseHTTPMiddleware):
         "/openapi.json",
         "/redoc",
         "/health",
+        "/api/health",
+        # Supabase auth endpoints
         "/api/v1/auth/signup",
         "/api/v1/auth/signin",
         "/api/v1/auth/refresh",
         "/api/v1/auth/forgot-password",
         "/api/v1/auth/reset-password",
+        # Native backend auth endpoints
+        "/api/auth/signup",
+        "/api/auth/login",
+        "/api/auth/logout",
+        "/api/auth/reset-password",
+        # Other public endpoints
         "/api/v1/invitations/accept",  # Accept invitation with token
     ]
 
@@ -121,7 +131,12 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
             # Use get_db_context to get a database session
             async with get_db_context() as db:
-                user = await auth_service.get_user_from_token(db, token)
+                # Use auth service based on AUTH_PROVIDER setting
+                settings = get_settings()
+                if settings.auth_provider == 'backend':
+                    user = await native_auth_service.get_user_from_token(db, token)
+                else:  # supabase
+                    user = await auth_service.get_user_from_token(db, token)
 
                 if user:
                     # Store user in request state for access in endpoints

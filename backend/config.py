@@ -38,11 +38,19 @@ class Settings(BaseSettings):
     LANGFUSE_PUBLIC_KEY: str = Field(default="", env="LANGFUSE_PUBLIC_KEY")
     LANGFUSE_HOST: str = Field(default="http://localhost:3000", env="LANGFUSE_HOST")
     
-    # Supabase Configuration
+    # Authentication Configuration
+    auth_provider: str = Field(default="backend", env="AUTH_PROVIDER")  # 'backend' or 'supabase'
+
+    # Supabase Configuration (only needed if AUTH_PROVIDER=supabase)
     supabase_url: str = Field(default="", env="SUPABASE_URL")
     supabase_anon_key: str = Field(default="", env="SUPABASE_ANON_KEY")
     supabase_service_role_key: str = Field(default="", env="SUPABASE_SERVICE_ROLE_KEY")
     supabase_jwt_secret: str = Field(default="", env="SUPABASE_JWT_SECRET")
+
+    # Native Auth Configuration (only needed if AUTH_PROVIDER=backend)
+    jwt_secret: str = Field(default="", env="JWT_SECRET")  # Generate with: openssl rand -hex 32
+    access_token_expire_minutes: int = Field(default=60, env="ACCESS_TOKEN_EXPIRE_MINUTES")
+    refresh_token_expire_days: int = Field(default=7, env="REFRESH_TOKEN_EXPIRE_DAYS")
 
     # Application Configuration
     frontend_url: str = Field(default="http://localhost:8100", env="FRONTEND_URL")

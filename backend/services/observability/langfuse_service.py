@@ -16,6 +16,59 @@ settings = get_settings()
 logger = logging.getLogger(__name__)
 
 
+class NoOpContextManager:
+    """No-op context manager that does nothing when Langfuse is disabled."""
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        pass
+
+    def update(self, **kwargs):
+        """No-op update method."""
+        pass
+
+    def end(self):
+        """No-op end method."""
+        pass
+
+
+class NoOpClient:
+    """No-op client that mimics Langfuse client interface when disabled."""
+
+    def start_as_current_span(self, *args, **kwargs):
+        """Return a no-op context manager."""
+        return NoOpContextManager(*args, **kwargs)
+
+    def start_span(self, *args, **kwargs):
+        """Return a no-op span."""
+        return NoOpContextManager(*args, **kwargs)
+
+    def start_generation(self, *args, **kwargs):
+        """Return a no-op generation."""
+        return NoOpContextManager(*args, **kwargs)
+
+    def create_event(self, *args, **kwargs):
+        """Return None for events."""
+        return None
+
+    def create_score(self, *args, **kwargs):
+        """Return None for scores."""
+        return None
+
+    def flush(self):
+        """No-op flush."""
+        pass
+
+    def shutdown(self):
+        """No-op shutdown."""
+        pass
+
+
 class LangfuseService:
     """Service for LLM observability and monitoring using Langfuse."""
     
@@ -38,16 +91,16 @@ class LangfuseService:
         try:
             # Check if Langfuse is enabled
             if not settings.LANGFUSE_ENABLED:
-                logger.info("Langfuse is disabled via LANGFUSE_ENABLED=false")
-                self._client = None
+                logger.info("Langfuse is disabled via LANGFUSE_ENABLED=false - using no-op client")
+                self._client = NoOpClient()
                 return
 
             # Check if Langfuse is configured
             if not settings.LANGFUSE_PUBLIC_KEY or not settings.LANGFUSE_SECRET_KEY:
-                logger.warning("Langfuse keys not configured - observability disabled")
-                self._client = None
+                logger.warning("Langfuse keys not configured - using no-op client")
+                self._client = NoOpClient()
                 return
-            
+
             # Initialize Langfuse client
             self._client = Langfuse(
                 public_key=settings.LANGFUSE_PUBLIC_KEY,
@@ -55,13 +108,13 @@ class LangfuseService:
                 host=settings.LANGFUSE_HOST,
                 debug=False
             )
-            
+
             self.initialized = True
             logger.info(f"Langfuse client initialized - host: {settings.LANGFUSE_HOST}")
-            
+
         except Exception as e:
-            logger.error(f"Failed to initialize Langfuse client: {e}")
-            self._client = None
+            logger.error(f"Failed to initialize Langfuse client: {e} - using no-op client")
+            self._client = NoOpClient()
     
     @property
     def client(self) -> Optional[Langfuse]:

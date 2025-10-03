@@ -274,170 +274,290 @@ class _ProgramDetailScreenState extends ConsumerState<ProgramDetailScreen> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth <= 768;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header Row
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // Back button
-            IconButton(
-              icon: Icon(
-                Icons.arrow_back,
-                size: 22,
-                color: colorScheme.onSurfaceVariant,
-              ),
-              onPressed: () => Navigator.of(context).pop(),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(
-                minWidth: 40,
-                minHeight: 40,
-              ),
-            ),
-
-            const SizedBox(width: 8),
-
-            // PROGRAM badge
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: Colors.deepPurple.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: Colors.deepPurple.withValues(alpha: 0.3),
-                  width: 1,
+        if (isMobile) ...[
+          // Mobile Header - Single row
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              IconButton(
+                icon: Icon(
+                  Icons.arrow_back,
+                  size: 22,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                onPressed: () => Navigator.of(context).pop(),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(
+                  minWidth: 40,
+                  minHeight: 40,
                 ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.dashboard_outlined,
-                    size: 14,
-                    color: Colors.deepPurple[600],
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'PROGRAM',
-                    style: TextStyle(
-                      color: Colors.deepPurple[600],
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(width: 12),
-
-            // Program title
-            Expanded(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
                       program.name,
-                      style: theme.textTheme.headlineMedium?.copyWith(
+                      style: theme.textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 4,
+                      children: [
+                        if (program.portfolioId != null)
+                          InkWell(
+                            onTap: () => context.go('/hierarchy/portfolio/${program.portfolioId}'),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.folder_outlined, size: 12, color: colorScheme.primary),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'View Portfolio',
+                                  style: textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.primary,
+                                    decoration: TextDecoration.underline,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.calendar_today_outlined, size: 12, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+                            const SizedBox(width: 4),
+                            Text(
+                              _formatFullDate(DateTime.now()),
+                              style: textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              PopupMenuButton<String>(
+                icon: Icon(Icons.more_horiz, color: colorScheme.onSurfaceVariant),
+                onSelected: (value) => _handleMenuAction(context, value, program),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'generate_summary',
+                    child: Row(
+                      children: [
+                        Icon(Icons.summarize, size: 20),
+                        SizedBox(width: 12),
+                        Text('Generate Summary'),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  // Active projects indicator
-                  _buildActiveProjectsBadge(program),
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit, size: 20),
+                        SizedBox(width: 12),
+                        Text('Edit Program'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete, size: 20, color: Colors.red),
+                        SizedBox(width: 12),
+                        Text('Delete', style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                  ),
                 ],
-              ),
-            ),
-
-            // Menu button
-            PopupMenuButton<String>(
-              icon: Icon(Icons.more_horiz, color: colorScheme.onSurfaceVariant),
-              onSelected: (value) => _handleMenuAction(context, value, program),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'generate_summary',
-                  child: Row(
-                    children: [
-                      Icon(Icons.summarize, size: 20),
-                      SizedBox(width: 12),
-                      Text('Generate Summary'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'edit',
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit, size: 20),
-                      SizedBox(width: 12),
-                      Text('Edit Program'),
-                    ],
-                  ),
-                ),
-                const PopupMenuDivider(),
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete, size: 20, color: Colors.red),
-                      SizedBox(width: 12),
-                      Text('Delete', style: TextStyle(color: Colors.red)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 8),
-
-        // Metadata row
-        Padding(
-          padding: const EdgeInsets.only(left: 56),
-          child: Row(
-            children: [
-              if (program.portfolioId != null) ...[
-                Icon(Icons.folder_outlined, size: 14, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
-                const SizedBox(width: 4),
-                InkWell(
-                  onTap: () => context.go('/hierarchy/portfolio/${program.portfolioId}'),
-                  child: Text(
-                    'View Portfolio',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.primary,
-                      decoration: TextDecoration.underline,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-              ],
-              Icon(Icons.calendar_today_outlined, size: 14, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
-              const SizedBox(width: 4),
-              Text(
-                _formatFullDate(DateTime.now()), // Using current date as createdAt is not available
-                style: textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Icon(Icons.person_outline, size: 14, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
-              const SizedBox(width: 4),
-              Text(
-                'User',
-                style: textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
-                ),
               ),
             ],
           ),
-        ),
+        ] else ...[
+          // Desktop/Tablet Header (original layout)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Back button
+              IconButton(
+                icon: Icon(
+                  Icons.arrow_back,
+                  size: 22,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                onPressed: () => Navigator.of(context).pop(),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(
+                  minWidth: 40,
+                  minHeight: 40,
+                ),
+              ),
+
+              const SizedBox(width: 8),
+
+              // PROGRAM badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.deepPurple.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: Colors.deepPurple.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.dashboard_outlined,
+                      size: 14,
+                      color: Colors.deepPurple[600],
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'PROGRAM',
+                      style: TextStyle(
+                        color: Colors.deepPurple[600],
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 12),
+
+              // Program title
+              Expanded(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        program.name,
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Active projects indicator
+                    _buildActiveProjectsBadge(program),
+                  ],
+                ),
+              ),
+
+              // Menu button
+              PopupMenuButton<String>(
+                icon: Icon(Icons.more_horiz, color: colorScheme.onSurfaceVariant),
+                onSelected: (value) => _handleMenuAction(context, value, program),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'generate_summary',
+                    child: Row(
+                      children: [
+                        Icon(Icons.summarize, size: 20),
+                        SizedBox(width: 12),
+                        Text('Generate Summary'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit, size: 20),
+                        SizedBox(width: 12),
+                        Text('Edit Program'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete, size: 20, color: Colors.red),
+                        SizedBox(width: 12),
+                        Text('Delete', style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 8),
+
+          // Metadata row
+          Padding(
+            padding: const EdgeInsets.only(left: 56),
+            child: Row(
+              children: [
+                if (program.portfolioId != null) ...[
+                  Icon(Icons.folder_outlined, size: 14, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+                  const SizedBox(width: 4),
+                  InkWell(
+                    onTap: () => context.go('/hierarchy/portfolio/${program.portfolioId}'),
+                    child: Text(
+                      'View Portfolio',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.primary,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                ],
+                Icon(Icons.calendar_today_outlined, size: 14, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+                const SizedBox(width: 4),
+                Text(
+                  _formatFullDate(DateTime.now()), // Using current date as createdAt is not available
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Icon(Icons.person_outline, size: 14, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+                const SizedBox(width: 4),
+                Text(
+                  'User',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
