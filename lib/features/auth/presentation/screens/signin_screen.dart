@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/validation_constants.dart';
 import '../../../../shared/widgets/forms/app_text_field.dart';
 import '../providers/auth_provider.dart';
-import '../../data/repositories/auth_repository.dart';
+import '../../data/repositories/supabase_auth_repository.dart';
 import '../../../organizations/presentation/providers/organization_provider.dart';
 import '../../../../core/services/firebase_analytics_service.dart';
 

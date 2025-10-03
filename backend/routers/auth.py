@@ -205,8 +205,8 @@ async def sign_in(
                 detail="Failed to sync user data"
             )
 
-        # Update last login
-        local_user.updated_at = datetime.now(timezone.utc)
+        # Update last login (use timezone-naive datetime for PostgreSQL)
+        local_user.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         await db.commit()
 
         # Return authentication response

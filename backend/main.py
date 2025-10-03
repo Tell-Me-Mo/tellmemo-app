@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 import sentry_sdk
 
 from config import get_settings, configure_logging
-from routers import health, projects, content, queries, admin, scheduler, activities, websocket_audio, transcription, jobs, websocket_jobs, integrations, upload, portfolios, programs, hierarchy, hierarchy_summaries, content_availability, unified_summaries, risks_tasks, lessons_learned, auth, organizations, invitations, websocket_notifications, support_tickets, websocket_tickets, conversations, notifications
+from routers import health, projects, content, queries, admin, scheduler, activities, websocket_audio, transcription, jobs, websocket_jobs, integrations, upload, portfolios, programs, hierarchy, hierarchy_summaries, content_availability, unified_summaries, risks_tasks, lessons_learned, auth, native_auth, organizations, invitations, websocket_notifications, support_tickets, websocket_tickets, conversations, notifications
 from utils.logger import get_logger
 from db.database import init_database, close_database
 from db.multi_tenant_vector_store import multi_tenant_vector_store
@@ -219,6 +219,7 @@ async def global_exception_handler(request, exc):
 
 
 app.include_router(auth.router, tags=["auth"])
+app.include_router(native_auth.router, tags=["native-auth"])  # Native auth endpoints at /api/auth/*
 app.include_router(organizations.router, tags=["organizations"])
 app.include_router(invitations.router, tags=["invitations"])
 app.include_router(health.router, prefix="/api", tags=["health"])
