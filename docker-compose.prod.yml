@@ -376,9 +376,9 @@ services:
       - ./logstash/templates:/usr/share/logstash/templates:ro
       - logstash_data:/usr/share/logstash/data
     ports:
-      - "5000:5000"  # TCP input for application logs
-      - "9600:9600"  # Monitoring API
-      - "12201:12201/udp"  # GELF UDP input for Docker containers
+      - "127.0.0.1:5000:5000"  # TCP input for application logs (localhost only)
+      - "127.0.0.1:9600:9600"  # Monitoring API (localhost only)
+      - "127.0.0.1:12201:12201/udp"  # GELF UDP input for Docker containers (localhost only)
     networks:
       - pm_network
     logging:
