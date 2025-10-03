@@ -101,12 +101,20 @@ class LangfuseService:
                 self._client = NoOpClient()
                 return
 
+            # Set OpenTelemetry timeout environment variables before initializing client
+            # This prevents the very short default timeout (0.074s) that causes connection errors
+            os.environ.setdefault('OTEL_EXPORTER_OTLP_TIMEOUT', '30000')  # 30 seconds in milliseconds
+            os.environ.setdefault('OTEL_EXPORTER_OTLP_TRACES_TIMEOUT', '30000')
+
             # Initialize Langfuse client
             self._client = Langfuse(
                 public_key=settings.LANGFUSE_PUBLIC_KEY,
                 secret_key=settings.LANGFUSE_SECRET_KEY,
                 host=settings.LANGFUSE_HOST,
-                debug=False
+                debug=False,
+                flush_interval=1.0,  # Flush every second
+                flush_at=10,  # Flush after 10 events
+                timeout=30  # 30 second timeout for HTTP requests
             )
 
             self.initialized = True
