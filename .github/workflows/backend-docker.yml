@@ -76,12 +76,22 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            await github.rest.git.createRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: 'refs/tags/backend-v${{ steps.version.outputs.version }}',
-              sha: context.sha
-            });
+            const tagName = 'refs/tags/backend-v${{ steps.version.outputs.version }}';
+            try {
+              await github.rest.git.createRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: tagName,
+                sha: context.sha
+              });
+              console.log(`Created tag: ${tagName}`);
+            } catch (error) {
+              if (error.status === 422) {
+                console.log(`Tag ${tagName} already exists, skipping creation`);
+              } else {
+                throw error;
+              }
+            }
 
       - name: Create GitHub Release
         uses: actions/github-script@v7
