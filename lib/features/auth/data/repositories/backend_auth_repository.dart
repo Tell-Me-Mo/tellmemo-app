@@ -11,6 +11,10 @@ class BackendAuthRepository implements AuthInterface {
   // Stream controller for auth state changes
   final _authStateController = StreamController<AuthStateChange>.broadcast();
 
+  // Cache current user and session in memory
+  AppAuthUser? _cachedUser;
+  AuthSession? _cachedSession;
+
   BackendAuthRepository(this._dio, this._authService) {
     debugPrint('🔧 BackendAuthRepository: Initialized with Dio baseUrl: ${_dio.options.baseUrl}');
   }
@@ -19,17 +23,10 @@ class BackendAuthRepository implements AuthInterface {
   Stream<AuthStateChange> get authStateChanges => _authStateController.stream;
 
   @override
-  AppAuthUser? get currentUser {
-    // Try to get user from stored session
-    // This is a simplified version - you might want to decode JWT or fetch from backend
-    return null; // Implement based on your backend's session management
-  }
+  AppAuthUser? get currentUser => _cachedUser;
 
   @override
-  AuthSession? get currentSession {
-    // Return session from stored token
-    return null; // Implement based on your backend's session management
-  }
+  AuthSession? get currentSession => _cachedSession;
 
   @override
   Future<AuthResult> signUp({
@@ -77,6 +74,10 @@ class BackendAuthRepository implements AuthInterface {
         accessToken: token,
         user: user,
       );
+
+      // Cache user and session
+      _cachedUser = user;
+      _cachedSession = session;
 
       // Emit auth state change
       _authStateController.add(AuthStateChange(session: session, user: user));
@@ -137,6 +138,10 @@ class BackendAuthRepository implements AuthInterface {
         user: user,
       );
 
+      // Cache user and session
+      _cachedUser = user;
+      _cachedSession = session;
+
       // Emit auth state change
       _authStateController.add(AuthStateChange(session: session, user: user));
 
@@ -161,6 +166,10 @@ class BackendAuthRepository implements AuthInterface {
 
       // Clear local auth state
       await _authService.clearAuth();
+
+      // Clear cached user and session
+      _cachedUser = null;
+      _cachedSession = null;
 
       // Emit auth state change
       _authStateController.add(AuthStateChange(session: null, user: null));
@@ -271,17 +280,90 @@ class BackendAuthRepository implements AuthInterface {
           user: user,
         );
 
+        // Cache user and session
+        _cachedUser = user;
+        _cachedSession = session;
+
         // Emit auth state change
         _authStateController.add(AuthStateChange(session: session, user: user));
 
         return session;
-      } catch (_) {
-        // Token is invalid, clear auth
+      } on DioException catch (e) {
+        // If token verification fails with 401, try to refresh
+        if (e.response?.statusCode == 401) {
+          debugPrint('🔄 BackendAuthRepository.recoverSession: Access token expired, attempting refresh');
+
+          final refreshToken = await _authService.getRefreshToken();
+          if (refreshToken == null || refreshToken.isEmpty) {
+            debugPrint('❌ BackendAuthRepository.recoverSession: No refresh token available');
+            await _authService.clearAuth();
+            _cachedUser = null;
+            _cachedSession = null;
+            return null;
+          }
+
+          try {
+            // Try to refresh the token
+            final refreshResponse = await _dio.post('/api/auth/refresh', data: {
+              'refresh_token': refreshToken,
+            });
+
+            final refreshData = refreshResponse.data;
+            final newAccessToken = refreshData['access_token'] as String;
+            final newRefreshToken = refreshData['refresh_token'] as String?;
+            final userId = refreshData['user_id'] as String;
+
+            // Store new tokens
+            await _authService.setToken(newAccessToken);
+            if (newRefreshToken != null) {
+              await _authService.setRefreshToken(newRefreshToken);
+            }
+
+            final user = AppAuthUser(
+              id: userId,
+              email: refreshData['email'] as String?,
+            );
+
+            final session = AuthSession(
+              accessToken: newAccessToken,
+              user: user,
+            );
+
+            // Cache user and session
+            _cachedUser = user;
+            _cachedSession = session;
+
+            // Emit auth state change
+            _authStateController.add(AuthStateChange(session: session, user: user));
+
+            debugPrint('✅ BackendAuthRepository.recoverSession: Session refreshed successfully');
+            return session;
+          } catch (refreshError) {
+            // Refresh failed, clear auth
+            debugPrint('❌ BackendAuthRepository.recoverSession: Token refresh failed: $refreshError');
+            await _authService.clearAuth();
+            _cachedUser = null;
+            _cachedSession = null;
+            return null;
+          }
+        }
+
+        // Other errors, clear auth
         await _authService.clearAuth();
+        _cachedUser = null;
+        _cachedSession = null;
+        return null;
+      } catch (e) {
+        // Unexpected error, clear auth
+        await _authService.clearAuth();
+        _cachedUser = null;
+        _cachedSession = null;
         return null;
       }
     } catch (e) {
       await _authService.clearAuth();
+      _cachedUser = null;
+      _cachedSession = null;
       return null;
     }
   }

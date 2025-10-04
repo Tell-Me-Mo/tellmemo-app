@@ -52,6 +52,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         "/api/auth/signup",
         "/api/auth/login",
         "/api/auth/logout",
+        "/api/auth/refresh",  # Token refresh should be public
         "/api/auth/reset-password",
         # Other public endpoints
         "/api/v1/invitations/accept",  # Accept invitation with token
