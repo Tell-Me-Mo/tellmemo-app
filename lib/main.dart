@@ -10,8 +10,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 // To disable: set firebaseAnalyticsEnabled = false in lib/config.dart
 import 'package:firebase_core/firebase_core.dart';
 import 'core/services/firebase_analytics_service.dart';
-// Use stub when firebase_options.dart doesn't exist (e.g., in Docker builds)
-import 'firebase_options_stub.dart' show DefaultFirebaseOptions;
+import 'firebase_options.dart' show DefaultFirebaseOptions;
 
 void main() async {
   // Initialize Sentry if enabled
