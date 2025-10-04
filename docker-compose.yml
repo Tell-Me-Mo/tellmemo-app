@@ -1,7 +1,7 @@
 services:
-  # PostgreSQL 17.6 - Main database for project metadata
+  # PostgreSQL 18.0 - Main database for project metadata
   postgres:
-    image: postgres:17.6
+    image: postgres:18.0
     container_name: tellmemo_postgres
     restart: unless-stopped
     environment:
@@ -22,9 +22,9 @@ services:
     networks:
       - pm_network
 
-  # Qdrant v1.15.3 - Vector database for semantic search
+  # Qdrant v1.15.5 - Vector database for semantic search
   qdrant:
-    image: qdrant/qdrant:v1.15.4
+    image: qdrant/qdrant:v1.15.5
     container_name: tellmemo_qdrant
     restart: unless-stopped
     environment:
@@ -49,242 +49,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
-    networks:
-      - pm_network
-
-  # Redis 7 - Required for Langfuse v3 queue and caching (optional)
-  redis:
-    image: redis:7-alpine
-    container_name: tellmemo_redis
-    restart: unless-stopped
-    profiles:
-      - langfuse
-    command: >
-      --requirepass ${REDIS_PASSWORD:-redispassword123}
-      --appendonly yes
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redispassword123}", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - pm_network
-
-  # MinIO - S3-compatible storage for Langfuse v3 (optional)
-  minio:
-    image: minio/minio:latest
-    container_name: tellmemo_minio
-    restart: unless-stopped
-    profiles:
-      - langfuse
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
-    ports:
-      - "9000:9000"  # API
-      - "9001:9001"  # Console
-    volumes:
-      - minio_data:/data
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - pm_network
-
-  # Zookeeper - Required for ClickHouse clustering (optional - only for Langfuse)
-  zookeeper:
-    image: zookeeper:3.9
-    container_name: tellmemo_zookeeper
-    restart: unless-stopped
-    profiles:
-      - langfuse
-    environment:
-      ZOO_MY_ID: 1
-      ZOO_SERVERS: server.1=zookeeper:2888:3888;2181
-      ZOO_4LW_COMMANDS_WHITELIST: mntr,conf,ruok
-    ports:
-      - "2181:2181"
-    volumes:
-      - zookeeper_data:/data
-      - zookeeper_logs:/datalog
-    healthcheck:
-      test: ["CMD-SHELL", "echo ruok | nc localhost 2181 | grep imok"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - pm_network
-
-  # ClickHouse - Required for Langfuse v3 analytics (with clustering support) (optional)
-  clickhouse:
-    image: clickhouse/clickhouse-server:24.3-alpine
-    container_name: tellmemo_clickhouse
-    restart: unless-stopped
-    profiles:
-      - langfuse
-    depends_on:
-      zookeeper:
-        condition: service_healthy
-    environment:
-      CLICKHOUSE_DB: default
-      CLICKHOUSE_USER: default
-      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhousepass123}
-      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
-    ports:
-      - "8123:8123"  # HTTP interface
-      - "9009:9000"  # Native protocol (changed from 9000 to avoid conflict)
-      - "9010:9009"  # Interserver HTTP port
-    volumes:
-      - clickhouse_data:/var/lib/clickhouse
-      - ./backend/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml:ro
-    ulimits:
-      nofile:
-        soft: 262144
-        hard: 262144
-    healthcheck:
-      test: ["CMD-SHELL", "clickhouse-client --password ${CLICKHOUSE_PASSWORD:-clickhousepass123} --query 'SELECT 1'"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-    networks:
-      - pm_network
-
-  # Langfuse v3 Worker - Background processing (optional)
-  langfuse-worker:
-    image: langfuse/langfuse-worker:latest
-    container_name: tellmemo_langfuse_worker
-    restart: unless-stopped
-    profiles:
-      - langfuse
-    depends_on:
-      postgres:
-        condition: service_healthy
-      clickhouse:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
-    environment:
-      # Database
-      DATABASE_URL: postgresql://${POSTGRES_USER:-pm_master}:${POSTGRES_PASSWORD:-pm_master_pass}@postgres:5432/${LANGFUSE_DB:-langfuse_db}
-      
-      # Security
-      SALT: ${LANGFUSE_SALT:-your-salt-at-least-32-chars-long-change-in-production}
-      ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
-      
-      # ClickHouse
-      CLICKHOUSE_URL: http://default:${CLICKHOUSE_PASSWORD:-clickhousepass123}@clickhouse:8123
-      CLICKHOUSE_MIGRATION_URL: clickhouse://default:${CLICKHOUSE_PASSWORD:-clickhousepass123}@clickhouse:9000
-      CLICKHOUSE_USER: default
-      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhousepass123}
-      
-      # Redis
-      REDIS_CONNECTION_STRING: redis://:${REDIS_PASSWORD:-redispassword123}@redis:6379
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_AUTH: ${REDIS_PASSWORD:-redispassword123}
-      
-      # MinIO/S3
-      LANGFUSE_S3_EVENT_UPLOAD_ENABLED: true
-      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
-      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
-      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
-      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
-      LANGFUSE_S3_EVENT_UPLOAD_REGION: us-east-1
-      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: true
-      
-      LANGFUSE_S3_MEDIA_UPLOAD_ENABLED: true
-      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://minio:9000
-      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
-      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
-      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse-media
-      LANGFUSE_S3_MEDIA_UPLOAD_REGION: us-east-1
-      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: true
-    networks:
-      - pm_network
-
-  # Langfuse v3 Web - Main application (optional)
-  langfuse-web:
-    image: langfuse/langfuse:latest
-    container_name: tellmemo_langfuse
-    restart: unless-stopped
-    profiles:
-      - langfuse
-    depends_on:
-      postgres:
-        condition: service_healthy
-      clickhouse:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
-      langfuse-worker:
-        condition: service_started
-    environment:
-      # Database
-      DATABASE_URL: postgresql://${POSTGRES_USER:-pm_master}:${POSTGRES_PASSWORD:-pm_master_pass}@postgres:5432/${LANGFUSE_DB:-langfuse_db}
-      
-      # Auth & Security
-      NEXTAUTH_URL: ${LANGFUSE_URL:-http://localhost:3000}
-      NEXTAUTH_SECRET: ${LANGFUSE_SECRET:-your-secret-key-at-least-32-chars-long-change-in-production}
-      SALT: ${LANGFUSE_SALT:-your-salt-at-least-32-chars-long-change-in-production}
-      ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
-      
-      # ClickHouse
-      CLICKHOUSE_URL: http://default:${CLICKHOUSE_PASSWORD:-clickhousepass123}@clickhouse:8123
-      CLICKHOUSE_MIGRATION_URL: clickhouse://default:${CLICKHOUSE_PASSWORD:-clickhousepass123}@clickhouse:9000
-      CLICKHOUSE_USER: default
-      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhousepass123}
-      
-      # Redis
-      REDIS_CONNECTION_STRING: redis://:${REDIS_PASSWORD:-redispassword123}@redis:6379
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_AUTH: ${REDIS_PASSWORD:-redispassword123}
-      
-      # MinIO/S3
-      LANGFUSE_S3_EVENT_UPLOAD_ENABLED: true
-      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
-      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
-      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
-      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
-      LANGFUSE_S3_EVENT_UPLOAD_REGION: us-east-1
-      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: true
-      
-      LANGFUSE_S3_MEDIA_UPLOAD_ENABLED: true
-      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://minio:9000
-      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
-      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
-      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse-media
-      LANGFUSE_S3_MEDIA_UPLOAD_REGION: us-east-1
-      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: true
-      
-      # Features
-      TELEMETRY_ENABLED: ${LANGFUSE_TELEMETRY:-false}
-      LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: true
-      NODE_ENV: ${NODE_ENV:-development}
-      
-      # Auth settings
-      AUTH_DISABLE_LOGIN: ${LANGFUSE_AUTH_DISABLE:-false}
-      AUTH_DISABLE_SIGNUP: ${LANGFUSE_AUTH_DISABLE_SIGNUP:-false}
-    ports:
-      - "3000:3000"
-    healthcheck:
-      test: ["CMD-SHELL", "test -f /proc/1/cmdline || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 40s
     networks:
       - pm_network
 
@@ -377,16 +141,6 @@ volumes:
   qdrant_data:
     driver: local
   qdrant_snapshots:
-    driver: local
-  redis_data:
-    driver: local
-  minio_data:
-    driver: local
-  clickhouse_data:
-    driver: local
-  zookeeper_data:
-    driver: local
-  zookeeper_logs:
     driver: local
   # Application volumes
   backend_uploads:
