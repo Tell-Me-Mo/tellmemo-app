@@ -1,6 +1,6 @@
 # TellMeMo Documentation Website
 
-This directory contains the static documentation and marketing website for TellMeMo, an AI-powered meeting intelligence platform.
+This directory contains the static documentation and marketing website for TellMeMo, an AI-powered project intelligence platform that transforms meeting transcripts, emails, and documents into searchable knowledge with semantic search, risk detection, and portfolio-level summaries.
 
 ## 📁 Structure
 
