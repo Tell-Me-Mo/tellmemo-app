@@ -115,11 +115,15 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Create git tag
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git tag -a "frontend-v${{ steps.version.outputs.version }}" -m "Frontend release ${{ steps.version.outputs.version }}"
-          git push origin "frontend-v${{ steps.version.outputs.version }}"
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'refs/tags/frontend-v${{ steps.version.outputs.version }}',
+              sha: context.sha
+            });
 
       - name: Create GitHub Release
         uses: actions/github-script@v7
