@@ -275,8 +275,63 @@ class BackendAuthRepository implements AuthInterface {
         _authStateController.add(AuthStateChange(session: session, user: user));
 
         return session;
-      } catch (_) {
-        // Token is invalid, clear auth
+      } on DioException catch (e) {
+        // If token verification fails with 401, try to refresh
+        if (e.response?.statusCode == 401) {
+          debugPrint('🔄 BackendAuthRepository.recoverSession: Access token expired, attempting refresh');
+
+          final refreshToken = await _authService.getRefreshToken();
+          if (refreshToken == null || refreshToken.isEmpty) {
+            debugPrint('❌ BackendAuthRepository.recoverSession: No refresh token available');
+            await _authService.clearAuth();
+            return null;
+          }
+
+          try {
+            // Try to refresh the token
+            final refreshResponse = await _dio.post('/api/auth/refresh', data: {
+              'refresh_token': refreshToken,
+            });
+
+            final refreshData = refreshResponse.data;
+            final newAccessToken = refreshData['access_token'] as String;
+            final newRefreshToken = refreshData['refresh_token'] as String?;
+            final userId = refreshData['user_id'] as String;
+
+            // Store new tokens
+            await _authService.setToken(newAccessToken);
+            if (newRefreshToken != null) {
+              await _authService.setRefreshToken(newRefreshToken);
+            }
+
+            final user = AppAuthUser(
+              id: userId,
+              email: refreshData['email'] as String?,
+            );
+
+            final session = AuthSession(
+              accessToken: newAccessToken,
+              user: user,
+            );
+
+            // Emit auth state change
+            _authStateController.add(AuthStateChange(session: session, user: user));
+
+            debugPrint('✅ BackendAuthRepository.recoverSession: Session refreshed successfully');
+            return session;
+          } catch (refreshError) {
+            // Refresh failed, clear auth
+            debugPrint('❌ BackendAuthRepository.recoverSession: Token refresh failed: $refreshError');
+            await _authService.clearAuth();
+            return null;
+          }
+        }
+
+        // Other errors, clear auth
+        await _authService.clearAuth();
+        return null;
+      } catch (e) {
+        // Unexpected error, clear auth
         await _authService.clearAuth();
         return null;
       }
