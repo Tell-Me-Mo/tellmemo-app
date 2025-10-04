@@ -114,6 +114,34 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # MinIO Client - Initialize buckets for Langfuse
+  minio-init:
+    image: minio/mc:latest
+    container_name: pm_master_minio_init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      echo 'Waiting for MinIO to be ready...';
+      sleep 5;
+      mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin123};
+      echo 'Creating Langfuse buckets...';
+      mc mb myminio/langfuse || echo 'Bucket langfuse already exists';
+      mc mb myminio/langfuse-media || echo 'Bucket langfuse-media already exists';
+      echo 'Setting bucket policies...';
+      mc anonymous set download myminio/langfuse-media || echo 'Policy already set for langfuse-media';
+      echo 'Buckets initialized successfully';
+      exit 0;
+      "
+    networks:
+      - pm_network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   # Zookeeper - Required for ClickHouse clustering
   zookeeper:
     image: zookeeper:3.9
@@ -193,6 +221,8 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     environment:
       # Database
       DATABASE_URL: postgresql://${POSTGRES_USER:-pm_master}:${POSTGRES_PASSWORD:-pm_master_pass}@postgres:5432/${LANGFUSE_DB:-langfuse_db}

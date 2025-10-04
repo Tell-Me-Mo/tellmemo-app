@@ -348,7 +348,7 @@ services:
       start_period: 40s
 
   # Frontend - Flutter Web application
-  # Note: Frontend config is injected at runtime via entrypoint script
+  # Note: Configuration is baked into the image from lib/config.dart
   frontend:
     image: nkondratyk93/tellmemo-frontend:latest
     container_name: tellmemo_frontend
@@ -356,16 +356,6 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-    environment:
-      # Runtime configuration (injected into JavaScript at startup)
-      SUPABASE_URL: ${SUPABASE_URL:-}
-      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
-      API_BASE_URL: ${FRONTEND_URL:-http://localhost:8100}
-
-      # Optional: Analytics & Error Tracking
-      FLUTTER_SENTRY_ENABLED: ${FLUTTER_SENTRY_ENABLED:-false}
-      FLUTTER_SENTRY_DSN: ${FLUTTER_SENTRY_DSN:-}
-      FLUTTER_FIREBASE_ANALYTICS_ENABLED: ${FLUTTER_FIREBASE_ANALYTICS_ENABLED:-false}
     ports:
       - "80:80"
     networks:

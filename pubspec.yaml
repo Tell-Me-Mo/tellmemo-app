@@ -55,9 +55,6 @@ dependencies:
   image_picker: ^1.2.0
   fl_chart: ^1.1.1
   
-  # Environment & Config
-  flutter_dotenv: ^6.0.0
-  
   # Authentication
   supabase_flutter: ^2.10.1
 

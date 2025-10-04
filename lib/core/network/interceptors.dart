@@ -1,12 +1,12 @@
 import 'package:dio/dio.dart';
-import '../config/env_config.dart';
+import '../config/app_config.dart';
 import '../config/supabase_config.dart';
 import '../services/auth_service.dart';
 
 class LoggingInterceptor extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    if (EnvConfig.enableLogging) {
+    if (AppConfig.enableLogging) {
       print('REQUEST[${options.method}] => PATH: ${options.path}');
       print('Headers: ${options.headers}');
       if (options.data != null) {
@@ -18,7 +18,7 @@ class LoggingInterceptor extends Interceptor {
 
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
-    if (EnvConfig.enableLogging) {
+    if (AppConfig.enableLogging) {
       print('RESPONSE[${response.statusCode}] => PATH: ${response.requestOptions.path}');
       // Only log data for non-summary endpoints or limit the output
       if (!response.requestOptions.path.contains('/summaries')) {
@@ -42,7 +42,7 @@ class LoggingInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
-    if (EnvConfig.enableLogging) {
+    if (AppConfig.enableLogging) {
       print('ERROR[${err.response?.statusCode}] => PATH: ${err.requestOptions.path}');
       print('Message: ${err.message}');
       if (err.response?.data != null) {
@@ -61,10 +61,6 @@ class HeaderInterceptor extends Interceptor {
       'Accept': 'application/json',
     });
 
-    // Add API key for admin endpoints
-    if (options.path.contains('/admin/')) {
-      options.headers['X-API-Key'] = EnvConfig.apiKey;
-    }
 
     super.onRequest(options, handler);
   }
@@ -78,7 +74,7 @@ class AuthInterceptor extends Interceptor {
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
-    if (EnvConfig.useSupabaseAuth) {
+    if (AppConfig.useSupabaseAuth) {
       // Add authentication token from Supabase
       final session = SupabaseConfig.client.auth.currentSession;
       if (session?.accessToken != null) {
@@ -102,7 +98,7 @@ class AuthInterceptor extends Interceptor {
 
       // Check if token is expired
       if (errorMessage.contains('expired') || errorMessage.contains('token')) {
-        if (EnvConfig.useSupabaseAuth) {
+        if (AppConfig.useSupabaseAuth) {
           // Try to refresh the token (Supabase auth)
           try {
             final response = await SupabaseConfig.client.auth.refreshSession();
@@ -156,7 +152,7 @@ class AuthInterceptor extends Interceptor {
       }
 
       // Call refresh endpoint
-      final dio = Dio(BaseOptions(baseUrl: EnvConfig.apiBaseUrl));
+      final dio = Dio(BaseOptions(baseUrl: AppConfig.apiBaseUrl));
       final response = await dio.post(
         '/api/auth/refresh',
         data: {'refresh_token': refreshToken},

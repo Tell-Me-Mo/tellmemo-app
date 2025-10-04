@@ -1,5 +1,6 @@
-# Frontend Dockerfile for PM Master V2
-# Multi-stage build for Flutter web application
+# Flutter Web Dockerfile
+# Note: Edit lib/config.dart before building
+# Set apiBaseUrl to 'http://backend:8000' for Docker
 
 # Stage 1: Build the Flutter web app
 FROM ghcr.io/cirruslabs/flutter:stable AS builder
@@ -19,45 +20,18 @@ COPY web ./web
 COPY assets ./assets
 COPY analysis_options.yaml ./
 
-# Create a dummy .env file for build (real config injected at runtime)
-RUN echo "# Placeholder - config injected at runtime" > .env
-
-# Build the web app without environment config (will be injected at runtime)
-RUN flutter build web --release --dart-define=PLACEHOLDER_BUILD=true
+# Build the web app - configuration comes from lib/config.dart
+# Note: lib/config.dart must exist before building this image
+RUN flutter build web --release
 
 # Stage 2: Serve the web app with nginx
 FROM nginx:alpine
 
-# Install necessary packages
-RUN apk add --no-cache curl bash
+# Install necessary packages for health check
+RUN apk add --no-cache curl
 
 # Copy the built web app from builder stage
 COPY --from=builder /app/build/web /usr/share/nginx/html
-
-# Create runtime config injection script
-RUN cat > /docker-entrypoint.d/00-inject-env.sh << 'EOF'
-#!/bin/bash
-set -e
-
-# Create runtime config JavaScript file
-cat > /usr/share/nginx/html/assets/config.js << JSEOF
-window.ENV_CONFIG = {
-  SUPABASE_URL: "${SUPABASE_URL}",
-  SUPABASE_ANON_KEY: "${SUPABASE_ANON_KEY}",
-  API_BASE_URL: "${API_BASE_URL:-http://localhost:8000}",
-  FLUTTER_SENTRY_ENABLED: "${FLUTTER_SENTRY_ENABLED:-false}",
-  FLUTTER_SENTRY_DSN: "${FLUTTER_SENTRY_DSN:-}",
-  FLUTTER_FIREBASE_ANALYTICS_ENABLED: "${FLUTTER_FIREBASE_ANALYTICS_ENABLED:-false}"
-};
-JSEOF
-
-# Inject config script into index.html before any other scripts
-sed -i 's|<base href="/">|<base href="/"><script src="assets/config.js"></script>|' /usr/share/nginx/html/index.html
-
-echo "Runtime configuration injected successfully"
-EOF
-
-RUN chmod +x /docker-entrypoint.d/00-inject-env.sh
 
 # Create nginx config
 RUN echo 'server { \

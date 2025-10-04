@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../domain/auth_interface.dart';
 import './supabase_auth_repository.dart';
 import './backend_auth_repository.dart';
-import '../../../../core/config/env_config.dart';
+import '../../../../core/config/app_config.dart';
 import '../../../../core/services/auth_service.dart';
 
 /// Factory for creating the appropriate auth repository based on configuration
@@ -21,11 +21,11 @@ class AuthRepositoryFactory {
     }
 
     debugPrint('🏭 AuthRepositoryFactory: Creating new auth repository instance');
-    debugPrint('🏭 AuthRepositoryFactory: AUTH_PROVIDER from env: ${EnvConfig.authProvider}');
-    debugPrint('🏭 AuthRepositoryFactory: useSupabaseAuth: ${EnvConfig.useSupabaseAuth}');
-    debugPrint('🏭 AuthRepositoryFactory: useBackendAuth: ${EnvConfig.useBackendAuth}');
+    debugPrint('🏭 AuthRepositoryFactory: AUTH_PROVIDER from env: ${AppConfig.authProvider}');
+    debugPrint('🏭 AuthRepositoryFactory: useSupabaseAuth: ${AppConfig.useSupabaseAuth}');
+    debugPrint('🏭 AuthRepositoryFactory: useBackendAuth: ${AppConfig.useBackendAuth}');
 
-    if (EnvConfig.useSupabaseAuth) {
+    if (AppConfig.useSupabaseAuth) {
       debugPrint('🏭 AuthRepositoryFactory: Creating SupabaseAuthRepository');
       _instance = SupabaseAuthRepository();
     } else {
