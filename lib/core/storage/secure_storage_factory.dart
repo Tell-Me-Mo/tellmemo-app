@@ -1,15 +1,11 @@
 import 'secure_storage.dart';
-import 'secure_storage_mobile.dart' as mobile;
-import 'secure_storage_web.dart' as web;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'secure_storage_mobile.dart'
+    if (dart.library.js_interop) 'secure_storage_web.dart'
+    as platform_storage;
 
 /// Factory for creating platform-specific SecureStorage implementations
 class SecureStorageFactory {
   static SecureStorage create() {
-    if (kIsWeb) {
-      return web.SecureStorageWeb();
-    } else {
-      return mobile.SecureStorageMobile();
-    }
+    return platform_storage.createSecureStorage();
   }
 }

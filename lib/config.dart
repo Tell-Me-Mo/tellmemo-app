@@ -9,8 +9,8 @@ class Config {
   // ============================================
 
   // API Backend URL - Uncomment the one you need:
-  static const String apiBaseUrl = 'http://localhost:8000'; // Local development
-  // static const String apiBaseUrl = 'https://api.tellmemo.io'; // Production
+  // static const String apiBaseUrl = 'http://localhost:8000'; // Local development
+  static const String apiBaseUrl = 'https://api.tellmemo.io'; // Production
   // static const String apiBaseUrl = 'http://backend:8000'; // Docker local
 
   // Environment

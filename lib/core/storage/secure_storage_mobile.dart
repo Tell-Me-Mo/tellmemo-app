@@ -2,6 +2,9 @@ import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'secure_storage.dart';
 
+/// Factory function for platform-specific imports
+SecureStorage createSecureStorage() => SecureStorageMobile();
+
 /// Mobile/Desktop implementation of SecureStorage
 /// Uses SharedPreferences as fallback since flutter_secure_storage is removed
 /// Note: This is not encrypted. For production, consider platform-specific secure storage
