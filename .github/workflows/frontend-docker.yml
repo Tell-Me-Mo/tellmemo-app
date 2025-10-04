@@ -66,22 +66,38 @@ jobs:
 
       - name: Setup configuration
         run: |
-          # Update config.dart for the target environment
-          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            # Production configuration
-            sed -i "s|'http://localhost:8000'|'https://api.tellmemo.io'|g" lib/config.dart
-            sed -i "s|'development'|'production'|g" lib/config.dart
-            sed -i "s|enableLogging = true|enableLogging = false|g" lib/config.dart
-            sed -i "s|enableDebugMode = true|enableDebugMode = false|g" lib/config.dart
-            sed -i "s|sentryEnabled = false|sentryEnabled = true|g" lib/config.dart
-            # Add Sentry DSN if provided
-            if [ -n "${{ secrets.FLUTTER_SENTRY_DSN }}" ]; then
-              sed -i "s|sentryDsn = ''|sentryDsn = '${{ secrets.FLUTTER_SENTRY_DSN }}'|g" lib/config.dart
-            fi
-          else
-            # Docker/develop configuration
-            sed -i "s|'http://localhost:8000'|'http://backend:8000'|g" lib/config.dart
-          fi
+          # Update config.dart for Docker environment with specified values
+          # Set API Backend URL to Docker backend service
+          sed -i "s|static const String apiBaseUrl = '.*'|static const String apiBaseUrl = 'http://backend:8000'|g" lib/config.dart
+
+          # Set environment to development
+          sed -i "s|static const String environment = '.*'|static const String environment = 'development'|g" lib/config.dart
+
+          # Set authentication provider to backend
+          sed -i "s|static const String authProvider = '.*'|static const String authProvider = 'backend'|g" lib/config.dart
+
+          # Enable logging
+          sed -i "s|static const bool enableLogging = .*|static const bool enableLogging = true|g" lib/config.dart
+
+          # Disable debug mode
+          sed -i "s|static const bool enableDebugMode = .*|static const bool enableDebugMode = false|g" lib/config.dart
+
+          # Disable Sentry
+          sed -i "s|static const bool sentryEnabled = .*|static const bool sentryEnabled = false|g" lib/config.dart
+
+          # Clear Sentry DSN
+          sed -i "s|static const String sentryDsn = '.*'|static const String sentryDsn = ''|g" lib/config.dart
+
+          # Disable Firebase Analytics
+          sed -i "s|static const bool firebaseAnalyticsEnabled =.*|static const bool firebaseAnalyticsEnabled = false|g" lib/config.dart
+
+          # Clear Supabase URL
+          sed -i "s|static const String supabaseUrl = '.*'|static const String supabaseUrl = ''|g" lib/config.dart
+
+          # Clear Supabase Anon Key
+          sed -i "s|static const String supabaseAnonKey = '.*'|static const String supabaseAnonKey = ''|g" lib/config.dart
+
+          echo "Configuration updated for Docker environment"
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
