@@ -62,6 +62,11 @@ class VerifyOTPRequest(BaseModel):
     token: str
 
 
+class RefreshTokenRequest(BaseModel):
+    """Request model for token refresh"""
+    refresh_token: str
+
+
 class AuthResponse(BaseModel):
     """Response model for authentication operations"""
     access_token: str
@@ -222,6 +227,95 @@ async def sign_out():
     return MessageResponse(
         message="Signed out successfully"
     )
+
+
+@router.post("/refresh", response_model=AuthResponse)
+async def refresh_token(
+    request: RefreshTokenRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Refresh access token using a valid refresh token
+
+    Args:
+        request: Refresh token request
+        db: Database session
+
+    Returns:
+        New access and refresh tokens
+
+    Raises:
+        HTTPException: If refresh token is invalid or expired
+    """
+    try:
+        # Verify refresh token
+        payload = native_auth_service.verify_jwt_token(request.refresh_token)
+
+        if not payload:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired refresh token"
+            )
+
+        # Check token type
+        if payload.get("type") != "refresh":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token type"
+            )
+
+        # Get user ID from token
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token payload"
+            )
+
+        # Get user from database
+        from sqlalchemy import select
+        result = await db.execute(
+            select(User).where(
+                User.id == user_id,
+                User.auth_provider == 'native',
+                User.is_active == True
+            )
+        )
+        user = result.scalar_one_or_none()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found or inactive"
+            )
+
+        # Generate new tokens
+        access_token = native_auth_service.create_access_token(
+            user_id=str(user.id),
+            email=user.email,
+            organization_id=str(user.last_active_organization_id) if user.last_active_organization_id else None
+        )
+
+        refresh_token = native_auth_service.create_refresh_token(
+            user_id=str(user.id)
+        )
+
+        return AuthResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            user_id=str(user.id),
+            email=user.email,
+            organization_id=str(user.last_active_organization_id) if user.last_active_organization_id else None
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error during token refresh: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Token refresh failed"
+        )
 
 
 @router.post("/reset-password", response_model=MessageResponse)
