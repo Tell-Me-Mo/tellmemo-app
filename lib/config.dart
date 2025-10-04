@@ -28,12 +28,13 @@ class Config {
   static const bool enableDebugMode = true; // Set to false in production
 
   // Sentry Error Tracking
-  static const bool sentryEnabled = false; // Set to true in production
-  static const String sentryDsn = ''; // Add your Sentry DSN here
+  static const bool sentryEnabled = true; // Set to true in production
+  static const String sentryDsn =
+      'https://4b881d36553907c1293df1e416a7ee01@o4507007486394368.ingest.us.sentry.io/4510112239452160'; // Add your Sentry DSN here
 
   // Firebase Analytics
   static const bool firebaseAnalyticsEnabled =
-      false; // Set to true if using Firebase
+      true; // Set to true if using Firebase
 
   // Supabase (only if authProvider = 'supabase')
   static const String supabaseUrl = ''; // Add your Supabase URL
