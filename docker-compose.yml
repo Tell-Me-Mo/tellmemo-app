@@ -101,7 +101,7 @@ services:
       # Application
       API_ENV: ${API_ENV:-development}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:80,http://localhost:3001,http://frontend}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8100}
     ports:
       - "8000:8000"
     volumes:
