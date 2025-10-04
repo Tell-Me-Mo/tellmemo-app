@@ -22,7 +22,8 @@ ProjectsRepository projectsRepository(Ref ref) {
 }
 
 // Projects list provider
-@riverpod
+// Keep data cached for 5 minutes, then auto-dispose
+@Riverpod(keepAlive: true)
 class ProjectsList extends _$ProjectsList {
   @override
   Future<List<Project>> build() async {
@@ -35,11 +36,9 @@ class ProjectsList extends _$ProjectsList {
     // Organization context is handled by the API interceptor
     final repository = ref.read(projectsRepositoryProvider);
 
-    // Keep provider alive for 5 minutes to avoid refetching on navigation
-    ref.keepAlive();
-    Timer(const Duration(minutes: 5), () {
-      ref.invalidateSelf();
-    });
+    // Keep alive with auto-dispose after 5 minutes of inactivity
+    final link = ref.keepAlive();
+    Timer(const Duration(minutes: 5), link.close);
 
     print('[PROJECTS_DEBUG] Fetching projects from repository...');
     final projects = await repository.getProjects();
@@ -182,11 +181,9 @@ class ProjectDetail extends _$ProjectDetail {
     // Organization context is handled by the API interceptor
     final repository = ref.read(projectsRepositoryProvider);
 
-    // Keep provider alive for 5 minutes
-    ref.keepAlive();
-    Timer(const Duration(minutes: 5), () {
-      ref.invalidateSelf();
-    });
+    // Keep alive with auto-dispose after 5 minutes of inactivity
+    final link = ref.keepAlive();
+    Timer(const Duration(minutes: 5), link.close);
 
     try {
       final project = await repository.getProject(projectId);

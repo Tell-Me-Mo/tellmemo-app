@@ -32,11 +32,9 @@ HierarchyRepository hierarchyRepository(HierarchyRepositoryRef ref) {
 class HierarchyState extends _$HierarchyState {
   @override
   Future<List<HierarchyItem>> build({bool includeArchived = false}) async {
-    // Keep provider alive for 5 minutes to avoid refetching on navigation
-    ref.keepAlive();
-    Timer(const Duration(minutes: 5), () {
-      ref.invalidateSelf();
-    });
+    // Keep alive with auto-dispose after 5 minutes of inactivity
+    final link = ref.keepAlive();
+    Timer(const Duration(minutes: 5), link.close);
 
     final repository = ref.watch(hierarchyRepositoryProvider);
     return await repository.getFullHierarchy(includeArchived: includeArchived);

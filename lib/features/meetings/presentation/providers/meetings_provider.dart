@@ -14,11 +14,9 @@ Future<List<Content>> meetingsList(MeetingsListRef ref) async {
   // Watch organization changes to auto-refresh when organization switches
   ref.watch(organizationChangedProvider);
 
-  // Keep provider alive for 5 minutes to avoid refetching on navigation
-  ref.keepAlive();
-  Timer(const Duration(minutes: 5), () {
-    ref.invalidateSelf();
-  });
+  // Keep alive with auto-dispose after 5 minutes of inactivity
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 5), link.close);
 
   final selectedProject = ref.watch(selectedProjectProvider);
   final apiClient = ref.read(apiClientProvider);

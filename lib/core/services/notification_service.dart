@@ -53,22 +53,14 @@ class NotificationState {
 }
 
 class NotificationService extends StateNotifier<NotificationState> {
-  Timer? _queueProcessor;
   final Map<String, Timer> _autoDissmissTimers = {};
   static const int _maxHistorySize = 100;
   static const int _maxActiveSize = 5;
 
-  NotificationService() : super(NotificationState()) {
-    _startQueueProcessor();
-  }
-
-  void _startQueueProcessor() {
-    _queueProcessor = Timer.periodic(const Duration(milliseconds: 500), (_) {
-      _processQueue();
-    });
-  }
+  NotificationService() : super(NotificationState());
 
   void _processQueue() {
+    // Process queue immediately when called, no periodic timer needed
     if (state.queue.isEmpty || state.currentToast != null) return;
 
     if (state.active.length >= _maxActiveSize) {
@@ -81,6 +73,11 @@ class NotificationService extends StateNotifier<NotificationState> {
 
     final notification = state.queue.removeFirst();
     _showNotification(notification);
+
+    // Process next item in queue if available (recursive call)
+    if (state.queue.isNotEmpty) {
+      Future.microtask(() => _processQueue());
+    }
   }
 
   void _showNotification(AppNotification notification) {
@@ -150,6 +147,8 @@ class NotificationService extends StateNotifier<NotificationState> {
       state = state.copyWith(
         queue: Queue<AppNotification>.from([...state.queue, notification]),
       );
+      // Trigger queue processing immediately after adding
+      Future.microtask(() => _processQueue());
     }
 
     return id;
@@ -182,6 +181,9 @@ class NotificationService extends StateNotifier<NotificationState> {
     );
 
     notification.onDismiss?.call();
+
+    // Process queue after dismissing (might free up space)
+    Future.microtask(() => _processQueue());
   }
 
   List<AppNotification> _addToHistory(AppNotification notification) {
@@ -307,7 +309,6 @@ class NotificationService extends StateNotifier<NotificationState> {
 
   @override
   void dispose() {
-    _queueProcessor?.cancel();
     for (final timer in _autoDissmissTimers.values) {
       timer.cancel();
     }

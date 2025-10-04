@@ -292,73 +292,208 @@
     flex-wrap: wrap;
 }
 
-/* Mobile Responsive */
+/* Mobile Responsive - Mobile First Design */
 @media (max-width: 968px) {
-    .docs-layout {
-        grid-template-columns: 1fr;
-        gap: 40px;
+    /* Global consistency fixes */
+    * {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
     }
 
-    .docs-sidebar {
-        position: static;
-        max-height: none;
-        padding-bottom: 40px;
-        border-bottom: 1px solid var(--border-color);
+    /* Docs Hero - Compact */
+    .docs-hero {
+        padding: 100px 0 48px;
+        text-align: left;
     }
 
     .docs-hero h1 {
-        font-size: 36px;
+        font-size: 28px;
+        line-height: 1.2;
+        margin-bottom: 12px;
     }
 
     .docs-hero p {
-        font-size: 18px;
+        font-size: 15px;
+        line-height: 1.6;
+        max-width: 100%;
+    }
+
+    /* Docs Layout - Single Column */
+    .docs-content {
+        padding: 40px 0 60px;
+    }
+
+    .docs-layout {
+        grid-template-columns: 1fr;
+        gap: 0;
+        padding: 0 16px;
+    }
+
+    /* Sidebar - Collapsible Style */
+    .docs-sidebar {
+        position: static;
+        max-height: none;
+        padding: 24px 0;
+        margin-bottom: 32px;
+        border-bottom: 1px solid var(--border-color);
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        padding: 20px;
+    }
+
+    .docs-nav-section {
+        margin-bottom: 24px;
+    }
+
+    .docs-nav-section:last-child {
+        margin-bottom: 0;
+    }
+
+    .docs-nav-section h4 {
+        font-size: 11px;
+        margin-bottom: 10px;
+        letter-spacing: 0.08em;
+    }
+
+    .docs-nav-section a {
+        padding: 10px 12px;
+        font-size: 14px;
+        margin-bottom: 4px;
+    }
+
+    /* Main Content - Optimized Reading */
+    .docs-main {
+        padding: 0;
+    }
+
+    .docs-article {
+        margin-bottom: 40px;
+        scroll-margin-top: 80px;
     }
 
     .docs-article h2 {
-        font-size: 28px;
+        font-size: 24px;
+        line-height: 1.3;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
     }
 
     .docs-article h3 {
-        font-size: 20px;
+        font-size: 19px;
+        line-height: 1.4;
+        margin: 24px 0 12px;
+    }
+
+    .docs-article h4 {
+        font-size: 16px;
+        margin: 20px 0 10px;
+    }
+
+    .docs-article p {
+        font-size: 15px;
+        line-height: 1.7;
+        margin-bottom: 16px;
+    }
+
+    .docs-article ul,
+    .docs-article ol {
+        margin: 16px 0;
+        padding-left: 20px;
+    }
+
+    .docs-article li {
+        font-size: 15px;
+        line-height: 1.7;
+        margin-bottom: 8px;
+    }
+
+    .docs-article code {
+        font-size: 13px;
+        padding: 2px 6px;
+    }
+
+    /* Code Blocks - Horizontal Scroll */
+    .code-block {
+        margin: 20px 0;
+        border-radius: 8px;
     }
 
     .code-block pre {
         padding: 16px;
+        font-size: 12px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .code-block code {
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    /* Tables - Horizontal Scroll */
+    .docs-table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
         font-size: 13px;
     }
 
-    .docs-table {
-        font-size: 14px;
+    .docs-table th,
+    .docs-table td {
+        padding: 10px 12px;
+        white-space: nowrap;
     }
 
+    /* Info Boxes - Compact */
+    .info-box,
+    .warning-box,
+    .success-box {
+        padding: 16px;
+        margin: 20px 0;
+        border-radius: 8px;
+        border-left-width: 3px;
+    }
+
+    .info-box h4,
+    .warning-box h4,
+    .success-box h4 {
+        font-size: 15px;
+        margin-bottom: 10px;
+    }
+
+    .info-box p,
+    .warning-box p,
+    .success-box p {
+        font-size: 14px;
+        line-height: 1.6;
+    }
+
+    /* Docs CTA - Full Width */
     .docs-cta {
-        padding: 32px 24px;
+        margin-top: 48px;
+        padding: 28px 20px;
+        border-radius: 12px;
+    }
+
+    .docs-cta h3 {
+        font-size: 22px;
+        line-height: 1.3;
+        margin-bottom: 10px;
+    }
+
+    .docs-cta p {
+        font-size: 15px;
+        margin-bottom: 20px;
     }
 
     .docs-cta-buttons {
         flex-direction: column;
+        gap: 10px;
     }
 
     .docs-cta-buttons .btn-primary,
     .docs-cta-buttons .btn-secondary {
         width: 100%;
-    }
-}
-
-@media (max-width: 480px) {
-    .docs-hero {
-        padding: 120px 0 60px;
-    }
-
-    .docs-hero h1 {
-        font-size: 32px;
-    }
-
-    .docs-content {
-        padding: 40px 0 60px;
-    }
-
-    .docs-article {
-        margin-bottom: 40px;
+        padding: 14px 24px;
     }
 }
