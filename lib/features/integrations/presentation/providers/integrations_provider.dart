@@ -14,14 +14,12 @@ final integrationsServiceProvider = Provider<IntegrationsService>((ref) {
 @riverpod
 class Integrations extends _$Integrations {
   late final IntegrationsService _service;
-  
+
   @override
   Future<List<Integration>> build() async {
-    // Keep provider alive for 5 minutes to avoid refetching on navigation
-    ref.keepAlive();
-    Timer(const Duration(minutes: 5), () {
-      ref.invalidateSelf();
-    });
+    // Keep alive with auto-dispose after 5 minutes of inactivity
+    final link = ref.keepAlive();
+    Timer(const Duration(minutes: 5), link.close);
 
     _service = ref.watch(integrationsServiceProvider);
 
@@ -145,11 +143,9 @@ class Integrations extends _$Integrations {
 
 @riverpod
 Future<Integration?> firefliesIntegration(Ref ref) async {
-  // Keep provider alive for 5 minutes
-  ref.keepAlive();
-  Timer(const Duration(minutes: 5), () {
-    ref.invalidateSelf();
-  });
+  // Keep alive with auto-dispose after 5 minutes of inactivity
+  final link = ref.keepAlive();
+  Timer(const Duration(minutes: 5), link.close);
 
   final integrations = await ref.watch(integrationsProvider.future);
   return integrations.firstWhere(
