@@ -34,7 +34,7 @@ class Config {
 
   // Firebase Analytics
   static const bool firebaseAnalyticsEnabled =
-      false; // Set to true if using Firebase
+      true; // Set to true if using Firebase
 
   // Supabase (only if authProvider = 'supabase')
   static const String supabaseUrl = ''; // Add your Supabase URL
