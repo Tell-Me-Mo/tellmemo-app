@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb, compute;
 import 'package:dio/dio.dart';
 import 'package:http/http.dart' as http;
-import '../../../../core/config/env_config.dart';
+import '../../../../core/config/app_config.dart';
 
 class TranscriptionResult {
   final String text;
@@ -44,7 +44,7 @@ class TranscriptionService {
   final String baseUrl;
 
   TranscriptionService({String? customBaseUrl})
-      : baseUrl = customBaseUrl ?? EnvConfig.apiBaseUrl {
+      : baseUrl = customBaseUrl ?? AppConfig.apiBaseUrl {
     _dio = Dio(BaseOptions(
       baseUrl: baseUrl,
       connectTimeout: const Duration(seconds: 30),

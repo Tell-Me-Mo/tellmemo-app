@@ -2,23 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'app/app.dart';
-import 'core/config/env_config.dart';
+import 'core/config/app_config.dart';
 import 'core/config/supabase_config.dart';
 import 'core/services/firebase_analytics_service.dart';
 import 'firebase_options.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize environment configuration first to read flags
-  await EnvConfig.initialize();
+  // Print config in debug mode
+  if (kDebugMode) {
+    AppConfig.debugPrint();
+  }
 
   // Initialize Sentry if enabled
-  if (EnvConfig.sentryEnabled && EnvConfig.sentryDsn.isNotEmpty) {
+  if (AppConfig.sentryEnabled && AppConfig.sentryDsn.isNotEmpty) {
     await SentryFlutter.init(
       (options) {
-        options.dsn = EnvConfig.sentryDsn;
+        options.dsn = AppConfig.sentryDsn;
         options.sendDefaultPii = true;
         options.tracesSampleRate = 1.0;
         options.profilesSampleRate = 1.0;
@@ -35,7 +38,7 @@ void main() async {
 
 Future<void> _runApp() async {
   // Initialize Firebase if analytics is enabled
-  if (EnvConfig.firebaseAnalyticsEnabled) {
+  if (AppConfig.firebaseAnalyticsEnabled) {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
@@ -51,7 +54,7 @@ Future<void> _runApp() async {
   await SupabaseConfig.initialize();
 
   // Wrap in SentryWidget only if Sentry is enabled
-  if (EnvConfig.sentryEnabled) {
+  if (AppConfig.sentryEnabled) {
     runApp(SentryWidget(child: const ProviderScope(child: PMasterApp())));
   } else {
     runApp(const ProviderScope(child: PMasterApp()));

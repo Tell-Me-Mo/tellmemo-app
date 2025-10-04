@@ -1,14 +1,14 @@
-import 'env_config.dart';
+import 'app_config.dart';
 
 class ApiConfig {
   // Private constructor
   ApiConfig._();
 
   // Base URL
-  static String get baseUrl => EnvConfig.apiBaseUrl;
+  static String get baseUrl => AppConfig.apiBaseUrl;
 
   // Timeout
-  static Duration get timeout => Duration(milliseconds: EnvConfig.apiTimeout);
+  static Duration get timeout => Duration(milliseconds: AppConfig.apiTimeout);
 
   // API Endpoints
   static const String projects = '/api/projects';
@@ -27,11 +27,6 @@ class ApiConfig {
         'Accept': 'application/json',
       };
 
-  // Headers with API key (when needed)
-  static Map<String, String> get headersWithApiKey => {
-        ...defaultHeaders,
-        'X-API-Key': EnvConfig.apiKey,
-      };
 
   // Response status codes
   static const int successCode = 200;

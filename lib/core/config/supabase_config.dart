@@ -1,7 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../storage/secure_storage.dart';
 import '../storage/secure_storage_factory.dart';
-import './env_config.dart';
+import './app_config.dart';
 
 class SupabaseConfig {
   static Supabase? _instance;
@@ -20,15 +20,15 @@ class SupabaseConfig {
   /// Initialize Supabase (only if using Supabase auth)
   static Future<void> initialize() async {
     // Skip initialization if not using Supabase
-    if (!EnvConfig.useSupabaseAuth) {
+    if (!AppConfig.useSupabaseAuth) {
       return;
     }
 
-    final supabaseUrl = EnvConfig.supabaseUrl;
-    final supabaseAnonKey = EnvConfig.supabaseAnonKey;
+    final supabaseUrl = AppConfig.supabaseUrl;
+    final supabaseAnonKey = AppConfig.supabaseAnonKey;
 
     if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
-      throw Exception('Supabase configuration is missing. Set SUPABASE_URL and SUPABASE_ANON_KEY in .env file.');
+      throw Exception('Supabase configuration is missing. Set SUPABASE_URL and SUPABASE_ANON_KEY via --dart-define.');
     }
 
     _instance = await Supabase.initialize(
