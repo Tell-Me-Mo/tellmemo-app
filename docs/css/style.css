@@ -938,6 +938,18 @@ button:focus-visible {
 
 /* Responsive - Mobile First Design */
 @media (max-width: 768px) {
+    /* Global fixes for text stability */
+    * {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Prevent layout shift */
+    img, svg {
+        display: block;
+        max-width: 100%;
+    }
+
     /* Container */
     .container {
         padding: 0 16px;
@@ -1081,12 +1093,13 @@ button:focus-visible {
     }
 
     .feature-card {
-        padding: 20px;
+        padding: 18px;
         border-radius: 12px;
         display: flex;
-        align-items: flex-start;
-        gap: 16px;
+        align-items: center;
+        gap: 14px;
         background: var(--bg-tertiary);
+        min-height: 80px;
     }
 
     .feature-card:hover {
@@ -1099,6 +1112,9 @@ button:focus-visible {
         margin-bottom: 0;
         flex-shrink: 0;
         border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .feature-icon svg {
@@ -1106,17 +1122,24 @@ button:focus-visible {
         height: 20px;
     }
 
+    .feature-card > div {
+        flex: 1;
+        min-width: 0;
+    }
+
     .feature-card h3 {
         font-size: 16px;
         font-weight: 600;
         margin-bottom: 4px;
         line-height: 1.3;
+        color: var(--text-primary);
     }
 
     .feature-card p {
         font-size: 13px;
         line-height: 1.5;
         opacity: 0.85;
+        margin: 0;
     }
 
     /* How It Works - Horizontal Timeline */
@@ -1133,18 +1156,19 @@ button:focus-visible {
 
     .step {
         display: flex;
-        align-items: flex-start;
-        gap: 16px;
+        align-items: center;
+        gap: 14px;
         text-align: left;
         position: relative;
         padding-left: 0;
+        min-height: 70px;
     }
 
     .step::after {
         content: '';
         position: absolute;
         left: 23px;
-        top: 48px;
+        top: 70px;
         bottom: -20px;
         width: 2px;
         background: linear-gradient(180deg, var(--accent-primary), transparent);
@@ -1163,17 +1187,24 @@ button:focus-visible {
         box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
     }
 
+    .step > div {
+        flex: 1;
+        min-width: 0;
+    }
+
     .step h3 {
         font-size: 17px;
         font-weight: 600;
         margin-bottom: 4px;
         line-height: 1.3;
+        color: var(--text-primary);
     }
 
     .step p {
         font-size: 13px;
         line-height: 1.5;
         opacity: 0.85;
+        margin: 0;
     }
 
     /* Open Source Section - List Style Layout */
@@ -1188,12 +1219,13 @@ button:focus-visible {
     }
 
     .open-source-card {
-        padding: 20px;
+        padding: 18px;
         border-radius: 12px;
         display: flex;
-        align-items: flex-start;
-        gap: 16px;
+        align-items: center;
+        gap: 14px;
         text-align: left;
+        min-height: 100px;
     }
 
     .open-source-card:hover {
@@ -1206,6 +1238,9 @@ button:focus-visible {
         margin: 0;
         flex-shrink: 0;
         border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .open-source-icon svg {
@@ -1213,17 +1248,24 @@ button:focus-visible {
         height: 22px;
     }
 
+    .open-source-card > div {
+        flex: 1;
+        min-width: 0;
+    }
+
     .open-source-card h3 {
         font-size: 16px;
         font-weight: 600;
         margin-bottom: 4px;
         line-height: 1.3;
+        color: var(--text-primary);
     }
 
     .open-source-card p {
         font-size: 13px;
         line-height: 1.5;
         opacity: 0.85;
+        margin: 0;
     }
 
     .open-source-cta {
@@ -1248,7 +1290,7 @@ button:focus-visible {
     }
 
     .use-case-card {
-        padding: 20px;
+        padding: 18px;
         border-radius: 12px;
     }
 
@@ -1257,9 +1299,10 @@ button:focus-visible {
     }
 
     .use-case-icon {
-        font-size: 32px;
-        margin-bottom: 12px;
-        display: inline-block;
+        font-size: 28px;
+        margin-bottom: 10px;
+        display: block;
+        line-height: 1;
     }
 
     .use-case-card h3 {
@@ -1267,6 +1310,7 @@ button:focus-visible {
         font-weight: 600;
         margin-bottom: 10px;
         line-height: 1.3;
+        color: var(--text-primary);
     }
 
     .use-case-card p {
@@ -1278,17 +1322,21 @@ button:focus-visible {
 
     .use-case-author {
         padding-top: 14px;
-        gap: 2px;
+        gap: 4px;
+        display: flex;
+        flex-direction: column;
     }
 
     .use-case-author strong {
         font-size: 13px;
-        display: block;
+        line-height: 1.4;
+        color: var(--text-primary);
     }
 
     .use-case-author span {
         font-size: 11px;
         opacity: 0.7;
+        line-height: 1.3;
     }
 
     /* FAQ Section - Improved Touch Targets */
@@ -1352,47 +1400,59 @@ button:focus-visible {
     }
 
     .footer-brand {
-        padding-bottom: 16px;
+        padding-bottom: 20px;
         border-bottom: 1px solid var(--border-color);
     }
 
     .footer-brand .logo {
         margin-bottom: 12px;
+        display: flex;
+        align-items: center;
     }
 
     .footer-brand p {
         font-size: 13px;
         line-height: 1.5;
         opacity: 0.7;
+        margin: 0;
     }
 
     .footer-links {
         grid-template-columns: repeat(2, 1fr);
-        gap: 28px 20px;
+        gap: 28px 16px;
+    }
+
+    .footer-column {
+        min-width: 0;
     }
 
     .footer-column h4 {
         font-size: 11px;
         font-weight: 700;
-        margin-bottom: 10px;
+        margin-bottom: 12px;
         letter-spacing: 0.08em;
         opacity: 0.9;
+        line-height: 1.2;
     }
 
     .footer-column a {
         font-size: 12px;
         margin-bottom: 8px;
         line-height: 1.4;
+        display: block;
     }
 
     .footer-bottom {
         padding-top: 20px;
         margin-top: 8px;
+        border-top: 1px solid var(--border-color);
     }
 
     .footer-bottom p {
         font-size: 11px;
         opacity: 0.6;
+        line-height: 1.4;
+        margin: 0;
     }
 
     /* Legal Pages */

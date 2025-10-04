@@ -294,6 +294,12 @@
 
 /* Mobile Responsive - Mobile First Design */
 @media (max-width: 968px) {
+    /* Global consistency fixes */
+    * {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
     /* Docs Hero - Compact */
     .docs-hero {
         padding: 100px 0 48px;
