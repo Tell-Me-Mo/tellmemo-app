@@ -2,7 +2,7 @@ name: Frontend Docker Build
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
     paths:
       - 'lib/**'
       - 'web/**'
@@ -28,7 +28,7 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
       - uses: actions/checkout@v4
@@ -68,7 +68,7 @@ jobs:
         run: |
           # Update config.dart for Docker environment with specified values
           # Set API Backend URL to Docker backend service
-          sed -i "s|static const String apiBaseUrl = '.*'|static const String apiBaseUrl = 'http://backend:8000'|g" lib/config.dart
+          sed -i "s|static const String apiBaseUrl = '.*'|static const String apiBaseUrl = 'http://localhost:8000'|g" lib/config.dart
 
           # Set environment to development
           sed -i "s|static const String environment = '.*'|static const String environment = 'development'|g" lib/config.dart

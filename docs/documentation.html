@@ -423,8 +423,17 @@ EOF
 # 4. Start all services
 docker compose up -d
 
-# 5. Access the application
+# 5. Wait for all services to start (this can take 4-5 minutes)
+# You can monitor the logs with: docker compose logs -f
+
+# 6. Access the application
 # UI will be available at http://localhost:8100</code></pre>
+                        </div>
+
+                        <div class="info-box">
+                            <h4>⏱️ First Startup Takes Time</h4>
+                            <p>After running <code>docker compose up -d</code>, it can take <strong>4-5 minutes</strong> for all services to fully start and initialize. This includes downloading embedding models, initializing the database, and setting up the vector database.</p>
+                            <p>You can monitor progress with: <code>docker compose logs -f</code></p>
                         </div>
 
                         <div class="success-box">
