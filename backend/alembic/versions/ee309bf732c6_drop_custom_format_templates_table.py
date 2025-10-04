@@ -20,7 +20,18 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Drop the custom_format_templates table as it is not being used."""
-    op.drop_table('custom_format_templates')
+    # Check if table exists before dropping
+    conn = op.get_bind()
+    result = conn.execute(sa.text("""
+        SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.tables
+            WHERE table_schema = 'public'
+            AND table_name = 'custom_format_templates'
+        )
+    """))
+    if result.scalar():
+        op.drop_table('custom_format_templates')
 
 
 def downgrade() -> None:

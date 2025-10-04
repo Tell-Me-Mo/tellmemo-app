@@ -2,7 +2,7 @@
 # Python 3.13 compatible versions
 
 # Core Framework
-fastapi==0.117.1
+fastapi==0.118.0
 uvicorn[standard]==0.37.0
 gunicorn==23.0.0
 python-multipart==0.0.20
@@ -15,7 +15,7 @@ alembic==1.16.5
 
 # Validation & Settings
 pydantic==2.11.9
-pydantic-settings==2.10.1
+pydantic-settings==2.11.0
 email-validator==2.3.0
 python-dotenv==1.1.1
 
@@ -36,28 +36,28 @@ soundfile==0.13.1
 spacy==3.8.7
 en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
 scikit-learn==1.7.2
-nltk==3.9.1
-transformers==4.56.2
+nltk==3.9.2
+transformers==4.57.0
 rank-bm25==0.2.2
 fast-langdetect==1.0.0
 
 # LLM Integration
-anthropic==0.68.0
-openai==1.109.1
+anthropic==0.69.0
+openai==2.1.0
 
 # Observability
-langfuse==3.5.0
+langfuse==3.6.1
 sentry-sdk[fastapi]==2.39.0
 
 # Authentication
-supabase==2.20.0
+supabase==2.21.1
 gotrue==2.12.4
 pyjwt==2.10.1
 
 # Utilities
 httpx>=0.26,<0.28
 aiofiles==24.1.0
-aiohttp==3.11.18
+aiohttp==3.12.15
 python-jose[cryptography]==3.3.0
 
 # Scheduling

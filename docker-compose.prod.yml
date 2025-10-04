@@ -1,7 +1,7 @@
 services:
-  # PostgreSQL 17.6 - Main database for project metadata
+  # PostgreSQL 18.0 - Main database for project metadata
   postgres:
-    image: postgres:17.6
+    image: postgres:18.0
     container_name: pm_master_postgres
     restart: unless-stopped
     environment:
@@ -27,9 +27,9 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Qdrant v1.15.3 - Vector database for semantic search
+  # Qdrant v1.15.5 - Vector database for semantic search
   qdrant:
-    image: qdrant/qdrant:v1.15.4
+    image: qdrant/qdrant:v1.15.5
     container_name: pm_master_qdrant
     restart: unless-stopped
     environment:
@@ -62,9 +62,9 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Redis 7 - Required for Langfuse v3 queue and caching
+  # Redis 8 - Required for Langfuse v3 queue and caching
   redis:
-    image: redis:7-alpine
+    image: redis:8.2.2-alpine
     container_name: pm_master_redis
     restart: unless-stopped
     command: >
@@ -126,12 +126,20 @@ services:
       echo 'Waiting for MinIO to be ready...';
       sleep 5;
       mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin123};
-      echo 'Creating Langfuse buckets...';
-      mc mb myminio/langfuse || echo 'Bucket langfuse already exists';
-      mc mb myminio/langfuse-media || echo 'Bucket langfuse-media already exists';
+      echo 'Checking Langfuse buckets...';
+      if mc ls myminio/langfuse >/dev/null 2>&1; then
+        echo '✓ Bucket langfuse already exists';
+      else
+        mc mb myminio/langfuse && echo '✓ Created bucket langfuse';
+      fi;
+      if mc ls myminio/langfuse-media >/dev/null 2>&1; then
+        echo '✓ Bucket langfuse-media already exists';
+      else
+        mc mb myminio/langfuse-media && echo '✓ Created bucket langfuse-media';
+      fi;
       echo 'Setting bucket policies...';
-      mc anonymous set download myminio/langfuse-media || echo 'Policy already set for langfuse-media';
-      echo 'Buckets initialized successfully';
+      mc anonymous set download myminio/langfuse-media 2>/dev/null && echo '✓ Set download policy for langfuse-media' || echo '✓ Policy already configured for langfuse-media';
+      echo '✓ MinIO buckets initialized successfully';
       exit 0;
       "
     networks:
@@ -144,7 +152,7 @@ services:
 
   # Zookeeper - Required for ClickHouse clustering
   zookeeper:
-    image: zookeeper:3.9
+    image: zookeeper:3.9.4
     container_name: pm_master_zookeeper
     restart: unless-stopped
     environment:
@@ -171,7 +179,7 @@ services:
 
   # ClickHouse - Required for Langfuse v3 analytics (with clustering support)
   clickhouse:
-    image: clickhouse/clickhouse-server:24.3-alpine
+    image: clickhouse/clickhouse-server:25.8-alpine
     container_name: pm_master_clickhouse
     restart: unless-stopped
     depends_on:
@@ -349,7 +357,7 @@ services:
   # ===== ELK STACK =====
   # Elasticsearch - Search and analytics engine
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.1.4
     container_name: pm_master_elasticsearch
     restart: unless-stopped
     environment:
@@ -363,6 +371,7 @@ services:
       - xpack.security.transport.ssl.enabled=false
       - xpack.license.self_generated.type=basic
       - indices.id_field_data.enabled=true
+      - action.auto_create_index=true
     ulimits:
       memlock:
         soft: -1
@@ -391,7 +400,7 @@ services:
 
   # Logstash - Data processing pipeline
   logstash:
-    image: docker.elastic.co/logstash/logstash:8.15.3
+    image: docker.elastic.co/logstash/logstash:8.19.4
     container_name: pm_master_logstash
     restart: unless-stopped
     depends_on:
@@ -420,7 +429,7 @@ services:
 
   # Kibana - Visualization and exploration
   kibana:
-    image: docker.elastic.co/kibana/kibana:8.15.3
+    image: docker.elastic.co/kibana/kibana:8.19.4
     container_name: pm_master_kibana
     restart: unless-stopped
     depends_on:

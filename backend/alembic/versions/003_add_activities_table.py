@@ -19,34 +19,20 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Create activity type enum if it doesn't exist
-    op.execute("""
-        DO $$ BEGIN
-            CREATE TYPE activitytype AS ENUM (
-                'project_created',
-                'project_updated', 
-                'project_deleted',
-                'content_uploaded',
-                'summary_generated',
-                'query_submitted',
-                'report_generated',
-                'member_added',
-                'member_removed'
-            );
-        EXCEPTION
-            WHEN duplicate_object THEN null;
-        END $$;
-    """)
-    
+    # Create activity type enum using SQLAlchemy's Enum
+    activity_type_enum = sa.Enum(
+        'PROJECT_CREATED', 'PROJECT_UPDATED', 'PROJECT_DELETED',
+        'CONTENT_UPLOADED', 'SUMMARY_GENERATED', 'QUERY_SUBMITTED',
+        'REPORT_GENERATED', 'MEMBER_ADDED', 'MEMBER_REMOVED',
+        name='activitytype'
+    )
+
     # Create activities table
     op.create_table(
         'activities',
         sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, primary_key=True),
         sa.Column('project_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('type', sa.Enum('PROJECT_CREATED', 'PROJECT_UPDATED', 'PROJECT_DELETED', 
-                                  'CONTENT_UPLOADED', 'SUMMARY_GENERATED', 'QUERY_SUBMITTED',
-                                  'REPORT_GENERATED', 'MEMBER_ADDED', 'MEMBER_REMOVED',
-                                  name='activitytype'), nullable=False),
+        sa.Column('type', activity_type_enum, nullable=False),
         sa.Column('title', sa.String(255), nullable=False),
         sa.Column('description', sa.Text(), nullable=False),
         sa.Column('metadata', sa.Text(), nullable=True),
@@ -68,9 +54,10 @@ def downgrade() -> None:
     op.drop_index('idx_activities_type', table_name='activities')
     op.drop_index('idx_activities_timestamp', table_name='activities')
     op.drop_index('idx_activities_project_id', table_name='activities')
-    
+
     # Drop table
     op.drop_table('activities')
-    
-    # Drop enum type
-    op.execute('DROP TYPE activitytype')
+
+    # Drop enum type using SQLAlchemy's Enum
+    activity_type_enum = sa.Enum(name='activitytype')
+    activity_type_enum.drop(op.get_bind())
