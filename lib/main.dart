@@ -10,13 +10,6 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  // Print config in debug mode
-  if (kDebugMode) {
-    AppConfig.debugPrint();
-  }
-
   // Initialize Sentry if enabled
   if (AppConfig.sentryEnabled && AppConfig.sentryDsn.isNotEmpty) {
     await SentryFlutter.init(
@@ -37,6 +30,14 @@ void main() async {
 }
 
 Future<void> _runApp() async {
+  // Ensure bindings are initialized in the same zone as runApp
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Print config in debug mode
+  if (kDebugMode) {
+    AppConfig.debugPrint();
+  }
+
   // Initialize Firebase if analytics is enabled
   if (AppConfig.firebaseAnalyticsEnabled) {
     await Firebase.initializeApp(
