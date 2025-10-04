@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'app/app.dart';
 import 'core/config/app_config.dart';
 import 'core/config/supabase_config.dart';
-import 'core/services/firebase_analytics_service.dart';
-import 'firebase_options.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
+
+// Only import Firebase dependencies when enabled
+// To disable: set firebaseAnalyticsEnabled = false in lib/config.dart
+import 'package:firebase_core/firebase_core.dart';
+import 'core/services/firebase_analytics_service.dart';
+// Use stub when firebase_options.dart doesn't exist (e.g., in Docker builds)
+import 'firebase_options_stub.dart' show DefaultFirebaseOptions;
 
 void main() async {
   // Initialize Sentry if enabled
