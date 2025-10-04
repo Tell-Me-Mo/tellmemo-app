@@ -1,33 +1,31 @@
 # TellMeMo
 
-**TellMeMo** is an AI-powered Meeting Intelligence platform that uses RAG (Retrieval Augmented Generation) to help teams extract insights from meeting transcripts, generate summaries, track action items, and detect risks automatically.
+Turn project chaos into clarity. AI-powered platform that transforms meetings into searchable knowledge—upload content, ask questions, get instant answers.
 
 ## ✨ Features
 
-- 🎙️ **Meeting Intelligence** - Transform meeting transcripts into actionable insights
-- 📝 **Auto Summaries** - Generate executive, technical, and stakeholder summaries
-- ✅ **Action Item Tracking** - Automatically extract and track tasks from meetings
-- ⚠️ **Risk Detection** - AI identifies risks and concerns mentioned in discussions
-- 💬 **Context-Aware Chat** - Ask questions about your meetings with full context
-- 🔍 **Semantic Search** - Find information across all your meeting content
-- 📊 **Project Hierarchy** - Organize by Portfolio → Programs → Projects
+- 🔍 **Ask questions** - Search in plain English, get answers with sources
+- ✅ **Track actions** - AI extracts tasks automatically
+- ⚠️ **Detect risks** - Spot problems before they become critical
+- 📝 **Generate summaries** - Executive, technical, or stakeholder formats
+- 📊 **Portfolio view** - Organize by Portfolio → Program → Project
+- 🔓 **100% Open Source** - Self-host or use our cloud
 
-## 🏗️ Architecture
+## 🏗️ Tech Stack
 
-- **Frontend**: Flutter Web (port 8100)
-- **Backend**: FastAPI with built-in authentication (port 8000)
-- **Databases**: PostgreSQL (metadata), Qdrant (vector search)
-- **AI/LLM**: Claude 3.5 Haiku via Anthropic API
-- **Embeddings**: Google EmbeddingGemma-300m (local)
+- **Frontend**: Flutter Web
+- **Backend**: FastAPI + PostgreSQL + Qdrant
+- **AI**: Claude 3.5 (LLM), EmbeddingGemma (local embeddings)
+- **Deploy**: Docker Compose (everything containerized)
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- **Docker** ≥20.10
-- **Docker Compose** ≥2.0
+- Docker ≥20.10
+- Docker Compose ≥2.0
 
-That's it! Everything else runs in containers.
+Everything else runs in containers.
 
 ### Installation
 
@@ -51,17 +49,9 @@ docker compose up -d
 
 ### Getting API Keys
 
-**ANTHROPIC_API_KEY** (Required):
-1. Visit [console.anthropic.com](https://console.anthropic.com/)
-2. Sign up or log in
-3. Go to API Keys section
-4. Create a new key (starts with `sk-ant-api03-`)
+**ANTHROPIC_API_KEY**: Get from [console.anthropic.com](https://console.anthropic.com/) → API Keys
 
-**HF_TOKEN** (Required):
-1. Visit [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
-2. Sign up or log in
-3. Create a new token with "Read" permission
-4. Used for downloading embedding models
+**HF_TOKEN**: Get from [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) → Create token (Read permission)
 
 ### Useful Commands
 
@@ -86,17 +76,9 @@ docker compose up -d
 
 ## 📖 Documentation
 
-Full documentation is available at:
 - **Online**: [tellmemo.io/documentation](https://tellmemo.io/documentation)
-- **Local**: Open `docs/documentation.html` in a browser
-
-### Key Documentation Sections
-
-- **Installation** - Detailed setup instructions
-- **Configuration** - All environment variables and options
-- **User Guide** - How to use TellMeMo's features
-- **Troubleshooting** - Common issues and solutions
-- **API Reference** - Backend API documentation
+- **Local**: Open `docs/documentation.html` in browser
+- **API**: Full REST API reference included
 
 ## 🛠️ Development
 
@@ -141,80 +123,60 @@ tellmemo-app/
 
 ## 🔧 Configuration
 
-TellMeMo is highly configurable via environment variables. The most common options:
+Key environment variables:
 
 ```bash
 # Required
 ANTHROPIC_API_KEY=sk-ant-api03-xxx
 HF_TOKEN=hf_xxx
 
-# Authentication (optional, has defaults)
+# Optional
 JWT_SECRET=your-secret-here
-
-# Optional features
 SENTRY_ENABLED=false
-FLUTTER_FIREBASE_ANALYTICS_ENABLED=false
 ```
 
-See `.env.example` for all available configuration options.
+See `.env.example` for all options.
 
-## 📚 Key Documents
+## 📚 More Info
 
-- **[CLAUDE.md](CLAUDE.md)** - Instructions for Claude Code (AI assistant)
-- **[CHANGELOG.md](CHANGELOG.md)** - Version history and changes
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** - How to contribute
-- **[SECURITY.md](SECURITY.md)** - Security policy and reporting
+- **[CLAUDE.md](CLAUDE.md)** - Claude Code instructions
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guide
+- **[SECURITY.md](SECURITY.md)** - Security policy
 - **[LICENSE](LICENSE)** - MIT License
 
 ## 🤝 Contributing
 
-We welcome contributions! Here's how to get started:
+1. Fork the repo
+2. Create feature branch: `git checkout -b feature/amazing-feature`
+3. Make changes and run tests
+4. Commit: `git commit -m 'Add amazing feature'`
+5. Push and open a Pull Request
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Make your changes
-4. Run tests: `flutter test` and `pytest`
-5. Commit your changes: `git commit -m 'Add amazing feature'`
-6. Push to the branch: `git push origin feature/amazing-feature`
-7. Open a Pull Request
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## 🐛 Troubleshooting
 
-### Common Issues
-
-**Services won't start:**
+**Services won't start?**
 ```bash
-# Check ports are not in use
-lsof -i :5432  # PostgreSQL
-lsof -i :6333  # Qdrant
-lsof -i :8000  # Backend
-lsof -i :8100  # Frontend
-
-# Restart Docker
 docker compose down
 docker compose up -d
 ```
 
-**Database connection errors:**
+**Check logs:**
 ```bash
-# Check PostgreSQL logs
-docker compose logs postgres
-
-# Restart database
-docker compose restart postgres
+docker compose logs -f
 ```
 
-For more help, see the [Troubleshooting section](docs/documentation.html#troubleshooting) in the documentation.
+See [full troubleshooting guide](https://tellmemo.io/documentation#troubleshooting).
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) file.
 
 ## 🔒 Security
 
-If you discover a security vulnerability, please see [SECURITY.md](SECURITY.md) for reporting instructions.
+Found a vulnerability? See [SECURITY.md](SECURITY.md) for reporting.
 
 ## 🌐 Links
 
