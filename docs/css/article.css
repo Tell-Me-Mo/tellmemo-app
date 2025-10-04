@@ -285,6 +285,12 @@
 
 /* Responsive - Mobile First Design */
 @media (max-width: 768px) {
+    /* Global consistency fixes */
+    * {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
     /* Article Header - Compact */
     .article-header {
         padding: 100px 0 40px;
