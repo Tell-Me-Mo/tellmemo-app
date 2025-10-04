@@ -85,11 +85,11 @@ jobs:
           # Disable Sentry
           sed -i "s|static const bool sentryEnabled = .*|static const bool sentryEnabled = false|g" lib/config.dart
 
-          # Clear Sentry DSN
-          sed -i "s|static const String sentryDsn = '.*'|static const String sentryDsn = ''|g" lib/config.dart
+          # Clear Sentry DSN (handle multiline const)
+          perl -i -0pe "s/static const String sentryDsn =\s*\n?\s*'[^']*';/static const String sentryDsn = '';/g" lib/config.dart
 
-          # Disable Firebase Analytics
-          sed -i "s|static const bool firebaseAnalyticsEnabled =.*|static const bool firebaseAnalyticsEnabled = false|g" lib/config.dart
+          # Disable Firebase Analytics (handle multiline const)
+          perl -i -0pe 's/static const bool firebaseAnalyticsEnabled =\s*\n?\s*[^;]*;/static const bool firebaseAnalyticsEnabled = false;/g' lib/config.dart
 
           # Clear Supabase URL
           sed -i "s|static const String supabaseUrl = '.*'|static const String supabaseUrl = ''|g" lib/config.dart
