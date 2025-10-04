@@ -936,27 +936,31 @@ button:focus-visible {
     margin-bottom: 60px;
 }
 
-/* Responsive */
+/* Responsive - Mobile First Design */
 @media (max-width: 768px) {
     /* Container */
     .container {
-        padding: 0 20px;
+        padding: 0 16px;
     }
 
     /* Navigation */
+    .nav-content {
+        padding: 16px 0;
+    }
+
     .mobile-menu-toggle {
         display: flex;
     }
 
     .nav-links {
         position: fixed;
-        top: 73px;
+        top: 69px;
         left: 0;
         right: 0;
         background: var(--bg-secondary);
         flex-direction: column;
-        padding: 24px 20px;
-        gap: 20px;
+        padding: 20px 16px;
+        gap: 16px;
         border-top: 1px solid var(--border-color);
         transform: translateY(-100%);
         opacity: 0;
@@ -973,330 +977,465 @@ button:focus-visible {
 
     .nav-links a {
         font-size: 15px;
-        padding: 6px 0;
+        padding: 8px 0;
     }
 
     .nav-links .btn-primary {
         width: 100%;
         text-align: center;
         padding: 12px 20px;
+        margin-top: 8px;
     }
 
-    /* Hero Section */
+    /* Hero Section - Mobile Optimized */
     .hero {
-        padding: 120px 0 60px;
+        padding: 100px 0 48px;
     }
 
     .hero h1 {
-        font-size: 36px;
+        font-size: 32px;
+        line-height: 1.2;
         margin-bottom: 16px;
     }
 
     .hero-description {
-        font-size: 16px;
-        margin-bottom: 28px;
+        font-size: 15px;
+        line-height: 1.6;
+        margin-bottom: 24px;
     }
 
     .open-source-badge {
-        padding: 6px 12px;
-        font-size: 12px;
-        margin-bottom: 20px;
+        padding: 6px 14px;
+        font-size: 11px;
+        margin-bottom: 16px;
     }
 
     .hero-cta {
         flex-direction: column;
         align-items: stretch;
-        gap: 12px;
-        margin-bottom: 48px;
+        gap: 10px;
+        margin-bottom: 40px;
     }
 
     .hero-cta a {
         width: 100%;
         text-align: center;
         justify-content: center;
+        padding: 14px 24px;
     }
 
+    /* Hero Stats - Compact Grid Design */
     .hero-stats {
-        flex-direction: row;
-        gap: 16px;
-        padding-top: 28px;
-        justify-content: space-around;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        padding: 24px 0 0;
+        border-top: 1px solid var(--border-color);
     }
 
     .stat-item {
-        flex: 1;
-        min-width: 0;
+        background: var(--bg-tertiary);
+        padding: 16px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
     }
 
     .stat-number {
-        font-size: 24px;
+        font-size: 20px;
         margin-bottom: 4px;
         line-height: 1;
+        display: block;
     }
 
     .stat-label {
-        font-size: 11px;
-        line-height: 1.3;
+        font-size: 10px;
+        line-height: 1.2;
+        opacity: 0.8;
     }
 
-    /* Features Section */
+    /* Features Section - Compact Card Design */
     .features {
-        padding: 60px 0;
+        padding: 48px 0;
     }
 
     .section-header {
-        margin-bottom: 40px;
+        margin-bottom: 32px;
+        text-align: left;
+        padding: 0 4px;
     }
 
     .section-header h2 {
-        font-size: 28px;
-        margin-bottom: 12px;
+        font-size: 26px;
+        margin-bottom: 8px;
+        line-height: 1.2;
     }
 
     .section-header p {
-        font-size: 15px;
+        font-size: 14px;
+        line-height: 1.5;
     }
 
     .features-grid {
         grid-template-columns: 1fr;
-        gap: 16px;
+        gap: 12px;
     }
 
     .feature-card {
-        padding: 24px;
+        padding: 20px;
         border-radius: 12px;
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        background: var(--bg-tertiary);
+    }
+
+    .feature-card:hover {
+        transform: none;
     }
 
     .feature-icon {
-        width: 40px;
-        height: 40px;
-        margin-bottom: 16px;
+        width: 44px;
+        height: 44px;
+        margin-bottom: 0;
+        flex-shrink: 0;
+        border-radius: 10px;
+    }
+
+    .feature-icon svg {
+        width: 20px;
+        height: 20px;
     }
 
     .feature-card h3 {
-        font-size: 18px;
-        margin-bottom: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 4px;
+        line-height: 1.3;
     }
 
     .feature-card p {
-        font-size: 14px;
+        font-size: 13px;
         line-height: 1.5;
+        opacity: 0.85;
     }
 
-    /* How It Works Section */
+    /* How It Works - Horizontal Timeline */
     .how-it-works {
-        padding: 60px 0;
+        padding: 48px 0;
     }
 
     .steps {
-        grid-template-columns: 1fr;
-        gap: 32px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        position: relative;
+    }
+
+    .step {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        text-align: left;
+        position: relative;
+        padding-left: 0;
+    }
+
+    .step::after {
+        content: '';
+        position: absolute;
+        left: 23px;
+        top: 48px;
+        bottom: -20px;
+        width: 2px;
+        background: linear-gradient(180deg, var(--accent-primary), transparent);
+    }
+
+    .step:last-child::after {
+        display: none;
     }
 
     .step-number {
-        width: 48px;
-        height: 48px;
-        font-size: 20px;
-        margin-bottom: 16px;
+        width: 46px;
+        height: 46px;
+        font-size: 18px;
+        margin: 0;
+        flex-shrink: 0;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
     }
 
     .step h3 {
-        font-size: 18px;
-        margin-bottom: 8px;
+        font-size: 17px;
+        font-weight: 600;
+        margin-bottom: 4px;
+        line-height: 1.3;
     }
 
     .step p {
-        font-size: 14px;
+        font-size: 13px;
         line-height: 1.5;
+        opacity: 0.85;
     }
 
-    /* Open Source Section */
+    /* Open Source Section - List Style Layout */
     .open-source-section {
-        padding: 60px 0;
+        padding: 48px 0;
     }
 
     .open-source-grid {
         grid-template-columns: 1fr;
-        gap: 16px;
-        margin-bottom: 32px;
+        gap: 12px;
+        margin-bottom: 28px;
     }
 
     .open-source-card {
-        padding: 24px;
+        padding: 20px;
         border-radius: 12px;
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        text-align: left;
+    }
+
+    .open-source-card:hover {
+        transform: none;
     }
 
     .open-source-icon {
-        width: 48px;
-        height: 48px;
-        margin-bottom: 16px;
+        width: 44px;
+        height: 44px;
+        margin: 0;
+        flex-shrink: 0;
+        border-radius: 10px;
     }
 
     .open-source-icon svg {
-        width: 24px;
-        height: 24px;
+        width: 22px;
+        height: 22px;
     }
 
     .open-source-card h3 {
-        font-size: 18px;
-        margin-bottom: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 4px;
+        line-height: 1.3;
     }
 
     .open-source-card p {
-        font-size: 14px;
+        font-size: 13px;
         line-height: 1.5;
+        opacity: 0.85;
     }
 
     .open-source-cta {
-        gap: 12px;
+        gap: 10px;
+        flex-direction: column;
     }
 
     .open-source-cta .btn-large {
         width: 100%;
-        padding: 12px 24px;
-        font-size: 14px;
+        padding: 14px 24px;
+        font-size: 15px;
     }
 
-    /* Use Cases Section */
+    /* Use Cases Section - Compact Testimonials */
     .use-cases {
-        padding: 60px 0;
+        padding: 48px 0;
     }
 
     .use-cases-grid {
         grid-template-columns: 1fr;
-        gap: 16px;
+        gap: 12px;
     }
 
     .use-case-card {
-        padding: 24px;
+        padding: 20px;
         border-radius: 12px;
     }
 
+    .use-case-card:hover {
+        transform: none;
+    }
+
     .use-case-icon {
-        font-size: 36px;
-        margin-bottom: 16px;
+        font-size: 32px;
+        margin-bottom: 12px;
+        display: inline-block;
     }
 
     .use-case-card h3 {
-        font-size: 18px;
-        margin-bottom: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 10px;
+        line-height: 1.3;
     }
 
     .use-case-card p {
-        font-size: 14px;
+        font-size: 13px;
         line-height: 1.6;
-        margin-bottom: 16px;
+        margin-bottom: 14px;
+        opacity: 0.9;
     }
 
     .use-case-author {
-        padding-top: 12px;
+        padding-top: 14px;
+        gap: 2px;
     }
 
     .use-case-author strong {
         font-size: 13px;
+        display: block;
     }
 
     .use-case-author span {
-        font-size: 12px;
+        font-size: 11px;
+        opacity: 0.7;
     }
 
-    /* FAQ Section */
+    /* FAQ Section - Improved Touch Targets */
     .faq {
-        padding: 60px 0;
+        padding: 48px 0;
     }
 
     .faq-question {
-        padding: 20px 0;
-        font-size: 16px;
+        padding: 18px 0;
+        font-size: 15px;
+        line-height: 1.4;
+        gap: 12px;
+    }
+
+    .faq-answer {
+        padding-right: 32px;
     }
 
     .faq-answer p {
-        font-size: 14px;
+        font-size: 13px;
+        line-height: 1.6;
+        opacity: 0.85;
+    }
+
+    .faq-item.active .faq-answer {
+        padding-bottom: 18px;
     }
 
     /* CTA Section */
     .cta {
-        padding: 60px 0;
+        padding: 48px 0;
     }
 
     .cta h2 {
-        font-size: 28px;
-        margin-bottom: 12px;
+        font-size: 26px;
+        line-height: 1.2;
+        margin-bottom: 10px;
     }
 
     .cta p {
-        font-size: 15px;
-        margin-bottom: 24px;
+        font-size: 14px;
+        margin-bottom: 20px;
     }
 
     .cta .btn-large {
         width: 100%;
         max-width: 100%;
         padding: 14px 28px;
+        font-size: 15px;
     }
 
-    /* Footer */
+    /* Footer - Accordion Style */
     .footer {
-        padding: 48px 0 32px;
+        padding: 40px 0 28px;
     }
 
     .footer-content {
         grid-template-columns: 1fr;
-        gap: 32px;
-        margin-bottom: 32px;
+        gap: 28px;
+        margin-bottom: 28px;
+    }
+
+    .footer-brand {
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .footer-brand .logo {
+        margin-bottom: 12px;
     }
 
     .footer-brand p {
         font-size: 13px;
-        margin-bottom: 24px;
+        line-height: 1.5;
+        opacity: 0.7;
     }
 
     .footer-links {
         grid-template-columns: repeat(2, 1fr);
-        gap: 24px;
+        gap: 28px 20px;
     }
 
     .footer-column h4 {
-        font-size: 12px;
-        margin-bottom: 12px;
+        font-size: 11px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        letter-spacing: 0.08em;
+        opacity: 0.9;
     }
 
     .footer-column a {
-        font-size: 13px;
-        margin-bottom: 10px;
+        font-size: 12px;
+        margin-bottom: 8px;
+        line-height: 1.4;
     }
 
     .footer-bottom {
-        padding-top: 24px;
+        padding-top: 20px;
+        margin-top: 8px;
     }
 
     .footer-bottom p {
-        font-size: 12px;
+        font-size: 11px;
+        opacity: 0.6;
     }
 
     /* Legal Pages */
+    .page-content {
+        padding: 100px 0 60px;
+    }
+
     .content-wrapper {
-        padding: 32px 20px;
+        padding: 28px 20px;
         border-radius: 12px;
     }
 
     .content-wrapper h1 {
-        font-size: 32px;
+        font-size: 28px;
+        line-height: 1.2;
+    }
+
+    .content-wrapper .text-muted {
+        font-size: 13px;
+        margin-bottom: 32px;
     }
 
     .content-wrapper h2 {
-        font-size: 22px;
-        margin-top: 32px;
+        font-size: 20px;
+        margin-top: 28px;
+        margin-bottom: 12px;
     }
 
     .content-wrapper h3 {
-        font-size: 18px;
-        margin-top: 24px;
+        font-size: 17px;
+        margin-top: 20px;
+        margin-bottom: 10px;
     }
 
-    .content-wrapper p,
+    .content-wrapper p {
+        font-size: 14px;
+        line-height: 1.65;
+        margin-bottom: 14px;
+    }
+
     .content-wrapper ul li {
         font-size: 14px;
-        line-height: 1.7;
+        line-height: 1.65;
+        margin-bottom: 10px;
     }
 }
