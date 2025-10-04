@@ -12,7 +12,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
 import '../../data/models/summary_model.dart';
-import 'web_download_stub.dart' if (dart.library.html) 'web_download_web.dart' as web_download;
+import 'web_download_stub.dart' if (dart.library.js_interop) 'web_download_web.dart' as web_download;
 
 class SummaryExportService {
   static Future<Uint8List> generatePdf(SummaryModel summary) async {

@@ -2,6 +2,9 @@ import 'dart:async';
 import 'package:web/web.dart' as web;
 import 'secure_storage.dart';
 
+/// Factory function for platform-specific imports
+SecureStorage createSecureStorage() => SecureStorageWeb();
+
 /// Web implementation of SecureStorage
 /// Uses browser's localStorage (not encrypted, but standard for web)
 /// Note: For truly sensitive data on web, consider server-side storage
