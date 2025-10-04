@@ -1199,7 +1199,7 @@ button:focus-visible {
         display: block;
     }
 
-    /* How It Works - Horizontal Timeline */
+    /* How It Works - Minimal List Style */
     .how-it-works {
         padding: 56px 0;
     }
@@ -1207,23 +1207,37 @@ button:focus-visible {
     .steps {
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: 1px;
+        background: var(--border-color);
+        border-radius: 16px;
+        overflow: hidden;
         position: relative;
         max-width: 100%;
     }
 
     .step {
-        display: flex;
-        align-items: center;
-        gap: 16px;
+        display: grid;
+        grid-template-columns: 40px 1fr;
+        grid-template-rows: auto auto;
+        column-gap: 18px;
+        row-gap: 10px;
         text-align: left;
         position: relative;
-        padding-left: 0;
-        min-height: 76px;
         background: var(--bg-tertiary);
-        padding: 18px;
-        border-radius: 14px;
-        border: 1px solid var(--border-color);
+        padding: 26px 20px;
+        transition: background 0.3s ease;
+    }
+
+    .step:first-child {
+        border-radius: 16px 16px 0 0;
+    }
+
+    .step:last-child {
+        border-radius: 0 0 16px 16px;
+    }
+
+    .step:hover {
+        background: rgba(99, 102, 241, 0.05);
     }
 
     .step::after {
@@ -1231,32 +1245,49 @@ button:focus-visible {
     }
 
     .step-number {
-        width: 48px;
-        height: 48px;
-        font-size: 20px;
+        grid-column: 1;
+        grid-row: 1;
+        width: 40px;
+        height: 40px;
+        font-size: 19px;
+        font-weight: 700;
         margin: 0;
-        flex-shrink: 0;
-        box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
-    }
-
-    .step > div {
-        flex: 1;
-        min-width: 0;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
+        color: var(--accent-primary);
     }
 
     .step h3 {
-        font-size: 17px;
+        grid-column: 2;
+        grid-row: 1;
+        font-size: 18px;
         font-weight: 600;
-        margin-bottom: 5px;
+        margin: 0;
+        padding: 0;
         line-height: 1.3;
         color: var(--text-primary);
+        display: block;
+        align-self: center;
     }
 
     .step p {
-        font-size: 14px;
-        line-height: 1.5;
+        grid-column: 2;
+        grid-row: 2;
+        font-size: 15px;
+        line-height: 1.55;
         opacity: 0.85;
         margin: 0;
+        padding: 0;
+        color: var(--text-secondary);
+        display: block;
+    }
+
+    .step > div {
+        display: contents;
     }
 
     /* Open Source Section - List Style Layout */
@@ -1265,70 +1296,111 @@ button:focus-visible {
     }
 
     .open-source-grid {
-        grid-template-columns: 1fr;
-        gap: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        background: var(--border-color);
+        border-radius: 16px;
+        overflow: hidden;
         margin-bottom: 28px;
     }
 
     .open-source-card {
-        padding: 18px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        gap: 14px;
+        padding: 26px 20px;
+        border-radius: 0;
+        border: none;
+        background: var(--bg-primary);
+        display: grid;
+        grid-template-columns: auto 1fr;
+        grid-template-rows: auto auto;
+        column-gap: 16px;
+        row-gap: 10px;
         text-align: left;
-        min-height: 100px;
+        transition: background 0.3s ease;
+    }
+
+    .open-source-card:first-child {
+        border-radius: 16px 16px 0 0;
+    }
+
+    .open-source-card:last-child {
+        border-radius: 0 0 16px 16px;
     }
 
     .open-source-card:hover {
-        transform: none;
+        background: rgba(99, 102, 241, 0.05);
     }
 
     .open-source-icon {
-        width: 44px;
-        height: 44px;
+        grid-column: 1;
+        grid-row: 1;
+        width: 40px;
+        height: 40px;
         margin: 0;
-        flex-shrink: 0;
         border-radius: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
     }
 
     .open-source-icon svg {
-        width: 22px;
-        height: 22px;
-    }
-
-    .open-source-card > div {
-        flex: 1;
-        min-width: 0;
+        width: 20px;
+        height: 20px;
     }
 
     .open-source-card h3 {
-        font-size: 16px;
+        grid-column: 2;
+        grid-row: 1;
+        font-size: 17px;
         font-weight: 600;
-        margin-bottom: 4px;
+        margin: 0;
+        padding: 0;
         line-height: 1.3;
         color: var(--text-primary);
+        display: block;
+        align-self: center;
     }
 
     .open-source-card p {
-        font-size: 13px;
-        line-height: 1.5;
+        grid-column: 2;
+        grid-row: 2;
+        font-size: 14px;
+        line-height: 1.55;
         opacity: 0.85;
         margin: 0;
+        padding: 0;
+        color: var(--text-secondary);
+        display: block;
+    }
+
+    .open-source-card > div {
+        display: contents;
     }
 
     .open-source-cta {
-        gap: 10px;
+        gap: 12px;
         flex-direction: column;
+        align-items: stretch;
     }
 
-    .open-source-cta .btn-large {
+    .open-source-cta .btn-primary,
+    .open-source-cta .btn-secondary {
         width: 100%;
-        padding: 14px 24px;
-        font-size: 15px;
+        padding: 16px 24px;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        text-align: center;
+    }
+
+    .open-source-cta .btn-primary svg,
+    .open-source-cta .btn-secondary svg {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
     }
 
     /* Use Cases Section - Compact Testimonials */
