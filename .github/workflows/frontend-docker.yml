@@ -77,13 +77,13 @@ jobs:
           sed -i "s|static const String authProvider = '.*'|static const String authProvider = 'backend'|g" lib/config.dart
 
           # Enable logging
-          sed -i "s|static const bool enableLogging = .*|static const bool enableLogging = true|g" lib/config.dart
+          sed -i "s|static const bool enableLogging = [^;]*;|static const bool enableLogging = true;|g" lib/config.dart
 
           # Disable debug mode
-          sed -i "s|static const bool enableDebugMode = .*|static const bool enableDebugMode = false|g" lib/config.dart
+          sed -i "s|static const bool enableDebugMode = [^;]*;|static const bool enableDebugMode = false;|g" lib/config.dart
 
           # Disable Sentry
-          sed -i "s|static const bool sentryEnabled = .*|static const bool sentryEnabled = false|g" lib/config.dart
+          sed -i "s|static const bool sentryEnabled = [^;]*;|static const bool sentryEnabled = false;|g" lib/config.dart
 
           # Clear Sentry DSN (handle multiline const)
           perl -i -0pe "s/static const String sentryDsn =\s*\n?\s*'[^']*';/static const String sentryDsn = '';/g" lib/config.dart
