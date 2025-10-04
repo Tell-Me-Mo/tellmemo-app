@@ -283,81 +283,205 @@
     transition: width 0.1s ease;
 }
 
-/* Responsive */
+/* Responsive - Mobile First Design */
 @media (max-width: 768px) {
+    /* Article Header - Compact */
     .article-header {
-        padding: 120px 0 60px;
+        padding: 100px 0 40px;
+    }
+
+    .article-header-content {
+        padding: 0 16px;
+    }
+
+    .back-link {
+        font-size: 13px;
+        margin-bottom: 24px;
     }
 
     .article-header h1 {
-        font-size: 28px;
+        font-size: 26px;
+        line-height: 1.25;
+        margin-bottom: 12px;
     }
 
     .article-subtitle {
-        font-size: 16px;
+        font-size: 15px;
+        line-height: 1.5;
+        margin-bottom: 24px;
     }
 
     .article-meta {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 16px;
     }
 
+    .author-avatar {
+        width: 40px;
+        height: 40px;
+        font-size: 14px;
+    }
+
+    .author-name {
+        font-size: 14px;
+    }
+
+    .article-date {
+        font-size: 13px;
+    }
+
+    /* Article Content - Optimized Reading */
     .article-content {
-        padding: 60px 0;
+        padding: 48px 0;
     }
 
     .article-body {
-        padding: 0 20px;
+        padding: 0 16px;
     }
 
     .article-body .lead {
-        font-size: 18px;
+        font-size: 16px;
+        line-height: 1.65;
+        margin-bottom: 24px;
     }
 
-    .article-body p,
-    .article-body li {
-        font-size: 16px;
+    .article-body p {
+        font-size: 15px;
+        line-height: 1.7;
+        margin-bottom: 20px;
     }
 
     .article-body h2 {
-        font-size: 24px;
-        margin: 36px 0 16px;
+        font-size: 22px;
+        line-height: 1.3;
+        margin: 32px 0 16px;
+        scroll-margin-top: 80px;
     }
 
     .article-body h3 {
-        font-size: 20px;
+        font-size: 18px;
+        line-height: 1.4;
+        margin: 24px 0 12px;
+    }
+
+    .article-body ul,
+    .article-body ol {
+        margin: 20px 0;
+        padding-left: 20px;
+    }
+
+    .article-body li {
+        font-size: 15px;
+        line-height: 1.7;
+        margin-bottom: 10px;
     }
 
     .article-body blockquote {
-        padding: 20px;
-        font-size: 16px;
+        padding: 16px 20px;
+        margin: 24px 0;
+        font-size: 15px;
+        line-height: 1.6;
+        border-radius: 0 8px 8px 0;
     }
 
+    /* Highlight Box - Compact */
     .highlight-box {
-        padding: 24px;
+        padding: 20px;
+        margin: 24px 0;
+        border-radius: 12px;
     }
 
+    .highlight-box h3 {
+        font-size: 17px;
+        margin-bottom: 12px;
+    }
+
+    .highlight-box p {
+        font-size: 14px;
+        line-height: 1.6;
+    }
+
+    .highlight-box ul {
+        margin: 12px 0 0;
+    }
+
+    /* Article CTA - Full Width */
     .article-cta {
-        padding: 32px 24px;
+        margin: 40px 0;
+        padding: 28px 20px;
+        border-radius: 12px;
     }
 
+    .article-cta h3 {
+        font-size: 22px;
+        margin-bottom: 10px;
+    }
+
+    .article-cta p {
+        font-size: 14px;
+        margin-bottom: 20px;
+    }
+
+    .article-cta .btn-primary {
+        width: 100%;
+        padding: 14px 24px;
+    }
+
+    /* Article Share - Stacked Layout */
     .article-share {
+        margin-top: 40px;
+        padding-top: 24px;
         flex-direction: column;
-        align-items: flex-start;
+        align-items: stretch;
+        gap: 16px;
+    }
+
+    .share-text {
+        text-align: left;
+    }
+
+    .share-text strong {
+        font-size: 14px;
     }
 
     .share-buttons {
         width: 100%;
-        flex-direction: column;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
     }
 
     .share-button {
-        width: 100%;
+        padding: 10px 16px;
+        font-size: 13px;
+        text-align: center;
+    }
+
+    .share-button:hover {
+        transform: none;
+    }
+
+    /* Related Articles - Compact Cards */
+    .related-articles {
+        padding: 48px 0;
+    }
+
+    .related-articles h2 {
+        font-size: 24px;
+        margin-bottom: 24px;
+        text-align: left;
+        padding: 0 16px;
     }
 
     .related-grid {
         grid-template-columns: 1fr;
-        gap: 24px;
+        gap: 12px;
+        padding: 0 16px;
+    }
+
+    /* Reading Progress Bar */
+    .reading-progress {
+        top: 69px;
     }
 }
