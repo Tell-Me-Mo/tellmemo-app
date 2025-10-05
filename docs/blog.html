@@ -121,17 +121,16 @@
     <!-- Featured Article -->
     <section class="blog-featured">
         <div class="container">
-            <article class="featured-article">
+            <article class="featured-article" data-href="blog/rag-revolution.html">
                 <div class="featured-content">
                     <span class="featured-badge">Featured</span>
-                    <h2><a href="blog/rag-revolution.html">How I Got My Fridays Back (And You Can Too)</a></h2>
+                    <h2>How I Got My Fridays Back (And You Can Too)</h2>
                     <p>I used to spend every Friday afternoon compiling meeting notes and chasing action items. Then I discovered a better way. Here's how I reclaimed 10 hours every week.</p>
                     <div class="article-meta">
                         <span class="author">Sarah Mitchell</span>
                         <span class="date">December 15, 2025</span>
                         <span class="read-time">5 min read</span>
                     </div>
-                    <a href="blog/rag-revolution.html" class="btn-primary">Read Article</a>
                 </div>
                 <div class="featured-image">
                     <div class="placeholder-img"></div>
@@ -144,13 +143,13 @@
     <section class="blog-grid">
         <div class="container">
             <div class="articles-grid">
-                <article class="blog-card" data-category="productivity">
+                <article class="blog-card" data-category="productivity" data-href="blog/stopped-taking-notes.html">
                     <div class="blog-card-image">
                         <div class="placeholder-img"></div>
                     </div>
                     <div class="blog-card-content">
                         <span class="category-badge">Productivity</span>
-                        <h3><a href="blog/rag-revolution.html">Why I Stopped Taking Meeting Notes</a></h3>
+                        <h3>Why I Stopped Taking Meeting Notes</h3>
                         <p>I quit taking notes in meetings 6 months ago. My productivity doubled, and I never miss anything important.</p>
                         <div class="card-meta">
                             <span class="date">Dec 10, 2025</span>
@@ -159,13 +158,13 @@
                     </div>
                 </article>
 
-                <article class="blog-card" data-category="management">
+                <article class="blog-card" data-category="management" data-href="blog/2m-meeting-failure.html">
                     <div class="blog-card-image">
                         <div class="placeholder-img"></div>
                     </div>
                     <div class="blog-card-content">
                         <span class="category-badge">Management</span>
-                        <h3><a href="blog/rag-revolution.html">The $2M Meeting That Almost Failed</a></h3>
+                        <h3>The $2M Meeting That Almost Failed</h3>
                         <p>One meeting. One missed detail. Nearly $2 million down the drain. Here's how we caught it just in time.</p>
                         <div class="card-meta">
                             <span class="date">Dec 5, 2025</span>
@@ -174,13 +173,13 @@
                     </div>
                 </article>
 
-                <article class="blog-card" data-category="collaboration">
+                <article class="blog-card" data-category="collaboration" data-href="blog/remote-work-success.html">
                     <div class="blog-card-image">
                         <div class="placeholder-img"></div>
                     </div>
                     <div class="blog-card-content">
                         <span class="category-badge">Collaboration</span>
-                        <h3><a href="blog/rag-revolution.html">Remote Work Actually Works</a></h3>
+                        <h3>Remote Work Actually Works</h3>
                         <p>We went fully remote and productivity went UP 40%. The secret? It's not what you think.</p>
                         <div class="card-meta">
                             <span class="date">Nov 28, 2025</span>
@@ -189,13 +188,13 @@
                     </div>
                 </article>
 
-                <article class="blog-card" data-category="ai">
+                <article class="blog-card" data-category="ai" data-href="blog/ai-assistant-memory.html">
                     <div class="blog-card-image">
                         <div class="placeholder-img"></div>
                     </div>
                     <div class="blog-card-content">
                         <span class="category-badge">AI & Tech</span>
-                        <h3><a href="blog/rag-revolution.html">My AI Assistant Knows More Than I Do</a></h3>
+                        <h3>My AI Assistant Knows More Than I Do</h3>
                         <p>I asked our AI about a decision from 6 months ago. It gave me the answer, the context, and who said what.</p>
                         <div class="card-meta">
                             <span class="date">Nov 20, 2025</span>
@@ -204,13 +203,13 @@
                     </div>
                 </article>
 
-                <article class="blog-card" data-category="management">
+                <article class="blog-card" data-category="management" data-href="blog/death-of-action-items.html">
                     <div class="blog-card-image">
                         <div class="placeholder-img"></div>
                     </div>
                     <div class="blog-card-content">
                         <span class="category-badge">Management</span>
-                        <h3><a href="blog/rag-revolution.html">The Death of the Action Item Email</a></h3>
+                        <h3>The Death of the Action Item Email</h3>
                         <p>Remember those "per our discussion" emails? Yeah, we don't do those anymore. Here's what replaced them.</p>
                         <div class="card-meta">
                             <span class="date">Nov 15, 2025</span>
@@ -219,13 +218,13 @@
                     </div>
                 </article>
 
-                <article class="blog-card" data-category="productivity">
+                <article class="blog-card" data-category="productivity" data-href="blog/meeting-math.html">
                     <div class="blog-card-image">
                         <div class="placeholder-img"></div>
                     </div>
                     <div class="blog-card-content">
                         <span class="category-badge">Productivity</span>
-                        <h3><a href="blog/rag-revolution.html">The Math That Will Cancel Your Meetings</a></h3>
+                        <h3>The Math That Will Cancel Your Meetings</h3>
                         <p>8 people × 1 hour × $150/hour = $1,200. Was that meeting worth $1,200? Here's how to know.</p>
                         <div class="card-meta">
                             <span class="date">Nov 10, 2025</span>
@@ -313,6 +312,14 @@
             </div>
         </div>
     </footer>
+
+    <!-- Cookie Banner -->
+    <div id="cookieBanner" class="cookie-banner">
+        <div class="cookie-content">
+            <p>We use cookies to enhance your experience. By continuing to visit this site you agree to our use of cookies. <a href="privacy.html">Learn more</a></p>
+            <button id="acceptCookies" class="btn-accept">Accept</button>
+        </div>
+    </div>
 
     <script src="js/script.js"></script>
     <script src="js/blog.js"></script>

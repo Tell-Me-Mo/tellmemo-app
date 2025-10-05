@@ -97,16 +97,7 @@
     font-size: 32px;
     font-weight: 700;
     margin-bottom: 16px;
-}
-
-.featured-content h2 a {
     color: var(--text-primary);
-    text-decoration: none;
-    transition: var(--transition);
-}
-
-.featured-content h2 a:hover {
-    color: var(--accent-primary);
 }
 
 .featured-content p {
@@ -293,16 +284,7 @@
     font-weight: 600;
     margin-bottom: 12px;
     line-height: 1.4;
-}
-
-.blog-card h3 a {
     color: var(--text-primary);
-    text-decoration: none;
-    transition: var(--transition);
-}
-
-.blog-card h3 a:hover {
-    color: var(--accent-primary);
 }
 
 .blog-card p {

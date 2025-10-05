@@ -107,6 +107,27 @@ document.addEventListener('DOMContentLoaded', function() {
         observer.observe(card);
     });
 
+    // Make entire blog cards clickable
+    blogCards.forEach(card => {
+        card.addEventListener('click', function(e) {
+            const href = this.dataset.href;
+            if (href) {
+                window.location.href = href;
+            }
+        });
+    });
+
+    // Make featured article clickable
+    const featuredArticle = document.querySelector('.featured-article');
+    if (featuredArticle) {
+        featuredArticle.addEventListener('click', function(e) {
+            const href = this.dataset.href;
+            if (href) {
+                window.location.href = href;
+            }
+        });
+    }
+
     // Search functionality (placeholder for future implementation)
     const searchInput = document.querySelector('.search-input');
     if (searchInput) {

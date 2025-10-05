@@ -56,9 +56,14 @@ class WebSocketActiveJobsTracker extends _$WebSocketActiveJobsTracker {
     
     // Subscribe to job updates
     _jobUpdateSubscription?.cancel();
-    _jobUpdateSubscription = service.jobUpdates.listen((job) {
-      _handleJobUpdate(job);
-    });
+    _jobUpdateSubscription = service.jobUpdates.listen(
+      (job) {
+        _handleJobUpdate(job);
+      },
+      onError: (error) {
+        debugPrint('[WebSocketActiveJobsTracker] Stream error: $error');
+      },
+    );
     
     // Start cleanup timer to remove completed jobs after a delay
     _startCleanupTimer();
@@ -103,13 +108,16 @@ class WebSocketActiveJobsTracker extends _$WebSocketActiveJobsTracker {
 
         // Refresh the lists to show the new items
         // This ensures the UI updates even after page refresh
+        // Use actual project_id from metadata if available (AI matching scenario)
+        final actualProjectId = job.metadata['project_id'] as String? ?? job.projectId;
+
         ref.invalidate(meetingsListProvider);
-        ref.invalidate(projectSummariesProvider(job.projectId));
-        ref.invalidate(risksNotifierProvider(job.projectId));
-        ref.invalidate(tasksNotifierProvider(job.projectId));
-        ref.invalidate(lessonsLearnedNotifierProvider(job.projectId));
-        ref.invalidate(projectDetailProvider(job.projectId));
-        debugPrint('[WebSocketActiveJobsTracker] Refreshed all content sections (meetings, summaries, risks, tasks, lessons, description) for project ${job.projectId}');
+        ref.invalidate(projectSummariesProvider(actualProjectId));
+        ref.invalidate(risksNotifierProvider(actualProjectId));
+        ref.invalidate(tasksNotifierProvider(actualProjectId));
+        ref.invalidate(lessonsLearnedNotifierProvider(actualProjectId));
+        ref.invalidate(projectDetailProvider(actualProjectId));
+        debugPrint('[WebSocketActiveJobsTracker] Refreshed all content sections (meetings, summaries, risks, tasks, lessons, description) for project $actualProjectId');
 
         // If it's a transcription or text upload job with content_id, consider navigation
         if (contentId != null &&
@@ -224,11 +232,16 @@ class WebSocketProjectJobsTracker extends _$WebSocketProjectJobsTracker {
     
     // Listen to job updates
     _jobUpdateSubscription?.cancel();
-    _jobUpdateSubscription = service.jobUpdates.listen((job) {
-      if (job.projectId == projectId) {
-        _handleJobUpdate(job);
-      }
-    });
+    _jobUpdateSubscription = service.jobUpdates.listen(
+      (job) {
+        if (job.projectId == projectId) {
+          _handleJobUpdate(job);
+        }
+      },
+      onError: (error) {
+        debugPrint('[WebSocketProjectJobsTracker] Stream error: $error');
+      },
+    );
     
     // Cleanup on dispose
     ref.onDispose(() {
@@ -270,9 +283,14 @@ class WebSocketJobTracker extends _$WebSocketJobTracker {
     _jobUpdateSubscription?.cancel();
     _jobUpdateSubscription = service.jobUpdates
         .where((job) => job.jobId == jobId)
-        .listen((job) {
-      state = AsyncValue.data(job);
-    });
+        .listen(
+          (job) {
+            state = AsyncValue.data(job);
+          },
+          onError: (error) {
+            debugPrint('[WebSocketJobTracker] Stream error: $error');
+          },
+        );
     
     // Cleanup on dispose
     ref.onDispose(() {

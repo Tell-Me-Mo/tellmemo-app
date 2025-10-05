@@ -209,6 +209,8 @@
 
 .article-cta .btn-primary {
     display: inline-block;
+    color: white !important;
+    text-decoration: none;
 }
 
 /* Article Share */

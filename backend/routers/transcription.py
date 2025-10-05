@@ -208,14 +208,15 @@ async def process_audio_transcription(
                             f"project '{match_result['project_name']}' (confidence: {match_result['confidence']})"
                         )
 
-                        # Update job metadata with match info
+                        # Update job metadata with match info AND actual project_id
                         upload_job_service.update_job_metadata(
                             job_id,
                             {
                                 "ai_matched": True,
                                 "is_new_project": match_result['is_new'],
                                 "match_confidence": match_result['confidence'],
-                                "project_name": match_result['project_name']
+                                "project_name": match_result['project_name'],
+                                "project_id": str(project_uuid)  # Add actual project UUID
                             }
                         )
                     else:
