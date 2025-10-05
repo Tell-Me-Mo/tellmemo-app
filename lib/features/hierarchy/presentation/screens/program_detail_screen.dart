@@ -253,10 +253,10 @@ class _ProgramDetailScreenState extends ConsumerState<ProgramDetailScreen> {
                         ],
                       ),
                     ] else ...[
-                      // Mobile/Tablet Layout - Stack vertically
-                      _buildMainContent(context, program),
-                      const SizedBox(height: 24),
+                      // Mobile/Tablet Layout - Stack vertically with Quick Actions first
                       _buildSidebar(context, program),
+                      const SizedBox(height: 24),
+                      _buildMainContent(context, program),
                     ],
                   ],
                 ),
