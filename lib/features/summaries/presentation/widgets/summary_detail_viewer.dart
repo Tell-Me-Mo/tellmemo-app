@@ -485,24 +485,18 @@ class _SummaryDetailViewerState extends ConsumerState<SummaryDetailViewer> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 1200;
 
-    return Scaffold(
-      backgroundColor: colorScheme.surface,
-      body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(isDesktop ? 32 : 16),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: isDesktop ? 1400 : double.infinity),
-              child: Row(
+    final content = ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: isDesktop ? 1400 : double.infinity),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Main Content Area
+          Expanded(
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Main Content Area
-                  Expanded(
-                    child: SingleChildScrollView(
-                      controller: _scrollController,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
                           // Clean Header
                           _buildCleanHeader(context),
                           const SizedBox(height: 24),
@@ -668,8 +662,14 @@ class _SummaryDetailViewerState extends ConsumerState<SummaryDetailViewer> {
                   ],
                 ],
               ),
-            ),
-          ),
+    );
+
+    return Scaffold(
+      backgroundColor: colorScheme.surface,
+      body: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.all(isDesktop ? 32 : 16),
+          child: isDesktop ? Center(child: content) : content,
         ),
       ),
     );

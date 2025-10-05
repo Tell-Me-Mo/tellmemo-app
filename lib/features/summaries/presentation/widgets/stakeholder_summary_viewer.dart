@@ -226,18 +226,12 @@ class _StakeholderSummaryViewerState extends ConsumerState<StakeholderSummaryVie
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 900;
 
-    return Scaffold(
-      backgroundColor: colorScheme.surface,
-      body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(isDesktop ? 32 : 16),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: isDesktop ? 1400 : double.infinity),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+    final content = ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: isDesktop ? 1400 : double.infinity),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
                     // Common Header
                     _buildCommonHeader(context),
                     const SizedBox(height: 24),
@@ -289,8 +283,14 @@ class _StakeholderSummaryViewerState extends ConsumerState<StakeholderSummaryVie
                   ],
                 ),
               ),
-            ),
-          ),
+    );
+
+    return Scaffold(
+      backgroundColor: colorScheme.surface,
+      body: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.all(isDesktop ? 32 : 16),
+          child: isDesktop ? Center(child: content) : content,
         ),
       ),
     );
