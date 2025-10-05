@@ -70,7 +70,13 @@ class _EnhancedDeleteDialogState
             color: theme.colorScheme.error,
           ),
           const SizedBox(width: LayoutConstants.spacingSm),
-          Text('Delete ${widget.itemName}'),
+          Expanded(
+            child: Text(
+              'Delete ${widget.itemName}',
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
+            ),
+          ),
         ],
       ),
       content: SizedBox(
