@@ -207,6 +207,7 @@ class _AskAIPanelState extends ConsumerState<AskAIPanel> with TickerProviderStat
     final queryState = ref.watch(queryProvider);
     final screenInfo = ScreenInfo.fromContext(context);
     final hasConversation = queryState.conversation.isNotEmpty;
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
 
     final panelWidth = screenInfo.isMobile
       ? MediaQuery.of(context).size.width
@@ -236,7 +237,7 @@ class _AskAIPanelState extends ConsumerState<AskAIPanel> with TickerProviderStat
         Positioned(
           right: widget.rightOffset,
           top: 0,
-          bottom: 0,
+          bottom: screenInfo.isMobile ? keyboardHeight : 0,
           width: actualWidth,
           child: SlideTransition(
             position: _slideAnimation,
@@ -328,7 +329,8 @@ class _AskAIPanelState extends ConsumerState<AskAIPanel> with TickerProviderStat
                     ),
                   ),
                   // Conversation History Section
-                  _buildConversationHistory(theme, colorScheme),
+                  if (!screenInfo.isMobile || keyboardHeight == 0)
+                    _buildConversationHistory(theme, colorScheme),
                   // Content
                   Expanded(
                     child: hasConversation
@@ -350,12 +352,15 @@ class _AskAIPanelState extends ConsumerState<AskAIPanel> with TickerProviderStat
                       left: 20,
                       right: 20,
                       top: 16,
-                      bottom: MediaQuery.of(context).padding.bottom + 16,
+                      bottom: screenInfo.isMobile
+                        ? 16
+                        : MediaQuery.of(context).padding.bottom + 16,
                     ),
                     child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Example chips only shown when no conversation
-                        if (!hasConversation) ...[
+                        // Example chips only shown when no conversation and keyboard not visible
+                        if (!hasConversation && (!screenInfo.isMobile || keyboardHeight == 0)) ...[
                           SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
                             child: Row(
@@ -423,7 +428,7 @@ class _AskAIPanelState extends ConsumerState<AskAIPanel> with TickerProviderStat
                                       });
                                     },
                                   ),
-                                  if (_showSuggestions)
+                                  if (_showSuggestions && (!screenInfo.isMobile || keyboardHeight == 0))
                                     Positioned(
                                       bottom: 60,
                                       left: 0,
