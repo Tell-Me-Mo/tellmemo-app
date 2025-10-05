@@ -60,6 +60,7 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
   ContentAvailability? _contentAvailability;
   bool _isCheckingAvailability = false;
   final ScrollController _scrollController = ScrollController();
+  bool _isDescriptionExpanded = false;
 
   @override
   void initState() {
@@ -296,6 +297,36 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                                     ),
                                     const SizedBox(width: 12),
                                     const Text('View Activities'),
+                                  ],
+                                ),
+                              ),
+                              PopupMenuItem(
+                                value: 'documents',
+                                height: 40,
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.folder_outlined,
+                                      size: 18,
+                                      color: Colors.blue,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Text('View Documents'),
+                                  ],
+                                ),
+                              ),
+                              PopupMenuItem(
+                                value: 'lessons',
+                                height: 40,
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.lightbulb_outline,
+                                      size: 18,
+                                      color: Colors.amber,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Text('View Lessons'),
                                   ],
                                 ),
                               ),
@@ -1050,7 +1081,7 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                                         ],
                                       ),
                                       InkWell(
-                                        onTap: () => context.push('/lessons?project=${project.id}'),
+                                        onTap: () => context.push('/lessons?project=${project.id}&from=project'),
                                         borderRadius: BorderRadius.circular(4),
                                         child: Padding(
                                           padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -1096,71 +1127,6 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                               ],
 
                               const SizedBox(height: 32),
-
-                              // Documents Section
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Documents',
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  TextButton(
-                                    onPressed: () => _showDocumentsDialog(context, project),
-                                    child: const Text('See all'),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              meetingsAsync.when(
-                                data: (documents) {
-                                  // Check if there are any processing jobs for this project
-                                  // Use WebSocket active jobs which persist across navigation
-                                  final activeJobs = ref.watch(webSocketActiveJobsTrackerProvider).valueOrNull ?? [];
-                                  final hasProcessing = activeJobs.any((job) =>
-                                    job.projectId == project.id &&
-                                    (job.status == JobStatus.pending || job.status == JobStatus.processing) &&
-                                    job.progress < 90.0  // Only show during document processing, not summary generation
-                                  );
-
-                                  // Build list including skeleton loaders for processing content
-                                  final widgets = <Widget>[];
-
-                                  // Add skeleton loader if content is being processed
-                                  if (hasProcessing) {
-                                    widgets.add(
-                                      const Padding(
-                                        padding: EdgeInsets.only(bottom: 6),
-                                        child: ProcessingSkeletonLoader(
-                                          isDocument: true,
-                                        ),
-                                      ),
-                                    );
-                                  }
-
-                                  // Add actual documents
-                                  if (documents.isNotEmpty) {
-                                    widgets.addAll(
-                                      documents.take(hasProcessing ? 2 : 3).map((doc) =>
-                                        Padding(
-                                          padding: const EdgeInsets.only(bottom: 6),
-                                          child: _buildSimpleDocumentCard(context, doc),
-                                        ),
-                                      ),
-                                    );
-                                  } else if (!hasProcessing) {
-                                    return _buildEmptyCard('No documents yet');
-                                  }
-
-                                  return Column(children: widgets);
-                                },
-                                loading: () => const LinearProgressIndicator(),
-                                error: (_, __) => _buildEmptyCard('Error loading'),
-                              ),
-
-                              const SizedBox(height: 24),
 
                               // Summaries Section
                               Row(
@@ -1227,21 +1193,23 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
 
                               const SizedBox(height: 24),
 
-                              // Blockers, Risks & Tasks Section
-                              ProjectBlockersWidget(
+                              // Tasks Section
+                              ProjectTasksWidget(
                                 projectId: project.id,
                                 limit: 5,
-                                project: project,
                               ),
                               const SizedBox(height: 16),
+                              // Risks Section
                               ProjectRisksWidget(
                                 projectId: project.id,
                                 limit: 5,
                               ),
                               const SizedBox(height: 16),
-                              ProjectTasksWidget(
+                              // Blockers Section
+                              ProjectBlockersWidget(
                                 projectId: project.id,
                                 limit: 5,
+                                project: project,
                               ),
                             ],
                           ),
@@ -1543,6 +1511,10 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
   Widget _buildDescriptionSection(BuildContext context, Project project) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+    final description = project.description!;
+    final isLongDescription = description.length > 150;
 
     return Container(
       width: double.infinity,
@@ -1576,12 +1548,35 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
           ),
           const SizedBox(height: 12),
           Text(
-            project.description!,
+            description,
             style: textTheme.bodyMedium?.copyWith(
               color: colorScheme.onSurfaceVariant.withValues(alpha: 0.9),
               height: 1.5,
             ),
+            maxLines: isMobile && isLongDescription && !_isDescriptionExpanded ? 3 : null,
+            overflow: isMobile && isLongDescription && !_isDescriptionExpanded ? TextOverflow.ellipsis : null,
           ),
+          if (isMobile && isLongDescription) ...[
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: () {
+                setState(() {
+                  _isDescriptionExpanded = !_isDescriptionExpanded;
+                });
+              },
+              borderRadius: BorderRadius.circular(4),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Text(
+                  _isDescriptionExpanded ? 'View Less' : 'View More',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -2786,6 +2781,12 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
       case 'activities':
         _showActivityDialog(context, project);
         break;
+      case 'documents':
+        _showDocumentsDialog(context, project);
+        break;
+      case 'lessons':
+        context.push('/lessons?project=${project.id}&from=project');
+        break;
       case 'edit':
         _showEditProjectDialog(context, project);
         break;
@@ -3334,57 +3335,6 @@ class _ActivityDialogState extends ConsumerState<_ActivityDialog> {
                 ),
               ),
             ),
-
-              // Simplified Footer
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                decoration: BoxDecoration(
-                  border: Border(
-                    top: BorderSide(
-                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.08),
-                    ),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Updates every 30 seconds',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                        fontSize: 11,
-                      ),
-                    ),
-                    InkWell(
-                      onTap: () {
-                        ref.read(activityProvider.notifier).loadActivities(widget.projectId);
-                      },
-                      borderRadius: BorderRadius.circular(6),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.refresh,
-                              size: 14,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Refresh',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context).colorScheme.primary,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             ],
           ),
         ),

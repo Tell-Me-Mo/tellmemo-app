@@ -253,10 +253,10 @@ class _ProgramDetailScreenState extends ConsumerState<ProgramDetailScreen> {
                         ],
                       ),
                     ] else ...[
-                      // Mobile/Tablet Layout - Stack vertically
-                      _buildMainContent(context, program),
-                      const SizedBox(height: 24),
+                      // Mobile/Tablet Layout - Stack vertically with Quick Actions first
                       _buildSidebar(context, program),
+                      const SizedBox(height: 24),
+                      _buildMainContent(context, program),
                     ],
                   ],
                 ),
@@ -361,6 +361,17 @@ class _ProgramDetailScreenState extends ConsumerState<ProgramDetailScreen> {
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
                 itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'recent_activity',
+                    child: Row(
+                      children: [
+                        Icon(Icons.timeline, size: 20),
+                        SizedBox(width: 12),
+                        Text('Recent Activity'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(),
                   const PopupMenuItem(
                     value: 'generate_summary',
                     child: Row(
@@ -743,13 +754,18 @@ class _ProgramDetailScreenState extends ConsumerState<ProgramDetailScreen> {
   }
 
   Widget _buildSidebar(BuildContext context, Program program) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth <= 768;
+
     return Column(
       children: [
         // Quick Actions Card
         _buildQuickActionsCard(context, program),
-        const SizedBox(height: 24),
-        // Timeline Card
-        _buildTimelineCard(context, program),
+        // Timeline Card - Only show on desktop
+        if (!isMobile) ...[
+          const SizedBox(height: 24),
+          _buildTimelineCard(context, program),
+        ],
       ],
     );
   }
@@ -1410,6 +1426,9 @@ class _ProgramDetailScreenState extends ConsumerState<ProgramDetailScreen> {
 
   void _handleMenuAction(BuildContext context, String action, Program program) {
     switch (action) {
+      case 'recent_activity':
+        _showRecentActivityDialog(context, program);
+        break;
       case 'generate_summary':
         _showProgramSummaryDialog(context, program);
         break;
@@ -1420,6 +1439,88 @@ class _ProgramDetailScreenState extends ConsumerState<ProgramDetailScreen> {
         _showDeleteConfirmation(program);
         break;
     }
+  }
+
+  void _showRecentActivityDialog(BuildContext context, Program program) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.timeline, color: colorScheme.primary),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Recent Activity',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+              ),
+              // Content
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: _recentActivities.isEmpty
+                      ? Center(
+                          child: Column(
+                            children: [
+                              const SizedBox(height: 40),
+                              Icon(
+                                Icons.timeline,
+                                size: 64,
+                                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                _hasInitialized ? 'No recent activity' : 'Loading activities...',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                ),
+                              ),
+                              const SizedBox(height: 40),
+                            ],
+                          ),
+                        )
+                      : Column(
+                          children: List.generate(
+                            _recentActivities.length,
+                            (index) => _buildActivityItem(
+                              context,
+                              _recentActivities[index],
+                              index == _recentActivities.length - 1,
+                            ),
+                          ),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showEditDialog(Program program) {

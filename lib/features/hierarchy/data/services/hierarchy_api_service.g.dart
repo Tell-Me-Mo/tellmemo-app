@@ -194,7 +194,7 @@ class _HierarchyApiService implements HierarchyApiService {
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
-            '/api/portfolios',
+            '/api/portfolios/',
             queryParameters: queryParameters,
             data: _data,
           )
@@ -253,7 +253,7 @@ class _HierarchyApiService implements HierarchyApiService {
       Options(method: 'POST', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
-            '/api/portfolios',
+            '/api/portfolios/',
             queryParameters: queryParameters,
             data: _data,
           )
@@ -400,7 +400,7 @@ class _HierarchyApiService implements HierarchyApiService {
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
-            '/api/programs',
+            '/api/programs/',
             queryParameters: queryParameters,
             data: _data,
           )
@@ -457,7 +457,7 @@ class _HierarchyApiService implements HierarchyApiService {
       Options(method: 'POST', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
-            '/api/programs',
+            '/api/programs/',
             queryParameters: queryParameters,
             data: _data,
           )

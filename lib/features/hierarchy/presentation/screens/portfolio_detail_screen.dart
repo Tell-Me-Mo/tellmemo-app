@@ -250,10 +250,10 @@ class _PortfolioDetailScreenState extends ConsumerState<PortfolioDetailScreen> {
                     if (isDesktop) ...[
                       _buildMainContent(context, portfolio),
                     ] else ...[
-                      // Mobile/Tablet Layout - Stack vertically
-                      _buildMainContent(context, portfolio),
-                      const SizedBox(height: 24),
+                      // Mobile/Tablet Layout - Stack vertically with Quick Actions first
                       _buildSidebar(context, portfolio),
+                      const SizedBox(height: 24),
+                      _buildMainContent(context, portfolio),
                     ],
                   ],
                 ),
@@ -353,6 +353,17 @@ class _PortfolioDetailScreenState extends ConsumerState<PortfolioDetailScreen> {
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
                 itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'recent_activity',
+                    child: Row(
+                      children: [
+                        Icon(Icons.timeline, size: 20),
+                        SizedBox(width: 12),
+                        Text('Recent Activity'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(),
                   const PopupMenuItem(
                     value: 'generate_summary',
                     child: Row(
@@ -897,13 +908,18 @@ class _PortfolioDetailScreenState extends ConsumerState<PortfolioDetailScreen> {
 
 
   Widget _buildSidebar(BuildContext context, Portfolio portfolio) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth <= 768;
+
     return Column(
       children: [
         // Quick Actions Card
         _buildQuickActionsCard(context, portfolio),
-        const SizedBox(height: 16),
-        // Activities Section
-        _buildActivitiesCard(context, portfolio),
+        // Activities Section - Only show on desktop
+        if (!isMobile) ...[
+          const SizedBox(height: 16),
+          _buildActivitiesCard(context, portfolio),
+        ],
       ],
     );
   }
@@ -1423,23 +1439,6 @@ class _PortfolioDetailScreenState extends ConsumerState<PortfolioDetailScreen> {
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 20),
-            FilledButton.tonalIcon(
-              onPressed: () {
-                // Get current portfolio from context
-                final portfolioAsync = ref.read(portfolioProvider(widget.portfolioId));
-                portfolioAsync.whenData((portfolio) {
-                  if (portfolio != null) {
-                    _showCreateProgramDialog(portfolio);
-                  }
-                });
-              },
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('Create First Program'),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              ),
-            ),
           ],
         ),
       ),
@@ -1711,6 +1710,9 @@ class _PortfolioDetailScreenState extends ConsumerState<PortfolioDetailScreen> {
 
   void _handleMenuAction(BuildContext context, String action, Portfolio portfolio) {
     switch (action) {
+      case 'recent_activity':
+        _showRecentActivityDialog(context, portfolio);
+        break;
       case 'generate_summary':
         _showPortfolioSummaryDialog(context, portfolio);
         break;
@@ -1721,6 +1723,88 @@ class _PortfolioDetailScreenState extends ConsumerState<PortfolioDetailScreen> {
         _showDeleteConfirmation(portfolio);
         break;
     }
+  }
+
+  void _showRecentActivityDialog(BuildContext context, Portfolio portfolio) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.timeline, color: colorScheme.primary),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Recent Activity',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+              ),
+              // Content
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: _recentActivities.isEmpty
+                      ? Center(
+                          child: Column(
+                            children: [
+                              const SizedBox(height: 40),
+                              Icon(
+                                Icons.timeline,
+                                size: 64,
+                                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                _hasInitialized ? 'No recent activity' : 'Loading activities...',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                ),
+                              ),
+                              const SizedBox(height: 40),
+                            ],
+                          ),
+                        )
+                      : Column(
+                          children: List.generate(
+                            _recentActivities.length,
+                            (index) => _buildActivityItem(
+                              context,
+                              _recentActivities[index],
+                              index == _recentActivities.length - 1,
+                            ),
+                          ),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showEditDialog(Portfolio portfolio) {

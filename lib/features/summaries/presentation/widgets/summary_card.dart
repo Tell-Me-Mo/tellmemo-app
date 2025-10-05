@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/layout_constants.dart';
@@ -9,16 +8,12 @@ class SummaryCard extends StatelessWidget {
   final SummaryModel summary;
   final VoidCallback? onTap;
   final VoidCallback? onExport;
-  final VoidCallback? onCopy;
-  final VoidCallback? onShare;
 
   const SummaryCard({
     super.key,
     required this.summary,
     this.onTap,
     this.onExport,
-    this.onCopy,
-    this.onShare,
   });
 
   @override
@@ -72,41 +67,16 @@ class SummaryCard extends StatelessWidget {
                       color: colorScheme.onSurfaceVariant,
                     ),
                     onSelected: (value) {
-                      switch (value) {
-                        case 'copy':
-                          onCopy?.call();
-                          _copyToClipboard(context);
-                          break;
-                        case 'export':
-                          onExport?.call();
-                          break;
-                        case 'share':
-                          onShare?.call();
-                          break;
+                      if (value == 'export') {
+                        onExport?.call();
                       }
                     },
                     itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'copy',
-                        child: ListTile(
-                          leading: Icon(Icons.copy, size: 20),
-                          title: Text('Copy to clipboard'),
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ),
                       const PopupMenuItem(
                         value: 'export',
                         child: ListTile(
                           leading: Icon(Icons.download, size: 20),
                           title: Text('Export as PDF'),
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'share',
-                        child: ListTile(
-                          leading: Icon(Icons.share, size: 20),
-                          title: Text('Share'),
                           contentPadding: EdgeInsets.zero,
                         ),
                       ),
@@ -454,19 +424,4 @@ class SummaryCard extends StatelessWidget {
     );
   }
 
-  void _copyToClipboard(BuildContext context) {
-    final buffer = StringBuffer();
-    buffer.writeln(summary.subject);
-    buffer.writeln();
-    buffer.writeln(summary.body);
-    
-    Clipboard.setData(ClipboardData(text: buffer.toString()));
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Summary copied to clipboard'),
-        duration: Duration(seconds: 2),
-      ),
-    );
-  }
 }

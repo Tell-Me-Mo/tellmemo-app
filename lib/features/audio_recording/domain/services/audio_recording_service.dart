@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:record/record.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 
@@ -38,19 +37,10 @@ class AudioRecordingService {
   // Check and request microphone permission
   Future<bool> requestPermission() async {
     try {
-      if (kIsWeb) {
-        // For web, use the record package's built-in permission check
-        print('[AudioRecordingService] Checking microphone permission on web...');
-        final hasPermission = await _recorder.hasPermission();
-        print('[AudioRecordingService] Web microphone permission: $hasPermission');
-        return hasPermission;
-      } else {
-        // For mobile/desktop, use permission_handler
-        print('[AudioRecordingService] Requesting microphone permission on native platform...');
-        final status = await Permission.microphone.request();
-        print('[AudioRecordingService] Native microphone permission status: $status');
-        return status == PermissionStatus.granted;
-      }
+      print('[AudioRecordingService] Requesting microphone permission...');
+      final hasPermission = await _recorder.hasPermission();
+      print('[AudioRecordingService] Microphone permission: $hasPermission');
+      return hasPermission;
     } catch (e) {
       print('[AudioRecordingService] Error checking permission: $e');
       return false;

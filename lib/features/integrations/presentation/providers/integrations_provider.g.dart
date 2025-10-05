@@ -7,7 +7,7 @@ part of 'integrations_provider.dart';
 // **************************************************************************
 
 String _$firefliesIntegrationHash() =>
-    r'93ec97113052bf478e161b83e7db79b1cf1fdacf';
+    r'71b280e48252dc1493c7df715905dd309fa0a33f';
 
 /// See also [firefliesIntegration].
 @ProviderFor(firefliesIntegration)
@@ -25,7 +25,7 @@ final firefliesIntegrationProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef FirefliesIntegrationRef = AutoDisposeFutureProviderRef<Integration?>;
-String _$integrationsHash() => r'6ebde2701054202844ed8767f2a4fcf64acd20c2';
+String _$integrationsHash() => r'4b438b9882e3c14715be5db9663649da86a7b99e';
 
 /// See also [Integrations].
 @ProviderFor(Integrations)
