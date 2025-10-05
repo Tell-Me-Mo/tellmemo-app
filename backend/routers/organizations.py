@@ -114,13 +114,13 @@ class InvitationCreate(BaseModel):
 
 class InvitationResponse(BaseModel):
     """Response model for invitation details."""
-    id: int
-    organization_id: int
+    id: UUID
+    organization_id: UUID
     email: str
     role: str
     invitation_token: str
     invitation_sent_at: datetime
-    invited_by: int
+    invited_by: UUID
 
 
 class RoleUpdateRequest(BaseModel):
@@ -477,7 +477,7 @@ async def update_organization(
         if request.settings is not None:
             organization.settings = request.settings
 
-        organization.updated_at = datetime.now(timezone.utc)
+        organization.updated_at = datetime.utcnow()
 
         await db.commit()
         await db.refresh(organization)
@@ -755,7 +755,7 @@ async def list_organization_members(
     status_code=status.HTTP_201_CREATED
 )
 async def invite_member(
-    organization_id: int,
+    organization_id: UUID,
     invitation: InvitationCreate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -834,7 +834,8 @@ async def invite_member(
             invited_by=current_user.id,
             invitation_token=invitation_token,
             invitation_email=invitation.email,  # Store the email
-            invitation_sent_at=datetime.utcnow()
+            invitation_sent_at=datetime.utcnow(),
+            joined_at=None  # Pending invitation - not yet accepted
         )
 
         db.add(new_invitation)
@@ -881,7 +882,7 @@ async def invite_member(
     response_model=List[InvitationResponse]
 )
 async def list_pending_invitations(
-    organization_id: int,
+    organization_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
     user_role: str = Depends(get_current_user_role)
@@ -944,8 +945,8 @@ async def list_pending_invitations(
     response_model=OrganizationMemberResponse
 )
 async def update_member_role(
-    organization_id: int,
-    user_id: int,
+    organization_id: UUID,
+    user_id: UUID,
     role_update: RoleUpdateRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -1021,8 +1022,8 @@ async def update_member_role(
     status_code=status.HTTP_204_NO_CONTENT
 )
 async def remove_member(
-    organization_id: int,
-    user_id: int,
+    organization_id: UUID,
+    user_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
     user_role: str = Depends(get_current_user_role)

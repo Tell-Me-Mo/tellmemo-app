@@ -3,10 +3,17 @@
 // Do not manually edit this file.
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'dart:async' as _i3;
+import 'dart:async' as _i4;
 
 import 'package:mockito/mockito.dart' as _i1;
+import 'package:pm_master_v2/core/storage/secure_storage.dart' as _i7;
 import 'package:pm_master_v2/features/auth/domain/auth_interface.dart' as _i2;
+import 'package:pm_master_v2/features/organizations/data/models/create_organization_request.dart'
+    as _i6;
+import 'package:pm_master_v2/features/organizations/data/models/organization_model.dart'
+    as _i3;
+import 'package:pm_master_v2/features/organizations/data/services/organization_api_service.dart'
+    as _i5;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -27,6 +34,12 @@ class _FakeAuthResult_0 extends _i1.SmartFake implements _i2.AuthResult {
     : super(parent, parentInvocation);
 }
 
+class _FakeOrganizationModel_1 extends _i1.SmartFake
+    implements _i3.OrganizationModel {
+  _FakeOrganizationModel_1(Object parent, Invocation parentInvocation)
+    : super(parent, parentInvocation);
+}
+
 /// A class which mocks [AuthInterface].
 ///
 /// See the documentation for Mockito's code generation for more information.
@@ -36,15 +49,15 @@ class MockAuthInterface extends _i1.Mock implements _i2.AuthInterface {
   }
 
   @override
-  _i3.Stream<_i2.AuthStateChange> get authStateChanges =>
+  _i4.Stream<_i2.AuthStateChange> get authStateChanges =>
       (super.noSuchMethod(
             Invocation.getter(#authStateChanges),
-            returnValue: _i3.Stream<_i2.AuthStateChange>.empty(),
+            returnValue: _i4.Stream<_i2.AuthStateChange>.empty(),
           )
-          as _i3.Stream<_i2.AuthStateChange>);
+          as _i4.Stream<_i2.AuthStateChange>);
 
   @override
-  _i3.Future<_i2.AuthResult> signUp({
+  _i4.Future<_i2.AuthResult> signUp({
     required String? email,
     required String? password,
     Map<String, dynamic>? metadata,
@@ -55,7 +68,7 @@ class MockAuthInterface extends _i1.Mock implements _i2.AuthInterface {
               #password: password,
               #metadata: metadata,
             }),
-            returnValue: _i3.Future<_i2.AuthResult>.value(
+            returnValue: _i4.Future<_i2.AuthResult>.value(
               _FakeAuthResult_0(
                 this,
                 Invocation.method(#signUp, [], {
@@ -66,10 +79,10 @@ class MockAuthInterface extends _i1.Mock implements _i2.AuthInterface {
               ),
             ),
           )
-          as _i3.Future<_i2.AuthResult>);
+          as _i4.Future<_i2.AuthResult>);
 
   @override
-  _i3.Future<_i2.AuthResult> signIn({
+  _i4.Future<_i2.AuthResult> signIn({
     required String? email,
     required String? password,
   }) =>
@@ -78,7 +91,7 @@ class MockAuthInterface extends _i1.Mock implements _i2.AuthInterface {
               #email: email,
               #password: password,
             }),
-            returnValue: _i3.Future<_i2.AuthResult>.value(
+            returnValue: _i4.Future<_i2.AuthResult>.value(
               _FakeAuthResult_0(
                 this,
                 Invocation.method(#signIn, [], {
@@ -88,41 +101,41 @@ class MockAuthInterface extends _i1.Mock implements _i2.AuthInterface {
               ),
             ),
           )
-          as _i3.Future<_i2.AuthResult>);
+          as _i4.Future<_i2.AuthResult>);
 
   @override
-  _i3.Future<void> signOut() =>
+  _i4.Future<void> signOut() =>
       (super.noSuchMethod(
             Invocation.method(#signOut, []),
-            returnValue: _i3.Future<void>.value(),
-            returnValueForMissingStub: _i3.Future<void>.value(),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
           )
-          as _i3.Future<void>);
+          as _i4.Future<void>);
 
   @override
-  _i3.Future<void> resetPassword(String? email) =>
+  _i4.Future<void> resetPassword(String? email) =>
       (super.noSuchMethod(
             Invocation.method(#resetPassword, [email]),
-            returnValue: _i3.Future<void>.value(),
-            returnValueForMissingStub: _i3.Future<void>.value(),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
           )
-          as _i3.Future<void>);
+          as _i4.Future<void>);
 
   @override
-  _i3.Future<_i2.AuthResult> updatePassword(String? newPassword) =>
+  _i4.Future<_i2.AuthResult> updatePassword(String? newPassword) =>
       (super.noSuchMethod(
             Invocation.method(#updatePassword, [newPassword]),
-            returnValue: _i3.Future<_i2.AuthResult>.value(
+            returnValue: _i4.Future<_i2.AuthResult>.value(
               _FakeAuthResult_0(
                 this,
                 Invocation.method(#updatePassword, [newPassword]),
               ),
             ),
           )
-          as _i3.Future<_i2.AuthResult>);
+          as _i4.Future<_i2.AuthResult>);
 
   @override
-  _i3.Future<_i2.AuthResult> updateProfile({
+  _i4.Future<_i2.AuthResult> updateProfile({
     String? email,
     String? phone,
     Map<String, dynamic>? data,
@@ -133,7 +146,7 @@ class MockAuthInterface extends _i1.Mock implements _i2.AuthInterface {
               #phone: phone,
               #data: data,
             }),
-            returnValue: _i3.Future<_i2.AuthResult>.value(
+            returnValue: _i4.Future<_i2.AuthResult>.value(
               _FakeAuthResult_0(
                 this,
                 Invocation.method(#updateProfile, [], {
@@ -144,25 +157,246 @@ class MockAuthInterface extends _i1.Mock implements _i2.AuthInterface {
               ),
             ),
           )
-          as _i3.Future<_i2.AuthResult>);
+          as _i4.Future<_i2.AuthResult>);
 
   @override
-  _i3.Future<void> verifyOTP({
+  _i4.Future<void> verifyOTP({
     required String? email,
     required String? token,
   }) =>
       (super.noSuchMethod(
             Invocation.method(#verifyOTP, [], {#email: email, #token: token}),
-            returnValue: _i3.Future<void>.value(),
-            returnValueForMissingStub: _i3.Future<void>.value(),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
           )
-          as _i3.Future<void>);
+          as _i4.Future<void>);
 
   @override
-  _i3.Future<_i2.AuthSession?> recoverSession() =>
+  _i4.Future<_i2.AuthSession?> recoverSession() =>
       (super.noSuchMethod(
             Invocation.method(#recoverSession, []),
-            returnValue: _i3.Future<_i2.AuthSession?>.value(),
+            returnValue: _i4.Future<_i2.AuthSession?>.value(),
           )
-          as _i3.Future<_i2.AuthSession?>);
+          as _i4.Future<_i2.AuthSession?>);
+}
+
+/// A class which mocks [OrganizationApiService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockOrganizationApiService extends _i1.Mock
+    implements _i5.OrganizationApiService {
+  MockOrganizationApiService() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i4.Future<_i3.OrganizationModel> createOrganization(
+    _i6.CreateOrganizationRequest? request,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#createOrganization, [request]),
+            returnValue: _i4.Future<_i3.OrganizationModel>.value(
+              _FakeOrganizationModel_1(
+                this,
+                Invocation.method(#createOrganization, [request]),
+              ),
+            ),
+          )
+          as _i4.Future<_i3.OrganizationModel>);
+
+  @override
+  _i4.Future<dynamic> listUserOrganizations({bool? includeInactive = false}) =>
+      (super.noSuchMethod(
+            Invocation.method(#listUserOrganizations, [], {
+              #includeInactive: includeInactive,
+            }),
+            returnValue: _i4.Future<dynamic>.value(),
+          )
+          as _i4.Future<dynamic>);
+
+  @override
+  _i4.Future<_i3.OrganizationModel> getOrganization(String? organizationId) =>
+      (super.noSuchMethod(
+            Invocation.method(#getOrganization, [organizationId]),
+            returnValue: _i4.Future<_i3.OrganizationModel>.value(
+              _FakeOrganizationModel_1(
+                this,
+                Invocation.method(#getOrganization, [organizationId]),
+              ),
+            ),
+          )
+          as _i4.Future<_i3.OrganizationModel>);
+
+  @override
+  _i4.Future<_i3.OrganizationModel> updateOrganization(
+    String? organizationId,
+    Map<String, dynamic>? request,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#updateOrganization, [organizationId, request]),
+            returnValue: _i4.Future<_i3.OrganizationModel>.value(
+              _FakeOrganizationModel_1(
+                this,
+                Invocation.method(#updateOrganization, [
+                  organizationId,
+                  request,
+                ]),
+              ),
+            ),
+          )
+          as _i4.Future<_i3.OrganizationModel>);
+
+  @override
+  _i4.Future<void> deleteOrganization(String? organizationId) =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteOrganization, [organizationId]),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
+          )
+          as _i4.Future<void>);
+
+  @override
+  _i4.Future<dynamic> switchOrganization(String? organizationId) =>
+      (super.noSuchMethod(
+            Invocation.method(#switchOrganization, [organizationId]),
+            returnValue: _i4.Future<dynamic>.value(),
+          )
+          as _i4.Future<dynamic>);
+
+  @override
+  _i4.Future<dynamic> listOrganizationMembers(String? organizationId) =>
+      (super.noSuchMethod(
+            Invocation.method(#listOrganizationMembers, [organizationId]),
+            returnValue: _i4.Future<dynamic>.value(),
+          )
+          as _i4.Future<dynamic>);
+
+  @override
+  _i4.Future<dynamic> inviteMember(
+    String? organizationId,
+    Map<String, dynamic>? invitation,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#inviteMember, [organizationId, invitation]),
+            returnValue: _i4.Future<dynamic>.value(),
+          )
+          as _i4.Future<dynamic>);
+
+  @override
+  _i4.Future<dynamic> listPendingInvitations(String? organizationId) =>
+      (super.noSuchMethod(
+            Invocation.method(#listPendingInvitations, [organizationId]),
+            returnValue: _i4.Future<dynamic>.value(),
+          )
+          as _i4.Future<dynamic>);
+
+  @override
+  _i4.Future<dynamic> getOrganizationMembers(String? organizationId) =>
+      (super.noSuchMethod(
+            Invocation.method(#getOrganizationMembers, [organizationId]),
+            returnValue: _i4.Future<dynamic>.value(),
+          )
+          as _i4.Future<dynamic>);
+
+  @override
+  _i4.Future<void> removeOrganizationMember(
+    String? organizationId,
+    String? userId,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#removeOrganizationMember, [
+              organizationId,
+              userId,
+            ]),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
+          )
+          as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> updateOrganizationMemberRole(
+    String? organizationId,
+    String? userId,
+    Map<String, dynamic>? roleUpdate,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#updateOrganizationMemberRole, [
+              organizationId,
+              userId,
+              roleUpdate,
+            ]),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
+          )
+          as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> resendInvitation(
+    String? organizationId,
+    Map<String, dynamic>? request,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#resendInvitation, [organizationId, request]),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
+          )
+          as _i4.Future<void>);
+
+  @override
+  _i4.Future<dynamic> inviteToOrganization(
+    String? organizationId,
+    Map<String, dynamic>? invitation,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#inviteToOrganization, [
+              organizationId,
+              invitation,
+            ]),
+            returnValue: _i4.Future<dynamic>.value(),
+          )
+          as _i4.Future<dynamic>);
+}
+
+/// A class which mocks [SecureStorage].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockSecureStorage extends _i1.Mock implements _i7.SecureStorage {
+  MockSecureStorage() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i4.Future<String?> read(String? key) =>
+      (super.noSuchMethod(
+            Invocation.method(#read, [key]),
+            returnValue: _i4.Future<String?>.value(),
+          )
+          as _i4.Future<String?>);
+
+  @override
+  _i4.Future<void> write(String? key, String? value) =>
+      (super.noSuchMethod(
+            Invocation.method(#write, [key, value]),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
+          )
+          as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> delete(String? key) =>
+      (super.noSuchMethod(
+            Invocation.method(#delete, [key]),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
+          )
+          as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> deleteAll() =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteAll, []),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
+          )
+          as _i4.Future<void>);
 }

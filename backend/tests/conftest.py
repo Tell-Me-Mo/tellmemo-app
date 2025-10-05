@@ -89,34 +89,62 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 @pytest.fixture(scope="function")
-async def client(db_session: AsyncSession, monkeypatch) -> AsyncGenerator[AsyncClient, None]:
+async def client_factory(db_session: AsyncSession, monkeypatch):
     """
-    Create an async HTTP client for testing API endpoints.
+    Create a factory for generating multiple independent HTTP clients.
 
-    This fixture overrides both get_db and get_db_context to use the test database session.
+    This fixture allows tests to create multiple authenticated clients for different users.
+    Each client shares the same database session, overrides, and transport.
     """
+    # Set up database overrides once
     async def override_get_db():
         yield db_session
 
-    # Override dependency injection get_db
     app.dependency_overrides[get_db] = override_get_db
 
-    # CRITICAL: Also override get_db_context for middleware using monkeypatch
-    # The auth middleware uses get_db_context() directly, not the dependency injection
     @asynccontextmanager
     async def override_get_db_context():
         yield db_session
 
-    # Patch it in both locations
     monkeypatch.setattr("db.database.get_db_context", override_get_db_context)
     monkeypatch.setattr("middleware.auth_middleware.get_db_context", override_get_db_context)
 
+    # Create a shared transport for all clients (important for sharing app state)
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        yield ac
 
-    # Cleanup handled by monkeypatch
+    # Keep track of all clients created for cleanup
+    clients = []
+
+    async def create_client(**headers) -> AsyncClient:
+        """Create a new client with optional headers."""
+        ac = AsyncClient(transport=transport, base_url="http://test")
+
+        # Set any provided headers
+        for key, value in headers.items():
+            ac.headers[key] = value
+
+        clients.append(ac)
+        return ac
+
+    # Yield the factory function
+    yield create_client
+
+    # Cleanup all clients
+    for client in clients:
+        await client.aclose()
+
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(scope="function")
+async def client(client_factory) -> AsyncClient:
+    """
+    Create a single async HTTP client for testing API endpoints.
+
+    This is a convenience fixture that uses client_factory to create one client.
+    For tests that need multiple clients with different auth, use client_factory directly.
+    """
+    return await client_factory()
 
 
 @pytest.fixture
@@ -184,26 +212,25 @@ async def test_user_refresh_token(test_user: User) -> str:
 
 @pytest.fixture
 async def authenticated_client(
-    client: AsyncClient,
+    client_factory,
     test_user_token: str
 ) -> AsyncClient:
     """
     Create an authenticated HTTP client with valid JWT token.
 
     Args:
-        client: Base HTTP client
+        client_factory: Client factory function
         test_user_token: Valid access token
 
     Returns:
         AsyncClient with Authorization header set
     """
-    client.headers["Authorization"] = f"Bearer {test_user_token}"
-    return client
+    return await client_factory(Authorization=f"Bearer {test_user_token}")
 
 
 @pytest.fixture
 async def authenticated_org_client(
-    client: AsyncClient,
+    client_factory,
     test_user: User,
     test_organization: Organization
 ) -> AsyncClient:
@@ -211,7 +238,7 @@ async def authenticated_org_client(
     Create an authenticated HTTP client with organization context.
 
     Args:
-        client: Base HTTP client
+        client_factory: Client factory function
         test_user: Test user fixture
         test_organization: Test organization fixture
 
@@ -223,9 +250,10 @@ async def authenticated_org_client(
         email=test_user.email,
         organization_id=str(test_organization.id)
     )
-    client.headers["Authorization"] = f"Bearer {token}"
-    client.headers["X-Organization-Id"] = str(test_organization.id)
-    return client
+    return await client_factory(
+        Authorization=f"Bearer {token}",
+        **{"X-Organization-Id": str(test_organization.id)}
+    )
 
 
 @pytest.fixture
@@ -255,7 +283,8 @@ async def test_organization(db_session: AsyncSession, test_user: User) -> Organi
         organization_id=org.id,
         user_id=test_user.id,
         role="admin",
-        invited_by=test_user.id
+        invited_by=test_user.id,
+        joined_at=datetime.utcnow()
     )
 
     db_session.add(member)

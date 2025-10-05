@@ -3,7 +3,33 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pm_master_v2/features/organizations/data/models/organization_member.dart';
 
-// Provider for managing invitation acceptance notifications
+/// Provider for managing invitation acceptance notifications
+///
+/// **Usage:**
+/// - To display notifications: Just watch the provider in your widget
+/// - To enable automatic polling: Call `ref.read(invitationNotificationsProvider.notifier).startPolling()`
+///   when you want to actively monitor for new invitation acceptances
+/// - To stop polling: Call `ref.read(invitationNotificationsProvider.notifier).stopPolling()`
+///
+/// **Example:**
+/// ```dart
+/// // In a screen that needs to monitor invitations:
+/// @override
+/// void initState() {
+///   super.initState();
+///   // Start polling when screen is shown
+///   Future.microtask(() {
+///     ref.read(invitationNotificationsProvider.notifier).startPolling();
+///   });
+/// }
+///
+/// @override
+/// void dispose() {
+///   // Stop polling when screen is disposed
+///   ref.read(invitationNotificationsProvider.notifier).stopPolling();
+///   super.dispose();
+/// }
+/// ```
 final invitationNotificationsProvider = StateNotifierProvider<InvitationNotificationsNotifier, InvitationNotificationState>((ref) {
   return InvitationNotificationsNotifier(ref);
 });
@@ -53,17 +79,30 @@ class InvitationNotification {
 class InvitationNotificationsNotifier extends StateNotifier<InvitationNotificationState> {
   Timer? _pollingTimer;
   final Map<String, Set<String>> _previousInvitedMembers = {};
+  bool _isPolling = false;
 
   InvitationNotificationsNotifier(Ref ref) : super(InvitationNotificationState()) {
-    // Start polling for invitation acceptances
-    _startPolling();
+    // Polling is now opt-in - call startPolling() explicitly when needed
+    // This prevents automatic timer creation and allows proper cleanup in tests
   }
 
-  void _startPolling() {
+  /// Start polling for invitation acceptances
+  /// Call this method when you need to actively monitor for new invitations
+  void startPolling() {
+    if (_isPolling) return; // Already polling
+
+    _isPolling = true;
     // Poll every 30 seconds for new acceptances
     _pollingTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       _checkForAcceptedInvitations();
     });
+  }
+
+  /// Stop polling for invitation acceptances
+  void stopPolling() {
+    _isPolling = false;
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
   }
 
   Future<void> _checkForAcceptedInvitations() async {
@@ -209,7 +248,7 @@ class InvitationNotificationsNotifier extends StateNotifier<InvitationNotificati
 
   @override
   void dispose() {
-    _pollingTimer?.cancel();
+    stopPolling();
     super.dispose();
   }
 }
