@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -976,22 +975,12 @@ class _SummariesScreenState extends ConsumerState<SummariesScreen>
                   borderRadius: BorderRadius.circular(8),
                 ),
                 onSelected: (value) {
-                  switch (value) {
-                    case 'copy':
-                      _copySummary(summary);
-                      break;
-                    case 'export':
-                      _exportSummary(summary);
-                      break;
-                    case 'share':
-                      _shareSummary(summary);
-                      break;
+                  if (value == 'export') {
+                    _exportSummary(summary);
                   }
                 },
                 itemBuilder: (context) => [
-                  const PopupMenuItem(value: 'copy', child: Text('Copy')),
                   const PopupMenuItem(value: 'export', child: Text('Export PDF')),
-                  const PopupMenuItem(value: 'share', child: Text('Share')),
                 ],
               ),
             ],
@@ -1066,22 +1055,12 @@ class _SummariesScreenState extends ConsumerState<SummariesScreen>
                       color: colorScheme.onSurfaceVariant,
                     ),
                     onSelected: (value) {
-                      switch (value) {
-                        case 'copy':
-                          _copySummary(summary);
-                          break;
-                        case 'export':
-                          _exportSummary(summary);
-                          break;
-                        case 'share':
-                          _shareSummary(summary);
-                          break;
+                      if (value == 'export') {
+                        _exportSummary(summary);
                       }
                     },
                     itemBuilder: (context) => [
-                      const PopupMenuItem(value: 'copy', child: Text('Copy')),
                       const PopupMenuItem(value: 'export', child: Text('Export PDF')),
-                      const PopupMenuItem(value: 'share', child: Text('Share')),
                     ],
                   ),
                 ],
@@ -1235,22 +1214,12 @@ class _SummariesScreenState extends ConsumerState<SummariesScreen>
                   color: colorScheme.onSurfaceVariant,
                 ),
                 onSelected: (value) {
-                  switch (value) {
-                    case 'copy':
-                      _copySummary(summary);
-                      break;
-                    case 'export':
-                      _exportSummary(summary);
-                      break;
-                    case 'share':
-                      _shareSummary(summary);
-                      break;
+                  if (value == 'export') {
+                    _exportSummary(summary);
                   }
                 },
                 itemBuilder: (context) => [
-                  const PopupMenuItem(value: 'copy', child: Text('Copy')),
                   const PopupMenuItem(value: 'export', child: Text('Export PDF')),
-                  const PopupMenuItem(value: 'share', child: Text('Share')),
                 ],
               ),
             ],
@@ -1644,19 +1613,6 @@ class _SummariesScreenState extends ConsumerState<SummariesScreen>
     );
   }
 
-  void _copySummary(SummaryModel summary) {
-    Clipboard.setData(ClipboardData(text: summary.body));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Summary copied to clipboard'),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
-    );
-  }
-
   void _exportSummary(SummaryModel summary) {
     showDialog(
       context: context,
@@ -1664,16 +1620,5 @@ class _SummariesScreenState extends ConsumerState<SummariesScreen>
     );
   }
 
-  void _shareSummary(SummaryModel summary) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Share feature coming soon'),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
-    );
-  }
 }
 
