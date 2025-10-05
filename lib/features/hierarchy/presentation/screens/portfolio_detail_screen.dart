@@ -1439,23 +1439,6 @@ class _PortfolioDetailScreenState extends ConsumerState<PortfolioDetailScreen> {
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 20),
-            FilledButton.tonalIcon(
-              onPressed: () {
-                // Get current portfolio from context
-                final portfolioAsync = ref.read(portfolioProvider(widget.portfolioId));
-                portfolioAsync.whenData((portfolio) {
-                  if (portfolio != null) {
-                    _showCreateProgramDialog(portfolio);
-                  }
-                });
-              },
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('Create First Program'),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              ),
-            ),
           ],
         ),
       ),
