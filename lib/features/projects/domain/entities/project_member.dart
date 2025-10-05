@@ -32,4 +32,28 @@ class ProjectMember {
       addedAt: addedAt ?? this.addedAt,
     );
   }
+
+  factory ProjectMember.fromJson(Map<String, dynamic> json) {
+    return ProjectMember(
+      id: json['id'],
+      projectId: json['project_id'],
+      name: json['name'],
+      email: json['email'],
+      role: json['role'],
+      addedAt: json['added_at'] != null
+          ? DateTime.parse(json['added_at'])
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (id != null) 'id': id,
+      'project_id': projectId,
+      'name': name,
+      'email': email,
+      'role': role,
+      if (addedAt != null) 'added_at': addedAt!.toIso8601String(),
+    };
+  }
 }

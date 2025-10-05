@@ -156,9 +156,17 @@ freezegun>=1.4.0
 - [x] List project members (via get project)
 
 #### 3.3 Project Assignment
-- [ ] Assign project to program
-- [ ] Assign project to portfolio
-- [ ] Move project between programs
+- [x] Assign project to program
+- [x] Assign project to portfolio
+- [x] Move project between programs
+- [x] Assign project to both program and portfolio
+- [x] Unassign project from program
+- [x] Unassign project from portfolio
+- [x] Create project with program assignment
+- [x] Create project with portfolio assignment
+- [x] Move project from portfolio to program
+- [x] Validation: Non-existent program/portfolio
+- [x] Security: Cross-organization assignment prevention
 
 ### 4. Hierarchy Management
 
@@ -416,10 +424,11 @@ freezegun>=1.4.0
 - ✅ **Mostly Tested**: Invitations (3/4 features, 16/22 tests passing, 1 feature not implemented, 6 tests need fixture refactoring)
 - ✅ **Fully Tested**: Project CRUD (7/7 features, 34 tests passing)
 - ✅ **Fully Tested**: Project Members (3/3 features, included in 34 project tests)
+- ✅ **Fully Tested**: Project Assignment (11/11 features, 11 tests passing) - **NO BUGS FOUND** ✨
 - ❌ **Not Tested**: All other features
 
 **Total Features**: ~200+ individual test items
-**Currently Tested**: 20% (40/200 features)
+**Currently Tested**: 25% (51/200 features)
 **Target**: 60-70% coverage
 **Current Coverage**: TBD (run `pytest --cov` to check)
 
@@ -443,9 +452,19 @@ freezegun>=1.4.0
 | 🔴 Critical | `add_member` missing organization_id param | `project_service.py:407` | Add `organization_id: UUID` parameter to validate project ownership | ✅ FIXED |
 | 🔴 Critical | `remove_member` missing organization_id param | `project_service.py:450` | Add `organization_id: UUID` and rename `email` to `member_email` for consistency | ✅ FIXED |
 | 🔴 Critical | `remove_member` uses wrong variable name | `project_service.py:471,474` | Change `email` to `member_email` in logging statements | ✅ FIXED |
+| ✅ None | Project Assignment - NO BUGS FOUND | `projects.py, project_service.py` | Proper validation, multi-tenant security, error handling all working correctly | ✅ VERIFIED |
 
 **Impact Before Fixes**: 60+ tests blocked by critical bugs (30+ organization bugs, 30+ project bugs)
 **Impact After Fixes**: All critical backend bugs FIXED! All 34 project tests passing, 16/22 invitation tests passing (6 have test infrastructure issues, not backend bugs)
+
+**Project Assignment Testing Results (2025-10-05)**:
+- ✅ 11/11 tests passing
+- ✅ Proper validation of non-existent programs/portfolios (returns 409)
+- ✅ Multi-tenant security enforced (cross-org assignment blocked with 409)
+- ✅ Supports assignment during creation and via update
+- ✅ Supports unassignment (setting to None)
+- ✅ Supports moving between programs/portfolios
+- ✅ NO BUGS FOUND - Implementation is solid! ✨
 
 ---
 

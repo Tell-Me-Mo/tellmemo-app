@@ -7,6 +7,7 @@ Status: TBD
 """
 
 import pytest
+from datetime import datetime
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.user import User
@@ -958,3 +959,500 @@ class TestProjectMemberManagement:
 
         # Assert
         assert response.status_code == 404
+
+
+class TestProjectAssignment:
+    """Test project assignment to programs and portfolios (TESTING_BACKEND.md section 3.3)."""
+
+    @pytest.mark.asyncio
+    async def test_assign_project_to_program(
+        self,
+        authenticated_org_client: AsyncClient,
+        test_organization: Organization,
+        db_session: AsyncSession
+    ):
+        """Test assigning a standalone project to a program."""
+        # Arrange - Create a program
+        from models.program import Program
+        program = Program(
+            name="Test Program",
+            organization_id=test_organization.id,
+            created_by="test@example.com"
+        )
+        db_session.add(program)
+        await db_session.commit()
+        await db_session.refresh(program)
+
+        # Create a standalone project
+        create_response = await authenticated_org_client.post(
+            "/api/v1/projects",
+            json={"name": "Standalone Project"}
+        )
+        project_id = create_response.json()["id"]
+        assert create_response.json()["program_id"] is None
+
+        # Act - Assign to program
+        response = await authenticated_org_client.put(
+            f"/api/v1/projects/{project_id}",
+            json={"program_id": str(program.id)}
+        )
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert data["program_id"] == str(program.id)
+        assert data["updated_at"] is not None
+
+    @pytest.mark.asyncio
+    async def test_assign_project_to_portfolio(
+        self,
+        authenticated_org_client: AsyncClient,
+        test_organization: Organization,
+        db_session: AsyncSession
+    ):
+        """Test assigning a standalone project to a portfolio."""
+        # Arrange - Create a portfolio
+        from models.portfolio import Portfolio
+        portfolio = Portfolio(
+            name="Test Portfolio",
+            organization_id=test_organization.id,
+            created_by="test@example.com"
+        )
+        db_session.add(portfolio)
+        await db_session.commit()
+        await db_session.refresh(portfolio)
+
+        # Create a standalone project
+        create_response = await authenticated_org_client.post(
+            "/api/v1/projects",
+            json={"name": "Portfolio Project"}
+        )
+        project_id = create_response.json()["id"]
+        assert create_response.json()["portfolio_id"] is None
+
+        # Act - Assign to portfolio
+        response = await authenticated_org_client.put(
+            f"/api/v1/projects/{project_id}",
+            json={"portfolio_id": str(portfolio.id)}
+        )
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert data["portfolio_id"] == str(portfolio.id)
+        assert data["updated_at"] is not None
+
+    @pytest.mark.asyncio
+    async def test_move_project_between_programs(
+        self,
+        authenticated_org_client: AsyncClient,
+        test_organization: Organization,
+        db_session: AsyncSession
+    ):
+        """Test moving a project from one program to another."""
+        # Arrange - Create two programs
+        from models.program import Program
+        program1 = Program(
+            name="Program A",
+            organization_id=test_organization.id,
+            created_by="test@example.com"
+        )
+        program2 = Program(
+            name="Program B",
+            organization_id=test_organization.id,
+            created_by="test@example.com"
+        )
+        db_session.add_all([program1, program2])
+        await db_session.commit()
+        await db_session.refresh(program1)
+        await db_session.refresh(program2)
+
+        # Create project assigned to program1
+        create_response = await authenticated_org_client.post(
+            "/api/v1/projects",
+            json={
+                "name": "Moving Project",
+                "program_id": str(program1.id)
+            }
+        )
+        project_id = create_response.json()["id"]
+        assert create_response.json()["program_id"] == str(program1.id)
+
+        # Act - Move to program2
+        response = await authenticated_org_client.put(
+            f"/api/v1/projects/{project_id}",
+            json={"program_id": str(program2.id)}
+        )
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert data["program_id"] == str(program2.id)
+
+        # Verify the change persisted
+        get_response = await authenticated_org_client.get(
+            f"/api/v1/projects/{project_id}"
+        )
+        assert get_response.json()["program_id"] == str(program2.id)
+
+    @pytest.mark.asyncio
+    async def test_assign_project_to_both_program_and_portfolio(
+        self,
+        authenticated_org_client: AsyncClient,
+        test_organization: Organization,
+        db_session: AsyncSession
+    ):
+        """Test assigning a project to both a program and portfolio (program under portfolio)."""
+        # Arrange - Create portfolio and program under it
+        from models.portfolio import Portfolio
+        from models.program import Program
+
+        portfolio = Portfolio(
+            name="Parent Portfolio",
+            organization_id=test_organization.id,
+            created_by="test@example.com"
+        )
+        db_session.add(portfolio)
+        await db_session.commit()
+        await db_session.refresh(portfolio)
+
+        program = Program(
+            name="Child Program",
+            portfolio_id=portfolio.id,
+            organization_id=test_organization.id,
+            created_by="test@example.com"
+        )
+        db_session.add(program)
+        await db_session.commit()
+        await db_session.refresh(program)
+
+        # Create project
+        create_response = await authenticated_org_client.post(
+            "/api/v1/projects",
+            json={"name": "Hierarchical Project"}
+        )
+        project_id = create_response.json()["id"]
+
+        # Act - Assign to both program and portfolio
+        response = await authenticated_org_client.put(
+            f"/api/v1/projects/{project_id}",
+            json={
+                "program_id": str(program.id),
+                "portfolio_id": str(portfolio.id)
+            }
+        )
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert data["program_id"] == str(program.id)
+        assert data["portfolio_id"] == str(portfolio.id)
+
+    @pytest.mark.asyncio
+    async def test_unassign_project_from_program(
+        self,
+        authenticated_org_client: AsyncClient,
+        test_organization: Organization,
+        db_session: AsyncSession
+    ):
+        """Test removing program assignment (making project standalone)."""
+        # Arrange - Create program and assigned project
+        from models.program import Program
+        program = Program(
+            name="Test Program",
+            organization_id=test_organization.id,
+            created_by="test@example.com"
+        )
+        db_session.add(program)
+        await db_session.commit()
+        await db_session.refresh(program)
+
+        create_response = await authenticated_org_client.post(
+            "/api/v1/projects",
+            json={
+                "name": "Assigned Project",
+                "program_id": str(program.id)
+            }
+        )
+        project_id = create_response.json()["id"]
+        assert create_response.json()["program_id"] == str(program.id)
+
+        # Act - Unassign from program
+        response = await authenticated_org_client.put(
+            f"/api/v1/projects/{project_id}",
+            json={"program_id": None}
+        )
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert data["program_id"] is None
+
+    @pytest.mark.asyncio
+    async def test_unassign_project_from_portfolio(
+        self,
+        authenticated_org_client: AsyncClient,
+        test_organization: Organization,
+        db_session: AsyncSession
+    ):
+        """Test removing portfolio assignment."""
+        # Arrange - Create portfolio and assigned project
+        from models.portfolio import Portfolio
+        portfolio = Portfolio(
+            name="Test Portfolio",
+            organization_id=test_organization.id,
+            created_by="test@example.com"
+        )
+        db_session.add(portfolio)
+        await db_session.commit()
+        await db_session.refresh(portfolio)
+
+        create_response = await authenticated_org_client.post(
+            "/api/v1/projects",
+            json={
+                "name": "Portfolio Project",
+                "portfolio_id": str(portfolio.id)
+            }
+        )
+        project_id = create_response.json()["id"]
+
+        # Act - Unassign from portfolio
+        response = await authenticated_org_client.put(
+            f"/api/v1/projects/{project_id}",
+            json={"portfolio_id": None}
+        )
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert data["portfolio_id"] is None
+
+    @pytest.mark.asyncio
+    async def test_assign_project_to_nonexistent_program_fails(
+        self,
+        authenticated_org_client: AsyncClient,
+        test_organization: Organization
+    ):
+        """Test that assigning to non-existent program fails with 409."""
+        # Arrange
+        create_response = await authenticated_org_client.post(
+            "/api/v1/projects",
+            json={"name": "Test Project"}
+        )
+        project_id = create_response.json()["id"]
+        fake_program_uuid = "00000000-0000-0000-0000-000000000000"
+
+        # Act
+        response = await authenticated_org_client.put(
+            f"/api/v1/projects/{project_id}",
+            json={"program_id": fake_program_uuid}
+        )
+
+        # Assert
+        assert response.status_code == 409
+        assert "not found" in response.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_assign_project_to_nonexistent_portfolio_fails(
+        self,
+        authenticated_org_client: AsyncClient,
+        test_organization: Organization
+    ):
+        """Test that assigning to non-existent portfolio fails with 409."""
+        # Arrange
+        create_response = await authenticated_org_client.post(
+            "/api/v1/projects",
+            json={"name": "Test Project"}
+        )
+        project_id = create_response.json()["id"]
+        fake_portfolio_uuid = "00000000-0000-0000-0000-000000000000"
+
+        # Act
+        response = await authenticated_org_client.put(
+            f"/api/v1/projects/{project_id}",
+            json={"portfolio_id": fake_portfolio_uuid}
+        )
+
+        # Assert
+        assert response.status_code == 409
+        assert "not found" in response.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_assign_project_to_program_from_different_org_fails(
+        self,
+        client_factory,
+        test_organization: Organization,
+        db_session: AsyncSession
+    ):
+        """Test that assigning project to program from different organization fails."""
+        # Arrange - Create second organization with a user first
+        from services.auth.native_auth_service import native_auth_service
+
+        # Create admin user for org2
+        admin2 = User(
+            email="admin2@example.com",
+            password_hash=native_auth_service.hash_password("Password123!"),
+            name="Admin 2",
+            auth_provider='native',
+            email_verified=True,
+            is_active=True
+        )
+        db_session.add(admin2)
+        await db_session.flush()
+
+        org2 = Organization(
+            name="Second Org",
+            slug="second-org",
+            created_by=admin2.id
+        )
+        db_session.add(org2)
+        await db_session.commit()
+        await db_session.refresh(org2)
+
+        # Create program in org2
+        from models.program import Program
+        program_org2 = Program(
+            name="Org2 Program",
+            organization_id=org2.id,
+            created_by="admin2@example.com"
+        )
+        db_session.add(program_org2)
+        await db_session.commit()
+        await db_session.refresh(program_org2)
+
+        # Create user for org1
+        user1 = User(
+            email="user1@example.com",
+            password_hash=native_auth_service.hash_password("Password123!"),
+            name="User 1",
+            auth_provider='native',
+            email_verified=True,
+            is_active=True
+        )
+        db_session.add(user1)
+        await db_session.flush()
+
+        from models.organization_member import OrganizationMember, OrganizationRole
+        member1 = OrganizationMember(
+            organization_id=test_organization.id,
+            user_id=user1.id,
+            role=OrganizationRole.ADMIN.value,
+            invited_by=test_organization.created_by,
+            joined_at=datetime.utcnow()
+        )
+        db_session.add(member1)
+        await db_session.commit()
+
+        # Create token for user1 in org1
+        token1 = native_auth_service.create_access_token(
+            user_id=str(user1.id),
+            email=user1.email,
+            organization_id=str(test_organization.id)
+        )
+
+        client1 = await client_factory(
+            Authorization=f"Bearer {token1}",
+            **{"X-Organization-Id": str(test_organization.id)}
+        )
+
+        # Create project in org1
+        create_response = await client1.post(
+            "/api/v1/projects",
+            json={"name": "Org1 Project"}
+        )
+        project_id = create_response.json()["id"]
+
+        # Act - Try to assign org1 project to org2 program
+        response = await client1.put(
+            f"/api/v1/projects/{project_id}",
+            json={"program_id": str(program_org2.id)}
+        )
+
+        # Assert - Should fail with 409 (backend validates program belongs to org)
+        assert response.status_code == 409
+        assert "not found" in response.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_create_project_with_program_assignment(
+        self,
+        authenticated_org_client: AsyncClient,
+        test_organization: Organization,
+        db_session: AsyncSession
+    ):
+        """Test creating project with program assignment in one step."""
+        # Arrange - Create program
+        from models.program import Program
+        program = Program(
+            name="Initial Program",
+            organization_id=test_organization.id,
+            created_by="test@example.com"
+        )
+        db_session.add(program)
+        await db_session.commit()
+        await db_session.refresh(program)
+
+        # Act - Create project with program assignment
+        response = await authenticated_org_client.post(
+            "/api/v1/projects",
+            json={
+                "name": "Pre-assigned Project",
+                "program_id": str(program.id)
+            }
+        )
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert data["program_id"] == str(program.id)
+
+    @pytest.mark.asyncio
+    async def test_move_project_from_portfolio_to_program(
+        self,
+        authenticated_org_client: AsyncClient,
+        test_organization: Organization,
+        db_session: AsyncSession
+    ):
+        """Test moving project from portfolio to program."""
+        # Arrange - Create portfolio and program
+        from models.portfolio import Portfolio
+        from models.program import Program
+
+        portfolio = Portfolio(
+            name="Source Portfolio",
+            organization_id=test_organization.id,
+            created_by="test@example.com"
+        )
+        program = Program(
+            name="Target Program",
+            organization_id=test_organization.id,
+            created_by="test@example.com"
+        )
+        db_session.add_all([portfolio, program])
+        await db_session.commit()
+        await db_session.refresh(portfolio)
+        await db_session.refresh(program)
+
+        # Create project in portfolio
+        create_response = await authenticated_org_client.post(
+            "/api/v1/projects",
+            json={
+                "name": "Moving Project",
+                "portfolio_id": str(portfolio.id)
+            }
+        )
+        project_id = create_response.json()["id"]
+
+        # Act - Move to program (remove from portfolio, add to program)
+        response = await authenticated_org_client.put(
+            f"/api/v1/projects/{project_id}",
+            json={
+                "portfolio_id": None,
+                "program_id": str(program.id)
+            }
+        )
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert data["portfolio_id"] is None
+        assert data["program_id"] == str(program.id)

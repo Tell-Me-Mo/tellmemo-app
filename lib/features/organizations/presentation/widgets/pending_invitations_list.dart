@@ -221,7 +221,9 @@ class _PendingInvitationsListWidgetState extends ConsumerState<PendingInvitation
     final theme = Theme.of(context);
     final membersAsync = ref.watch(membersProvider(widget.organizationId));
 
-    return membersAsync.when(
+    return Material(
+      color: Colors.transparent,
+      child: membersAsync.when(
       loading: () => const Center(
         child: Padding(
           padding: EdgeInsets.all(32.0),
@@ -375,6 +377,7 @@ class _PendingInvitationsListWidgetState extends ConsumerState<PendingInvitation
                     ),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         const SizedBox(height: 4),
                         Row(
@@ -385,18 +388,24 @@ class _PendingInvitationsListWidgetState extends ConsumerState<PendingInvitation
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
                             const SizedBox(width: 4),
-                            Text(
-                              'Invited ${_formatInvitationDate(invitation.invitedAt)}',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
+                            Flexible(
+                              child: Text(
+                                'Invited ${_formatInvitationDate(invitation.invitedAt)}',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             if (invitation.invitedBy != null) ...[
                               const SizedBox(width: 8),
-                              Text(
-                                'by ${invitation.invitedBy}',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
+                              Flexible(
+                                child: Text(
+                                  'by ${invitation.invitedBy}',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
@@ -433,20 +442,32 @@ class _PendingInvitationsListWidgetState extends ConsumerState<PendingInvitation
                               const PopupMenuItem(
                                 value: 'resend',
                                 child: Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(Icons.send, size: 20),
                                     SizedBox(width: 12),
-                                    Text('Resend Invitation'),
+                                    Flexible(
+                                      child: Text(
+                                        'Resend Invitation',
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
                               const PopupMenuItem(
                                 value: 'copy',
                                 child: Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(Icons.copy, size: 20),
                                     SizedBox(width: 12),
-                                    Text('Copy Email'),
+                                    Flexible(
+                                      child: Text(
+                                        'Copy Email',
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -454,12 +475,16 @@ class _PendingInvitationsListWidgetState extends ConsumerState<PendingInvitation
                               PopupMenuItem(
                                 value: 'cancel',
                                 child: Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(Icons.cancel, size: 20, color: Colors.red),
                                     const SizedBox(width: 12),
-                                    Text(
-                                      'Cancel Invitation',
-                                      style: TextStyle(color: Colors.red),
+                                    Flexible(
+                                      child: Text(
+                                        'Cancel Invitation',
+                                        style: TextStyle(color: Colors.red),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -480,6 +505,7 @@ class _PendingInvitationsListWidgetState extends ConsumerState<PendingInvitation
           ],
         );
       },
+      ),
     );
   }
 
