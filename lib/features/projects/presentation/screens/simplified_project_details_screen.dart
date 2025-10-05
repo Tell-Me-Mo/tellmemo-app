@@ -315,6 +315,21 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                                   ],
                                 ),
                               ),
+                              PopupMenuItem(
+                                value: 'lessons',
+                                height: 40,
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.lightbulb_outline,
+                                      size: 18,
+                                      color: Colors.amber,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Text('View Lessons'),
+                                  ],
+                                ),
+                              ),
                               const PopupMenuDivider(),
                               PopupMenuItem(
                                 value: 'edit',
@@ -1066,7 +1081,7 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                                         ],
                                       ),
                                       InkWell(
-                                        onTap: () => context.push('/lessons?project=${project.id}'),
+                                        onTap: () => context.push('/lessons?project=${project.id}&from=project'),
                                         borderRadius: BorderRadius.circular(4),
                                         child: Padding(
                                           padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -2768,6 +2783,9 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
         break;
       case 'documents':
         _showDocumentsDialog(context, project);
+        break;
+      case 'lessons':
+        context.push('/lessons?project=${project.id}&from=project');
         break;
       case 'edit':
         _showEditProjectDialog(context, project);
