@@ -25,12 +25,12 @@ final projectsRepositoryProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef ProjectsRepositoryRef = AutoDisposeProviderRef<ProjectsRepository>;
-String _$projectsListHash() => r'17cf57ba32da2fde5c89f5c0e15ae324bbd26979';
+String _$projectsListHash() => r'd28f8c9fd97dca125834d51349f46e7d8716d2df';
 
 /// See also [ProjectsList].
 @ProviderFor(ProjectsList)
 final projectsListProvider =
-    AutoDisposeAsyncNotifierProvider<ProjectsList, List<Project>>.internal(
+    AsyncNotifierProvider<ProjectsList, List<Project>>.internal(
       ProjectsList.new,
       name: r'projectsListProvider',
       debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
@@ -40,8 +40,8 @@ final projectsListProvider =
       allTransitiveDependencies: null,
     );
 
-typedef _$ProjectsList = AutoDisposeAsyncNotifier<List<Project>>;
-String _$projectDetailHash() => r'8346d5809193a5148caefcdaf2ddf0c5afa7abb5';
+typedef _$ProjectsList = AsyncNotifier<List<Project>>;
+String _$projectDetailHash() => r'104e33351275dc2b27a5a4f248610421dff07f32';
 
 /// Copied from Dart SDK
 class _SystemHash {
