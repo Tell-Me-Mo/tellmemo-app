@@ -119,13 +119,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Stats counter animation
     const animateCounter = (element, target, duration = 2000) => {
-        const start = 0;
-        const increment = target / (duration / 16);
+        const isCountingDown = target === 0;
+        const start = isCountingDown ? 10 : 0;
+        const increment = isCountingDown ? -10 / (duration / 16) : target / (duration / 16);
         let current = start;
 
         const timer = setInterval(() => {
             current += increment;
-            if (current >= target) {
+
+            if ((isCountingDown && current <= target) || (!isCountingDown && current >= target)) {
                 element.textContent = element.dataset.value;
                 clearInterval(timer);
             } else {
@@ -171,6 +173,28 @@ document.addEventListener('DOMContentLoaded', () => {
             this.style.transform = '';
         });
     });
+
+    // Cookie Banner
+    const cookieBanner = document.getElementById('cookieBanner');
+    const acceptCookiesBtn = document.getElementById('acceptCookies');
+
+    // Check if user has already accepted cookies
+    if (!localStorage.getItem('cookiesAccepted')) {
+        // Show banner after a short delay
+        setTimeout(() => {
+            if (cookieBanner) {
+                cookieBanner.classList.add('show');
+            }
+        }, 1000);
+    }
+
+    // Handle accept button click
+    if (acceptCookiesBtn) {
+        acceptCookiesBtn.addEventListener('click', () => {
+            localStorage.setItem('cookiesAccepted', 'true');
+            cookieBanner.classList.remove('show');
+        });
+    }
 
     // Console message
     console.log('%c Welcome to TellMeMo! 🚀', 'font-size: 20px; font-weight: bold; color: #6366F1;');

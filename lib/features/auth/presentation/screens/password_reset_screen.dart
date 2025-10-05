@@ -151,11 +151,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen>
 
   bool _isPasswordValid() {
     final password = _passwordController.text;
-    return password.length >= 8 &&
-        RegExp(r'[A-Z]').hasMatch(password) &&
-        RegExp(r'[a-z]').hasMatch(password) &&
-        RegExp(r'[0-9]').hasMatch(password) &&
-        RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password);
+    return password.length >= 6;
   }
 
   Widget _buildPasswordRequirement(String text, bool isMet) {
@@ -196,11 +192,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen>
     final isTablet = screenWidth >= 600 && screenWidth < 1200;
 
     final password = _passwordController.text;
-    final hasMinLength = password.length >= 8;
-    final hasUppercase = RegExp(r'[A-Z]').hasMatch(password);
-    final hasLowercase = RegExp(r'[a-z]').hasMatch(password);
-    final hasNumber = RegExp(r'[0-9]').hasMatch(password);
-    final hasSpecialChar = RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password);
+    final hasMinLength = password.length >= 6;
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -470,11 +462,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen>
                                     ),
                                   ),
                                   const SizedBox(height: 8),
-                                  _buildPasswordRequirement('At least 8 characters', hasMinLength),
-                                  _buildPasswordRequirement('One uppercase letter (A-Z)', hasUppercase),
-                                  _buildPasswordRequirement('One lowercase letter (a-z)', hasLowercase),
-                                  _buildPasswordRequirement('One number (0-9)', hasNumber),
-                                  _buildPasswordRequirement('One special character (!@#\$%^&*)', hasSpecialChar),
+                                  _buildPasswordRequirement('At least 6 characters', hasMinLength),
                                 ],
                               ),
                             ),

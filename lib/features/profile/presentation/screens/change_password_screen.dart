@@ -181,11 +181,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  '• At least 8 characters long\n'
-                                  '• Contains at least one uppercase letter\n'
-                                  '• Contains at least one lowercase letter\n'
-                                  '• Contains at least one number\n'
-                                  '• Contains at least one special character',
+                                  '• At least 6 characters long',
                                   style: theme.textTheme.bodySmall,
                                 ),
                               ],
