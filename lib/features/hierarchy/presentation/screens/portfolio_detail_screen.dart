@@ -250,10 +250,10 @@ class _PortfolioDetailScreenState extends ConsumerState<PortfolioDetailScreen> {
                     if (isDesktop) ...[
                       _buildMainContent(context, portfolio),
                     ] else ...[
-                      // Mobile/Tablet Layout - Stack vertically
-                      _buildMainContent(context, portfolio),
-                      const SizedBox(height: 24),
+                      // Mobile/Tablet Layout - Stack vertically with Quick Actions first
                       _buildSidebar(context, portfolio),
+                      const SizedBox(height: 24),
+                      _buildMainContent(context, portfolio),
                     ],
                   ],
                 ),
