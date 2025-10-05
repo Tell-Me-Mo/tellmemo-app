@@ -147,13 +147,16 @@ See `.env.example` for all options.
 
 ## 🤝 Contributing
 
-1. Fork the repo
-2. Create feature branch: `git checkout -b feature/amazing-feature`
-3. Make changes and run tests
-4. Commit: `git commit -m 'Add amazing feature'`
-5. Push and open a Pull Request
+We follow the **Feature Branch Model**:
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+1. Fork the repo
+2. Start from main: `git checkout main && git pull origin main`
+3. Create feature branch: `git checkout -b feature/amazing-feature`
+4. Make changes and run tests
+5. Commit: `git commit -m 'feat: add amazing feature'`
+6. Push and open a Pull Request to `main`
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for full workflow and guidelines.
 
 ## 🐛 Troubleshooting
 
