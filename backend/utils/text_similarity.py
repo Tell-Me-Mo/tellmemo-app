@@ -19,14 +19,18 @@ def normalize_text(text: str) -> str:
     if not text:
         return ""
 
+    # Limit input length to prevent DoS attacks (10KB max)
+    if len(text) > 10000:
+        text = text[:10000]
+
     # Convert to lowercase
     text = text.lower()
 
     # Remove special characters except spaces and alphanumeric
     text = re.sub(r'[^a-z0-9\s]', ' ', text)
 
-    # Replace multiple spaces with single space
-    text = re.sub(r'\s+', ' ', text)
+    # Replace multiple spaces with single space (ReDoS-safe)
+    text = ' '.join(text.split())
 
     # Strip leading/trailing whitespace
     text = text.strip()

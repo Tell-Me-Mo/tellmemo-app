@@ -142,8 +142,18 @@ class SwitchOrganizationResponse(BaseModel):
 
 def generate_slug(name: str, existing_slugs: set = None) -> str:
     """Generate a URL-friendly slug from organization name."""
-    # Convert to lowercase and replace spaces/special chars with hyphens
-    slug = re.sub(r'[^a-z0-9]+', '-', name.lower())
+    # Limit input length to prevent ReDoS attacks
+    name = name[:200] if len(name) > 200 else name
+
+    # Convert to lowercase and replace spaces/special chars with hyphens (ReDoS-safe)
+    # Use list comprehension instead of regex to avoid polynomial time complexity
+    slug_chars = [c if c.isalnum() else '-' for c in name.lower()]
+    slug = ''.join(slug_chars)
+
+    # Replace multiple consecutive hyphens with single hyphen
+    while '--' in slug:
+        slug = slug.replace('--', '-')
+
     slug = slug.strip('-')
 
     if not existing_slugs:
