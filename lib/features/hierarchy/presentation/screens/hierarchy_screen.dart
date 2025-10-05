@@ -209,17 +209,33 @@ class _HierarchyScreenState extends ConsumerState<HierarchyScreen> {
           ],
         ),
       ),
-      floatingActionButton: _buildFloatingActionButtons(context, screenWidth),
+      floatingActionButton: hierarchyAsync.maybeWhen(
+        data: (hierarchy) => _buildFloatingActionButtons(context, hierarchy, screenWidth),
+        orElse: () => null,
+      ),
     );
   }
 
-  Widget? _buildFloatingActionButtons(BuildContext context, double screenWidth) {
+  Widget? _buildFloatingActionButtons(BuildContext context, List<HierarchyItem> hierarchy, double screenWidth) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final isMobile = screenWidth <= 768;
 
-    if (isMobile) {
-      // Mobile: Show "New Project" FAB
+    // Count total projects in hierarchy
+    int projectCount = 0;
+    void countProjects(List<HierarchyItem> items) {
+      for (final item in items) {
+        if (item.type == HierarchyItemType.project) {
+          projectCount++;
+        }
+        countProjects(item.children);
+      }
+    }
+    countProjects(hierarchy);
+
+    final hasProjects = projectCount > 0;
+
+    // If no projects, show "New Project" FAB
+    if (!hasProjects) {
       return SafeArea(
         child: FloatingActionButton.extended(
           onPressed: () => _showCreateProjectDialog(),
@@ -228,18 +244,18 @@ class _HierarchyScreenState extends ConsumerState<HierarchyScreen> {
           label: const Text('New Project'),
         ),
       );
-    } else {
-      // Desktop/Tablet: Show "Ask AI" FAB
-      return SafeArea(
-        child: FloatingActionButton.extended(
-          onPressed: () => _showAskAIDialog(context),
-          backgroundColor: colorScheme.primary,
-          icon: const Icon(Icons.psychology_outlined),
-          label: const Text('Ask AI'),
-          elevation: 4,
-        ),
-      );
     }
+
+    // If there are projects, show "Ask AI" FAB
+    return SafeArea(
+      child: FloatingActionButton.extended(
+        onPressed: () => _showAskAIDialog(context),
+        backgroundColor: colorScheme.primary,
+        icon: const Icon(Icons.psychology_outlined),
+        label: const Text('Ask AI'),
+        elevation: 4,
+      ),
+    );
   }
 
   Widget _buildHeader(BuildContext context, bool isDesktop, bool isMobile) {
