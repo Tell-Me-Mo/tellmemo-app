@@ -253,7 +253,7 @@ class _HierarchyApiService implements HierarchyApiService {
       Options(method: 'POST', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
-            '/api/portfolios',
+            '/api/portfolios/',
             queryParameters: queryParameters,
             data: _data,
           )

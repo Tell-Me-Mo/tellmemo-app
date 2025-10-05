@@ -704,7 +704,7 @@ final hierarchyStatisticsProvider =
 // ignore: unused_element
 typedef HierarchyStatisticsRef =
     AutoDisposeFutureProviderRef<Map<String, dynamic>>;
-String _$hierarchyStateHash() => r'b9a9a246e75da66c58b8767a45c020adfae92c35';
+String _$hierarchyStateHash() => r'658ff3357e83bc48a2dc5de0f360bd701156f523';
 
 abstract class _$HierarchyState
     extends BuildlessAutoDisposeAsyncNotifier<List<HierarchyItem>> {

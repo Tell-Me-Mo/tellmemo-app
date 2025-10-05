@@ -41,7 +41,7 @@ abstract class HierarchyApiService {
   @GET('/api/portfolios/{id}')
   Future<PortfolioModel> getPortfolio(@Path('id') String portfolioId);
 
-  @POST('/api/portfolios')
+  @POST('/api/portfolios/')
   Future<PortfolioModel> createPortfolio(@Body() Map<String, dynamic> request);
 
   @PUT('/api/portfolios/{id}')

@@ -70,7 +70,7 @@ final jobWebSocketConnectionStateProvider =
 // ignore: unused_element
 typedef JobWebSocketConnectionStateRef = AutoDisposeStreamProviderRef<bool>;
 String _$webSocketActiveJobsTrackerHash() =>
-    r'a99bb597cffed7b814147743c1b97c398b60823b';
+    r'04e0a81d74892be8a7a5162955a14affa274b6f4';
 
 /// Active jobs tracker using WebSocket
 ///
@@ -92,7 +92,7 @@ final webSocketActiveJobsTrackerProvider =
 
 typedef _$WebSocketActiveJobsTracker = AutoDisposeAsyncNotifier<List<JobModel>>;
 String _$webSocketProjectJobsTrackerHash() =>
-    r'd9f3cdaf819bce790fe9bdcef796950564269ec1';
+    r'3e4ab531e3c748e8e59429554437d31fb5746580';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -275,7 +275,7 @@ class _WebSocketProjectJobsTrackerProviderElement
 }
 
 String _$webSocketJobTrackerHash() =>
-    r'4f933c3994958086dc8ade7e27e80fc65a0abe01';
+    r'55cfff586aee5ae1ff2fdc6c04ada48e9a3bcdb2';
 
 abstract class _$WebSocketJobTracker
     extends BuildlessAutoDisposeAsyncNotifier<JobModel?> {
