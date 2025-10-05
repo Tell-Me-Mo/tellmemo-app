@@ -7,6 +7,7 @@ Thank you for your interest in contributing to TellMeMo! We welcome contribution
 - [Code of Conduct](#code-of-conduct)
 - [How Can I Contribute?](#how-can-i-contribute)
 - [Development Setup](#development-setup)
+- [Git Workflow](#git-workflow)
 - [Pull Request Process](#pull-request-process)
 - [Style Guidelines](#style-guidelines)
 - [Commit Message Guidelines](#commit-message-guidelines)
@@ -46,7 +47,7 @@ Unsure where to begin? Look for issues labeled:
 
 ### Pull Requests
 
-1. Fork the repository and create your branch from `develop`
+1. Fork the repository and create your branch from `main`
 2. Make your changes following our style guidelines
 3. Add tests if applicable
 4. Ensure all tests pass
@@ -132,44 +133,92 @@ flake8 .
 black --check .
 ```
 
+## Git Workflow
+
+We follow the **Feature Branch Model**:
+
+- **`main`** - Protected branch, always deployable
+- **Feature branches** - Created from `main` for each task
+- **No long-lived branches** - Merge frequently to avoid conflicts
+
+### Branch Naming Conventions
+
+```
+feature/description  → New features
+fix/issue-name      → Bug fixes
+refactor/component  → Code improvements
+docs/update-readme  → Documentation
+chore/dependency    → Maintenance tasks
+```
+
+### Important Rules
+
+✅ **DO:**
+- Always branch from latest `main`
+- One feature/fix per branch
+- Write clear commit messages
+- Use PRs for all changes to `main`
+- Keep commits small and focused
+- Pull latest `main` before creating new branch
+
+❌ **DON'T:**
+- Push directly to `main` (protected)
+- Work on `main` branch locally
+- Force push to shared branches
+- Create long-lived branches (merge frequently)
+
 ## Pull Request Process
 
-1. **Create a feature branch**
+1. **Start from latest main**
    ```bash
-   git checkout -b feature/your-feature-name
+   git checkout main
+   git pull origin main
    ```
 
-2. **Make your changes**
+2. **Create a feature branch**
+   ```bash
+   git checkout -b feature/your-feature-name
+   # Branch naming: feature/, fix/, refactor/, docs/, chore/
+   ```
+
+3. **Make your changes**
    - Write clean, readable code
    - Follow style guidelines
    - Add tests for new functionality
    - Update documentation
 
-3. **Commit your changes**
+4. **Commit your changes**
    ```bash
    git add .
    git commit -m "feat: add amazing feature"
    ```
 
-4. **Push to your fork**
+5. **Push to your fork**
    ```bash
-   git push origin feature/your-feature-name
+   git push -u origin feature/your-feature-name
    ```
 
-5. **Open a Pull Request**
+6. **Open a Pull Request**
    - Use a clear title and description
-   - Reference related issues
+   - Reference related issues (e.g., "Closes #123")
    - Ensure CI checks pass
    - Request review from maintainers
 
-6. **Code Review**
+7. **Code Review**
    - Address review comments
-   - Keep the PR up to date with `develop`
+   - Keep the PR up to date with `main`
    - Be responsive to feedback
 
-7. **Merge**
+8. **Merge**
    - Once approved, a maintainer will merge your PR
-   - Delete your feature branch after merge
+   - Feature branches are automatically deleted after merge
+
+9. **Clean up locally**
+   ```bash
+   git checkout main
+   git pull origin main
+   git branch -d feature/your-feature-name
+   ```
 
 ## Style Guidelines
 
