@@ -171,16 +171,16 @@ freezegun>=1.4.0
 ### 4. Hierarchy Management
 
 #### 4.1 Portfolio Management (portfolios.py)
-- [ ] Create portfolio
-- [ ] List portfolios
-- [ ] Get portfolio by ID
-- [ ] Update portfolio
-- [ ] Delete portfolio
-- [ ] Get portfolio programs
-- [ ] Get portfolio projects
-- [ ] Portfolio statistics
-- [ ] Query portfolio (RAG)
-- [ ] Deletion impact analysis
+- [x] Create portfolio
+- [x] List portfolios
+- [x] Get portfolio by ID
+- [x] Update portfolio
+- [x] Delete portfolio
+- [x] Get portfolio programs
+- [x] Get portfolio projects
+- [x] Portfolio statistics
+- [x] Query portfolio (RAG)
+- [x] Deletion impact analysis
 
 #### 4.2 Program Management (programs.py)
 - [ ] Create program
@@ -425,10 +425,11 @@ freezegun>=1.4.0
 - ✅ **Fully Tested**: Project CRUD (7/7 features, 34 tests passing)
 - ✅ **Fully Tested**: Project Members (3/3 features, included in 34 project tests)
 - ✅ **Fully Tested**: Project Assignment (11/11 features, 11 tests passing) - **NO BUGS FOUND** ✨
+- ✅ **Fully Tested**: Portfolio Management (10/10 features, 38 tests passing) - **NO BUGS** ✨
 - ❌ **Not Tested**: All other features
 
 **Total Features**: ~200+ individual test items
-**Currently Tested**: 25% (51/200 features)
+**Currently Tested**: 30% (61/200 features)
 **Target**: 60-70% coverage
 **Current Coverage**: TBD (run `pytest --cov` to check)
 
@@ -453,9 +454,11 @@ freezegun>=1.4.0
 | 🔴 Critical | `remove_member` missing organization_id param | `project_service.py:450` | Add `organization_id: UUID` and rename `email` to `member_email` for consistency | ✅ FIXED |
 | 🔴 Critical | `remove_member` uses wrong variable name | `project_service.py:471,474` | Change `email` to `member_email` in logging statements | ✅ FIXED |
 | ✅ None | Project Assignment - NO BUGS FOUND | `projects.py, project_service.py` | Proper validation, multi-tenant security, error handling all working correctly | ✅ VERIFIED |
+| 🔴 Critical | Invalid `.then()` JavaScript syntax in Python code | `portfolios.py:781` | Remove line 781 (dead code - line 796 already sets program_count correctly). The `.then()` method doesn't exist in Python/SQLAlchemy and would cause AttributeError if reached. | ✅ FIXED |
 
 **Impact Before Fixes**: 60+ tests blocked by critical bugs (30+ organization bugs, 30+ project bugs)
 **Impact After Fixes**: All critical backend bugs FIXED! All 34 project tests passing, 16/22 invitation tests passing (6 have test infrastructure issues, not backend bugs)
+**Portfolio Testing Impact**: 1 critical bug found and fixed (dead code with JavaScript .then() syntax removed)
 
 **Project Assignment Testing Results (2025-10-05)**:
 - ✅ 11/11 tests passing
@@ -465,6 +468,16 @@ freezegun>=1.4.0
 - ✅ Supports unassignment (setting to None)
 - ✅ Supports moving between programs/portfolios
 - ✅ NO BUGS FOUND - Implementation is solid! ✨
+
+**Portfolio Management Testing Results (2025-10-05)**:
+- ✅ 38/38 tests passing
+- ✅ Portfolio CRUD operations working correctly
+- ✅ Multi-tenant isolation enforced (cross-org access blocked)
+- ✅ Cascade delete and orphan delete both working
+- ✅ Program and project counts calculated correctly
+- ✅ Deletion impact analysis provides detailed information
+- ✅ Statistics endpoint includes all relevant metrics
+- ✅ **Bug Fixed**: Removed dead code with JavaScript `.then()` syntax (was on line 781, got overwritten on line 796)
 
 ---
 

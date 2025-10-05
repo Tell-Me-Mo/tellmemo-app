@@ -778,7 +778,6 @@ async def query_portfolio(
 
         # Prepare portfolio context
         portfolio_context = {
-            "program_count": len(await db.execute(select(Program).where(Program.portfolio_id == portfolio_id)).then(lambda r: r.scalars().all())),
             "project_count": len(projects),
             "health_status": portfolio.health_status.value,
             "owner": portfolio.owner

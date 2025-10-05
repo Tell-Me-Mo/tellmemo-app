@@ -11,6 +11,7 @@ import 'package:pm_master_v2/features/projects/presentation/providers/projects_p
 import 'package:pm_master_v2/features/documents/presentation/providers/documents_provider.dart';
 import 'package:pm_master_v2/features/hierarchy/domain/entities/portfolio.dart';
 import 'package:pm_master_v2/features/hierarchy/domain/entities/program.dart';
+import 'package:pm_master_v2/features/hierarchy/domain/entities/hierarchy_item.dart';
 import 'package:pm_master_v2/features/hierarchy/presentation/providers/hierarchy_providers.dart';
 
 /// Simple mock API service for testing - implements interface with noSuchMethod
@@ -270,10 +271,29 @@ Override createMembersErrorOverride(String organizationId, Object error) {
 class MockPortfolioList extends PortfolioList {
   final List<Portfolio> _portfolios;
   final Object? _error;
+  final Future<Portfolio> Function({required String name, String? description})? _onCreate;
+  final Future<Portfolio> Function({
+    required String portfolioId,
+    String? name,
+    String? description,
+  })? _onUpdate;
+  final Future<void> Function({required String portfolioId, bool cascadeDelete})? _onDelete;
 
-  MockPortfolioList({List<Portfolio> portfolios = const [], Object? error})
-      : _portfolios = portfolios,
-        _error = error;
+  MockPortfolioList({
+    List<Portfolio> portfolios = const [],
+    Object? error,
+    Future<Portfolio> Function({required String name, String? description})? onCreate,
+    Future<Portfolio> Function({
+      required String portfolioId,
+      String? name,
+      String? description,
+    })? onUpdate,
+    Future<void> Function({required String portfolioId, bool cascadeDelete})? onDelete,
+  })  : _portfolios = portfolios,
+        _error = error,
+        _onCreate = onCreate,
+        _onUpdate = onUpdate,
+        _onDelete = onDelete;
 
   @override
   Future<List<Portfolio>> build() async {
@@ -282,16 +302,95 @@ class MockPortfolioList extends PortfolioList {
     }
     return _portfolios;
   }
+
+  @override
+  Future<Portfolio> createPortfolio({required String name, String? description}) async {
+    if (_onCreate != null) {
+      return _onCreate!(name: name, description: description);
+    }
+    // Default mock portfolio
+    return Portfolio(
+      id: 'new-portfolio-id',
+      name: name,
+      description: description,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<Portfolio> updatePortfolio({
+    required String portfolioId,
+    String? name,
+    String? description,
+    String? owner,
+    HealthStatus? healthStatus,
+    String? riskSummary,
+  }) async {
+    if (_onUpdate != null) {
+      return _onUpdate!(portfolioId: portfolioId, name: name, description: description);
+    }
+    // Default mock portfolio
+    final existing = _portfolios.firstWhere((p) => p.id == portfolioId);
+    return existing.copyWith(
+      name: name ?? existing.name,
+      description: description ?? existing.description,
+    );
+  }
+
+  @override
+  Future<void> deletePortfolio({required String portfolioId, bool cascadeDelete = false}) async {
+    if (_onDelete != null) {
+      return _onDelete!(portfolioId: portfolioId, cascadeDelete: cascadeDelete);
+    }
+  }
 }
 
 /// Mock ProgramList notifier for testing
 class MockProgramList extends ProgramList {
   final List<Program> _programs;
   final Object? _error;
+  final Future<Program> Function({
+    required String name,
+    String? portfolioId,
+    String? description,
+  })? _onCreate;
+  final Future<Program> Function({
+    required String programId,
+    String? name,
+    String? description,
+    String? portfolioId,
+  })? _onUpdate;
+  final Future<void> Function({
+    required String programId,
+    bool cascadeDelete,
+    String? portfolioId,
+  })? _onDelete;
 
-  MockProgramList({List<Program> programs = const [], Object? error})
-      : _programs = programs,
-        _error = error;
+  MockProgramList({
+    List<Program> programs = const [],
+    Object? error,
+    Future<Program> Function({
+      required String name,
+      String? portfolioId,
+      String? description,
+    })? onCreate,
+    Future<Program> Function({
+      required String programId,
+      String? name,
+      String? description,
+      String? portfolioId,
+    })? onUpdate,
+    Future<void> Function({
+      required String programId,
+      bool cascadeDelete,
+      String? portfolioId,
+    })? onDelete,
+  })  : _programs = programs,
+        _error = error,
+        _onCreate = onCreate,
+        _onUpdate = onUpdate,
+        _onDelete = onDelete;
 
   @override
   Future<List<Program>> build({String? portfolioId}) async {
@@ -304,18 +403,182 @@ class MockProgramList extends ProgramList {
     }
     return _programs;
   }
+
+  @override
+  Future<Program> createProgram({
+    required String name,
+    String? portfolioId,
+    String? description,
+  }) async {
+    if (_onCreate != null) {
+      return _onCreate!(name: name, portfolioId: portfolioId, description: description);
+    }
+    // Default mock program
+    return Program(
+      id: 'new-program-id',
+      name: name,
+      description: description,
+      portfolioId: portfolioId,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<Program> updateProgram({
+    required String programId,
+    String? name,
+    String? description,
+    String? portfolioId,
+  }) async {
+    if (_onUpdate != null) {
+      return _onUpdate!(
+        programId: programId,
+        name: name,
+        description: description,
+        portfolioId: portfolioId,
+      );
+    }
+    // Default mock program
+    final existing = _programs.firstWhere((p) => p.id == programId);
+    return existing.copyWith(
+      name: name ?? existing.name,
+      description: description ?? existing.description,
+      portfolioId: portfolioId ?? existing.portfolioId,
+    );
+  }
+
+  @override
+  Future<void> deleteProgram({
+    required String programId,
+    bool cascadeDelete = false,
+    String? portfolioId,
+  }) async {
+    if (_onDelete != null) {
+      return _onDelete!(
+        programId: programId,
+        cascadeDelete: cascadeDelete,
+        portfolioId: portfolioId,
+      );
+    }
+  }
 }
 
 /// Helper function to create portfolio list provider override
-Override createPortfolioListOverride({List<Portfolio> portfolios = const [], Object? error}) {
+Override createPortfolioListOverride({
+  List<Portfolio> portfolios = const [],
+  Object? error,
+  Future<Portfolio> Function({required String name, String? description})? onCreate,
+  Future<Portfolio> Function({
+    required String portfolioId,
+    String? name,
+    String? description,
+  })? onUpdate,
+  Future<void> Function({required String portfolioId, bool cascadeDelete})? onDelete,
+}) {
   return portfolioListProvider.overrideWith(() {
-    return MockPortfolioList(portfolios: portfolios, error: error);
+    return MockPortfolioList(
+      portfolios: portfolios,
+      error: error,
+      onCreate: onCreate,
+      onUpdate: onUpdate,
+      onDelete: onDelete,
+    );
   });
 }
 
 /// Helper function to create program list provider override
-Override createProgramListOverride({List<Program> programs = const [], Object? error, String? portfolioId}) {
+Override createProgramListOverride({
+  List<Program> programs = const [],
+  Object? error,
+  String? portfolioId,
+  Future<Program> Function({
+    required String name,
+    String? portfolioId,
+    String? description,
+  })? onCreate,
+  Future<Program> Function({
+    required String programId,
+    String? name,
+    String? description,
+    String? portfolioId,
+  })? onUpdate,
+  Future<void> Function({
+    required String programId,
+    bool cascadeDelete,
+    String? portfolioId,
+  })? onDelete,
+}) {
   return programListProvider(portfolioId: portfolioId).overrideWith(() {
-    return MockProgramList(programs: programs, error: error);
+    return MockProgramList(
+      programs: programs,
+      error: error,
+      onCreate: onCreate,
+      onUpdate: onUpdate,
+      onDelete: onDelete,
+    );
+  });
+}
+
+/// Mock Program provider for testing individual programs
+class MockProgramProvider {
+  final Program? program;
+  final Object? error;
+
+  MockProgramProvider({this.program, this.error});
+
+  Future<Program?> call() async {
+    if (error != null) {
+      throw error!;
+    }
+    return program;
+  }
+}
+
+/// Helper function to create program provider override (single program)
+Override createProgramOverride(String programId, {Program? program, Object? error}) {
+  return programProvider(programId).overrideWith((ref) async {
+    if (error != null) {
+      throw error;
+    }
+    return program;
+  });
+}
+
+/// Helper function to create portfolio provider override (single portfolio)
+Override createPortfolioOverride(String portfolioId, {Portfolio? portfolio, Object? error}) {
+  return portfolioProvider(portfolioId).overrideWith((ref) async {
+    if (error != null) {
+      throw error;
+    }
+    return portfolio;
+  });
+}
+
+/// Mock HierarchyState notifier for testing
+class MockHierarchyState extends HierarchyState {
+  final List<HierarchyItem> _items;
+  final Object? _error;
+
+  MockHierarchyState({List<HierarchyItem> items = const [], Object? error})
+      : _items = items,
+        _error = error;
+
+  @override
+  Future<List<HierarchyItem>> build({bool includeArchived = false}) async {
+    if (_error != null) {
+      throw _error!;
+    }
+    return _items;
+  }
+}
+
+/// Helper function to create hierarchy state provider override
+Override createHierarchyStateOverride({
+  List<HierarchyItem> items = const [],
+  Object? error,
+}) {
+  return hierarchyStateProvider().overrideWith(() {
+    return MockHierarchyState(items: items, error: error);
   });
 }
