@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My AI Assistant Knows More Than I Do - TellMeMo Blog</title>
+    <meta name="description" content="I asked our AI about a decision from 6 months ago. It gave me the answer, the context, and who said what.">
+    <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32x32.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/blog.css">
+    <link rel="stylesheet" href="../css/article.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-content">
+                <a href="../" class="logo">
+                    <svg width="40" height="40" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#6366F1"/>
+                                <stop offset="100%" stop-color="#8B5CF6"/>
+                            </linearGradient>
+                        </defs>
+                        <circle cx="100" cy="100" r="80" fill="url(#gradient)"/>
+                        <circle cx="100" cy="100" r="15" fill="white"/>
+                        <ellipse cx="100" cy="100" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6" transform="rotate(0 100 100)"/>
+                        <ellipse cx="100" cy="100" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6" transform="rotate(60 100 100)"/>
+                        <ellipse cx="100" cy="100" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6" transform="rotate(120 100 100)"/>
+                    </svg>
+                    <span>TellMeMo</span>
+                </a>
+                <div class="nav-links">
+                    <a href="../blog.html" class="active">Blog</a>
+                    <a href="https://app.tellmemo.io" class="btn-primary" target="_blank">Get Started</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <header class="article-header">
+        <div class="container">
+            <div class="article-header-content">
+                <a href="../blog.html" class="back-link">← Back to Blog</a>
+                <h1>My AI Assistant Knows More Than I Do</h1>
+                <p class="article-subtitle">I asked our AI about a decision from 6 months ago. It gave me the answer, the context, and who said what.</p>
+                <div class="article-meta">
+                    <div class="author-info">
+                        <div class="author-avatar">TP</div>
+                        <div>
+                            <div class="author-name">Taylor Park</div>
+                            <div class="article-date">November 20, 2025 · 3 min read</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <article class="article-content">
+        <div class="container">
+            <div class="article-body">
+                <p class="lead">
+                    "Why did we choose Postgres over MongoDB?" New engineer, reasonable question. I had no idea. The AI did. Complete with who suggested it, when, and the exact reasoning.
+                </p>
+
+                <h2>The Question</h2>
+                <p>
+                    It was a simple onboarding question. Our new backend engineer wanted to understand our tech decisions. Specifically, why we went with Postgres when MongoDB seemed like a better fit for our document-heavy data model.
+                </p>
+
+                <p>
+                    I was the tech lead. I should know this. I was probably in the meeting where we decided. But this was six months ago, and I had attended approximately 200 meetings since then.
+                </p>
+
+                <p>
+                    My brain: blank.
+                </p>
+
+                <div class="highlight-box">
+                    <h3>🤔 The Reality</h3>
+                    <p>You attend 20-30 meetings per week. That's 500-800 meetings per year. Nobody's brain was designed to retain all that.</p>
+                </div>
+
+                <h2>The Search</h2>
+                <p>
+                    Old me would have spent 20 minutes hunting through:
+                </p>
+
+                <ul>
+                    <li>Email threads</li>
+                    <li>Slack messages</li>
+                    <li>Architecture decision records (if we'd written any)</li>
+                    <li>Meeting notes (if I'd taken any)</li>
+                </ul>
+
+                <p>
+                    Instead, I typed into TellMeMo: "Why did we choose Postgres over MongoDB?"
+                </p>
+
+                <p>
+                    15 seconds later, I had the answer.
+                </p>
+
+                <blockquote>
+                    "Discussion from Architecture Review, March 15, 2025:
+                    <br><br>
+                    Dave (CTO): 'MongoDB would work, but we're likely to need complex joins as we grow. Postgres gives us flexibility to go relational if needed.'
+                    <br><br>
+                    Sarah (Backend Lead): 'Plus our team knows Postgres better. Learning curve matters.'
+                    <br><br>
+                    Decision: Postgres. Rationale: Team expertise + future flexibility > current data model fit."
+                </blockquote>
+
+                <h2>Beyond Simple Recall</h2>
+                <p>
+                    What's wild isn't just that the AI remembered—it's that it understood context. It connected Dave's comment about joins to Sarah's point about team expertise and synthesized the actual reasoning.
+                </p>
+
+                <p>
+                    My notes from that meeting (if I'd taken any) would have said: "Decision: Postgres." The AI captured the why, not just the what.
+                </p>
+
+                <h2>The Institutional Memory Problem</h2>
+                <p>
+                    Every company has this problem. Knowledge lives in people's heads. When they leave, it leaves. When they forget, it's gone.
+                </p>
+
+                <p>
+                    We try to solve it with documentation. But documentation requires:
+                </p>
+
+                <ol>
+                    <li>Someone to write it (they won't)</li>
+                    <li>Someone to maintain it (they definitely won't)</li>
+                    <li>Everyone to read it (haha)</li>
+                </ol>
+
+                <p>
+                    AI changes this. It automatically captures every discussion, extracts the decisions, and makes them searchable. No extra work. No documentation debt.
+                </p>
+
+                <div class="highlight-box">
+                    <h3>📚 What We've Captured</h3>
+                    <p>• 847 technical decisions</p>
+                    <p>• 1,200+ client conversations</p>
+                    <p>• 3,500+ action items</p>
+                    <p>• All searchable in seconds</p>
+                </div>
+
+                <h2>The Unexpected Uses</h2>
+                <p>
+                    Once you have institutional memory as a searchable database, you start using it for everything:
+                </p>
+
+                <h3>Onboarding</h3>
+                <p>
+                    "What's our philosophy on microservices?" Ask the AI. Get 6 months of relevant discussions, condensed.
+                </p>
+
+                <h3>Dispute Resolution</h3>
+                <p>
+                    "I thought we agreed to ship this feature in Q2?" Search for it. Find out it was Q3, and who said it.
+                </p>
+
+                <h3>Pattern Recognition</h3>
+                <p>
+                    "How many times have we discussed rewriting the frontend?" AI shows you: 7 times. Maybe stop discussing and start doing.
+                </p>
+
+                <h3>Learning from Mistakes</h3>
+                <p>
+                    "Why did the last migration fail?" AI surfaces the post-mortem discussion, the lessons learned, and the preventive measures we agreed on.
+                </p>
+
+                <h2>The Philosophical Shift</h2>
+                <p>
+                    There's something profound about having perfect organizational memory. It changes how you think about meetings.
+                </p>
+
+                <p>
+                    You stop trying to remember everything. You participate instead of documenting. You trust that important information will be captured and findable.
+                </p>
+
+                <p>
+                    It's liberating.
+                </p>
+
+                <blockquote>
+                    "I used to stress about taking detailed notes. Now I just engage in the conversation. The AI handles the rest."
+                    <br><br>— Product Manager, our team
+                </blockquote>
+
+                <h2>The Bottom Line</h2>
+                <p>
+                    Your AI assistant knows more than you do. Not because it's smarter—because it has perfect recall and infinite patience for searching through historical context.
+                </p>
+
+                <p>
+                    That's not threatening. That's exactly what you want. Let the AI remember. You focus on thinking.
+                </p>
+
+                <div class="article-cta">
+                    <h3>Build your team's institutional memory</h3>
+                    <p>Every meeting, every decision, every discussion—automatically captured and searchable.</p>
+                    <a href="https://app.tellmemo.io" class="btn-primary btn-large" target="_blank">Get Started</a>
+                </div>
+            </div>
+        </div>
+    </article>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="logo">
+                        <svg width="40" height="40" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <linearGradient id="gradient-footer" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#6366F1"/>
+                                    <stop offset="100%" stop-color="#8B5CF6"/>
+                                </linearGradient>
+                            </defs>
+                            <circle cx="100" cy="100" r="80" fill="url(#gradient-footer)"/>
+                            <circle cx="100" cy="100" r="15" fill="white"/>
+                        </svg>
+                        <span>TellMeMo</span>
+                    </div>
+                    <p>AI-powered meeting intelligence for modern teams.</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 TellMeMo. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <div id="cookieBanner" class="cookie-banner">
+        <div class="cookie-content">
+            <p>We use cookies to enhance your experience. <a href="../privacy.html">Learn more</a></p>
+            <button id="acceptCookies" class="btn-accept">Accept</button>
+        </div>
+    </div>
+
+    <script src="../js/script.js"></script>
+</body>
+</html>

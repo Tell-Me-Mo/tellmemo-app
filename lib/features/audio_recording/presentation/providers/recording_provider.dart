@@ -282,18 +282,20 @@ class RecordingNotifier extends _$RecordingNotifier {
         print('[RecordingProvider] Upload response: $response');
 
         if (response != null) {
-          // Extract job_id and track it
+          // Extract job_id, content_id, and actual project_id from response
           final jobId = response['job_id'] as String?;
           final contentId = response['content_id'] as String?;
+          // When using AI matching, backend returns the actual project UUID
+          final actualProjectId = response['project_id'] as String? ?? projectId;
 
-          // Add job to processing tracker - same as file upload
-          if (jobId != null && projectId != null) {
+          // Add job to processing tracker using the actual project ID
+          if (jobId != null && actualProjectId != null) {
             await ref.read(processingJobsProvider.notifier).addJob(
               jobId: jobId,
               contentId: contentId,
-              projectId: projectId,
+              projectId: actualProjectId,  // Use actual project ID, not "auto"
             );
-            print('[RecordingProvider] Added job to processing tracker: $jobId');
+            print('[RecordingProvider] Added job to processing tracker: $jobId for project: $actualProjectId');
           }
 
           // Update state
@@ -310,9 +312,9 @@ class RecordingNotifier extends _$RecordingNotifier {
               fileSize: fileBytes?.length,
             );
 
-            if (projectId != null && contentId != null) {
+            if (actualProjectId != null && contentId != null) {
               await FirebaseAnalyticsService().logRecordingUploaded(
-                projectId: projectId,
+                projectId: actualProjectId,  // Use actual project ID
                 fileSize: fileBytes?.length ?? 0,
                 duration: state.duration.inSeconds,
               );
@@ -321,11 +323,12 @@ class RecordingNotifier extends _$RecordingNotifier {
             // Silently fail analytics
           }
 
-          // Return the response data
+          // Return the response data with actual project ID
           return {
             'filePath': filePath,
             'contentId': contentId,
             'jobId': jobId,
+            'projectId': actualProjectId,  // Include actual project ID
             'transcription': '', // Will be available via job tracking
           };
         } else {

@@ -220,12 +220,20 @@ class JobWebSocketService {
   
   /// Handle connection errors
   void _handleError(dynamic error) {
-    debugPrint('[JobWebSocket] WebSocket error: $error');
+    // Only log errors during retry process, don't spam the console
+    if (_reconnectAttempts < _maxReconnectAttempts) {
+      debugPrint('[JobWebSocket] WebSocket error (attempt $_reconnectAttempts/$_maxReconnectAttempts): $error');
+    } else {
+      debugPrint('[JobWebSocket] WebSocket error after max retries: $error');
+    }
     _handleDisconnect();
   }
   
   /// Handle disconnection
   void _handleDisconnect() {
+    // Prevent handling disconnect multiple times for the same event
+    if (!_isConnected) return;
+
     debugPrint('[JobWebSocket] Disconnected');
 
     _isConnected = false;
