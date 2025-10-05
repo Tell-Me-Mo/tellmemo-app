@@ -109,11 +109,9 @@ class ChunkingService:
         Returns:
             Normalized text
         """
-        # Replace multiple whitespaces with single space
-        text = re.sub(r'\s+', ' ', text)
-        
-        # Replace multiple newlines with double newline (paragraph separator)
-        text = re.sub(r'\n{3,}', '\n\n', text)
+        # Replace multiple whitespaces with single space (ReDoS-safe)
+        # This normalizes all whitespace (spaces, tabs, newlines) into single spaces
+        text = ' '.join(text.split())
         
         # Strip leading/trailing whitespace
         text = text.strip()
@@ -235,7 +233,7 @@ class ChunkingService:
         for speaker, text in matches:
             # Clean up the text
             text = text.strip().replace('\n', ' ')
-            text = re.sub(r'\s+', ' ', text)  # Normalize whitespace
+            text = ' '.join(text.split())  # Normalize whitespace (ReDoS-safe)
             
             if text:
                 segments.append(f"{speaker}: {text}")
@@ -257,7 +255,7 @@ class ChunkingService:
         
         for match in matches:
             decision = match.strip().replace('\n', ' ')
-            decision = re.sub(r'\s+', ' ', decision)
+            decision = ' '.join(decision.split())  # ReDoS-safe
             if decision:
                 decisions.append(f"Decision: {decision}")
         
@@ -278,7 +276,7 @@ class ChunkingService:
         
         for assignee, task in matches:
             task = task.strip().replace('\n', ' ')
-            task = re.sub(r'\s+', ' ', task)
+            task = ' '.join(task.split())  # ReDoS-safe
             if task:
                 actions.append(f"Action - {assignee.strip()}: {task}")
         
