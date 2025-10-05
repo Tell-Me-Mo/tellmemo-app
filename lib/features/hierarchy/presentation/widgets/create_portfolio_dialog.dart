@@ -71,8 +71,8 @@ class _CreatePortfolioDialogState extends ConsumerState<CreatePortfolioDialog> {
 
       if (mounted) {
         // Invalidate hierarchy state to refresh the UI
+        // Note: portfolioListProvider is already refreshed by createPortfolio()
         ref.invalidate(hierarchyStateProvider);
-        ref.invalidate(portfolioListProvider);
 
         Navigator.of(context).pop();
         widget.onPortfolioCreated?.call(portfolio);
