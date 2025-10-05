@@ -15,18 +15,15 @@ import 'firebase_options.dart' show DefaultFirebaseOptions;
 void main() async {
   // Initialize Sentry if enabled
   if (AppConfig.sentryEnabled && AppConfig.sentryDsn.isNotEmpty) {
-    await SentryFlutter.init(
-      (options) {
-        options.dsn = AppConfig.sentryDsn;
-        options.sendDefaultPii = true;
-        options.tracesSampleRate = 1.0;
-        options.profilesSampleRate = 1.0;
-        options.replay.sessionSampleRate = 0.1;
-        options.replay.onErrorSampleRate = 1.0;
-        options.attachStacktrace = true;
-      },
-      appRunner: () => _runApp(),
-    );
+    await SentryFlutter.init((options) {
+      options.dsn = AppConfig.sentryDsn;
+      options.sendDefaultPii = true;
+      options.tracesSampleRate = 1.0;
+      options.profilesSampleRate = 1.0;
+      options.replay.sessionSampleRate = 0.1;
+      options.replay.onErrorSampleRate = 1.0;
+      options.attachStacktrace = true;
+    }, appRunner: () => _runApp());
   } else {
     await _runApp();
   }
