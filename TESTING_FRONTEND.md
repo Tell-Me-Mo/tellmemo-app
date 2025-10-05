@@ -141,10 +141,10 @@ dev_dependencies:
 ### 2. Organization Management
 
 #### 2.1 Organization Screens (features/organizations/)
-- [ ] Organization wizard screen
+- [x] Organization wizard screen (13 tests)
 - [ ] Organization settings screen
 - [ ] Member management screen
-- [ ] Invite members dialog
+- [x] Invite members dialog (17 tests - with layout warnings)
 - [ ] CSV bulk invite dialog
 - [ ] Pending invitations list
 - [ ] Member role management dialog
@@ -504,11 +504,16 @@ dev_dependencies:
 
 **Test Coverage Status:**
 - ✅ **Fully Tested**: Authentication screens (5 screens + integration tests)
-- ❌ **Not Tested**: Remaining features (organizations, projects, hierarchy, etc.)
+- ✅ **Partially Tested**: Organizations module (2 screens: wizard + invite dialog - 30 tests total)
+- ❌ **Not Tested**: Remaining features (projects, hierarchy, dashboard, etc.)
 
 **Total Features**: ~250+ individual test items across 21 screens and ~80+ widgets
-**Currently Tested**: ~8% (auth module complete)
+**Currently Tested**: ~10% (auth + partial organizations)
 **Target**: 50-60% coverage
+
+**Organization Tests Completed:**
+- OrganizationWizardScreen: 13 tests ✅
+- InviteMembersDialog: 17 tests ✅ (with UI layout warnings that don't affect functionality)
 
 **Priority Testing Areas:**
 1. **Critical User Flows** (P0): Auth, project creation, content upload, query/search

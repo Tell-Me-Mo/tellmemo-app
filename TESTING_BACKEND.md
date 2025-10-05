@@ -109,10 +109,10 @@ freezegun>=1.4.0
 - [x] OTP verification
 
 #### 1.2 OAuth Authentication (auth.py)
-- [ ] OAuth signup
-- [ ] OAuth signin
-- [ ] OAuth token refresh
-- [ ] Session management
+- [x] OAuth signup
+- [x] OAuth signin
+- [x] OAuth token refresh
+- [x] Session management
 
 #### 1.3 Authorization
 - [ ] Role-based access control (RBAC)
@@ -435,13 +435,14 @@ freezegun>=1.4.0
 ---
 
 **Test Coverage Status:**
-- ✅ **Tested**: Native Authentication (9/9 features, 32 tests, 65% coverage)
+- ✅ **Fully Tested**: Native Authentication (9/9 features, 32 tests)
+- ✅ **Fully Tested**: OAuth Authentication (4/4 features, 25+ tests)
 - ❌ **Not Tested**: All other features
 
 **Total Features**: ~200+ individual test items
-**Currently Tested**: 4.5% (9/200 features)
+**Currently Tested**: 6.5% (13/200 features)
 **Target**: 60-70% coverage
-**Current Coverage**: 65% for tested modules (native_auth)
+**Current Coverage**: TBD (run `pytest --cov` to check)
 
 ## Test Execution
 
