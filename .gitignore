@@ -69,6 +69,13 @@ venv/
 ENV/
 .venv
 
+# Testing
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+*.cover
+
 # Docker volumes (local development)
 postgres_data/
 qdrant_data/
