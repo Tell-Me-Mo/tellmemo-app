@@ -261,19 +261,11 @@ class _ExecutiveSummaryViewerState extends ConsumerState<ExecutiveSummaryViewer>
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 900;
 
-    return Scaffold(
-      backgroundColor: colorScheme.surface,
-      body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(
-          horizontal: isDesktop ? 120 : 24,
-          vertical: isDesktop ? 32 : 16,
-        ),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: 1400),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+    final content = ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: 1400),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
               // Common Header (like general format)
               _buildCommonHeader(context),
               const SizedBox(height: 24),
@@ -346,8 +338,18 @@ class _ExecutiveSummaryViewerState extends ConsumerState<ExecutiveSummaryViewer>
               ],
             ],
           ),
+    );
+
+    return Scaffold(
+      backgroundColor: colorScheme.surface,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.symmetric(
+            horizontal: isDesktop ? 120 : 24,
+            vertical: isDesktop ? 32 : 16,
+          ),
+          child: isDesktop ? Center(child: content) : content,
         ),
-      ),
       ),
     );
   }
