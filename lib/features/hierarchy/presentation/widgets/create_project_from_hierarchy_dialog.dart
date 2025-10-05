@@ -191,9 +191,12 @@ class _CreateProjectDialogFromHierarchyState extends ConsumerState<CreateProject
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
+    return Material(
+      color: colorScheme.surface,
+      borderRadius: BorderRadius.circular(_DialogConstants.largeBorderRadius),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
             // Header
             _DialogHeader(
               colorScheme: colorScheme,
@@ -479,6 +482,7 @@ class _CreateProjectDialogFromHierarchyState extends ConsumerState<CreateProject
           onSubmit: _handleSubmit,
         ),
       ],
+      ),
     );
   }
 }

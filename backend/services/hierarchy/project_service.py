@@ -270,11 +270,12 @@ class ProjectService:
             raise
     
     @staticmethod
-    async def archive_project(session: AsyncSession, project_id: UUID) -> bool:
+    async def archive_project(session: AsyncSession, project_id: UUID, organization_id: UUID) -> bool:
         """Archive a project by setting its status to archived."""
         try:
             stmt = update(Project).where(
-                Project.id == project_id
+                Project.id == project_id,
+                Project.organization_id == organization_id
             ).values(
                 status=ProjectStatus.ARCHIVED,
                 updated_at=datetime.utcnow()
@@ -304,23 +305,24 @@ class ProjectService:
             raise
     
     @staticmethod
-    async def restore_project(session: AsyncSession, project_id: UUID) -> bool:
+    async def restore_project(session: AsyncSession, project_id: UUID, organization_id: UUID) -> bool:
         """Restore an archived project by setting its status to active."""
         try:
             # First get the project to restore
-            project = await ProjectService.get_project(session, project_id)
+            project = await ProjectService.get_project(session, project_id, organization_id)
             if not project:
                 logger.warning(f"Project not found for restoration: {project_id}")
                 return False
-            
+
             # Check if project is already active
             if project.status == ProjectStatus.ACTIVE:
                 logger.warning(f"Project {project_id} is already active")
                 return False
-            
-            # Check if another active project with the same name exists
+
+            # Check if another active project with the same name exists in the same organization
             existing_stmt = select(Project).where(
                 Project.name == project.name,
+                Project.organization_id == organization_id,
                 Project.status == ProjectStatus.ACTIVE,
                 Project.id != project_id
             )
@@ -405,14 +407,15 @@ class ProjectService:
     async def add_member(
         session: AsyncSession,
         project_id: UUID,
+        organization_id: UUID,
         name: str,
         email: str,
         role: str = "member"
     ) -> Optional[ProjectMember]:
         """Add a member to a project."""
         try:
-            # Check if project exists
-            project = await ProjectService.get_project(session, project_id)
+            # Check if project exists and belongs to organization
+            project = await ProjectService.get_project(session, project_id, organization_id)
             if not project:
                 return None
             
@@ -447,22 +450,28 @@ class ProjectService:
     async def remove_member(
         session: AsyncSession,
         project_id: UUID,
-        email: str
+        organization_id: UUID,
+        member_email: str
     ) -> bool:
         """Remove a member from a project."""
         try:
+            # First verify project belongs to organization
+            project = await ProjectService.get_project(session, project_id, organization_id)
+            if not project:
+                return False
+
             stmt = delete(ProjectMember).where(
                 ProjectMember.project_id == project_id,
-                ProjectMember.email == email
+                ProjectMember.email == member_email
             )
             
             result = await session.execute(stmt)
             
             if result.rowcount > 0:
-                logger.info(f"Removed member {email} from project {project_id}")
+                logger.info(f"Removed member {member_email} from project {project_id}")
                 return True
             else:
-                logger.warning(f"Member {email} not found in project {project_id}")
+                logger.warning(f"Member {member_email} not found in project {project_id}")
                 return False
                 
         except Exception as e:

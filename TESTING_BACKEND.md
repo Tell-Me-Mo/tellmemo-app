@@ -142,18 +142,18 @@ freezegun>=1.4.0
 ### 3. Project Management
 
 #### 3.1 Project CRUD (projects.py)
-- [ ] Create project
-- [ ] List projects
-- [ ] Get project by ID
-- [ ] Update project
-- [ ] Archive project
-- [ ] Restore archived project
-- [ ] Delete project
+- [x] Create project
+- [x] List projects
+- [x] Get project by ID
+- [x] Update project
+- [x] Archive project
+- [x] Restore archived project
+- [x] Delete project
 
 #### 3.2 Project Members
-- [ ] Add member to project
-- [ ] Remove member from project
-- [ ] List project members
+- [x] Add member to project
+- [x] Remove member from project
+- [x] List project members (via get project)
 
 #### 3.3 Project Assignment
 - [ ] Assign project to program
@@ -373,11 +373,6 @@ freezegun>=1.4.0
 - [ ] Vector DB health
 - [ ] LLM service health
 
-#### 15.2 Admin Operations (admin.py)
-- [ ] Reset system (dev only)
-- [ ] System diagnostics
-- [ ] Admin-level operations
-
 ### 16. Cross-Cutting Concerns
 
 #### 16.1 Error Handling
@@ -411,25 +406,6 @@ freezegun>=1.4.0
 - [ ] File type validation
 - [ ] File size limits
 
-### 17. Performance & Scale
-
-#### 17.1 Performance Tests
-- [ ] Query response time < 2s
-- [ ] Summary generation < 30s
-- [ ] Database query optimization
-- [ ] Concurrent request handling
-- [ ] WebSocket connection limits
-- [ ] Memory usage limits
-
-#### 17.2 Edge Cases
-- [ ] Empty content upload
-- [ ] Very large files (>100MB)
-- [ ] Long text content (>100k tokens)
-- [ ] Special characters in input
-- [ ] Concurrent updates (race conditions)
-- [ ] Missing required fields
-- [ ] Malformed requests
-
 ---
 
 **Test Coverage Status:**
@@ -438,10 +414,12 @@ freezegun>=1.4.0
 - ✅ **Fully Tested**: Authorization (4/4 features, 20 tests)
 - ✅ **Partially Tested**: Organization Management (7/10 features, 20 tests passing, 3 blocked by backend bug)
 - ✅ **Mostly Tested**: Invitations (3/4 features, 16/22 tests passing, 1 feature not implemented, 6 tests need fixture refactoring)
+- ✅ **Fully Tested**: Project CRUD (7/7 features, 34 tests passing)
+- ✅ **Fully Tested**: Project Members (3/3 features, included in 34 project tests)
 - ❌ **Not Tested**: All other features
 
 **Total Features**: ~200+ individual test items
-**Currently Tested**: 15% (30/200 features)
+**Currently Tested**: 20% (40/200 features)
 **Target**: 60-70% coverage
 **Current Coverage**: TBD (run `pytest --cov` to check)
 
@@ -457,11 +435,17 @@ freezegun>=1.4.0
 | 🔴 Critical | Pending invitations have `joined_at` set | `organizations.py:838` | Explicitly set `joined_at=None` for pending invitations | ✅ FIXED |
 | 🟡 Minor | Slug generation differs from test expectation | `organizations.py:143-169` | Update test (current behavior is better) | ❌ Not Fixed |
 | 🟡 Minor | Returns 403 instead of 401 for unauth | Multiple endpoints | Update tests to accept 403 | ❌ Not Fixed |
-| 🔵 Info | Bulk invite via CSV not implemented | N/A | Feature removed from scope per user | N/A |
 | 🔵 Info | Test infrastructure limitation | `conftest.py` | Shared client fixture prevents multi-user testing in same test - needs refactoring | Known Limitation |
+| 🔴 Critical | Projects router missing API prefix | `projects.py:16-19` | Add `prefix="/api/v1/projects"` to APIRouter definition | ✅ FIXED |
+| 🔴 Critical | Main.py has duplicate prefix for projects | `main.py:251` | Remove `prefix="/api/projects"` from include_router | ✅ FIXED |
+| 🔴 Critical | `archive_project` missing organization_id param | `project_service.py:273` | Add `organization_id: UUID` parameter and validate in WHERE clause | ✅ FIXED |
+| 🔴 Critical | `restore_project` missing organization_id param | `project_service.py:308` | Add `organization_id: UUID` parameter and validate project belongs to org | ✅ FIXED |
+| 🔴 Critical | `add_member` missing organization_id param | `project_service.py:407` | Add `organization_id: UUID` parameter to validate project ownership | ✅ FIXED |
+| 🔴 Critical | `remove_member` missing organization_id param | `project_service.py:450` | Add `organization_id: UUID` and rename `email` to `member_email` for consistency | ✅ FIXED |
+| 🔴 Critical | `remove_member` uses wrong variable name | `project_service.py:471,474` | Change `email` to `member_email` in logging statements | ✅ FIXED |
 
-**Impact Before Fixes**: 30+ tests blocked by critical bugs
-**Impact After Fixes**: All critical backend bugs FIXED! 16/22 invitation tests passing, 6 have test infrastructure issues (not backend bugs)
+**Impact Before Fixes**: 60+ tests blocked by critical bugs (30+ organization bugs, 30+ project bugs)
+**Impact After Fixes**: All critical backend bugs FIXED! All 34 project tests passing, 16/22 invitation tests passing (6 have test infrastructure issues, not backend bugs)
 
 ---
 

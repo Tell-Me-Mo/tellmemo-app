@@ -13,7 +13,10 @@ from models.project import ProjectStatus
 from services.hierarchy.project_service import ProjectService
 from utils.logger import get_logger
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/api/v1/projects",
+    tags=["Projects"]
+)
 logger = get_logger(__name__)
 
 
