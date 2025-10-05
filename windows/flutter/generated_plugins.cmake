@@ -6,7 +6,6 @@ list(APPEND FLUTTER_PLUGIN_LIST
   app_links
   file_selector_windows
   firebase_core
-  permission_handler_windows
   printing
   record_windows
   sentry_flutter
