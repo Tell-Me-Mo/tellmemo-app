@@ -936,6 +936,70 @@ button:focus-visible {
     margin-bottom: 60px;
 }
 
+/* Cookie Banner */
+.cookie-banner {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(15, 15, 20, 0.98);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid var(--border-color);
+    padding: 16px 20px;
+    z-index: 1000;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.cookie-banner.show {
+    transform: translateY(0);
+}
+
+.cookie-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.cookie-content p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.cookie-content a {
+    color: var(--primary-color);
+    text-decoration: underline;
+    transition: opacity 0.2s ease;
+}
+
+.cookie-content a:hover {
+    opacity: 0.8;
+}
+
+.btn-accept {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-accept:hover {
+    transform: translateY(-1px);
+    opacity: 0.9;
+}
+
 /* Responsive - Mobile First Design */
 @media (max-width: 768px) {
     /* Global fixes for text stability */
@@ -1005,23 +1069,25 @@ button:focus-visible {
     }
 
     .hero h1 {
-        font-size: 34px;
-        line-height: 1.15;
-        margin-bottom: 18px;
+        font-size: 38px;
+        line-height: 1.2;
+        margin-bottom: 20px;
         letter-spacing: -0.01em;
     }
 
     .hero-description {
-        font-size: 16px;
+        font-size: 17px;
         line-height: 1.6;
-        margin-bottom: 28px;
+        margin-bottom: 32px;
         max-width: 100%;
+        padding: 0 20px;
     }
 
     .open-source-badge {
-        padding: 7px 16px;
-        font-size: 12px;
-        margin-bottom: 20px;
+        padding: 8px 18px;
+        font-size: 13px;
+        margin-bottom: 28px;
+        margin-top: 12px;
         border-radius: 24px;
     }
 
@@ -1030,6 +1096,7 @@ button:focus-visible {
         align-items: stretch;
         gap: 12px;
         margin-bottom: 48px;
+        padding: 0 20px;
     }
 
     .hero-cta a {
@@ -1038,14 +1105,15 @@ button:focus-visible {
         justify-content: center;
         display: flex;
         align-items: center;
-        font-size: 16px;
+        font-size: 15px;
         font-weight: 500;
         border-radius: 12px;
         transition: var(--transition);
+        gap: 10px;
     }
 
     .hero-cta .btn-primary {
-        padding: 16px 24px;
+        padding: 14px 20px;
         background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
         box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
     }
@@ -1056,7 +1124,7 @@ button:focus-visible {
     }
 
     .hero-cta .btn-secondary {
-        padding: 15px 24px;
+        padding: 13px 20px;
         background: transparent;
         border: 1.5px solid var(--border-color);
         color: var(--text-primary);
@@ -1209,7 +1277,7 @@ button:focus-visible {
         flex-direction: column;
         gap: 1px;
         background: var(--border-color);
-        border-radius: 16px;
+        border-radius: 14px;
         overflow: hidden;
         position: relative;
         max-width: 100%;
@@ -1217,23 +1285,23 @@ button:focus-visible {
 
     .step {
         display: grid;
-        grid-template-columns: 40px 1fr;
+        grid-template-columns: 36px 1fr;
         grid-template-rows: auto auto;
-        column-gap: 18px;
-        row-gap: 10px;
+        column-gap: 14px;
+        row-gap: 8px;
         text-align: left;
         position: relative;
         background: var(--bg-tertiary);
-        padding: 26px 20px;
+        padding: 20px 18px;
         transition: background 0.3s ease;
     }
 
     .step:first-child {
-        border-radius: 16px 16px 0 0;
+        border-radius: 14px 14px 0 0;
     }
 
     .step:last-child {
-        border-radius: 0 0 16px 16px;
+        border-radius: 0 0 14px 14px;
     }
 
     .step:hover {
@@ -1247,16 +1315,16 @@ button:focus-visible {
     .step-number {
         grid-column: 1;
         grid-row: 1;
-        width: 40px;
-        height: 40px;
-        font-size: 19px;
+        width: 36px;
+        height: 36px;
+        font-size: 18px;
         font-weight: 700;
         margin: 0;
         padding: 0;
         display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: 10px;
+        border-radius: 9px;
         background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
         color: var(--accent-primary);
     }
@@ -1264,7 +1332,7 @@ button:focus-visible {
     .step h3 {
         grid-column: 2;
         grid-row: 1;
-        font-size: 18px;
+        font-size: 17px;
         font-weight: 600;
         margin: 0;
         padding: 0;
@@ -1277,8 +1345,8 @@ button:focus-visible {
     .step p {
         grid-column: 2;
         grid-row: 2;
-        font-size: 15px;
-        line-height: 1.55;
+        font-size: 14px;
+        line-height: 1.5;
         opacity: 0.85;
         margin: 0;
         padding: 0;
@@ -1627,5 +1695,27 @@ button:focus-visible {
         font-size: 14px;
         line-height: 1.65;
         margin-bottom: 10px;
+    }
+
+    /* Cookie Banner - Mobile */
+    .cookie-banner {
+        padding: 14px 16px;
+    }
+
+    .cookie-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 14px;
+    }
+
+    .cookie-content p {
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    .btn-accept {
+        width: 100%;
+        padding: 12px 24px;
+        font-size: 15px;
     }
 }

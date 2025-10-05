@@ -442,44 +442,44 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
                                                 ),
                                               ),
                                             ),
-                                            if (_showPasswordResetSuggestion)
-                                              const SizedBox(height: 4),
+                                            // if (_showPasswordResetSuggestion)
+                                            //   const SizedBox(height: 4),
                                           ],
-                                          if (_showPasswordResetSuggestion) ...[
-                                            InkWell(
-                                              onTap: _isLoading
-                                                  ? null
-                                                  : () {
-                                                      context.push(
-                                                        '/auth/forgot-password?email=${Uri.encodeComponent(_emailController.text.trim())}',
-                                                      );
-                                                    },
-                                              borderRadius: BorderRadius.circular(8),
-                                              child: Padding(
-                                                padding: const EdgeInsets.symmetric(
-                                                  horizontal: 32,
-                                                  vertical: 4,
-                                                ),
-                                                child: Row(
-                                                  children: [
-                                                    Icon(
-                                                      Icons.lock_reset_outlined,
-                                                      color: colorScheme.primary,
-                                                      size: 16,
-                                                    ),
-                                                    const SizedBox(width: 8),
-                                                    Text(
-                                                      'Forgot password? Reset it',
-                                                      style: textTheme.bodySmall?.copyWith(
-                                                        color: colorScheme.primary,
-                                                        fontWeight: FontWeight.w600,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          ],
+                                          // if (_showPasswordResetSuggestion) ...[
+                                          //   InkWell(
+                                          //     onTap: _isLoading
+                                          //         ? null
+                                          //         : () {
+                                          //             context.push(
+                                          //               '/auth/forgot-password?email=${Uri.encodeComponent(_emailController.text.trim())}',
+                                          //             );
+                                          //           },
+                                          //     borderRadius: BorderRadius.circular(8),
+                                          //     child: Padding(
+                                          //       padding: const EdgeInsets.symmetric(
+                                          //         horizontal: 32,
+                                          //         vertical: 4,
+                                          //       ),
+                                          //       child: Row(
+                                          //         children: [
+                                          //           Icon(
+                                          //             Icons.lock_reset_outlined,
+                                          //             color: colorScheme.primary,
+                                          //             size: 16,
+                                          //           ),
+                                          //           const SizedBox(width: 8),
+                                          //           Text(
+                                          //             'Forgot password? Reset it',
+                                          //             style: textTheme.bodySmall?.copyWith(
+                                          //               color: colorScheme.primary,
+                                          //               fontWeight: FontWeight.w600,
+                                          //             ),
+                                          //           ),
+                                          //         ],
+                                          //       ),
+                                          //     ),
+                                          //   ),
+                                          // ],
                                         ],
                                       ],
                                     ),
@@ -626,29 +626,29 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
                                   ),
                                 ),
                               ),
-                              TextButton(
-                                onPressed: _isLoading
-                                    ? null
-                                    : () {
-                                        final email = _emailController.text.trim();
-                                        if (email.isNotEmpty) {
-                                          context.push('/auth/forgot-password?email=${Uri.encodeComponent(email)}');
-                                        } else {
-                                          context.push('/auth/forgot-password');
-                                        }
-                                      },
-                                style: TextButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                ),
-                                child: Text(
-                                  'Forgot password?',
-                                  style: textTheme.bodyMedium?.copyWith(
-                                    color: colorScheme.primary,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: isMobile ? 14 : 15,
-                                  ),
-                                ),
-                              ),
+                              // TextButton(
+                              //   onPressed: _isLoading
+                              //       ? null
+                              //       : () {
+                              //           final email = _emailController.text.trim();
+                              //           if (email.isNotEmpty) {
+                              //             context.push('/auth/forgot-password?email=${Uri.encodeComponent(email)}');
+                              //           } else {
+                              //             context.push('/auth/forgot-password');
+                              //           }
+                              //         },
+                              //   style: TextButton.styleFrom(
+                              //     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              //   ),
+                              //   child: Text(
+                              //     'Forgot password?',
+                              //     style: textTheme.bodyMedium?.copyWith(
+                              //       color: colorScheme.primary,
+                              //       fontWeight: FontWeight.w600,
+                              //       fontSize: isMobile ? 14 : 15,
+                              //     ),
+                              //   ),
+                              // ),
                             ],
                           ),
                           const SizedBox(height: 32),

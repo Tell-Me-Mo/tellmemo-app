@@ -253,11 +253,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
 
   bool _isPasswordValid() {
     final password = _passwordController.text;
-    return password.length >= 8 &&
-        RegExp(r'[A-Z]').hasMatch(password) &&
-        RegExp(r'[a-z]').hasMatch(password) &&
-        RegExp(r'[0-9]').hasMatch(password) &&
-        RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password);
+    return password.length >= 6;
   }
 
   Widget _buildPasswordRequirement(String text, bool isMet) {
@@ -298,11 +294,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
     final isTablet = screenWidth >= 600 && screenWidth < 1200;
 
     final password = _passwordController.text;
-    final hasMinLength = password.length >= 8;
-    final hasUppercase = RegExp(r'[A-Z]').hasMatch(password);
-    final hasLowercase = RegExp(r'[a-z]').hasMatch(password);
-    final hasNumber = RegExp(r'[0-9]').hasMatch(password);
-    final hasSpecialChar = RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password);
+    final hasMinLength = password.length >= 6;
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -760,15 +752,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
                                   const SizedBox(height: 8),
                                   // Only show requirements that are not met
                                   if (!hasMinLength)
-                                    _buildPasswordRequirement('At least 8 characters', false),
-                                  if (!hasUppercase)
-                                    _buildPasswordRequirement('One uppercase letter (A-Z)', false),
-                                  if (!hasLowercase)
-                                    _buildPasswordRequirement('One lowercase letter (a-z)', false),
-                                  if (!hasNumber)
-                                    _buildPasswordRequirement('One number (0-9)', false),
-                                  if (!hasSpecialChar)
-                                    _buildPasswordRequirement('One special character (!@#\$%^&*)', false),
+                                    _buildPasswordRequirement('At least 6 characters', false),
                                 ],
                               ),
                             ),
