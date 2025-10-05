@@ -115,25 +115,24 @@ freezegun>=1.4.0
 - [x] Session management
 
 #### 1.3 Authorization
-- [ ] Role-based access control (RBAC)
-- [ ] Organization-level permissions
-- [ ] Project-level permissions
-- [ ] Multi-tenant data isolation (RLS)
+- [x] Role-based access control (RBAC)
+- [x] Organization-level permissions
+- [x] Project-level permissions
+- [x] Multi-tenant data isolation (RLS)
 
 ### 2. Organizations & Multi-Tenancy
 
 #### 2.1 Organization Management (organizations.py)
-- [ ] Create organization
-- [ ] List organizations
-- [ ] Get organization by ID
-- [ ] Update organization
-- [ ] Delete organization
-- [ ] Switch active organization
-- [ ] Organization member management
-- [ ] Add members to organization
-- [ ] Update member roles
-- [ ] Remove members from organization
-- [ ] List organization members
+- [x] Create organization
+- [x] List organizations
+- [x] Get organization by ID
+- [~] Update organization (tests written, 500 errors - needs investigation)
+- [x] Delete organization
+- [x] Switch active organization
+- [x] List organization members
+- [ ] Add members to organization (blocked: int vs UUID type mismatch in router)
+- [ ] Update member roles (blocked: int vs UUID type mismatch in router)
+- [ ] Remove members from organization (blocked: int vs UUID type mismatch in router)
 
 #### 2.2 Invitations (invitations.py)
 - [ ] Send organization invitations
@@ -437,12 +436,27 @@ freezegun>=1.4.0
 **Test Coverage Status:**
 - ✅ **Fully Tested**: Native Authentication (9/9 features, 32 tests)
 - ✅ **Fully Tested**: OAuth Authentication (4/4 features, 25+ tests)
+- ✅ **Fully Tested**: Authorization (4/4 features, 20 tests)
+- ✅ **Partially Tested**: Organization Management (7/10 features, 20 tests passing, 3 blocked by backend bug)
 - ❌ **Not Tested**: All other features
 
 **Total Features**: ~200+ individual test items
-**Currently Tested**: 6.5% (13/200 features)
+**Currently Tested**: 12% (24/200 features)
 **Target**: 60-70% coverage
 **Current Coverage**: TBD (run `pytest --cov` to check)
+
+## Backend Code Issues Found During Testing
+
+| Priority | Issue | File:Lines | Fix Required |
+|----------|-------|------------|--------------|
+| 🔴 Critical | Member endpoints use `int` instead of `UUID` | `organizations.py:946-1101` | Change `organization_id: int` → `UUID`, `user_id: int` → `UUID` |
+| 🔴 Critical | Organization update returns 500 error | `organizations.py:417-516` | Investigate datetime/commit issue |
+| 🟡 Minor | Slug generation differs from test expectation | `organizations.py:143-169` | Update test (current behavior is better) |
+| 🟡 Minor | Returns 403 instead of 401 for unauth | Multiple endpoints | Update tests to accept 403 |
+
+**Impact**: 8 tests blocked, 20 tests passing
+
+---
 
 ## Test Execution
 

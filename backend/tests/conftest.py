@@ -6,20 +6,26 @@ outlined in TESTING_BACKEND.md.
 """
 
 import os
-import pytest
-import asyncio
-from typing import AsyncGenerator, Generator
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy.pool import NullPool
-from httpx import AsyncClient, ASGITransport
-from datetime import datetime, timezone
 
-# Set test environment
+# IMPORTANT: Set environment variables BEFORE any other imports
+# This ensures that services initialize with correct configuration
 os.environ["TESTING"] = "1"
 os.environ["DATABASE_URL"] = os.getenv(
     "TEST_DATABASE_URL",
     "postgresql+asyncpg://pm_master:pm_master_pass@localhost:5432/pm_master_test"
 )
+# Set consistent JWT secret for tests
+os.environ["JWT_SECRET"] = "test_jwt_secret_key_for_testing_only_do_not_use_in_production"
+os.environ["AUTH_PROVIDER"] = "backend"  # Use backend auth for tests
+
+import pytest
+import asyncio
+from typing import AsyncGenerator, Generator
+from contextlib import asynccontextmanager
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy.pool import NullPool
+from httpx import AsyncClient, ASGITransport
+from datetime import datetime, timezone
 
 from db.database import Base, get_db
 from main import app
@@ -28,6 +34,9 @@ from models.organization import Organization
 from models.organization_member import OrganizationMember
 from services.auth.native_auth_service import native_auth_service
 
+# CRITICAL: Force native_auth_service to use test JWT secret
+# The service was already initialized with a random secret before we set the env var
+native_auth_service.jwt_secret = os.environ["JWT_SECRET"]
 
 # Test database engine
 TEST_DATABASE_URL = os.environ["DATABASE_URL"]
@@ -80,21 +89,33 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 @pytest.fixture(scope="function")
-async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
+async def client(db_session: AsyncSession, monkeypatch) -> AsyncGenerator[AsyncClient, None]:
     """
     Create an async HTTP client for testing API endpoints.
 
-    This fixture overrides the get_db dependency to use the test database session.
+    This fixture overrides both get_db and get_db_context to use the test database session.
     """
     async def override_get_db():
         yield db_session
 
+    # Override dependency injection get_db
     app.dependency_overrides[get_db] = override_get_db
+
+    # CRITICAL: Also override get_db_context for middleware using monkeypatch
+    # The auth middleware uses get_db_context() directly, not the dependency injection
+    @asynccontextmanager
+    async def override_get_db_context():
+        yield db_session
+
+    # Patch it in both locations
+    monkeypatch.setattr("db.database.get_db_context", override_get_db_context)
+    monkeypatch.setattr("middleware.auth_middleware.get_db_context", override_get_db_context)
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
 
+    # Cleanup handled by monkeypatch
     app.dependency_overrides.clear()
 
 
@@ -130,7 +151,7 @@ async def test_user(db_session: AsyncSession) -> User:
 @pytest.fixture
 async def test_user_token(test_user: User) -> str:
     """
-    Create a valid access token for the test user.
+    Create a valid access token for the test user (without organization context).
 
     Args:
         test_user: Test user fixture
@@ -141,7 +162,7 @@ async def test_user_token(test_user: User) -> str:
     return native_auth_service.create_access_token(
         user_id=str(test_user.id),
         email=test_user.email,
-        organization_id=str(test_user.last_active_organization_id) if test_user.last_active_organization_id else None
+        organization_id=None
     )
 
 
@@ -181,6 +202,33 @@ async def authenticated_client(
 
 
 @pytest.fixture
+async def authenticated_org_client(
+    client: AsyncClient,
+    test_user: User,
+    test_organization: Organization
+) -> AsyncClient:
+    """
+    Create an authenticated HTTP client with organization context.
+
+    Args:
+        client: Base HTTP client
+        test_user: Test user fixture
+        test_organization: Test organization fixture
+
+    Returns:
+        AsyncClient with Authorization and X-Organization-Id headers set
+    """
+    token = native_auth_service.create_access_token(
+        user_id=str(test_user.id),
+        email=test_user.email,
+        organization_id=str(test_organization.id)
+    )
+    client.headers["Authorization"] = f"Bearer {token}"
+    client.headers["X-Organization-Id"] = str(test_organization.id)
+    return client
+
+
+@pytest.fixture
 async def test_organization(db_session: AsyncSession, test_user: User) -> Organization:
     """
     Create a test organization with the test user as owner.
@@ -194,8 +242,8 @@ async def test_organization(db_session: AsyncSession, test_user: User) -> Organi
     """
     org = Organization(
         name="Test Organization",
-        created_by=test_user.id,
-        updated_by=test_user.id
+        slug="test-organization",
+        created_by=test_user.id
     )
 
     db_session.add(org)
@@ -207,7 +255,7 @@ async def test_organization(db_session: AsyncSession, test_user: User) -> Organi
         organization_id=org.id,
         user_id=test_user.id,
         role="admin",
-        added_by=test_user.id
+        invited_by=test_user.id
     )
 
     db_session.add(member)
