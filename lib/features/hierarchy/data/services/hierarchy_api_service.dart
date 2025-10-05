@@ -35,7 +35,7 @@ abstract class HierarchyApiService {
   Future<HttpResponse<dynamic>> getHierarchyStatistics();
 
   // Portfolio endpoints
-  @GET('/api/portfolios')
+  @GET('/api/portfolios/')
   Future<List<PortfolioModel>> getPortfolios();
 
   @GET('/api/portfolios/{id}')
@@ -66,13 +66,13 @@ abstract class HierarchyApiService {
   Future<HttpResponse<dynamic>> getPortfolioStatistics(@Path('id') String portfolioId);
 
   // Program endpoints
-  @GET('/api/programs')
+  @GET('/api/programs/')
   Future<List<ProgramModel>> getPrograms(@Query('portfolio_id') String? portfolioId);
 
   @GET('/api/programs/{id}')
   Future<ProgramModel> getProgram(@Path('id') String programId);
 
-  @POST('/api/programs')
+  @POST('/api/programs/')
   Future<ProgramModel> createProgram(@Body() Map<String, dynamic> request);
 
   @PUT('/api/programs/{id}')
