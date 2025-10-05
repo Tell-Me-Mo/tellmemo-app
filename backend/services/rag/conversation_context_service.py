@@ -254,9 +254,9 @@ Question: {question}"""
         # Clean and truncate the question for a title
         title = first_question.strip()
 
-        # Remove question marks and extra whitespace
-        title = re.sub(r'[?!]+$', '', title)
-        title = re.sub(r'\s+', ' ', title)
+        # Remove question marks and extra whitespace (ReDoS-safe)
+        title = title.rstrip('?!')
+        title = ' '.join(title.split())
 
         # Truncate if too long
         if len(title) > 50:
