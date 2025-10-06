@@ -20,6 +20,12 @@ class _HierarchySearchBarState extends ConsumerState<HierarchySearchBar> {
   final _focusNode = FocusNode();
 
   @override
+  void initState() {
+    super.initState();
+    _controller.addListener(() => setState(() {}));
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     _focusNode.dispose();

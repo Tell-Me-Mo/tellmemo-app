@@ -104,8 +104,11 @@ class _EnhancedSearchBarState extends ConsumerState<EnhancedSearchBar>
   }
   
   void _onSearchTextChanged() {
+    // Update UI immediately for clear button visibility
+    setState(() {});
+
     _debounceTimer?.cancel();
-    
+
     if (_searchController.text.length < UIConstants.minSearchLength) {
       _removeSuggestionsOverlay();
       if (_searchController.text.isEmpty) {
@@ -113,7 +116,7 @@ class _EnhancedSearchBarState extends ConsumerState<EnhancedSearchBar>
       }
       return;
     }
-    
+
     _debounceTimer = Timer(
       Duration(milliseconds: UIConstants.searchDebounceMilliseconds),
       () {

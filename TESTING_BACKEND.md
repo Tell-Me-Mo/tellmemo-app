@@ -195,13 +195,13 @@ freezegun>=1.4.0
 - [x] Deletion impact analysis
 
 #### 4.3 Hierarchy Operations (hierarchy.py)
-- [ ] Get full hierarchy tree
-- [ ] Move items in hierarchy
-- [ ] Bulk move items
-- [ ] Bulk delete items
-- [ ] Get hierarchy path (breadcrumbs)
-- [ ] Search hierarchy
-- [ ] Hierarchy statistics summary
+- [x] Get full hierarchy tree
+- [x] Move items in hierarchy
+- [x] Bulk move items
+- [x] Bulk delete items
+- [x] Get hierarchy path (breadcrumbs)
+- [x] Search hierarchy (fully implemented)
+- [x] Hierarchy statistics summary
 
 ### 5. Content Management
 
@@ -427,10 +427,11 @@ freezegun>=1.4.0
 - ✅ **Fully Tested**: Project Assignment (11/11 features, 11 tests passing) - **NO BUGS FOUND** ✨
 - ✅ **Fully Tested**: Portfolio Management (10/10 features, 38 tests passing) - **NO BUGS** ✨
 - ✅ **Fully Tested**: Program Management (10/10 features, 45 tests passing) - **NO BUGS FOUND** ✨
+- ✅ **Fully Tested**: Hierarchy Operations (7/7 features, 48 tests passing) - **CRITICAL BUGS FIXED** 🔧
 - ❌ **Not Tested**: All other features
 
 **Total Features**: ~200+ individual test items
-**Currently Tested**: 35% (71/200 features)
+**Currently Tested**: 41% (85/200 features)
 **Target**: 60-70% coverage
 **Current Coverage**: TBD (run `pytest --cov` to check)
 
@@ -457,11 +458,25 @@ freezegun>=1.4.0
 | ✅ None | Project Assignment - NO BUGS FOUND | `projects.py, project_service.py` | Proper validation, multi-tenant security, error handling all working correctly | ✅ VERIFIED |
 | 🔴 Critical | Invalid `.then()` JavaScript syntax in Python code | `portfolios.py:781` | Remove line 781 (dead code - line 796 already sets program_count correctly). The `.then()` method doesn't exist in Python/SQLAlchemy and would cause AttributeError if reached. | ✅ FIXED |
 | ✅ None | Program Management - NO BUGS FOUND | `programs.py` | All endpoints properly validated, multi-tenant security enforced, cascade/orphan delete working correctly | ✅ VERIFIED |
+| 🔴 Critical | Missing `organization_id` parameter in `move_item` | `hierarchy_service.py:186-192` | Add `organization_id: Optional[UUID] = None` parameter to method signature | ✅ FIXED |
+| 🔴 Critical | Missing multi-tenant validation in `_move_project` | `hierarchy_service.py:223-237` | Add organization_id parameter and validate project belongs to org (line 240-241) | ✅ FIXED |
+| 🔴 Critical | Missing multi-tenant validation for target portfolio | `hierarchy_service.py:249-255` | Add validation that target portfolio belongs to same organization (line 258-259) | ✅ FIXED |
+| 🔴 Critical | Missing multi-tenant validation for target program | `hierarchy_service.py:273-279` | Add validation that target program belongs to same organization (line 282-283) | ✅ FIXED |
+| 🔴 Critical | Missing `organization_id` parameter in `_move_program` | `hierarchy_service.py:323-341` | Add organization_id parameter and validate program belongs to org (line 344-345) | ✅ FIXED |
+| 🔴 Critical | Missing multi-tenant validation for target portfolio in program move | `hierarchy_service.py:350-356` | Add validation that target portfolio belongs to same organization (line 359-360) | ✅ FIXED |
+| 🔴 Critical | Missing `organization_id` parameter in `bulk_move_items` | `hierarchy_service.py:411-416` | Add organization_id parameter and pass to move_item calls (line 445) | ✅ FIXED |
+| 🔴 Critical | Missing `organization_id` parameter in `get_hierarchy_path` | `hierarchy_service.py:463-468` | Add organization_id parameter to method signature | ✅ FIXED |
+| 🔴 Critical | Missing multi-tenant validation in hierarchy path for projects | `hierarchy_service.py:491-493` | Add validation check for project.organization_id (line 496-497) | ✅ FIXED |
+| 🔴 Critical | Missing multi-tenant validation in hierarchy path for programs | `hierarchy_service.py:529-531` | Add validation check for program.organization_id (line 534-535) | ✅ FIXED |
+| 🔴 Critical | Missing multi-tenant validation in hierarchy path for portfolios | `hierarchy_service.py:556-566` | Add validation check for portfolio.organization_id (line 559-560) | ✅ FIXED |
+| 🔴 Critical | Missing `Query` import for list parameter parsing | `hierarchy.py:1,460` | Add `Query` to FastAPI imports and use `Query(default=None)` for item_types parameter | ✅ FIXED |
+| 🔴 Critical | Missing `selectinload` import in search endpoint | `hierarchy.py:474` | Add `from sqlalchemy.orm import selectinload` to function imports | ✅ FIXED |
 
 **Impact Before Fixes**: 60+ tests blocked by critical bugs (30+ organization bugs, 30+ project bugs)
 **Impact After Fixes**: All critical backend bugs FIXED! All 34 project tests passing, 16/22 invitation tests passing (6 have test infrastructure issues, not backend bugs)
 **Portfolio Testing Impact**: 1 critical bug found and fixed (dead code with JavaScript .then() syntax removed)
 **Program Management Testing Impact**: NO BUGS FOUND - Implementation is solid! ✨
+**Hierarchy Operations Testing Impact**: 11 CRITICAL SECURITY BUGS FOUND AND FIXED - Missing multi-tenant validation allowed cross-organization access! 🔧
 
 **Project Assignment Testing Results (2025-10-05)**:
 - ✅ 11/11 tests passing
@@ -494,6 +509,33 @@ freezegun>=1.4.0
 - ✅ Statistics endpoint includes all relevant metrics (project count, content, summaries, activities)
 - ✅ Portfolio filtering in list endpoint working correctly
 - ✅ **NO BUGS FOUND** - Implementation is solid! ✨
+
+**Hierarchy Operations Testing Results (2025-10-06)**:
+- ✅ 48/48 tests passing (after fixes and search implementation)
+- 🔴 **11 CRITICAL SECURITY BUGS FOUND** - Missing multi-tenant validation throughout service
+- 🔴 **1 BUG FOUND IN SEARCH** - Missing `Query` import caused list parameter parsing issues
+- ✅ Get full hierarchy tree working correctly
+- ✅ Hierarchy correctly excludes archived projects by default
+- ✅ Hierarchy includes orphaned programs and projects
+- ✅ Move project to portfolio/program working correctly
+- ✅ Move program between portfolios working correctly
+- ✅ Bulk move operations working with partial failure handling
+- ✅ Bulk delete with reassignment working correctly
+- ✅ Hierarchy path (breadcrumbs) working for all entity types
+- ✅ Statistics endpoint provides accurate counts
+- ✅ Role-based access control enforced (admin required for bulk delete)
+- ✅ **Search hierarchy fully implemented** with 15 comprehensive tests:
+  - Case-insensitive search across portfolios, programs, and projects
+  - Search by name and description
+  - Filter by item types (portfolio, program, project)
+  - Filter by portfolio scope
+  - Relevance-based sorting (exact match > starts with > contains)
+  - Excludes archived projects
+  - Multi-tenant isolation enforced
+  - Respects limit parameter
+  - Includes full hierarchy path in results
+  - Validates invalid parameters (item types, portfolio ID)
+- 🔧 **ALL BUGS FIXED** - Multi-tenant validation enforced, search fully functional
 
 ---
 

@@ -188,30 +188,32 @@ class HierarchyService:
         item_id: UUID,
         item_type: str,
         target_parent_id: Optional[UUID] = None,
-        target_parent_type: Optional[str] = None
+        target_parent_type: Optional[str] = None,
+        organization_id: Optional[UUID] = None
     ) -> Dict[str, Any]:
         """Move an item within the hierarchy.
-        
+
         Args:
             session: Database session
             item_id: ID of item to move
             item_type: Type of item ('project', 'program')
             target_parent_id: ID of target parent (portfolio/program)
             target_parent_type: Type of target parent ('portfolio', 'program')
-            
+            organization_id: Organization ID for multi-tenant security
+
         Returns:
             Dictionary with move result and updated hierarchy path
-            
+
         Raises:
             ValueError: If move is invalid
         """
         if item_type == 'project':
             return await HierarchyService._move_project(
-                session, item_id, target_parent_id, target_parent_type
+                session, item_id, target_parent_id, target_parent_type, organization_id
             )
         elif item_type == 'program':
             return await HierarchyService._move_program(
-                session, item_id, target_parent_id, target_parent_type
+                session, item_id, target_parent_id, target_parent_type, organization_id
             )
         else:
             raise ValueError(f"Invalid item type: {item_type}")
@@ -222,7 +224,8 @@ class HierarchyService:
         session: AsyncSession,
         project_id: UUID,
         target_parent_id: Optional[UUID],
-        target_parent_type: Optional[str]
+        target_parent_type: Optional[str],
+        organization_id: Optional[UUID] = None
     ) -> Dict[str, Any]:
         """Move a project within the hierarchy."""
         # Get the project
@@ -232,6 +235,10 @@ class HierarchyService:
         project = project_result.scalars().first()
         if not project:
             raise ValueError(f"Project with ID '{project_id}' not found")
+
+        # Validate project belongs to organization
+        if organization_id and project.organization_id != organization_id:
+            raise ValueError(f"Project does not belong to the specified organization")
         
         old_portfolio_id = project.portfolio_id
         old_program_id = project.program_id
@@ -239,13 +246,18 @@ class HierarchyService:
         if target_parent_type == 'portfolio':
             # Moving to direct portfolio (no program)
             if target_parent_id:
-                # Verify portfolio exists
+                # Verify portfolio exists and belongs to organization
                 portfolio_result = await session.execute(
                     select(Portfolio).where(Portfolio.id == target_parent_id)
                 )
-                if not portfolio_result.scalars().first():
+                portfolio = portfolio_result.scalars().first()
+                if not portfolio:
                     raise ValueError(f"Portfolio with ID '{target_parent_id}' not found")
-                
+
+                # Validate portfolio belongs to same organization
+                if organization_id and portfolio.organization_id != organization_id:
+                    raise ValueError(f"Portfolio does not belong to the specified organization")
+
                 project.portfolio_id = target_parent_id
                 project.program_id = None
             else:
@@ -257,7 +269,7 @@ class HierarchyService:
             # Moving to program
             if not target_parent_id:
                 raise ValueError("Program ID required when moving to program")
-            
+
             # Get program and verify it exists
             program_result = await session.execute(
                 select(Program).where(Program.id == target_parent_id)
@@ -265,7 +277,11 @@ class HierarchyService:
             program = program_result.scalars().first()
             if not program:
                 raise ValueError(f"Program with ID '{target_parent_id}' not found")
-            
+
+            # Validate program belongs to same organization
+            if organization_id and program.organization_id != organization_id:
+                raise ValueError(f"Program does not belong to the specified organization")
+
             project.program_id = target_parent_id
             project.portfolio_id = program.portfolio_id  # Inherit portfolio from program
             
@@ -308,13 +324,14 @@ class HierarchyService:
         session: AsyncSession,
         program_id: UUID,
         target_parent_id: Optional[UUID],
-        target_parent_type: Optional[str]
+        target_parent_type: Optional[str],
+        organization_id: Optional[UUID] = None
     ) -> Dict[str, Any]:
         """Move a program within the hierarchy."""
         # Programs can only be moved between portfolios
         if target_parent_type != 'portfolio':
             raise ValueError("Programs can only be moved to portfolios")
-        
+
         # Get the program
         program_result = await session.execute(
             select(Program).where(Program.id == program_id)
@@ -322,16 +339,25 @@ class HierarchyService:
         program = program_result.scalars().first()
         if not program:
             raise ValueError(f"Program with ID '{program_id}' not found")
-        
+
+        # Validate program belongs to organization
+        if organization_id and program.organization_id != organization_id:
+            raise ValueError(f"Program does not belong to the specified organization")
+
         if not target_parent_id:
             raise ValueError("Portfolio ID required when moving program")
-        
-        # Verify target portfolio exists
+
+        # Verify target portfolio exists and belongs to organization
         portfolio_result = await session.execute(
             select(Portfolio).where(Portfolio.id == target_parent_id)
         )
-        if not portfolio_result.scalars().first():
+        portfolio = portfolio_result.scalars().first()
+        if not portfolio:
             raise ValueError(f"Portfolio with ID '{target_parent_id}' not found")
+
+        # Validate portfolio belongs to same organization
+        if organization_id and portfolio.organization_id != organization_id:
+            raise ValueError(f"Portfolio does not belong to the specified organization")
         
         # Check for name conflicts in target portfolio
         existing_result = await session.execute(
@@ -386,16 +412,18 @@ class HierarchyService:
         session: AsyncSession,
         items: List[Dict[str, Any]],
         target_parent_id: Optional[UUID] = None,
-        target_parent_type: Optional[str] = None
+        target_parent_type: Optional[str] = None,
+        organization_id: Optional[UUID] = None
     ) -> Dict[str, Any]:
         """Move multiple items in bulk.
-        
+
         Args:
             session: Database session
             items: List of items to move with 'id' and 'type' keys
             target_parent_id: Target parent ID
             target_parent_type: Target parent type
-            
+            organization_id: Organization ID for multi-tenant security
+
         Returns:
             Dictionary with bulk move results
         """
@@ -405,15 +433,16 @@ class HierarchyService:
             'errors': [],
             'moved_items': []
         }
-        
+
         for item in items:
             try:
                 result = await HierarchyService.move_item(
-                    session, 
-                    UUID(item['id']), 
+                    session,
+                    UUID(item['id']),
                     item['type'],
                     target_parent_id,
-                    target_parent_type
+                    target_parent_type,
+                    organization_id
                 )
                 results['success_count'] += 1
                 results['moved_items'].append(result['item'])
@@ -434,20 +463,22 @@ class HierarchyService:
     async def get_hierarchy_path(
         session: AsyncSession,
         item_id: UUID,
-        item_type: str
+        item_type: str,
+        organization_id: Optional[UUID] = None
     ) -> List[Dict[str, Any]]:
         """Get the full hierarchy path for an item.
-        
+
         Args:
             session: Database session
             item_id: Item ID
             item_type: Item type
-            
+            organization_id: Organization ID for multi-tenant security
+
         Returns:
             List of hierarchy path items from root to target
         """
         path = []
-        
+
         if item_type == 'project':
             project_result = await session.execute(
                 select(Project)
@@ -459,6 +490,10 @@ class HierarchyService:
             )
             project = project_result.scalars().first()
             if not project:
+                return path
+
+            # Validate project belongs to organization
+            if organization_id and project.organization_id != organization_id:
                 return path
             
             # Add portfolio to path if exists
@@ -494,6 +529,10 @@ class HierarchyService:
             program = program_result.scalars().first()
             if not program:
                 return path
+
+            # Validate program belongs to organization
+            if organization_id and program.organization_id != organization_id:
+                return path
             
             # Add portfolio to path if exists
             if program.portfolio:
@@ -516,10 +555,14 @@ class HierarchyService:
             )
             portfolio = portfolio_result.scalars().first()
             if portfolio:
+                # Validate portfolio belongs to organization
+                if organization_id and portfolio.organization_id != organization_id:
+                    return path
+
                 path.append({
                     'id': str(portfolio.id),
                     'name': portfolio.name,
                     'type': 'portfolio'
                 })
-        
+
         return path
