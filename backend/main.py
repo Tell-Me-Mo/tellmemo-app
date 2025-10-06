@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 import sentry_sdk
 
 from config import get_settings, configure_logging
-from routers import health, projects, content, queries, admin, scheduler, activities, websocket_audio, transcription, jobs, websocket_jobs, integrations, upload, portfolios, programs, hierarchy, hierarchy_summaries, content_availability, unified_summaries, risks_tasks, lessons_learned, auth, native_auth, organizations, invitations, websocket_notifications, support_tickets, websocket_tickets, conversations, notifications
+from routers import health, projects, content, queries, admin, scheduler, activities, transcription, jobs, websocket_jobs, integrations, upload, portfolios, programs, hierarchy, hierarchy_summaries, content_availability, unified_summaries, risks_tasks, lessons_learned, auth, native_auth, organizations, invitations, websocket_notifications, support_tickets, websocket_tickets, conversations, notifications
 from utils.logger import get_logger
 from db.database import init_database, close_database
 from db.multi_tenant_vector_store import multi_tenant_vector_store
@@ -255,7 +255,6 @@ app.include_router(queries.router, prefix="/api/projects", tags=["queries"])
 app.include_router(conversations.router, prefix="/api/projects", tags=["conversations"])
 app.include_router(scheduler.router, prefix="/api/scheduler", tags=["scheduler"])
 app.include_router(activities.router, tags=["activities"])
-app.include_router(websocket_audio.router, tags=["websocket"])
 app.include_router(websocket_jobs.router, tags=["websocket"])
 app.include_router(transcription.router, tags=["transcription"])
 app.include_router(jobs.router, prefix="/api", tags=["jobs"])

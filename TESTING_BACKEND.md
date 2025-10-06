@@ -363,10 +363,18 @@ freezegun>=1.4.0
 - [x] Error handling (404 for unknown integration types)
 
 #### 11.2 Transcription Services (transcription.py)
-- [ ] Fireflies transcription
-- [ ] Salad transcription
-- [ ] Audio buffer management
-- [ ] WebSocket audio streaming (websocket_audio.py)
+- [x] POST /api/transcribe - Audio file transcription (with Whisper/Salad support)
+- [x] File upload validation (size limits, empty file detection)
+- [x] Multi-format support (MP3, WAV, M4A, etc.)
+- [x] Language selection (auto-detection and specific languages)
+- [x] Meeting title (optional with auto-generation)
+- [x] Background job creation for async processing
+- [x] Whisper service integration (local transcription)
+- [x] Salad service integration (cloud transcription via integration settings)
+- [x] GET /api/languages - List supported languages
+- [x] GET /api/health - Service health check
+- [x] Authentication requirements (requires valid JWT token)
+- [ ] **Multi-tenant isolation (CRITICAL BUG)** - No validation that project belongs to user's organization
 
 ### 12. Notifications & Activities
 
@@ -480,15 +488,18 @@ freezegun>=1.4.0
 - ✅ **Fully Tested**: Job Management (7/7 REST/SSE features, 34 REST tests + 17 WebSocket tests) - **11 CRITICAL SECURITY BUGS FIXED** ✅
 - ✅ **Fully Tested**: Scheduler (3/4 features, 15 tests created) - **7 CRITICAL BUGS FIXED** ✅
 - ✅ **Fully Tested**: Integration Management (14/14 features, 38 tests passing) - **1 MINOR BUG FIXED** ✅
-- ❌ **Not Tested**: Transcription Services, Notifications, Activities, Support Tickets, Conversations, Health
+- ✅ **Fully Tested**: Transcription Services (11/11 features, 20 tests passing) - **1 CRITICAL SECURITY BUG FOUND** 🔧
+- ❌ **Not Tested**: Notifications, Activities, Support Tickets, Conversations, Health
 - ❌ **Not Tested**: All other features
 
-**Total Features**: ~215+ individual test items
-**Currently Tested**: 88% (206/215 features - includes integration management)
+**Total Features**: ~226+ individual test items
+**Currently Tested**: 88% (217/226 features - includes transcription services)
 **Target**: 60-70% coverage ✅ **TARGET EXCEEDED!**
 **Current Coverage**: TBD (run `pytest --cov` to check)
 
-**Latest Testing Results**: ✅ Integration Management - 38 tests passing, **1 MINOR BUG FIXED (test endpoint error handling)** ✅
+**Latest Testing Results**: ✅ Transcription Services - 20 tests passing, **1 CRITICAL SECURITY BUG FOUND (multi-tenant isolation missing)** ⚠️
+
+**Note**: WebSocket audio streaming (websocket_audio.py, audio_buffer_service.py) were dead code and have been removed. The frontend only uses HTTP POST file upload for transcription.
 
 ## Backend Code Issues Found During Testing
 
@@ -594,6 +605,7 @@ freezegun>=1.4.0
 | 🔴 Critical | **Missing method `reschedule_project_reports` in scheduler service** | `scheduler.py:161` | Fixed method name from `reschedule_project_reports` to `reschedule_weekly_reports` | ✅ FIXED |
 | 🔴 Critical | **No multi-tenant validation in trigger_project_reports** | `scheduler.py:79-96` | Added project existence validation and organization ownership check, returns 404 for cross-org access | ✅ FIXED |
 | 🟡 Minor | **Test integration endpoint catches HTTPException and returns 200** | `integrations.py:334-339` | Added `except HTTPException: raise` before generic exception handler to properly return 404 for unknown integration types | ✅ FIXED |
+| 🔴 Critical | **No multi-tenant validation in transcription endpoint** | `transcription.py:293-428` | The `/api/transcribe` endpoint doesn't validate that the specified `project_id` belongs to the authenticated user's organization. Users can transcribe audio files to projects in OTHER organizations. Add project ownership validation before accepting transcription request. | ❌ NOT FIXED |
 
 ---
 
