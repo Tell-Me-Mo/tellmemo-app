@@ -695,12 +695,49 @@ All layout and responsive design utilities tested work correctly without any pro
 
 ### 23. Utilities & Helpers
 
-#### 23.1 Core Utils (core/utils/)
-- [ ] Animation utils
-- [ ] Logger
-- [ ] Responsive utils
-- [ ] Screen info
-- [ ] DateTime converter
+#### 23.1 Core Utils (core/utils/) ✅
+- [x] Animation utils (37 tests - **all passing ✅**)
+- [x] Logger (16 tests - **all passing ✅**)
+- [x] Responsive utils (45 tests - **previously tested ✅**)
+- [x] Screen info (41 tests - **previously tested ✅**)
+- [x] DateTime converter (52 tests - **all passing ✅**)
+
+**Total: 191 tests (105 new tests + 86 previously tested) - All passing ✅**
+
+**Production Bugs Found: 0** ✅
+
+All core utility functions tested work correctly without any production bugs discovered.
+
+**Test Coverage Breakdown:**
+
+*AnimationUtils (test/core/utils/animation_utils_test.dart) - 37 tests ✅*
+- slideUpDialogRoute (4 tests): route creation, custom parameters, widget rendering, animation transitions
+- fadeScaleDialogRoute (3 tests): route creation, custom parameters, widget rendering
+- buildAnimatedListItem (3 tests): slide/fade animations, left/right directional sliding
+- createStaggeredAnimations (5 tests): animation count, intervals, single item, empty list, custom duration
+- AnimatedExpansion widget (6 tests): expanded/collapsed states, animation transitions, custom duration/curve, controller disposal
+- AnimatedStateTransition widget (9 tests): default child, loading/error/empty states, state precedence, animation transitions, custom duration, fallback behavior
+- ShimmerLoading widget (7 tests): shimmer on/off, animation start/stop, custom duration, controller disposal, state toggling
+
+*Logger (test/core/utils/logger_test.dart) - 16 tests ✅*
+- debug() method (3 tests): logging with/without error object
+- info() method (3 tests): logging with/without error object
+- warning() method (3 tests): logging with/without error object
+- error() method (3 tests): logging with/without error object
+- Edge cases (4 tests): empty strings, very long messages (10k chars), special characters, Unicode
+
+*DateTimeUtils (test/core/utils/datetime_utils_test.dart) - 52 tests ✅*
+- parseUtcToLocal (7 tests): valid UTC parsing, with/without Z suffix, UTC to local conversion, null/invalid/empty handling, milliseconds
+- parseUtcToLocalRequired (4 tests): valid UTC parsing, throws on invalid input, milliseconds
+- formatDate (4 tests): correct formatting, UTC conversion, single digit days, different months
+- formatTime (5 tests): 24-hour format, leading zeros, UTC conversion, midnight, noon
+- formatDateTime (3 tests): combined date/time formatting, UTC conversion, single digit days
+- formatDateTimeShort (3 tests): short format without year, UTC conversion
+- formatTimeAgo (9 tests): "Just now" (<60s), minutes (60s-1h), hours (1h-24h), days (1d-7d), formatted date (>7d), UTC handling, edge cases at 59s/60s
+- formatRelativeTime (6 tests): "Today at", "Yesterday at", days ago with time, >7 days with full date/time, UTC handling, midnight edge case
+- toIsoString (4 tests): local/UTC to ISO string, milliseconds inclusion, always UTC output
+- ensureLocal (3 tests): UTC to local conversion, local unchanged, milliseconds preservation
+- Edge cases (4 tests): leap year dates, year boundary, very old dates (1900), far future dates (2100)
 
 #### 23.2 Extensions (core/extensions/)
 - [ ] Notification extensions
@@ -766,10 +803,11 @@ All layout and responsive design utilities tested work correctly without any pro
 - ✅ **Input Validation Fully Tested**: FormValidators class (**87 tests**, **all passing ✅** - **1 production bug found and fixed** ✅)
 - ✅ **Theming Fully Tested**: 3/3 theme components (**80 tests**, **all passing ✅** - 0 production bugs ✅)
 - ✅ **Responsive Layout Fully Tested**: 8/8 components (**205 tests**, **all passing ✅** - 0 production bugs ✅)
+- ✅ **Core Utils Fully Tested**: 5/5 components (**191 tests**, **all passing ✅** - **105 new tests created** - 0 production bugs ✅)
 - ❌ **Not Tested**: SimplifiedProjectDetailsScreen, ResponsiveShell (integration wrapper), Navigation state (not found)
 
-**Total Features**: ~250+ individual test items across 21 screens, ~80+ widgets, 10 providers, API layer, feature services, data models, error handling, input validation, theming, and responsive layout
-**Currently Tested**: ~99% (auth + organizations + project dialogs + project models + hierarchy + dashboard + content & documents + summary screens + summary widgets + query widgets + query state + risks + tasks + lessons learned + integrations + notifications + activities + support tickets + profile + audio recording + core widgets + layout & navigation + state management providers + **API client & network layer** + **feature services** + **data models** + **error handling** + **input validation** + **theming** + **responsive layout**)
+**Total Features**: ~250+ individual test items across 21 screens, ~80+ widgets, 10 providers, API layer, feature services, data models, error handling, input validation, theming, responsive layout, and core utilities
+**Currently Tested**: ~99% (auth + organizations + project dialogs + project models + hierarchy + dashboard + content & documents + summary screens + summary widgets + query widgets + query state + risks + tasks + lessons learned + integrations + notifications + activities + support tickets + profile + audio recording + core widgets + layout & navigation + state management providers + **API client & network layer** + **feature services** + **data models** + **error handling** + **input validation** + **theming** + **responsive layout** + **core utils**)
 **Target**: 50-60% coverage ✅ **EXCEEDED** (99%)
 
 **Critical Production Bugs**: **17 bugs found and fixed** ✅
@@ -815,6 +853,7 @@ All layout and responsive design utilities tested work correctly without any pro
   - **Failure classes (ServerFailure, NetworkFailure, CacheFailure, ValidationFailure, UnknownFailure)** (all tested ✅, 24 tests passing, no production bugs)
   - **FormValidators (validateName, validateDescription, validateEmail, validatePassword, validateConfirmPassword)** (all tested ✅, 86 tests passing, no production bugs)
   - **Theming (AppTheme, AppColorSchemes, AppTextThemes)** (all tested ✅, 80 tests passing, no production bugs)
+  - **Core Utils (AnimationUtils, Logger, DateTimeUtils)** (all tested ✅, 105 tests passing, no production bugs)
 
 **Project Tests Completed (25 tests - all passing ✅):**
 
