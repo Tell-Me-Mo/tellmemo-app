@@ -340,6 +340,17 @@ class MultiTenantVectorStore:
         # Ensure collection exists
         await self.ensure_organization_collections(organization_id)
 
+        # Handle MRL named vectors - convert single vector to named vectors
+        if settings.enable_mrl:
+            for point in points:
+                # If point has a single vector list, convert to named vectors dict
+                if isinstance(point.vector, list):
+                    full_vector = point.vector
+                    named_vectors = {}
+                    for dim in settings.mrl_dimensions_list:
+                        named_vectors[f"vector_{dim}"] = full_vector[:dim]
+                    point.vector = named_vectors
+
         # Add organization_id to each point's payload
         for point in points:
             if point.payload:
@@ -740,6 +751,29 @@ class MultiTenantVectorStore:
                 None, self.client.get_collection, collection_name
             )
 
+            # Handle both single vector and named vectors (MRL)
+            vectors_config = info.config.params.vectors
+            if isinstance(vectors_config, dict):
+                # MRL enabled - multiple named vectors
+                # Use the largest dimension for reporting
+                largest_dim = max(settings.mrl_dimensions_list)
+                vector_info = vectors_config.get(f"vector_{largest_dim}")
+                config_dict = {
+                    "vector_type": "named_vectors",
+                    "dimensions": list(vectors_config.keys()),
+                    "largest_vector_size": vector_info.size if vector_info else largest_dim,
+                    "distance": vector_info.distance.value if vector_info else "COSINE",
+                    "on_disk": vector_info.on_disk if vector_info else True
+                }
+            else:
+                # Single vector
+                config_dict = {
+                    "vector_type": "single_vector",
+                    "vector_size": vectors_config.size,
+                    "distance": vectors_config.distance.value,
+                    "on_disk": vectors_config.on_disk
+                }
+
             return {
                 "name": collection_name,
                 "exists": True,
@@ -750,11 +784,7 @@ class MultiTenantVectorStore:
                 "indexed_vectors_count": info.indexed_vectors_count,
                 "points_count": info.points_count,
                 "segments_count": getattr(info, 'segments_count', 0),
-                "config": {
-                    "vector_size": info.config.params.vectors.size,
-                    "distance": info.config.params.vectors.distance.value,
-                    "on_disk": info.config.params.vectors.on_disk
-                }
+                "config": config_dict
             }
         except Exception as e:
             logger.error(f"Failed to get collection info: {e}")
