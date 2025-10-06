@@ -185,7 +185,8 @@ async def generate_summary(
                     "format": request.format,
                     "date_range_start": request.date_range_start.isoformat(),
                     "date_range_end": request.date_range_end.isoformat(),
-                    "created_by": request.created_by
+                    "created_by": current_user.email,
+                    "created_by_id": str(current_user.id)
                 },
                 total_steps=3
             )
@@ -322,7 +323,8 @@ async def generate_summary(
 @router.get("/{summary_id}", response_model=UnifiedSummaryResponse)
 async def get_summary(
     summary_id: str,
-    session: AsyncSession = Depends(get_db)
+    session: AsyncSession = Depends(get_db),
+    current_org: Organization = Depends(get_current_organization)
 ):
     """Get any summary by ID, regardless of entity type."""
     logger.info(f"Fetching summary {summary_id}")
@@ -336,6 +338,10 @@ async def get_summary(
         summary = result.scalar_one_or_none()
 
         if not summary:
+            raise HTTPException(status_code=404, detail="Summary not found")
+
+        # Multi-tenant validation - ensure summary belongs to current organization
+        if summary.organization_id != current_org.id:
             raise HTTPException(status_code=404, detail="Summary not found")
 
         # Determine entity type and get entity name
@@ -428,6 +434,9 @@ async def list_summaries(
         # Apply filters
         conditions = []
 
+        # Multi-tenant filtering - only show summaries from current organization
+        conditions.append(Summary.organization_id == current_org.id)
+
         if filters.entity_type and filters.entity_id:
             entity_uuid = uuid.UUID(filters.entity_id)
             if filters.entity_type == "project":
@@ -491,6 +500,7 @@ async def list_summaries(
                 entity_type=entity_type,
                 entity_id=str(entity_id) if entity_id else "",
                 entity_name=entity_name,
+                project_id=str(summary.project_id) if summary.project_id else None,
                 content_id=str(summary.content_id) if summary.content_id else None,
                 summary_type=summary.summary_type.value.upper(),
                 subject=summary.subject,
@@ -500,7 +510,7 @@ async def list_summaries(
                 action_items=summary.action_items,
                 sentiment_analysis=summary.sentiment_analysis,
                 risks=summary.risks,
-            blockers=summary.blockers,
+                blockers=summary.blockers,
                 communication_insights=summary.communication_insights,
                 next_meeting_agenda=summary.next_meeting_agenda,
                 format=getattr(summary, 'format', 'general'),
@@ -523,7 +533,8 @@ async def list_summaries(
 @router.delete("/{summary_id}")
 async def delete_summary(
     summary_id: str,
-    session: AsyncSession = Depends(get_db)
+    session: AsyncSession = Depends(get_db),
+    current_org: Organization = Depends(get_current_organization)
 ):
     """Delete a summary by ID."""
     logger.info(f"Deleting summary {summary_id}")
@@ -537,6 +548,10 @@ async def delete_summary(
         summary = result.scalar_one_or_none()
 
         if not summary:
+            raise HTTPException(status_code=404, detail="Summary not found")
+
+        # Multi-tenant validation - ensure summary belongs to current organization
+        if summary.organization_id != current_org.id:
             raise HTTPException(status_code=404, detail="Summary not found")
 
         await session.delete(summary)
@@ -562,6 +577,18 @@ async def generate_summary_with_job(
     try:
         # Import here to avoid circular dependency
         from db.database import db_manager
+
+        # Get job to retrieve metadata with user info
+        job = upload_job_service.get_job(job_id)
+        if not job or not job.metadata:
+            raise ValueError(f"Job {job_id} not found or missing metadata")
+
+        # Extract created_by info from metadata
+        created_by = job.metadata.get("created_by")
+        created_by_id = job.metadata.get("created_by_id")
+
+        if not created_by or not created_by_id:
+            raise ValueError("Job metadata missing created_by or created_by_id")
 
         # Update job progress
         await upload_job_service.update_job_progress_async(
@@ -589,8 +616,8 @@ async def generate_summary_with_job(
                     program_id=entity_uuid,
                     week_start=request.date_range_start,
                     week_end=request.date_range_end,
-                    created_by=current_user.email,
-                    created_by_id=str(current_user.id),
+                    created_by=created_by,
+                    created_by_id=created_by_id,
                     format_type=request.format
                 )
             elif request.summary_type == "portfolio":
@@ -599,8 +626,8 @@ async def generate_summary_with_job(
                     portfolio_id=entity_uuid,
                     week_start=request.date_range_start,
                     week_end=request.date_range_end,
-                    created_by=current_user.email,
-                    created_by_id=str(current_user.id),
+                    created_by=created_by,
+                    created_by_id=created_by_id,
                     format_type=request.format
                 )
             elif request.summary_type == "project":
@@ -609,8 +636,8 @@ async def generate_summary_with_job(
                     project_id=entity_uuid,
                     week_start=request.date_range_start,
                     week_end=request.date_range_end,
-                    created_by=current_user.email,
-                    created_by_id=str(current_user.id),
+                    created_by=created_by,
+                    created_by_id=created_by_id,
                     format_type=request.format
                 )
 
@@ -669,7 +696,8 @@ class UpdateSummaryRequest(BaseModel):
 async def update_summary(
     summary_id: str,
     update_request: UpdateSummaryRequest,
-    session: AsyncSession = Depends(get_db)
+    session: AsyncSession = Depends(get_db),
+    current_org: Organization = Depends(get_current_organization)
 ):
     """
     Update an existing summary's fields.
@@ -692,6 +720,10 @@ async def update_summary(
         summary = result.scalar_one_or_none()
 
         if not summary:
+            raise HTTPException(status_code=404, detail=f"Summary '{summary_id}' not found")
+
+        # Multi-tenant validation - ensure summary belongs to current organization
+        if summary.organization_id != current_org.id:
             raise HTTPException(status_code=404, detail=f"Summary '{summary_id}' not found")
 
         # Update fields if provided
