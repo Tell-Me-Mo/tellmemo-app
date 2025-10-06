@@ -80,42 +80,48 @@ class _NotificationCenterDialogState extends ConsumerState<NotificationCenterDia
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.notifications,
-                            color: theme.colorScheme.primary,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Notifications',
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
+                      Flexible(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.notifications,
+                              color: theme.colorScheme.primary,
+                              size: 20,
                             ),
-                          ),
-                          if (notificationState.unreadCount > 0) ...[
                             const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.primary,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
+                            Flexible(
                               child: Text(
-                                '${notificationState.unreadCount} new',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
+                                'Notifications',
+                                style: theme.textTheme.titleLarge?.copyWith(
                                   fontWeight: FontWeight.bold,
                                 ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                            if (notificationState.unreadCount > 0) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.primary,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  '${notificationState.unreadCount} new',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.close, size: 20),
@@ -125,64 +131,94 @@ class _NotificationCenterDialogState extends ConsumerState<NotificationCenterDia
                   ),
                   const SizedBox(height: 8),
                   // Action buttons - more compact
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (notificationState.unreadCount > 0)
-                        TextButton.icon(
-                          onPressed: () => notificationService.markAllAsRead(),
-                          icon: const Icon(Icons.done_all, size: 16),
-                          label: const Text('Mark all read', style: TextStyle(fontSize: 12)),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            minimumSize: const Size(0, 32),
-                          ),
-                        ),
-                      const SizedBox(width: 4),
-                      if (notificationState.allNotifications.isNotEmpty)
-                        TextButton.icon(
-                          onPressed: () => notificationService.clearAll(),
-                          icon: Icon(
-                            Icons.clear_all,
-                            size: 16,
-                            color: theme.colorScheme.error,
-                          ),
-                          label: Text(
-                            'Clear all',
-                            style: TextStyle(color: theme.colorScheme.error, fontSize: 12),
-                          ),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            minimumSize: const Size(0, 32),
-                          ),
-                        ),
-                      const Spacer(),
-                      // Filter toggle for unread/all notifications
-                      SegmentedButton<bool>(
-                        segments: const [
-                          ButtonSegment<bool>(
-                            value: false,
-                            label: Text('All', style: TextStyle(fontSize: 12)),
-                            icon: Icon(Icons.inbox, size: 16),
-                          ),
-                          ButtonSegment<bool>(
-                            value: true,
-                            label: Text('Unread', style: TextStyle(fontSize: 12)),
-                            icon: Icon(Icons.markunread, size: 16),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      // Use narrow mode when available width is less than 360px
+                      // This accounts for buttons + segmented button + spacing
+                      final isNarrow = constraints.maxWidth < 360;
+                      return Row(
+                        children: [
+                          if (notificationState.unreadCount > 0)
+                            Flexible(
+                              child: isNarrow
+                                  ? IconButton(
+                                      onPressed: () => notificationService.markAllAsRead(),
+                                      icon: const Icon(Icons.done_all, size: 16),
+                                      tooltip: 'Mark all read',
+                                      padding: const EdgeInsets.all(8),
+                                      constraints: const BoxConstraints(),
+                                    )
+                                  : TextButton.icon(
+                                      onPressed: () => notificationService.markAllAsRead(),
+                                      icon: const Icon(Icons.done_all, size: 16),
+                                      label: const Text('Mark all read', style: TextStyle(fontSize: 12)),
+                                      style: TextButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        minimumSize: const Size(0, 32),
+                                      ),
+                                    ),
+                            ),
+                          const SizedBox(width: 4),
+                          if (notificationState.allNotifications.isNotEmpty)
+                            Flexible(
+                              child: isNarrow
+                                  ? IconButton(
+                                      onPressed: () => notificationService.clearAll(),
+                                      icon: Icon(
+                                        Icons.clear_all,
+                                        size: 16,
+                                        color: theme.colorScheme.error,
+                                      ),
+                                      tooltip: 'Clear all',
+                                      padding: const EdgeInsets.all(8),
+                                      constraints: const BoxConstraints(),
+                                    )
+                                  : TextButton.icon(
+                                      onPressed: () => notificationService.clearAll(),
+                                      icon: Icon(
+                                        Icons.clear_all,
+                                        size: 16,
+                                        color: theme.colorScheme.error,
+                                      ),
+                                      label: Text(
+                                        'Clear all',
+                                        style: TextStyle(color: theme.colorScheme.error, fontSize: 12),
+                                      ),
+                                      style: TextButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        minimumSize: const Size(0, 32),
+                                      ),
+                                    ),
+                            ),
+                          const Spacer(),
+                          // Filter toggle for unread/all notifications
+                          SegmentedButton<bool>(
+                            segments: [
+                              ButtonSegment<bool>(
+                                value: false,
+                                label: isNarrow ? null : const Text('All', style: TextStyle(fontSize: 12)),
+                                icon: const Icon(Icons.inbox, size: 16),
+                              ),
+                              ButtonSegment<bool>(
+                                value: true,
+                                label: isNarrow ? null : const Text('Unread', style: TextStyle(fontSize: 12)),
+                                icon: const Icon(Icons.markunread, size: 16),
+                              ),
+                            ],
+                            selected: {ref.watch(notificationFilterProvider)},
+                            onSelectionChanged: (Set<bool> newSelection) {
+                              ref.read(notificationFilterProvider.notifier).state = newSelection.first;
+                            },
+                            style: ButtonStyle(
+                              visualDensity: VisualDensity.compact,
+                              padding: WidgetStateProperty.all(
+                                EdgeInsets.symmetric(horizontal: isNarrow ? 4 : 8, vertical: 0),
+                              ),
+                            ),
                           ),
                         ],
-                        selected: {ref.watch(notificationFilterProvider)},
-                        onSelectionChanged: (Set<bool> newSelection) {
-                          ref.read(notificationFilterProvider.notifier).state = newSelection.first;
-                        },
-                        style: ButtonStyle(
-                          visualDensity: VisualDensity.compact,
-                          padding: WidgetStateProperty.all(
-                            const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                          ),
-                        ),
-                      ),
-                    ],
+                      );
+                    },
                   ),
                 ],
               ),
