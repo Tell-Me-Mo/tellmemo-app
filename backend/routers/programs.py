@@ -17,7 +17,7 @@ from models.project import Project, ProjectStatus
 from pydantic import BaseModel
 
 
-router = APIRouter(prefix="/api/programs", tags=["programs"])
+router = APIRouter(prefix="/api/v1/programs", tags=["programs"])
 
 
 class ProgramCreate(BaseModel):
@@ -65,7 +65,7 @@ class ProgramResponse(BaseModel):
         from_attributes = True
 
 
-@router.post("/", response_model=ProgramResponse)
+@router.post("", response_model=ProgramResponse, status_code=201)
 async def create_program(
     program: ProgramCreate,
     db: AsyncSession = Depends(get_db),

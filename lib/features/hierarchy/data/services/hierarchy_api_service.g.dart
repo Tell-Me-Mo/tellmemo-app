@@ -194,7 +194,7 @@ class _HierarchyApiService implements HierarchyApiService {
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
-            '/api/portfolios/',
+            '/api/v1/portfolios/',
             queryParameters: queryParameters,
             data: _data,
           )
@@ -225,7 +225,7 @@ class _HierarchyApiService implements HierarchyApiService {
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
-            '/api/portfolios/${portfolioId}',
+            '/api/v1/portfolios/${portfolioId}',
             queryParameters: queryParameters,
             data: _data,
           )
@@ -253,7 +253,7 @@ class _HierarchyApiService implements HierarchyApiService {
       Options(method: 'POST', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
-            '/api/portfolios/',
+            '/api/v1/portfolios/',
             queryParameters: queryParameters,
             data: _data,
           )
@@ -284,7 +284,7 @@ class _HierarchyApiService implements HierarchyApiService {
       Options(method: 'PUT', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
-            '/api/portfolios/${portfolioId}',
+            '/api/v1/portfolios/${portfolioId}',
             queryParameters: queryParameters,
             data: _data,
           )
@@ -319,7 +319,7 @@ class _HierarchyApiService implements HierarchyApiService {
           )
           .compose(
             _dio.options,
-            '/api/portfolios/${portfolioId}',
+            '/api/v1/portfolios/${portfolioId}',
             queryParameters: queryParameters,
             data: _data,
           )
@@ -348,7 +348,7 @@ class _HierarchyApiService implements HierarchyApiService {
           )
           .compose(
             _dio.options,
-            '/api/portfolios/${portfolioId}/deletion-impact',
+            '/api/v1/portfolios/${portfolioId}/deletion-impact',
             queryParameters: queryParameters,
             data: _data,
           )
@@ -377,7 +377,7 @@ class _HierarchyApiService implements HierarchyApiService {
           )
           .compose(
             _dio.options,
-            '/api/portfolios/${portfolioId}/statistics',
+            '/api/v1/portfolios/${portfolioId}/statistics',
             queryParameters: queryParameters,
             data: _data,
           )
@@ -400,7 +400,7 @@ class _HierarchyApiService implements HierarchyApiService {
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
-            '/api/programs/',
+            '/api/v1/programs/',
             queryParameters: queryParameters,
             data: _data,
           )
@@ -429,7 +429,7 @@ class _HierarchyApiService implements HierarchyApiService {
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
-            '/api/programs/${programId}',
+            '/api/v1/programs/${programId}',
             queryParameters: queryParameters,
             data: _data,
           )
@@ -457,7 +457,7 @@ class _HierarchyApiService implements HierarchyApiService {
       Options(method: 'POST', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
-            '/api/programs/',
+            '/api/v1/programs/',
             queryParameters: queryParameters,
             data: _data,
           )
@@ -488,7 +488,7 @@ class _HierarchyApiService implements HierarchyApiService {
       Options(method: 'PUT', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
-            '/api/programs/${programId}',
+            '/api/v1/programs/${programId}',
             queryParameters: queryParameters,
             data: _data,
           )
@@ -523,7 +523,7 @@ class _HierarchyApiService implements HierarchyApiService {
           )
           .compose(
             _dio.options,
-            '/api/programs/${programId}',
+            '/api/v1/programs/${programId}',
             queryParameters: queryParameters,
             data: _data,
           )
@@ -552,7 +552,7 @@ class _HierarchyApiService implements HierarchyApiService {
           )
           .compose(
             _dio.options,
-            '/api/programs/${programId}/deletion-impact',
+            '/api/v1/programs/${programId}/deletion-impact',
             queryParameters: queryParameters,
             data: _data,
           )
@@ -583,7 +583,7 @@ class _HierarchyApiService implements HierarchyApiService {
           )
           .compose(
             _dio.options,
-            '/api/programs/${programId}/projects/move',
+            '/api/v1/programs/${programId}/projects/move',
             queryParameters: queryParameters,
             data: _data,
           )
@@ -610,7 +610,7 @@ class _HierarchyApiService implements HierarchyApiService {
           )
           .compose(
             _dio.options,
-            '/api/programs/${programId}/statistics',
+            '/api/v1/programs/${programId}/statistics',
             queryParameters: queryParameters,
             data: _data,
           )

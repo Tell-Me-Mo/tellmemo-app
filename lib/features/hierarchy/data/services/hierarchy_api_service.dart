@@ -35,71 +35,71 @@ abstract class HierarchyApiService {
   Future<HttpResponse<dynamic>> getHierarchyStatistics();
 
   // Portfolio endpoints
-  @GET('/api/portfolios/')
+  @GET('/api/v1/portfolios/')
   Future<List<PortfolioModel>> getPortfolios();
 
-  @GET('/api/portfolios/{id}')
+  @GET('/api/v1/portfolios/{id}')
   Future<PortfolioModel> getPortfolio(@Path('id') String portfolioId);
 
-  @POST('/api/portfolios/')
+  @POST('/api/v1/portfolios/')
   Future<PortfolioModel> createPortfolio(@Body() Map<String, dynamic> request);
 
-  @PUT('/api/portfolios/{id}')
+  @PUT('/api/v1/portfolios/{id}')
   Future<PortfolioModel> updatePortfolio(
     @Path('id') String portfolioId,
     @Body() Map<String, dynamic> request,
   );
 
-  @DELETE('/api/portfolios/{id}')
+  @DELETE('/api/v1/portfolios/{id}')
   @DioResponseType(ResponseType.json)
   Future<HttpResponse<dynamic>> deletePortfolio(
     @Path('id') String portfolioId,
     @Query('cascade_delete') bool cascadeDelete,
   );
 
-  @GET('/api/portfolios/{id}/deletion-impact')
+  @GET('/api/v1/portfolios/{id}/deletion-impact')
   @DioResponseType(ResponseType.json)
   Future<HttpResponse<dynamic>> getPortfolioDeletionImpact(@Path('id') String portfolioId);
 
-  @GET('/api/portfolios/{id}/statistics')
+  @GET('/api/v1/portfolios/{id}/statistics')
   @DioResponseType(ResponseType.json)
   Future<HttpResponse<dynamic>> getPortfolioStatistics(@Path('id') String portfolioId);
 
   // Program endpoints
-  @GET('/api/programs/')
+  @GET('/api/v1/programs/')
   Future<List<ProgramModel>> getPrograms(@Query('portfolio_id') String? portfolioId);
 
-  @GET('/api/programs/{id}')
+  @GET('/api/v1/programs/{id}')
   Future<ProgramModel> getProgram(@Path('id') String programId);
 
-  @POST('/api/programs/')
+  @POST('/api/v1/programs/')
   Future<ProgramModel> createProgram(@Body() Map<String, dynamic> request);
 
-  @PUT('/api/programs/{id}')
+  @PUT('/api/v1/programs/{id}')
   Future<ProgramModel> updateProgram(
     @Path('id') String programId,
     @Body() Map<String, dynamic> request,
   );
 
-  @DELETE('/api/programs/{id}')
+  @DELETE('/api/v1/programs/{id}')
   @DioResponseType(ResponseType.json)
   Future<HttpResponse<dynamic>> deleteProgram(
     @Path('id') String programId,
     @Query('cascade_delete') bool cascadeDelete,
   );
 
-  @GET('/api/programs/{id}/deletion-impact')
+  @GET('/api/v1/programs/{id}/deletion-impact')
   @DioResponseType(ResponseType.json)
   Future<HttpResponse<dynamic>> getProgramDeletionImpact(@Path('id') String programId);
 
-  @POST('/api/programs/{id}/projects/move')
+  @POST('/api/v1/programs/{id}/projects/move')
   @DioResponseType(ResponseType.json)
   Future<HttpResponse<dynamic>> moveProjectsToProgram(
     @Path('id') String programId,
     @Body() Map<String, dynamic> request,
   );
 
-  @GET('/api/programs/{id}/statistics')
+  @GET('/api/v1/programs/{id}/statistics')
   @DioResponseType(ResponseType.json)
   Future<HttpResponse<dynamic>> getProgramStatistics(@Path('id') String programId);
 }
