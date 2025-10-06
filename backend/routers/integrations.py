@@ -331,6 +331,8 @@ async def test_integration_connection(
             "error": "Unknown integration type"
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to test integration {integration_id}: {e}")
         return {
