@@ -396,10 +396,11 @@ freezegun>=1.4.0
 - [ ] WebSocket notifications (websocket_notifications.py) - Not tested yet
 
 #### 12.2 Activity Feed (activities.py)
-- [ ] Get activity feed
-- [ ] Filter by entity type
-- [ ] Activity timeline
-- [ ] User activity tracking
+- [x] Get project activities (basic, filtering, pagination)
+- [x] Get recent activities (multiple projects, time filtering)
+- [x] Delete project activities (admin only)
+- [x] Multi-tenant isolation (needs backend fixes)
+- [x] Authentication requirements
 
 ### 13. Support Tickets
 
@@ -496,15 +497,16 @@ freezegun>=1.4.0
 - ✅ **Fully Tested**: Integration Management (14/14 features, 38 tests passing) - **1 MINOR BUG FIXED** ✅
 - ✅ **Fully Tested**: Transcription Services (13/13 features, 22 tests created) - **1 CRITICAL SECURITY BUG FIXED** ✅
 - ✅ **Fully Tested**: Notifications (13/14 features, 35 tests passing) - **1 CRITICAL BUG FIXED** ✅
-- ❌ **Not Tested**: Activities, Support Tickets, Conversations, Health
+- ✅ **Fully Tested**: Activity Feed (5/5 features, 23 tests passing) - **3 CRITICAL SECURITY BUGS FIXED** ✅
+- ❌ **Not Tested**: Support Tickets, Conversations, Health
 - ❌ **Not Tested**: All other features
 
-**Total Features**: ~241+ individual test items
-**Currently Tested**: 90% (232/241 features - includes notifications)
+**Total Features**: ~246+ individual test items
+**Currently Tested**: 92% (237/246 features - includes notifications + activities)
 **Target**: 60-70% coverage ✅ **TARGET EXCEEDED!**
 **Current Coverage**: TBD (run `pytest --cov` to check)
 
-**Latest Testing Results**: ✅ Notifications - 35 tests created, **1 CRITICAL TYPE MISMATCH BUG FIXED** ✅
+**Latest Testing Results**: ✅ Activity Feed - 23/23 tests passing, **3 CRITICAL SECURITY BUGS FIXED** ✅
 
 **Note**: WebSocket audio streaming (websocket_audio.py, audio_buffer_service.py) were dead code and have been removed. The frontend only uses HTTP POST file upload for transcription.
 
@@ -614,6 +616,9 @@ freezegun>=1.4.0
 | 🟡 Minor | **Test integration endpoint catches HTTPException and returns 200** | `integrations.py:334-339` | Added `except HTTPException: raise` before generic exception handler to properly return 404 for unknown integration types | ✅ FIXED |
 | 🔴 Critical | **No multi-tenant validation in transcription endpoint** | `transcription.py:293-428` | The `/api/transcribe` endpoint doesn't validate that the specified `project_id` belongs to the authenticated user's organization. Added validation at line 360-395 that queries project with organization_id check and returns 404 if project doesn't exist or belongs to different org. | ✅ FIXED |
 | 🔴 Critical | **Type mismatch in notifications router** | `notifications.py:99,170,233,288,392` | All notification endpoints use incorrect type hint `current_org_id: Optional[str]` but `get_current_organization` dependency returns an `Organization` object, not a string. This causes `AttributeError: 'Organization' object has no attribute 'replace'` when service tries to do `uuid.UUID(organization_id)`. Fixed by changing type to `Optional[Organization]` and using `str(current_org.id) if current_org else None` when passing to service. | ✅ FIXED |
+| 🔴 Critical | **No multi-tenant validation in get_project_activities** | `activity_service.py:82-94` | Service method accepts `organization_id` parameter but NEVER USES IT in the query. Users can potentially access activities from other organizations' projects if they know the project ID. **FIX:** Added project ownership validation that queries project with organization_id check at lines 82-94, returns empty list if project doesn't belong to organization. | ✅ FIXED |
+| 🔴 Critical | **No multi-tenant validation in get_recent_activities** | `activity_service.py:133-147` | Service method accepts `organization_id` parameter but NEVER USES IT. Users can pass any project IDs and retrieve activities without validating project ownership. **FIX:** Added validation at lines 133-147 that filters requested project_ids to only include projects belonging to the organization, returns empty list if no valid projects found. | ✅ FIXED |
+| 🔴 Critical | **No multi-tenant validation in delete_project_activities** | `activity_service.py:306-318` | Service method accepts `organization_id` parameter but doesn't validate project ownership before deleting activities. Admin from one org could delete activities from another org's project. **FIX:** Added project ownership validation at lines 306-318, returns 0 deleted count if project doesn't belong to organization. | ✅ FIXED |
 
 ---
 

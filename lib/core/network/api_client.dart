@@ -6,6 +6,9 @@ class ApiClient {
 
   ApiClient(this._dio);
 
+  // Expose Dio instance for legacy ApiService
+  Dio get dio => _dio;
+
   // Health check
   Future<dynamic> healthCheck() async {
     final response = await _dio.get('/api/health');
