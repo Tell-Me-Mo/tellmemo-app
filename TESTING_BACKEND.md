@@ -230,9 +230,20 @@ freezegun>=1.4.0
 - [x] Multi-tenant isolation (can't access other project's content)
 
 #### 5.3 Content Availability (content_availability.py)
-- [ ] Check content availability for entity
-- [ ] Get summary statistics
-- [ ] Batch content availability check
+- [x] Check content availability for project
+- [x] Check content availability for program
+- [x] Check content availability for portfolio
+- [x] Check content availability with date filters
+- [x] Check content availability for empty entities
+- [x] Get summary statistics with summaries
+- [x] Get summary statistics without summaries
+- [x] Batch content availability check
+- [x] Batch check with date filters
+- [x] Batch check error handling for invalid entities
+- [x] Validation: Invalid entity types
+- [x] Validation: Invalid UUID format
+- [x] Recent summaries count in availability check
+- [x] Multi-tenant isolation (FIXED - returns 404 for cross-org access)
 
 ### 6. RAG & Query System
 
@@ -440,10 +451,11 @@ freezegun>=1.4.0
 - ✅ **Fully Tested**: Hierarchy Operations (7/7 features, 48 tests passing) - **CRITICAL BUGS FIXED** 🔧
 - ✅ **Fully Tested**: Content Upload (14/14 features, 32 tests passing) - **1 BUG FIXED** ✨
 - ✅ **Fully Tested**: Content Retrieval (6/6 features, included in 32 content tests) - **NO BUGS** ✨
+- ✅ **Fully Tested**: Content Availability (14/14 features, 19 tests passing) - **1 CRITICAL SECURITY BUG FIXED** 🔧
 - ❌ **Not Tested**: All other features
 
 **Total Features**: ~200+ individual test items
-**Currently Tested**: 51% (105/200 features)
+**Currently Tested**: 54% (119/200 features)
 **Target**: 60-70% coverage
 **Current Coverage**: TBD (run `pytest --cov` to check)
 
@@ -484,6 +496,7 @@ freezegun>=1.4.0
 | 🔴 Critical | Missing `Query` import for list parameter parsing | `hierarchy.py:1,460` | Add `Query` to FastAPI imports and use `Query(default=None)` for item_types parameter | ✅ FIXED |
 | 🔴 Critical | Missing `selectinload` import in search endpoint | `hierarchy.py:474` | Add `from sqlalchemy.orm import selectinload` to function imports | ✅ FIXED |
 | 🟡 Minor | File size validation returns 500 instead of 400 | `content.py:242-249` | Add `except ValueError as e: raise HTTPException(status_code=400, detail=str(e))` to main execution path | ✅ FIXED |
+| 🔴 Critical | Missing multi-tenant validation in content availability | `content_availability.py:44-90, 92-127, 129-175` & `content_availability_service.py:22-110, 112-217, 219-330, 342-407` | Add organization_id validation in all three endpoints and service methods to prevent cross-organization data access | ✅ FIXED |
 
 **Impact Before Fixes**: 60+ tests blocked by critical bugs (30+ organization bugs, 30+ project bugs)
 **Impact After Fixes**: All critical backend bugs FIXED! All 34 project tests passing, 16/22 invitation tests passing (6 have test infrastructure issues, not backend bugs)
@@ -522,6 +535,34 @@ freezegun>=1.4.0
 - ✅ Statistics endpoint includes all relevant metrics (project count, content, summaries, activities)
 - ✅ Portfolio filtering in list endpoint working correctly
 - ✅ **NO BUGS FOUND** - Implementation is solid! ✨
+
+**Content Availability Testing Results (2025-10-06)**:
+- ✅ 19/19 tests passing
+- ✅ Check project content availability working correctly
+- ✅ Check program content availability working correctly (aggregates from projects)
+- ✅ Check portfolio content availability working correctly (aggregates from programs and direct projects)
+- ✅ Date range filtering working correctly
+- ✅ Content breakdown by type (meeting/email) working
+- ✅ Recent summaries count (last 7 days) included in availability check
+- ✅ Summary statistics endpoint provides accurate metrics
+- ✅ Batch check endpoint handles multiple entities correctly
+- ✅ Batch check gracefully handles invalid entities (returns error instead of skipping)
+- ✅ Validation for invalid entity types working
+- ✅ Validation for invalid UUID format working
+- ✅ **Multi-tenant isolation enforced** (cross-organization access blocked with 404)
+- 🔧 **1 CRITICAL SECURITY BUG FOUND AND FIXED**: Missing multi-tenant validation allowed cross-organization access
+  - Root cause: Endpoints didn't validate that the queried entity belongs to the user's organization
+  - Impact: Users could check content availability for projects/programs/portfolios in other organizations
+  - Security risk: Information disclosure - reveals whether other organizations have content
+  - Fix applied:
+    - Added `get_current_organization` dependency to all three router endpoints
+    - Updated all service methods to accept `organization_id` parameter
+    - Added validation in service methods to verify entity belongs to organization
+    - Returns 404 (not 403) to prevent information disclosure about entity existence
+  - Files modified:
+    - `content_availability.py`: Added organization dependency and pass org_id to service
+    - `content_availability_service.py`: Added org validation in all methods (check_project_content, check_program_content, check_portfolio_content, get_summary_generation_stats)
+  - Test verification: Cross-org access test now correctly expects 404 response
 
 **Content Upload Testing Results (2025-10-06)**:
 - ✅ 32/32 tests passing (after fix)

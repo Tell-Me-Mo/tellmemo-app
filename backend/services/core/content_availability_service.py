@@ -5,6 +5,7 @@ from typing import Dict, Any, List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, or_
 from datetime import datetime, timedelta
+from fastapi import HTTPException
 
 from models.content import Content
 from models.project import Project
@@ -23,11 +24,23 @@ class ContentAvailabilityService:
         self,
         session: AsyncSession,
         project_id: uuid.UUID,
+        organization_id: uuid.UUID,
         date_start: Optional[datetime] = None,
         date_end: Optional[datetime] = None
     ) -> Dict[str, Any]:
         """Check content availability for a project."""
         try:
+            # Validate project belongs to organization
+            project_query = select(Project).where(Project.id == project_id)
+            project_result = await session.execute(project_query)
+            project = project_result.scalar_one_or_none()
+
+            if not project:
+                raise HTTPException(status_code=404, detail="Project not found")
+
+            if project.organization_id != organization_id:
+                raise HTTPException(status_code=404, detail="Project not found")
+
             # Build query for content count
             query = select(func.count(Content.id)).where(
                 Content.project_id == project_id
@@ -100,11 +113,23 @@ class ContentAvailabilityService:
         self,
         session: AsyncSession,
         program_id: uuid.UUID,
+        organization_id: uuid.UUID,
         date_start: Optional[datetime] = None,
         date_end: Optional[datetime] = None
     ) -> Dict[str, Any]:
         """Check content availability for a program."""
         try:
+            # Validate program belongs to organization
+            program_query = select(Program).where(Program.id == program_id)
+            program_result = await session.execute(program_query)
+            program = program_result.scalar_one_or_none()
+
+            if not program:
+                raise HTTPException(status_code=404, detail="Program not found")
+
+            if program.organization_id != organization_id:
+                raise HTTPException(status_code=404, detail="Program not found")
+
             # Get all projects in the program
             projects_query = select(Project.id).where(
                 Project.program_id == program_id
@@ -195,11 +220,23 @@ class ContentAvailabilityService:
         self,
         session: AsyncSession,
         portfolio_id: uuid.UUID,
+        organization_id: uuid.UUID,
         date_start: Optional[datetime] = None,
         date_end: Optional[datetime] = None
     ) -> Dict[str, Any]:
         """Check content availability for a portfolio."""
         try:
+            # Validate portfolio belongs to organization
+            portfolio_query = select(Portfolio).where(Portfolio.id == portfolio_id)
+            portfolio_result = await session.execute(portfolio_query)
+            portfolio = portfolio_result.scalar_one_or_none()
+
+            if not portfolio:
+                raise HTTPException(status_code=404, detail="Portfolio not found")
+
+            if portfolio.organization_id != organization_id:
+                raise HTTPException(status_code=404, detail="Portfolio not found")
+
             # Get all programs in the portfolio
             programs_query = select(Program.id).where(
                 Program.portfolio_id == portfolio_id
@@ -266,7 +303,7 @@ class ContentAvailabilityService:
             program_breakdown = {}
             for program_id in program_ids:
                 program_data = await self.check_program_content(
-                    session, program_id, date_start, date_end
+                    session, program_id, organization_id, date_start, date_end
                 )
                 # Get program name
                 program_query = select(Program.name).where(Program.id == program_id)
@@ -306,10 +343,33 @@ class ContentAvailabilityService:
         self,
         session: AsyncSession,
         entity_type: str,
-        entity_id: uuid.UUID
+        entity_id: uuid.UUID,
+        organization_id: uuid.UUID
     ) -> Dict[str, Any]:
         """Get statistics about previous summary generations."""
         try:
+            # Validate entity belongs to organization
+            if entity_type == "project":
+                entity_query = select(Project).where(Project.id == entity_id)
+                entity_result = await session.execute(entity_query)
+                entity = entity_result.scalar_one_or_none()
+            elif entity_type == "program":
+                entity_query = select(Program).where(Program.id == entity_id)
+                entity_result = await session.execute(entity_query)
+                entity = entity_result.scalar_one_or_none()
+            elif entity_type == "portfolio":
+                entity_query = select(Portfolio).where(Portfolio.id == entity_id)
+                entity_result = await session.execute(entity_query)
+                entity = entity_result.scalar_one_or_none()
+            else:
+                raise ValueError(f"Invalid entity type: {entity_type}")
+
+            if not entity:
+                raise HTTPException(status_code=404, detail=f"{entity_type.capitalize()} not found")
+
+            if entity.organization_id != organization_id:
+                raise HTTPException(status_code=404, detail=f"{entity_type.capitalize()} not found")
+
             # Build query based on entity type
             if entity_type == "project":
                 query = select(Summary).where(Summary.project_id == entity_id)
