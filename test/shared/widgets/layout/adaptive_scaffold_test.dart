@@ -53,6 +53,11 @@ void main() {
       });
 
       testWidgets('displays AppBar when showAppBar is true', (tester) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+        addTearDown(() => tester.view.resetDevicePixelRatio());
+
         await tester.pumpWidget(
           MaterialApp(
             home: AdaptiveScaffold(
@@ -71,6 +76,11 @@ void main() {
       });
 
       testWidgets('hides AppBar when showAppBar is false', (tester) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+        addTearDown(() => tester.view.resetDevicePixelRatio());
+
         await tester.pumpWidget(
           MaterialApp(
             home: AdaptiveScaffold(
@@ -87,6 +97,11 @@ void main() {
       });
 
       testWidgets('handles destination selection', (tester) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+        addTearDown(() => tester.view.resetDevicePixelRatio());
+
         int? selectedIndex;
 
         await tester.pumpWidget(
@@ -111,6 +126,11 @@ void main() {
       });
 
       testWidgets('displays selected icon when destination is selected', (tester) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+        addTearDown(() => tester.view.resetDevicePixelRatio());
+
         await tester.pumpWidget(
           MaterialApp(
             home: AdaptiveScaffold(
@@ -127,6 +147,11 @@ void main() {
       });
 
       testWidgets('displays floating action button', (tester) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+        addTearDown(() => tester.view.resetDevicePixelRatio());
+
         await tester.pumpWidget(
           MaterialApp(
             home: AdaptiveScaffold(
@@ -147,6 +172,11 @@ void main() {
       });
 
       testWidgets('displays AppBar actions', (tester) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+        addTearDown(() => tester.view.resetDevicePixelRatio());
+
         await tester.pumpWidget(
           MaterialApp(
             home: AdaptiveScaffold(
@@ -364,6 +394,11 @@ void main() {
 
     group('Body Content', () {
       testWidgets('displays body content correctly', (tester) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+        addTearDown(() => tester.view.resetDevicePixelRatio());
+
         await tester.pumpWidget(
           MaterialApp(
             home: AdaptiveScaffold(

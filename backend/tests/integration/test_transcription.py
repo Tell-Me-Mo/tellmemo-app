@@ -427,19 +427,16 @@ class TestTranscribeAudio:
                 "language": "en"
             }
 
-            # Act
+            # Act - user2 tries to transcribe to org1's project
             response = await client2.post(
                 "/api/transcribe",
                 files=files,
                 data=data
             )
 
-            # Assert - should fail or create content in wrong org (which would be a bug)
-            # The endpoint doesn't currently validate project ownership
-            # This is a CRITICAL SECURITY BUG that needs to be fixed
-            # For now, we document this as expected behavior
-            # TODO: Fix multi-tenant isolation in transcription endpoint
-            pass  # Test documents the security issue
+            # Assert - should return 404 (not revealing project existence to prevent information disclosure)
+            assert response.status_code == 404
+            assert response.json()["detail"] == "Project not found"
 
     async def test_transcribe_audio_with_ai_matching(
         self,
@@ -556,6 +553,57 @@ class TestTranscribeAudio:
 
         # Assert
         assert response.status_code == 422  # Validation error
+
+    async def test_transcribe_audio_invalid_project_id_format(
+        self,
+        authenticated_org_client: AsyncClient,
+        mock_audio_file,
+        mock_whisper_service
+    ):
+        """Test that invalid project_id UUID format is rejected."""
+        # Arrange
+        files = {"audio_file": ("test_audio.wav", mock_audio_file(), "audio/wav")}
+        data = {
+            "project_id": "not-a-valid-uuid",
+            "language": "en"
+        }
+
+        # Act
+        response = await authenticated_org_client.post(
+            "/api/transcribe",
+            files=files,
+            data=data
+        )
+
+        # Assert
+        assert response.status_code == 400
+        assert "Invalid project_id format" in response.json()["detail"]
+
+    async def test_transcribe_audio_nonexistent_project(
+        self,
+        authenticated_org_client: AsyncClient,
+        mock_audio_file,
+        mock_whisper_service
+    ):
+        """Test that transcription to non-existent project returns 404."""
+        # Arrange - use a valid UUID that doesn't exist
+        nonexistent_uuid = str(uuid4())
+        files = {"audio_file": ("test_audio.wav", mock_audio_file(), "audio/wav")}
+        data = {
+            "project_id": nonexistent_uuid,
+            "language": "en"
+        }
+
+        # Act
+        response = await authenticated_org_client.post(
+            "/api/transcribe",
+            files=files,
+            data=data
+        )
+
+        # Assert
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Project not found"
 
 
 @pytest.mark.asyncio

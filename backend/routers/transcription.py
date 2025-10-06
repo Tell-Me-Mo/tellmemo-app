@@ -357,6 +357,43 @@ async def transcribe_audio(
 
         logger.info(f"Received audio file: {audio_file.filename}, size: {file_size} bytes")
 
+        # Validate project ownership (multi-tenant isolation)
+        # Skip validation only if using AI matching with "auto" project_id
+        if project_id != "auto" or not use_ai_matching:
+            try:
+                # Convert project_id to UUID and validate it belongs to current organization
+                project_uuid = uuid.UUID(project_id)
+
+                # Query project with organization check
+                from models.project import Project
+                result = await db.execute(
+                    select(Project).where(
+                        Project.id == project_uuid,
+                        Project.organization_id == current_org.id
+                    )
+                )
+                project = result.scalar_one_or_none()
+
+                if not project:
+                    # Clean up temp file before returning error
+                    if temp_file_path and os.path.exists(temp_file_path):
+                        os.unlink(temp_file_path)
+                    raise HTTPException(
+                        status_code=404,
+                        detail="Project not found"
+                    )
+
+                logger.info(f"Project validation passed: {project_id} belongs to org {current_org.id}")
+
+            except ValueError:
+                # Invalid UUID format
+                if temp_file_path and os.path.exists(temp_file_path):
+                    os.unlink(temp_file_path)
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid project_id format"
+                )
+
         # Create job for tracking transcription and processing progress
         job_id = upload_job_service.create_job(
             project_id=project_id,
