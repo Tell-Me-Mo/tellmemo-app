@@ -267,9 +267,25 @@ async def get_project_tasks(
     status: Optional[TaskStatus] = None,
     priority: Optional[TaskPriority] = None,
     assignee: Optional[str] = None,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_org: Organization = Depends(get_current_organization),
+    current_user: User = Depends(get_current_user),
+    _: str = Depends(require_role("member"))
 ):
     """Get all tasks for a project with optional filtering."""
+    # First verify project belongs to organization
+    project_result = await db.execute(
+        select(Project).where(
+            and_(
+                Project.id == project_id,
+                Project.organization_id == current_org.id
+            )
+        )
+    )
+    project = project_result.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
     query = select(Task).where(Task.project_id == project_id)
 
     if status:
@@ -289,11 +305,22 @@ async def get_project_tasks(
 async def create_task(
     project_id: UUID,
     task_data: TaskCreate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_org: Organization = Depends(get_current_organization),
+    current_user: User = Depends(get_current_user),
+    _: str = Depends(require_role("member"))
 ):
     """Create a new task for a project."""
-    # Verify project exists
-    project = await db.get(Project, project_id)
+    # Verify project belongs to organization
+    project_result = await db.execute(
+        select(Project).where(
+            and_(
+                Project.id == project_id,
+                Project.organization_id == current_org.id
+            )
+        )
+    )
+    project = project_result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -332,11 +359,20 @@ async def create_task(
 async def update_task(
     task_id: UUID,
     task_data: TaskUpdate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_org: Organization = Depends(get_current_organization),
+    current_user: User = Depends(get_current_user),
+    _: str = Depends(require_role("member"))
 ):
     """Update an existing task."""
+    # Get task
     task = await db.get(Task, task_id)
     if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    # Verify project belongs to organization
+    project = await db.get(Project, task.project_id)
+    if not project or project.organization_id != current_org.id:
         raise HTTPException(status_code=404, detail="Task not found")
 
     update_data = task_data.dict(exclude_unset=True)
@@ -374,10 +410,22 @@ async def update_task(
 
 
 @router.delete("/tasks/{task_id}")
-async def delete_task(task_id: UUID, db: AsyncSession = Depends(get_db)):
+async def delete_task(
+    task_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_org: Organization = Depends(get_current_organization),
+    current_user: User = Depends(get_current_user),
+    _: str = Depends(require_role("member"))
+):
     """Delete a task."""
+    # Get task
     task = await db.get(Task, task_id)
     if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    # Verify project belongs to organization
+    project = await db.get(Project, task.project_id)
+    if not project or project.organization_id != current_org.id:
         raise HTTPException(status_code=404, detail="Task not found")
 
     await db.delete(task)
@@ -462,11 +510,22 @@ async def bulk_update_risks(
 async def bulk_update_tasks(
     project_id: UUID,
     tasks: List[dict],
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_org: Organization = Depends(get_current_organization),
+    current_user: User = Depends(get_current_user),
+    _: str = Depends(require_role("member"))
 ):
     """Bulk create/update tasks from AI analysis."""
-    # Verify project exists
-    project = await db.get(Project, project_id)
+    # Verify project belongs to organization
+    project_result = await db.execute(
+        select(Project).where(
+            and_(
+                Project.id == project_id,
+                Project.organization_id == current_org.id
+            )
+        )
+    )
+    project = project_result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -506,7 +565,7 @@ async def bulk_update_tasks(
                 due_date=task_data.get("due_date"),
                 progress_percentage=task_data.get("progress_percentage", 0),
                 blocker_description=task_data.get("blocker_description"),
-                ai_generated=True,
+                ai_generated="true",
                 ai_confidence=task_data.get("ai_confidence", 0.8),
                 source_content_id=task_data.get("source_content_id"),
                 depends_on_risk_id=task_data.get("depends_on_risk_id"),
