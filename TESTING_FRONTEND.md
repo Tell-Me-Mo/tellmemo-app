@@ -1284,11 +1284,94 @@ These complex screens were verified via **static analysis only** rather than wid
 
 ### 8. Query & Search
 
-#### 8.1 Query Screens (features/queries/)
-- [ ] Query/search interface
-- [ ] Query input field
-- [ ] Query response card
-- [ ] Query history list
+#### 8.1 Query Widgets (features/queries/)
+- [x] TypingIndicator widget (6 tests - **all passing ✅**)
+- [x] QueryInputField widget (14 tests - **all passing ✅**, **PRODUCTION BUG FIXED** ✅)
+- [x] QueryResponseCard widget (16 tests - **all passing ✅**)
+- [x] QueryHistoryList widget (12 tests - **all passing ✅**)
+
+**Total: 48 tests - All passing ✅**
+
+**Test Details:**
+
+*TypingIndicator (test/features/queries/presentation/widgets/typing_indicator_test.dart) - 6 tests ✅*
+- Displays three animated dots
+- Uses custom color when provided
+- Uses theme primary color by default
+- Supports custom dot size
+- Animation controller is disposed properly
+- Dots animate vertically
+
+*QueryInputField (test/features/queries/presentation/widgets/query_input_field_test.dart) - 14 tests ✅*
+- Displays hint text ("Ask anything about your project...")
+- Displays psychology icon as prefix
+- Does not show suffix icons when text is empty
+- Shows suffix icons (clear + send) when text is entered (**BUG FIXED** ✅)
+- Clear button clears text and calls onChanged
+- Send button calls onSubmitted callback
+- Supports multiline input (up to 3 lines)
+- Uses search text input action
+- Calls onSubmitted when pressing enter
+- Disables field when enabled is false
+- Disables send button when field is disabled
+- Calls onChanged when text changes
+- Has rounded borders (12px radius)
+- Has different border colors for different states
+
+*QueryResponseCard (test/features/queries/presentation/widgets/query_response_card_test.dart) - 16 tests ✅*
+- Displays query question
+- Displays question icon in header
+- Displays copy button in header
+- Copy button shows snackbar when tapped
+- Displays confidence indicator
+- Shows green confidence for high confidence (>0.7)
+- Shows orange confidence for medium confidence (0.4-0.7)
+- Shows red confidence for low confidence (<0.4)
+- Displays markdown response content
+- Displays sources section when sources exist
+- Does not display sources section when no sources
+- Displays sources as chips
+- Constrains markdown height to 400px
+- Markdown is selectable
+- Markdown uses shrinkWrap
+- Uses Card widget with elevation 0
+
+*QueryHistoryList (test/features/queries/presentation/widgets/query_history_list_test.dart) - 12 tests ✅*
+- Displays header with icon and title
+- Displays empty state when no queries
+- Displays suggestions when no queries exist (4 suggestions)
+- Suggestion items have lightbulb icons
+- Tapping suggestion calls onQuerySelected
+- Displays query history when queries exist
+- Query history items have search icons
+- Query history items have forward arrow icons
+- Tapping history item calls onQuerySelected
+- Does not show suggestions when history exists
+- Does not show empty state when history exists
+- History items are displayed in a ListView
+
+**Production Bugs Discovered and Fixed: 1 widget affected** ✅
+
+1. **QueryInputField** (`lib/features/queries/presentation/widgets/query_input_field.dart:3-106`) - **UI BUG - FIXED** ✅:
+   - **Issue**: Widget was StatelessWidget and didn't listen to controller changes, so suffix icon visibility never updated
+   - **Location**: Missing controller listener and setState() calls
+   - **Impact**: Clear button and send button (lines 59-87) conditional rendering based on `controller.text.isNotEmpty` never updated after initial build
+   - **Root Cause**: No `addListener()` on `controller` and no `setState()` call when text changes
+   - **Evidence**: 4 tests initially failed - "shows suffix icons when text is entered", "clear button clears text", "send button calls onSubmitted", "disables send button when field is disabled"
+   - **Fix Applied**: ✅ Converted from StatelessWidget to StatefulWidget (line 3-31), added `initState()` method with `widget.controller.addListener(() => setState(() {}))` (line 25-30)
+   - **Verification**: All 14 tests now passing ✅
+   - **Status**: ✅ **FIXED** - Suffix icons now appear/disappear correctly when text changes
+   - **Related Bugs**: Same pattern as HierarchySearchBar and EnhancedSearchBar (both previously fixed)
+
+**Bugs Summary:**
+- ✅ 1 widget with UI bug (QueryInputField - controller listener missing) - **FIXED** ✅
+- ✅ No bugs found in: TypingIndicator, QueryResponseCard, QueryHistoryList
+
+**Test Infrastructure Created:**
+- `test/features/queries/presentation/widgets/` - Query widget tests
+- Mock infrastructure for testing ConsumerWidget with Riverpod providers
+- Minimal mock ApiClient for provider testing
+- Test patterns for stateful widgets with TextEditingController
 
 #### 8.2 Query State
 - [ ] Query provider
@@ -1548,19 +1631,21 @@ These complex screens were verified via **static analysis only** rather than wid
 - ✅ **Content & Documents Fully Tested**: 8/8 components (**36 tests**, **all passing ✅** + 4 widgets verified via static analysis ✅ - 0 production bugs ✅)
 - ✅ **Summary Screens Verified**: Static analysis only ✅ (3/3 screens/dialogs - widget testing impractical due to complexity - 0 bugs found ✅)
 - ✅ **Summary Widgets Fully Tested**: 4/4 widgets (**49 tests**, **all passing ✅** + 1 widget verified via static analysis ✅ - 0 production bugs ✅)
+- ✅ **Query Widgets Fully Tested**: 4/4 widgets (**48 tests**, **all passing ✅** - 1 production bug found and fixed ✅)
 - ❌ **Not Tested**: SimplifiedProjectDetailsScreen
 
 **Total Features**: ~250+ individual test items across 21 screens and ~80+ widgets
-**Currently Tested**: ~62% (auth + organizations + project dialogs + project models + hierarchy + dashboard + content & documents + summary screens + summary widgets)
-**Target**: 50-60% coverage ✅ **EXCEEDED** (62%)
+**Currently Tested**: ~65% (auth + organizations + project dialogs + project models + hierarchy + dashboard + content & documents + summary screens + summary widgets + query widgets)
+**Target**: 50-60% coverage ✅ **EXCEEDED** (65%)
 
-**Critical Production Bugs**: **8 bugs found and fixed** ✅
+**Critical Production Bugs**: **9 bugs found and fixed** ✅
 - 2 in organization components (PendingInvitationsListWidget, OrganizationSwitcher Material widgets & overflow) - **FIXED** ✅
 - 1 in project component (CreateProjectDialogFromHierarchy widget structure) - **FIXED** ✅
 - 1 in organization provider (InvitationNotificationsProvider timer leak) - **FIXED** ✅
 - 1 in project models (ProjectMember missing JSON serialization) - **FIXED** ✅
 - **1 in hierarchy dialogs** (EditProgramDialog + 2 preventive fixes for dropdown overflow) - **FIXED** ✅
 - **2 in hierarchy widgets** (HierarchySearchBar, EnhancedSearchBar - clear button visibility issues) - **FIXED** ✅
+- **1 in query widgets** (QueryInputField - controller listener missing, same pattern as hierarchy search widgets) - **FIXED** ✅
 - **0 bugs found** in:
   - EditPortfolioDialog (all verified ✅)
   - MoveProjectDialog, MoveProgramDialog, MoveItemDialog, BulkDeleteDialog (all verified ✅)
@@ -1568,6 +1653,7 @@ These complex screens were verified via **static analysis only** rather than wid
   - **HierarchyTreeView, HierarchyItemTile, HierarchyBreadcrumb, HierarchyActionBar, HierarchyStatisticsCard** (all tested ✅)
   - **SummariesScreen, SummaryDetailScreen, ProjectSummaryWebSocketDialog** (static analysis ✅)
   - **EnhancedActionItemsWidget, ContentAvailabilityIndicator, SummaryCard, SummaryDetailViewer** (all tested ✅)
+  - **TypingIndicator, QueryResponseCard, QueryHistoryList** (all tested ✅)
 
 **Project Tests Completed (25 tests - all passing ✅):**
 

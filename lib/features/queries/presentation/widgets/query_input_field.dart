@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class QueryInputField extends StatelessWidget {
+class QueryInputField extends StatefulWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
   final bool enabled;
@@ -17,19 +17,33 @@ class QueryInputField extends StatelessWidget {
   });
 
   @override
+  State<QueryInputField> createState() => _QueryInputFieldState();
+}
+
+class _QueryInputFieldState extends State<QueryInputField> {
+  @override
+  void initState() {
+    super.initState();
+    // Listen to controller changes to update suffix icon visibility
+    widget.controller.addListener(() {
+      setState(() {});
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
     return TextField(
-      controller: controller,
-      focusNode: focusNode,
-      enabled: enabled,
+      controller: widget.controller,
+      focusNode: widget.focusNode,
+      enabled: widget.enabled,
       maxLines: 3,
       minLines: 1,
       textInputAction: TextInputAction.search,
-      onSubmitted: onSubmitted,
-      onChanged: onChanged,
+      onSubmitted: widget.onSubmitted,
+      onChanged: widget.onChanged,
       style: theme.textTheme.bodyLarge,
       decoration: InputDecoration(
         hintText: 'Ask anything about your project...',
@@ -42,7 +56,7 @@ class QueryInputField extends StatelessWidget {
           Icons.psychology_outlined,
           color: colorScheme.primary,
         ),
-        suffixIcon: controller.text.isNotEmpty
+        suffixIcon: widget.controller.text.isNotEmpty
             ? Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -52,8 +66,8 @@ class QueryInputField extends StatelessWidget {
                       color: colorScheme.onSurfaceVariant,
                     ),
                     onPressed: () {
-                      controller.clear();
-                      onChanged?.call('');
+                      widget.controller.clear();
+                      widget.onChanged?.call('');
                     },
                   ),
                   Padding(
@@ -61,10 +75,10 @@ class QueryInputField extends StatelessWidget {
                     child: IconButton(
                       icon: Icon(
                         Icons.send,
-                        color: enabled ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                        color: widget.enabled ? colorScheme.primary : colorScheme.onSurfaceVariant,
                       ),
-                      onPressed: enabled
-                          ? () => onSubmitted?.call(controller.text)
+                      onPressed: widget.enabled
+                          ? () => widget.onSubmitted?.call(widget.controller.text)
                           : null,
                     ),
                   ),

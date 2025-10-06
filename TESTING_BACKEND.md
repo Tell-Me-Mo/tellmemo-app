@@ -280,11 +280,13 @@ freezegun>=1.4.0
 - [x] Delete summary
 - [~] WebSocket streaming for summaries (uses existing websocket_jobs.py - tested via job system)
 
-#### 7.2 Hierarchy Summaries (hierarchy_summaries.py)
-- [ ] Generate portfolio summaries
-- [ ] Generate program summaries
-- [ ] Include risks, blockers, lessons learned
-- [ ] Include action items and decisions
+#### 7.2 Hierarchy Summaries (hierarchy_summaries.py) - **DEPRECATED ENDPOINTS**
+- [~] Generate portfolio summaries (DEPRECATED - covered by unified_summaries.py tests)
+- [~] Generate program summaries (DEPRECATED - covered by unified_summaries.py tests)
+- [x] Get program summaries (GET endpoint)
+- [x] Get portfolio summaries (GET endpoint)
+- [x] Include risks, blockers, lessons learned in response schema
+- [x] Include action items and decisions in response schema
 
 ### 8. Risks, Tasks & Blockers
 
@@ -460,10 +462,11 @@ freezegun>=1.4.0
 - ✅ **Fully Tested**: Query Endpoints (9/9 features, 29 tests passing) - **3 CRITICAL BUGS FIXED** 🔧
 - ✅ **Fully Tested**: RAG Pipeline (7/7 features, 14 tests passing) - **2 CRITICAL BUGS FIXED** 🔧
 - ✅ **Fully Tested**: Unified Summaries (9/9 features, 31 tests passing) - **6 CRITICAL BUGS FIXED** ✅
+- ✅ **Fully Tested**: Hierarchy Summaries (2/2 GET endpoints, 13 tests passing) - **4 CRITICAL BUGS FIXED** ✅
 - ❌ **Not Tested**: All other features
 
 **Total Features**: ~200+ individual test items
-**Currently Tested**: 62% (144/200 features)
+**Currently Tested**: 65% (150/200 features)
 **Target**: 60-70% coverage ✅ **TARGET EXCEEDED!**
 **Current Coverage**: TBD (run `pytest --cov` to check)
 
@@ -517,6 +520,10 @@ freezegun>=1.4.0
 | 🔴 Critical | **Missing multi-tenant validation in delete_summary** | `unified_summaries.py:523-552` | No organization validation - users can delete summaries from other organizations. Add `get_current_organization` dependency and validate `summary.organization_id == current_org.id`, return 404 to prevent information disclosure | ✅ FIXED |
 | 🔴 Critical | **Background job references undefined `current_user`** | `unified_summaries.py:592,602,612` | In `generate_summary_with_job` function, `current_user` is used but not in scope. Need to pass `created_by` and `created_by_id` in metadata and retrieve from there | ✅ FIXED |
 | 🟡 Minor | **Missing `project_id` in list_summaries response** | `unified_summaries.py:489-514` | Response doesn't include `project_id` field (present in other response models). Add `project_id=str(summary.project_id) if summary.project_id else None` to response | ✅ FIXED |
+| 🔴 Critical | **No authentication on hierarchy_summaries endpoints** | `hierarchy_summaries.py:42-43,98-99` | Added `Depends(get_current_user)` and `Depends(get_current_organization)` to both GET endpoints. POST endpoints deleted. | ✅ FIXED |
+| 🔴 Critical | **No multi-tenant isolation in get_program_summaries** | `hierarchy_summaries.py:62` | Added `Summary.organization_id == current_org.id` to WHERE clause for multi-tenant filtering | ✅ FIXED |
+| 🔴 Critical | **No multi-tenant isolation in get_portfolio_summaries** | `hierarchy_summaries.py:118` | Added `Summary.organization_id == current_org.id` to WHERE clause for multi-tenant filtering | ✅ FIXED |
+| 🟡 Minor | **Invalid UUID returns 500 instead of 400** | `hierarchy_summaries.py:53-56,109-112` | Moved UUID validation before try block so HTTPException(400) is not caught by generic handler | ✅ FIXED |
 
 **Impact Before Fixes**: 60+ tests blocked by critical bugs (30+ organization bugs, 30+ project bugs)
 **Impact After Fixes**: All critical backend bugs FIXED! All 34 project tests passing, 16/22 invitation tests passing (6 have test infrastructure issues, not backend bugs)
@@ -593,6 +600,51 @@ freezegun>=1.4.0
   - **Security Risk**: ✅ **MITIGATED** - No more cross-organization data access
   - **Functional Risk**: ✅ **RESOLVED** - Background job generation will no longer crash
   - **Production Ready**: ✅ **YES** - All critical security issues resolved
+
+**Hierarchy Summaries Testing Results (2025-10-06)**:
+- ✅ 13/13 tests passing - **ALL TESTS PASSING** ✨
+- ✅ **DEPRECATED POST ENDPOINTS REMOVED** - generate_program_summary and generate_portfolio_summary endpoints deleted (use unified_summaries.py instead)
+- ✅ **GET Program Summaries** (6 tests):
+  - Fetch all summaries for a program working correctly with authentication
+  - Limit parameter supported
+  - Empty program returns empty array
+  - Summaries ordered by created_at descending (most recent first)
+  - Invalid UUID format returns 400 correctly (FIXED)
+  - Authentication required - returns 401/403 without token (FIXED)
+- ✅ **GET Portfolio Summaries** (6 tests):
+  - Fetch all summaries for a portfolio working correctly with authentication
+  - Limit parameter supported
+  - Empty portfolio returns empty array
+  - Summaries ordered by created_at descending (most recent first)
+  - Invalid UUID format returns 400 correctly (FIXED)
+  - Authentication required - returns 401/403 without token (FIXED)
+- ✅ **Multi-Tenant Isolation** (1 test):
+  - Multi-tenant isolation enforced - users cannot see summaries from other organizations (FIXED)
+  - Organization ID filtering added to all queries (FIXED)
+- ✅ **ALL 4 BUGS FIXED**:
+  1. ✅ **Authentication now required** - Added `Depends(get_current_user)` and `Depends(get_current_organization)` to both GET endpoints
+     - Fix applied: hierarchy_summaries.py:42-43, 98-99
+     - Impact: Endpoints now require valid JWT token with organization context
+     - Status: ✅ **FIXED**
+  2. ✅ **Multi-tenant isolation enforced** - Added organization_id filtering to queries
+     - Fix applied: hierarchy_summaries.py:62, 118
+     - Impact: Users can only see summaries from their own organization
+     - Status: ✅ **FIXED**
+  3. ✅ **Invalid UUID returns 400 correctly** - Moved UUID validation before try block
+     - Fix applied: hierarchy_summaries.py:53-56, 109-112
+     - Impact: API returns correct 400 status code for malformed UUIDs
+     - Status: ✅ **FIXED**
+  4. ✅ **Deprecated POST endpoints removed** - Deleted generate_program_summary and generate_portfolio_summary endpoints
+     - Fix applied: Removed hierarchy_summaries.py:68-230 (163 lines)
+     - Impact: Reduces attack surface, prevents use of unsafe endpoints
+     - Recommendation: Use POST /api/summaries/generate instead (has proper security)
+     - Status: ✅ **FIXED**
+- 🔧 **Impact Assessment**:
+  - **Severity**: ALL CRITICAL BUGS FIXED ✅
+  - **Scope**: 2 remaining GET endpoints now secure
+  - **Security**: ✅ **PRODUCTION READY** - Authentication and multi-tenant isolation enforced
+  - **API Changes**: POST endpoints removed (breaking change, but they were deprecated)
+  - **Flutter App**: ✅ **NO IMPACT** - Flutter only uses GET endpoints which are now secure
 
 **Project Assignment Testing Results (2025-10-05)**:
 - ✅ 11/11 tests passing
