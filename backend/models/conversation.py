@@ -15,7 +15,7 @@ class Conversation(Base):
     __tablename__ = "conversations"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    project_id = Column(UUID(as_uuid=True), nullable=True)  # Can store project_id, program_id, portfolio_id, or None for org-level. No FK constraint to allow flexibility.
     organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
 
     # Conversation metadata
@@ -31,5 +31,5 @@ class Conversation(Base):
     last_accessed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationships
-    project = relationship("Project", back_populates="conversations")
+    # Note: project relationship removed since project_id no longer has FK constraint (it can store program/portfolio IDs too)
     organization = relationship("Organization", back_populates="conversations")

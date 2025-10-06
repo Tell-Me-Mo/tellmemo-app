@@ -301,7 +301,7 @@ async def query_project(
 
         return QueryResponse(
             answer=response['answer'],
-            sources=response['sources'],
+            sources=response['sources'][:10],  # Limit to 10 sources for consistency
             confidence=response['confidence'],
             conversation_id=conversation_id,
             is_followup=is_followup
@@ -550,7 +550,8 @@ async def query_portfolio(
                 detail=f"No projects found in portfolio {portfolio_id}"
             )
 
-        project_ids = [str(p.id) for p in all_projects]
+        # Deduplicate project IDs (a project can be in both direct and program lists)
+        project_ids = list(set([str(p.id) for p in all_projects]))
         logger.info(f"Querying {len(project_ids)} projects in portfolio {portfolio.name}")
 
         # Handle conversation context

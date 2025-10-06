@@ -1,0 +1,541 @@
+Project: Ocean Guardians Documentary Film
+Meeting: Pre-Production Planning - Production Strategy
+Date: January 19, 2025
+Duration: 65 minutes
+Attendees: Diana Rodriguez (Director), Marcus Webb (Producer), Sarah Kim (Cinematographer), Elena Martinez (Line Producer), James Foster (Editor), Christina Lee (Impact Producer), David Park (Sound Designer)
+
+================================================================================
+
+[00:00] Diana Rodriguez:
+Alright everyone, thank you for making time. We're officially greenlit for Ocean Guardians and we have a lot to plan before principal photography starts in April. Marcus, can you give us the budget and timeline overview?
+
+[00:30] Marcus Webb:
+Absolutely. We secured 850,000 dollars in funding from the environmental foundation, Netflix pre-buy commitment, and our Kickstarter campaign. Total budget is 1.2 million with the remaining 350,000 coming from international pre-sales that I'm negotiating now.
+
+[00:55] Marcus Webb:
+Timeline is tight. We have 8 months from now until Sundance submission deadline in September. That means we need to finish principal photography by June, complete post-production by August, and have a locked picture ready for festival submission.
+
+[01:25] Diana Rodriguez:
+It's aggressive but doable. This film is about ocean plastic pollution and the scientists working to solve it. We're following three main characters - a marine biologist in Indonesia, an engineer developing plastic-eating bacteria, and a teenage activist organizing beach cleanups.
+
+[01:55] Diana Rodriguez:
+The narrative arc shows the problem, the solutions being developed, and the grassroots movement fighting for change. It's part environmental crisis film, part hopeful story about human ingenuity.
+
+[02:20] Sarah Kim:
+Diana, what's your visual approach? Are we going cinéma vérité documentary style or more polished and composed?
+
+[02:35] Diana Rodriguez:
+Blend of both. When we're with our characters in their daily lives, I want intimate vérité - handheld, natural light, observational. When we're showing the beauty and devastation of the ocean, I want stunning composed cinematography - underwater shots, aerial drone footage, time-lapses.
+
+[03:00] Sarah Kim:
+That makes sense. For the underwater work, we'll need specialized equipment. I'm thinking we rent an underwater housing for the RED camera. That's about 1,500 dollars per day plus we need a dive team.
+
+[03:25] Marcus Webb:
+How many days of underwater shooting are we talking?
+
+[03:30] Sarah Kim:
+At least 5 days for the sequences Diana described. Two days in Indonesia for the coral reef devastation, two days in the Maldives for pristine ocean footage, one day in a controlled tank for close-up plastic debris shots.
+
+[03:55] Marcus Webb:
+That's 7,500 for equipment rental plus dive team, travel, and permits. Let's budget 25,000 for all underwater production. Is that realistic?
+
+[04:15] Sarah Kim:
+That's tight but workable if we're efficient. We'll need to storyboard every underwater shot so we're not wasting expensive dive time figuring out what we want.
+
+[04:35] Diana Rodriguez:
+I'll work with you on detailed storyboards. Every minute underwater needs to be planned.
+
+[04:45] Elena Martinez:
+Speaking of travel, let's talk about the production schedule. We're shooting in four countries - Indonesia, Iceland, Kenya, and the US. That's complex logistics.
+
+[05:05] Elena Martinez:
+Indonesia is our biggest shoot - 12 days following the marine biologist. We need travel visas for the crew, filming permits from the Indonesian government, local fixers to help us navigate, and translators since our main character speaks limited English.
+
+[05:35] Marcus Webb:
+I'm working with a production services company in Jakarta. They're helping with permits and they have relationships with local authorities. Permits should be approved by March.
+
+[05:50] Elena Martinez:
+Good. Iceland is 6 days for the engineer character. Easier logistics since everyone speaks English, but expensive. Iceland has high daily costs for crew, equipment, and lodging.
+
+[06:10] Elena Martinez:
+Kenya is 5 days for footage of plastic pollution in Nairobi and coastal areas. Kenya requires filming permits from the Kenya Film Commission and we need security escorts for certain areas.
+
+[06:35] Marcus Webb:
+Security escorts?
+
+[06:40] Elena Martinez:
+Yes, some areas have safety concerns for foreign film crews. The production services company recommended hiring local security, especially when we have expensive camera equipment. It's about 200 dollars per day for two security personnel.
+
+[07:00] Marcus Webb:
+Add it to the budget. Safety is non-negotiable.
+
+[07:10] Diana Rodriguez:
+The US shooting is mostly in California - following the teenage activist and getting b-roll of beach cleanups. That's 8 days and logistically the easiest since it's our home base.
+
+[07:30] Sarah Kim:
+For the drone footage, we'll need FAA permits for aerial filming and a licensed drone operator. I know a guy who does nature documentary work - his aerials are stunning.
+
+[07:50] Diana Rodriguez:
+Yes, let's bring him on. Drone footage is critical for showing the scale of ocean pollution and the beauty of pristine coastlines.
+
+[08:05] Marcus Webb:
+Elena, what's the total travel and logistics budget?
+
+[08:15] Elena Martinez:
+Breaking it down - airfare for 6-person core crew to Indonesia, Iceland, and Kenya is about 45,000 dollars. Lodging and per diems for all locations is 60,000. Local crew hires, fixers, translators, and production services is another 40,000. Equipment shipping and carnets for international travel is 15,000. Total logistics budget is 160,000.
+
+[08:55] Marcus Webb:
+That's 13 percent of our total budget. Reasonable for an international production. Make sure we have contingency for unexpected travel issues - flight delays, extra hotel nights, emergency equipment rentals.
+
+[09:15] Elena Martinez:
+I've built in 10 percent contingency for travel. Should cover most surprises.
+
+[09:25] Diana Rodriguez:
+Let's talk about our characters. We have signed releases from all three main subjects. They're committed and excited about the film. But I'm concerned about the teenage activist.
+
+[09:45] Diana Rodriguez:
+She's 17 years old. We need parental consent for filming and we need to be mindful of not exploiting her. She's passionate and articulate, but we have a responsibility to protect her.
+
+[10:05] Christina Lee:
+As impact producer, I've been thinking about this too. We should have clear guidelines about what we film and what we don't. Her school life, family dynamics - those are off limits unless she and her parents explicitly consent.
+
+[10:30] Christina Lee:
+We should also give her editorial input. Not final cut, but the opportunity to see how she's portrayed and raise concerns before we lock picture.
+
+[10:45] Diana Rodriguez:
+Agreed. I'll draft a protocol for working with the teenage subject and share it with everyone.
+
+[11:00] Marcus Webb:
+Good. Ethical filmmaking is important, especially with minors. Let's make sure we're doing this right.
+
+[11:15] James Foster:
+Can we talk about post-production workflow? I need to know what we're shooting on so I can plan the edit.
+
+[11:30] Sarah Kim:
+We're shooting on RED Komodo in 6K RAW. That gives us flexibility in post for color grading and cropping. We'll also shoot some B-roll on the Sony A7S III for run-and-gun situations where the RED is too cumbersome.
+
+[11:55] James Foster:
+RED 6K RAW is going to generate massive file sizes. We're looking at probably 50-60 terabytes of footage for an 8-week shoot. We need a robust data management system.
+
+[12:15] Sarah Kim:
+I'm planning to hire a DIT - digital imaging technician - who will be on set every day backing up footage, verifying file integrity, and creating dailies. Can't risk losing a single frame.
+
+[12:35] Marcus Webb:
+What's the cost for a DIT for 8 weeks?
+
+[12:40] Sarah Kim:
+About 25,000 for the DIT plus equipment - hard drives, backup systems, laptop. Let's budget 35,000 total for data management.
+
+[13:00] James Foster:
+Once we have the footage, I'll be assembling a rough cut as we shoot. That way Diana can see what we have and what we're missing while we still have production resources to go back and get additional coverage.
+
+[13:25] Diana Rodriguez:
+Yes, I want to review rough assemblies every two weeks during production. Helps us course-correct in real-time.
+
+[13:40] James Foster:
+For the final edit, we're looking at 12-14 weeks in post. I'll need an assistant editor to help organize footage, sync sound, and create sequences. Then we'll go through multiple cut passes - assembly cut, rough cut, fine cut, and final locked cut.
+
+[14:05] Diana Rodriguez:
+The target runtime is 95 minutes. Festivals prefer docs under 100 minutes and Netflix wants streamable length. We'll shoot probably 60 hours of footage and cut it down to 95 minutes, so we need to be ruthless in the edit.
+
+[14:30] James Foster:
+Totally. Storytelling discipline is key. We're not making a 3-hour epic - we're making a tight, compelling 95-minute narrative.
+
+[14:45] David Park:
+Let's talk sound. I'll be handling sound design and mix in post, but Sarah, what's the plan for production sound?
+
+[15:00] Sarah Kim:
+We're hiring a dedicated sound recordist for all interview and observational scenes. For the vérité moments, I might be running camera and sound simultaneously using a shotgun mic, but ideally we have separate sound coverage.
+
+[15:25] David Park:
+Good. Clean production sound is critical. I can fix a lot in post but I can't create dialogue that wasn't captured properly on set.
+
+[15:40] David Park:
+For the underwater sequences, we won't have sync sound obviously. I'll be creating the soundscape in post using a combination of real underwater recordings and designed elements.
+
+[16:00] Diana Rodriguez:
+The sound design is going to be huge for this film. I want immersive ocean sounds - waves, underwater ambience, the creak of plastic debris. Sound should make the audience feel like they're in the ocean.
+
+[16:25] David Park:
+I'm planning a field recording trip to capture authentic ocean sounds. We'll need budget for recording equipment and a few days of location sound gathering.
+
+[16:45] Marcus Webb:
+How much are we talking?
+
+[16:50] David Park:
+Maybe 5,000 for specialized recording equipment rental and travel. It's worth it to have unique, high-quality sound that isn't stock library material.
+
+[17:05] Marcus Webb:
+Approved. Authentic sound makes the film feel real.
+
+[17:15] Christina Lee:
+I want to talk about impact strategy. This film isn't just entertainment - we want it to drive change. What's our impact plan?
+
+[17:35] Christina Lee:
+I'm proposing we partner with environmental organizations like Oceana and Surfrider Foundation. They can help us organize community screenings and educational programs around the film.
+
+[17:55] Christina Lee:
+We should also create a discussion guide for schools and environmental groups. Give them tools to use the film as a conversation starter about ocean pollution and activism.
+
+[18:15] Diana Rodriguez:
+I love that. The film should be a catalyst for action, not just awareness. What about a social media campaign?
+
+[18:30] Christina Lee:
+Yes, we'll launch a hashtag campaign encouraging people to share their own ocean cleanup efforts. User-generated content that amplifies the film's message.
+
+[18:50] Christina Lee:
+I'm also in talks with National Geographic about a potential partnership. They might feature the film on their platform and create supplementary content about ocean conservation.
+
+[19:10] Marcus Webb:
+That would be incredible exposure. Keep pushing on that partnership.
+
+[19:20] Diana Rodriguez:
+Let's talk about music. I want an original score that's emotional but not manipulative. The music should enhance the story without telling the audience what to feel.
+
+[19:40] Marcus Webb:
+I've been in touch with a composer who did the score for that climate change doc last year. Her work is beautiful - piano-driven, minimalist, very emotional. She's interested in the project.
+
+[20:00] Diana Rodriguez:
+Can we afford her?
+
+[20:05] Marcus Webb:
+She quoted 40,000 for an original score. That includes composition, recording with live musicians, and full licensing rights.
+
+[20:25] Diana Rodriguez:
+That's reasonable for the quality we need. Let's lock her in.
+
+[20:35] Marcus Webb:
+I'll send the contract this week.
+
+[20:40] Elena Martinez:
+One thing we haven't discussed - insurance. We need production insurance covering equipment, liability, and travel. For an international shoot with underwater work, we're looking at about 25,000 in insurance premiums.
+
+[21:00] Marcus Webb:
+Non-negotiable. Can't shoot without insurance. Add it to the budget.
+
+[21:10] Diana Rodriguez:
+Let's talk about the festival strategy. Sundance is our dream premiere, but we should have backup options.
+
+[21:25] Marcus Webb:
+Sundance submission deadline is September. If we're not selected, we pivot to Tribeca in April 2026, or Toronto, or SXSW. We'll also submit to environmental film festivals like Wildscreen and Jackson Hole.
+
+[21:50] Marcus Webb:
+Netflix is contracted to premiere the film on their platform 60 days after the festival debut. So if we premiere at Sundance in January 2026, Netflix release is March 2026.
+
+[22:15] Diana Rodriguez:
+What if we don't get into any major festivals?
+
+[22:25] Marcus Webb:
+Then we do a direct-to-Netflix release or we self-distribute with grassroots screenings. But I'm confident we'll get into at least one major festival. The subject matter is timely and compelling.
+
+[22:45] Christina Lee:
+We could also pitch it to environmental film festivals which have lower competition and are perfectly aligned with our subject matter.
+
+[23:00] Diana Rodriguez:
+Good backup plan. Let's aim for Sundance but be strategic about alternatives.
+
+[23:15] Sarah Kim:
+I have a concern about the shooting schedule. April to June is monsoon season in Indonesia. What if weather impacts our shoot?
+
+[23:35] Elena Martinez:
+I've built weather days into the Indonesia schedule. We have 12 shooting days plus 3 weather contingency days. If we lose days to rain, we have buffer.
+
+[23:55] Sarah Kim:
+And if we exceed the buffer?
+
+[24:00] Elena Martinez:
+Then we either extend the Indonesia shoot - which adds cost - or we accept that we might not get every shot on the shot list. Diana would need to make creative adjustments.
+
+[24:20] Diana Rodriguez:
+I can work with that. Documentary filmmaking is about adapting to reality. If monsoon forces us to change plans, we'll find creative solutions.
+
+[24:40] Marcus Webb:
+That's the documentary spirit. Expect the unexpected.
+
+[24:50] James Foster:
+What about archival footage? Are we licensing any stock footage or news clips?
+
+[25:05] Diana Rodriguez:
+Minimal archival. I want the film to feel present-tense and immersive. But we might use a few news clips to establish the scope of the plastic pollution crisis. Maybe 2-3 minutes total.
+
+[25:30] Marcus Webb:
+Archival licensing can get expensive depending on the source. News footage from major networks is thousands of dollars per minute. We should budget 15,000 for archival.
+
+[25:50] James Foster:
+Okay, I'll be selective about what we request.
+
+[26:00] Diana Rodriguez:
+Let's talk about crew size. For international travel, we need to keep it lean. What's the minimum viable crew?
+
+[26:20] Elena Martinez:
+Core crew is 6 people - director, producer, cinematographer, sound recordist, AC (assistant camera), and line producer. That's the minimum for professional production.
+
+[26:45] Sarah Kim:
+In some situations I can operate without an AC, but it's risky. If equipment fails and I don't have backup, we lose the day.
+
+[27:00] Diana Rodriguez:
+Let's keep the AC. Better to have redundancy than risk losing footage.
+
+[27:15] Elena Martinez:
+We'll hire local crew in each country for additional support - production assistants, drivers, translators. That's more cost-effective than flying a larger crew internationally.
+
+[27:40] Marcus Webb:
+Makes sense. Local crew also helps us navigate cultural nuances and access locations we might not get otherwise.
+
+[27:55] Christina Lee:
+On the topic of cultural sensitivity - we're filming in Indonesia and Kenya. We need to be respectful of local customs and traditions. Have we done cultural research?
+
+[28:15] Diana Rodriguez:
+Yes, I've been consulting with cultural advisors in each country. In Indonesia, we need to be mindful of religious practices and ask permission before filming in certain areas. In Kenya, there are protocols for filming in communities.
+
+[28:45] Christina Lee:
+Good. The worst thing we could do is show up as outsiders extracting stories without respect for the local context.
+
+[29:00] Diana Rodriguez:
+Absolutely. We're guests in these communities and we need to act accordingly.
+
+[29:15] Marcus Webb:
+Let's do a budget recap. We have 1.2 million total. Here's the breakdown - 300,000 for crew and talent, 250,000 for equipment and rentals, 160,000 for travel and logistics, 150,000 for post-production, 100,000 for music and sound, 80,000 for insurance and legal, 60,000 for impact and distribution, and 100,000 contingency.
+
+[30:00] Marcus Webb:
+That adds up to 1.2 million. We're fully budgeted with 8 percent contingency. If we go over, we need to make cuts or find additional funding.
+
+[30:20] Elena Martinez:
+I'll track every expense in real-time. Weekly budget reports so we know exactly where we stand.
+
+[30:35] Diana Rodriguez:
+Transparency is key. I want to know immediately if we're trending over budget so we can make adjustments.
+
+[30:50] Marcus Webb:
+Agreed. No surprises.
+
+[31:00] Diana Rodriguez:
+Alright, let's talk about risks. What could derail this project?
+
+[31:15] Sarah Kim:
+Equipment failure in a remote location. If the camera dies while we're in rural Indonesia, we can't easily replace it.
+
+[31:30] Elena Martinez:
+That's why we're bringing backup cameras and critical spare parts. We can't bring backups for everything, but we can mitigate the most likely failures.
+
+[31:50] Marcus Webb:
+My biggest risk is the funding. We still need 350,000 from international pre-sales. If those deals don't close, we're short and we'd need to scale back production.
+
+[32:10] Marcus Webb:
+I'm in active negotiations with distributors in UK, France, and Australia. I'm confident we'll close at least two of those deals by March. But until the contracts are signed, it's a risk.
+
+[32:35] Diana Rodriguez:
+What's plan B if we can't close those deals?
+
+[32:45] Marcus Webb:
+We scale back the international travel. Maybe we drop one location or reduce shooting days. We could also apply for additional grants, but that takes time.
+
+[33:05] Diana Rodriguez:
+Let's push hard on those distribution deals. The international locations are critical to the story.
+
+[33:20] Christina Lee:
+My risk is impact. What if we make a beautiful film but it doesn't change anything? No one takes action, no policy changes, no measurable impact.
+
+[33:45] Diana Rodriguez:
+That's a valid concern. How do we measure impact?
+
+[33:55] Christina Lee:
+We track metrics like number of community screenings, social media engagement, partnerships with environmental organizations, and actual beach cleanup participation. If people watch the film and then organize local cleanups, that's tangible impact.
+
+[34:20] Marcus Webb:
+We should also track media coverage and policy mentions. If legislators cite the film in discussions about plastic regulation, that's impact.
+
+[34:40] Christina Lee:
+Exactly. Impact is multi-dimensional. It's not just box office or streaming numbers.
+
+[34:55] Diana Rodriguez:
+I love that we're thinking about this from the beginning. Impact should be baked into the filmmaking process, not an afterthought.
+
+[35:15] James Foster:
+My risk is post-production timeline. If we finish shooting in June and we need a locked picture by September, that's only 12 weeks. If the edit takes longer than expected, we miss the Sundance deadline.
+
+[35:40] Diana Rodriguez:
+That's why we need to be disciplined in the edit. We can't get precious about footage. We need to kill our darlings and tell the story efficiently.
+
+[36:00] James Foster:
+I'll create a detailed post-production schedule with milestones. First assembly by week 4, rough cut by week 8, fine cut by week 11, locked picture by week 12. That leaves one week buffer before the Sundance deadline.
+
+[36:25] Diana Rodriguez:
+Perfect. Let's stick to that schedule.
+
+[36:35] David Park:
+Sound mixing is part of that timeline too. I need at least 2 weeks for sound design and final mix after picture lock. So we really need picture locked by end of August.
+
+[36:55] Diana Rodriguez:
+Noted. August 31st is our picture lock deadline.
+
+[37:05] Marcus Webb:
+Any other risks we haven't covered?
+
+[37:15] Elena Martinez:
+Talent risk. What if one of our main characters drops out mid-production or refuses to continue filming?
+
+[37:30] Diana Rodriguez:
+We have signed agreements with all three subjects, but you're right - documentary subjects can change their minds. We need to maintain strong relationships and make sure they feel comfortable throughout the process.
+
+[37:55] Diana Rodriguez:
+If someone drops out, we'd need to pivot. Maybe shift focus to the remaining two characters or find a replacement subject. It would be challenging but not impossible.
+
+[38:15] Marcus Webb:
+Let's make sure we're communicating regularly with our subjects. Check-ins every few weeks, make sure they're still on board and excited.
+
+[38:30] Diana Rodriguez:
+I'll own that. I'll stay in close contact with all three characters.
+
+[38:40] Marcus Webb:
+Alright, we've covered a lot. Let's do action items.
+
+[38:50] Diana Rodriguez:
+I'm creating detailed underwater shot storyboards with Sarah, drafting the protocol for working with the teenage subject, and maintaining regular contact with all three main characters.
+
+[39:10] Marcus Webb:
+I'm negotiating international pre-sales to close the funding gap, sending the composer contract this week, and finalizing the production services agreement in Indonesia.
+
+[39:30] Sarah Kim:
+I'm coordinating with the underwater equipment rental house, booking the drone operator, and working with Diana on storyboards.
+
+[39:50] Elena Martinez:
+I'm securing filming permits for Indonesia, Iceland, and Kenya, building out the detailed production schedule with weather contingencies, and setting up weekly budget tracking.
+
+[40:10] James Foster:
+I'm creating the post-production schedule with milestones and hiring an assistant editor to start in July.
+
+[40:25] David Park:
+I'm planning the field recording trip for ocean sounds and scoping out sound design resources.
+
+[40:40] Christina Lee:
+I'm developing partnerships with environmental organizations, creating the discussion guide for community screenings, and continuing conversations with National Geographic.
+
+[41:00] Marcus Webb:
+Our next meeting is March 1st to review permit status, finalize the shooting schedule, and confirm crew hires. Between now and then, let's stay in close communication via our production Slack channel.
+
+[41:25] Diana Rodriguez:
+This is an ambitious project but I'm confident we have the right team. Let's make a film that matters.
+
+[41:40] Sarah Kim:
+Excited to get started.
+
+[41:45] James Foster:
+Same here. This is going to be powerful.
+
+[41:50] Christina Lee:
+Can't wait to see the impact this film has.
+
+[41:55] Elena Martinez:
+Let's do this.
+
+[42:00] Marcus Webb:
+Alright team. See you in March.
+
+[42:05] David Park:
+Talk soon everyone.
+
+[END OF TRANSCRIPT]
+
+================================================================================
+
+KEY ACTION ITEMS EXTRACTED:
+- Diana Rodriguez: Create detailed underwater shot storyboards with Sarah Kim
+- Diana Rodriguez: Draft protocol for working with teenage subject and share with team
+- Diana Rodriguez: Maintain regular check-ins with all three main characters (every few weeks)
+- Marcus Webb: Negotiate international pre-sales with UK, France, and Australia distributors (need to close by March)
+- Marcus Webb: Send composer contract this week
+- Marcus Webb: Finalize production services agreement in Indonesia
+- Sarah Kim: Coordinate with underwater equipment rental house for RED camera housing
+- Sarah Kim: Book drone operator for aerial footage
+- Sarah Kim: Work with Diana on detailed underwater storyboards
+- Elena Martinez: Secure filming permits for Indonesia, Iceland, and Kenya (permits approved by March)
+- Elena Martinez: Build detailed production schedule with weather contingencies
+- Elena Martinez: Set up weekly budget tracking and reporting
+- James Foster: Create post-production schedule with specific milestones
+- James Foster: Hire assistant editor to start in July
+- David Park: Plan field recording trip for authentic ocean sounds
+- Christina Lee: Develop partnerships with environmental organizations (Oceana, Surfrider Foundation)
+- Christina Lee: Create discussion guide for community screenings
+- Christina Lee: Continue conversations with National Geographic about partnership
+
+KEY DECISIONS MADE:
+- Total budget: $1.2 million ($850k secured, $350k from international pre-sales pending)
+- Timeline: 8 months to Sundance submission (September deadline)
+- Principal photography: April to June (complete by June)
+- Post-production: Complete by August, locked picture by August 31st
+- Target runtime: 95 minutes
+- Shooting format: RED Komodo 6K RAW + Sony A7S III for B-roll
+- Visual approach: Blend of intimate vérité and composed cinematography
+- Core crew size: 6 people (director, producer, cinematographer, sound recordist, AC, line producer)
+- Underwater shooting: 5 days with specialized equipment ($25k budget)
+- Travel locations: Indonesia (12 days), Iceland (6 days), Kenya (5 days), California (8 days)
+- Travel and logistics budget: $160k total
+- Data management: Hire DIT for entire shoot ($35k budget)
+- Post-production timeline: 12-14 weeks (rough assemblies every 2 weeks during production)
+- Original music score: $40k (composer locked in)
+- Production insurance: $25k
+- Archival footage: Minimal usage ($15k budget)
+- Festival strategy: Sundance as primary target, Tribeca/Toronto/SXSW as backups
+- Netflix release: 60 days after festival premiere
+- Impact strategy: Partner with environmental orgs, create discussion guide, social media campaign
+- Ethical protocol: Teenage subject has editorial input, clear filming boundaries
+- Security: Hire local security escorts in Kenya ($200/day for 2 personnel)
+- Weather contingency: 3 extra days built into Indonesia schedule
+- Budget contingency: 8% ($100k)
+- Next meeting: March 1st to review permits and finalize shooting schedule
+
+BUDGET BREAKDOWN ($1.2M total):
+- Crew and talent: $300k
+- Equipment and rentals: $250k
+- Travel and logistics: $160k
+- Post-production: $150k
+- Music and sound: $100k
+- Insurance and legal: $80k
+- Impact and distribution: $60k
+- Contingency: $100k
+
+PROJECT OVERVIEW:
+- Film: Ocean Guardians (Documentary, 95 minutes)
+- Subject: Ocean plastic pollution and solutions
+- Three main characters: Marine biologist (Indonesia), engineer developing plastic-eating bacteria, teenage activist organizing cleanups
+- Narrative arc: Problem → Solutions → Grassroots movement
+- Target festivals: Sundance, Tribeca, Toronto, SXSW, environmental film festivals
+- Distribution: Netflix (60 days post-festival premiere)
+
+RISKS IDENTIFIED:
+- International pre-sales funding gap ($350k still needed - deals must close by March)
+- Equipment failure in remote locations (mitigated with backup cameras)
+- Weather delays during monsoon season in Indonesia (3 buffer days included)
+- Tight post-production timeline (12 weeks from shooting completion to locked picture)
+- Documentary subject dropout risk (maintaining strong relationships to prevent)
+- Cultural sensitivity issues when filming internationally (consulting with cultural advisors)
+- Festival rejection - backup plan is environmental film festivals or direct-to-Netflix
+- Impact measurement - tracking screenings, social engagement, policy mentions
+
+TECHNICAL SPECIFICATIONS:
+- Camera: RED Komodo 6K RAW, Sony A7S III
+- Underwater: RED with underwater housing ($1,500/day rental)
+- Drone: FAA-permitted aerial filming with licensed operator
+- Sound: Dedicated sound recordist + field recording trip for ocean sounds
+- Data: 50-60 terabytes of footage, DIT for daily backups and dailies
+- Edit workflow: Rough assemblies during production, 4 cut stages (assembly, rough, fine, locked)
+
+IMPACT STRATEGY:
+- Partner with Oceana and Surfrider Foundation
+- Community screenings with discussion guides
+- Hashtag campaign for user-generated content
+- National Geographic partnership (in talks)
+- Track metrics: screenings, social engagement, cleanup participation, policy mentions
+
+CREW ROLES:
+- Diana Rodriguez (Director) - Creative vision, character relationships
+- Marcus Webb (Producer) - Budget, funding, distribution deals
+- Sarah Kim (Cinematographer) - Visual execution, equipment
+- Elena Martinez (Line Producer) - Logistics, permits, schedule
+- James Foster (Editor) - Post-production, story assembly
+- Christina Lee (Impact Producer) - Community engagement, partnerships
+- David Park (Sound Designer) - Sound design and mix
+
+NEXT MEETING:
+- March 1st - Review permit status, finalize shooting schedule, confirm crew hires

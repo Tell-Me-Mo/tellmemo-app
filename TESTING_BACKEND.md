@@ -248,11 +248,15 @@ freezegun>=1.4.0
 ### 6. RAG & Query System
 
 #### 6.1 Query Endpoints (queries.py)
-- [ ] Query organization-wide
-- [ ] Query specific project
-- [ ] Query program
-- [ ] Query portfolio
-- [ ] Multi-tenant vector search
+- [x] Query organization-wide
+- [x] Query specific project
+- [x] Query program
+- [x] Query portfolio
+- [x] Multi-tenant vector search
+- [x] Conversation context and follow-up detection
+- [x] Conversation creation and updates
+- [x] Source limiting (10 sources max)
+- [x] Multi-tenant isolation
 
 #### 6.2 RAG Pipeline
 - [ ] Generate embeddings
@@ -452,10 +456,11 @@ freezegun>=1.4.0
 - ✅ **Fully Tested**: Content Upload (14/14 features, 32 tests passing) - **1 BUG FIXED** ✨
 - ✅ **Fully Tested**: Content Retrieval (6/6 features, included in 32 content tests) - **NO BUGS** ✨
 - ✅ **Fully Tested**: Content Availability (14/14 features, 19 tests passing) - **1 CRITICAL SECURITY BUG FIXED** 🔧
+- ✅ **Fully Tested**: Query Endpoints (9/9 features, 29 tests passing) - **3 CRITICAL BUGS FIXED** 🔧
 - ❌ **Not Tested**: All other features
 
 **Total Features**: ~200+ individual test items
-**Currently Tested**: 54% (119/200 features)
+**Currently Tested**: 56% (128/200 features)
 **Target**: 60-70% coverage
 **Current Coverage**: TBD (run `pytest --cov` to check)
 
@@ -497,6 +502,10 @@ freezegun>=1.4.0
 | 🔴 Critical | Missing `selectinload` import in search endpoint | `hierarchy.py:474` | Add `from sqlalchemy.orm import selectinload` to function imports | ✅ FIXED |
 | 🟡 Minor | File size validation returns 500 instead of 400 | `content.py:242-249` | Add `except ValueError as e: raise HTTPException(status_code=400, detail=str(e))` to main execution path | ✅ FIXED |
 | 🔴 Critical | Missing multi-tenant validation in content availability | `content_availability.py:44-90, 92-127, 129-175` & `content_availability_service.py:22-110, 112-217, 219-330, 342-407` | Add organization_id validation in all three endpoints and service methods to prevent cross-organization data access | ✅ FIXED |
+| 🔴 Critical | `Conversation.project_id` not nullable | `conversation.py:18` | Change `nullable=False` → `nullable=True` to support org/program/portfolio-level conversations | ✅ FIXED |
+| 🔴 Critical | `Conversation.project_id` has FK constraint to projects table | `conversation.py:18` | Remove FK constraint - field now stores project/program/portfolio IDs generically | ✅ FIXED |
+| 🔴 Critical | Portfolio query doesn't deduplicate project IDs | `queries.py:554` | Use `list(set([...]))` to deduplicate when project appears in both direct and program lists | ✅ FIXED |
+| 🟡 Minor | Project query doesn't limit sources to 10 | `queries.py:304` | Add `[:10]` slice to sources for consistency with other query endpoints | ✅ FIXED |
 
 **Impact Before Fixes**: 60+ tests blocked by critical bugs (30+ organization bugs, 30+ project bugs)
 **Impact After Fixes**: All critical backend bugs FIXED! All 34 project tests passing, 16/22 invitation tests passing (6 have test infrastructure issues, not backend bugs)
@@ -563,6 +572,69 @@ freezegun>=1.4.0
     - `content_availability.py`: Added organization dependency and pass org_id to service
     - `content_availability_service.py`: Added org validation in all methods (check_project_content, check_program_content, check_portfolio_content, get_summary_generation_stats)
   - Test verification: Cross-org access test now correctly expects 404 response
+
+**Query Endpoints Testing Results (2025-10-06)**:
+- ✅ 29/29 tests passing - **ALL TESTS PASSING** ✨
+- ✅ **Project Query Endpoint** (7 tests):
+  - Query project with RAG system working correctly
+  - Conversation creation and context tracking working
+  - Follow-up question detection and enhancement working
+  - Multi-tenant isolation enforced (cross-org access blocked)
+  - Authentication required
+  - Conversation messages appended correctly
+  - Conversation last_accessed_at updated on each query
+- ✅ **Organization Query Endpoint** (5 tests):
+  - Query all projects in organization working correctly
+  - No projects error handling working
+  - Organization-level conversation creation working (project_id = None)
+  - Follow-up detection and enhancement working
+  - Member role requirement enforced
+- ✅ **Program Query Endpoint** (6 tests):
+  - Query all projects in program working correctly
+  - Non-existent program returns 404
+  - Empty program (no projects) returns 404
+  - Multi-tenant isolation enforced (cross-org program access blocked)
+  - Program-level conversation creation working (stores program_id in project_id field)
+  - Follow-up detection working
+- ✅ **Portfolio Query Endpoint** (6 tests):
+  - Query all projects in portfolio (direct + through programs) working correctly
+  - Proper aggregation of direct portfolio projects and program projects
+  - Project deduplication working (project in both lists counted once)
+  - Non-existent portfolio returns 404
+  - Empty portfolio (no projects) returns 404
+  - Multi-tenant isolation enforced (cross-org portfolio access blocked)
+  - Portfolio-level conversation creation working
+  - Follow-up detection working
+- ✅ **Conversation Features** (5 tests):
+  - Invalid conversation ID handling (creates new conversation)
+  - Source limiting to 10 sources for all endpoints
+  - Conversation title generation working
+  - Conversation last_accessed_at tracking working
+- 🔧 **3 CRITICAL BUGS FOUND AND FIXED**:
+  1. **Conversation.project_id NOT NULL constraint** (`conversation.py:18`)
+     - Root cause: Model defined `project_id` as `nullable=False`, but organization-level queries need `project_id=None`
+     - Impact: All organization-level queries failed with IntegrityError
+     - Fix: Changed to `nullable=True` to support org/program/portfolio-level conversations
+  2. **Conversation.project_id has FK constraint** (`conversation.py:18`, `project.py:49`)
+     - Root cause: `project_id` had FK constraint to projects table, but program/portfolio queries store program_id/portfolio_id in this field
+     - Impact: All program and portfolio queries failed with ForeignKeyViolationError
+     - Fix: Removed FK constraint - field now generically stores entity IDs (project/program/portfolio)
+     - Also removed `conversations` relationship from Project model
+  3. **Portfolio query duplicates project IDs** (`queries.py:554`)
+     - Root cause: Portfolio queries concatenate direct_projects + program_projects without deduplication
+     - Impact: If a project has both `portfolio_id` and `program_id`, it appears twice in query, potentially duplicating RAG results
+     - Fix: Use `list(set([...]))` to deduplicate project IDs before querying
+- 🟡 **1 MINOR BUG FOUND AND FIXED**:
+  1. **Project query doesn't limit sources** (`queries.py:304`)
+     - Root cause: Project query returns all sources, while org/program/portfolio queries limit to 10
+     - Impact: Inconsistent API behavior, potential for very large responses
+     - Fix: Added `[:10]` slice to sources for consistency across all query endpoints
+- ✅ **Design Notes**:
+  - Conversation model now uses `project_id` field generically to store any entity ID (project/program/portfolio)
+  - `project_id = None` indicates organization-level conversation
+  - Conversation title includes entity type prefix: `[Organization: ...]`, `[Program: ...]`, `[Portfolio: ...]`, or no prefix for projects
+  - All query endpoints properly integrate with conversation context service for follow-up detection
+  - Multi-tenant isolation enforced at both entity validation and conversation creation levels
 
 **Content Upload Testing Results (2025-10-06)**:
 - ✅ 32/32 tests passing (after fix)
