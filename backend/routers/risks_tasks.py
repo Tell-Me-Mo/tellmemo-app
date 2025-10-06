@@ -153,11 +153,22 @@ async def get_project_risks(
 async def create_risk(
     project_id: UUID,
     risk_data: RiskCreate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_org: Organization = Depends(get_current_organization),
+    current_user: User = Depends(get_current_user),
+    _: str = Depends(require_role("member"))
 ):
     """Create a new risk for a project."""
-    # Verify project exists
-    project = await db.get(Project, project_id)
+    # Verify project belongs to organization
+    project_result = await db.execute(
+        select(Project).where(
+            and_(
+                Project.id == project_id,
+                Project.organization_id == current_org.id
+            )
+        )
+    )
+    project = project_result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -170,6 +181,8 @@ async def create_risk(
         mitigation=risk_data.mitigation,
         impact=risk_data.impact,
         probability=risk_data.probability,
+        assigned_to=risk_data.assigned_to,
+        assigned_to_email=risk_data.assigned_to_email,
         ai_generated="true" if risk_data.ai_generated else "false",
         ai_confidence=risk_data.ai_confidence,
         source_content_id=risk_data.source_content_id,
@@ -187,11 +200,20 @@ async def create_risk(
 async def update_risk(
     risk_id: UUID,
     risk_data: RiskUpdate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_org: Organization = Depends(get_current_organization),
+    current_user: User = Depends(get_current_user),
+    _: str = Depends(require_role("member"))
 ):
     """Update an existing risk."""
+    # Get risk
     risk = await db.get(Risk, risk_id)
     if not risk:
+        raise HTTPException(status_code=404, detail="Risk not found")
+
+    # Verify project belongs to organization
+    project = await db.get(Project, risk.project_id)
+    if not project or project.organization_id != current_org.id:
         raise HTTPException(status_code=404, detail="Risk not found")
 
     update_data = risk_data.dict(exclude_unset=True)
@@ -214,10 +236,22 @@ async def update_risk(
 
 
 @router.delete("/risks/{risk_id}")
-async def delete_risk(risk_id: UUID, db: AsyncSession = Depends(get_db)):
+async def delete_risk(
+    risk_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_org: Organization = Depends(get_current_organization),
+    current_user: User = Depends(get_current_user),
+    _: str = Depends(require_role("member"))
+):
     """Delete a risk."""
+    # Get risk
     risk = await db.get(Risk, risk_id)
     if not risk:
+        raise HTTPException(status_code=404, detail="Risk not found")
+
+    # Verify project belongs to organization
+    project = await db.get(Project, risk.project_id)
+    if not project or project.organization_id != current_org.id:
         raise HTTPException(status_code=404, detail="Risk not found")
 
     await db.delete(risk)
@@ -357,11 +391,22 @@ async def delete_task(task_id: UUID, db: AsyncSession = Depends(get_db)):
 async def bulk_update_risks(
     project_id: UUID,
     risks: List[dict],
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_org: Organization = Depends(get_current_organization),
+    current_user: User = Depends(get_current_user),
+    _: str = Depends(require_role("member"))
 ):
     """Bulk create/update risks from AI analysis."""
-    # Verify project exists
-    project = await db.get(Project, project_id)
+    # Verify project belongs to organization
+    project_result = await db.execute(
+        select(Project).where(
+            and_(
+                Project.id == project_id,
+                Project.organization_id == current_org.id
+            )
+        )
+    )
+    project = project_result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -400,7 +445,7 @@ async def bulk_update_risks(
                 mitigation=risk_data.get("mitigation"),
                 impact=risk_data.get("impact"),
                 probability=risk_data.get("probability"),
-                ai_generated=True,
+                ai_generated="true",
                 ai_confidence=risk_data.get("ai_confidence", 0.8),
                 source_content_id=risk_data.get("source_content_id"),
                 updated_by="ai"
