@@ -444,12 +444,27 @@ Tests cover (require `python main.py` running on port 8000):
 ### 14. Conversations
 
 #### 14.1 Conversation Management (conversations.py)
-- [ ] Create conversation
-- [ ] List conversations for project
-- [ ] Get conversation by ID
-- [ ] Update conversation
-- [ ] Delete conversation
-- [ ] Multi-turn chat history
+- [x] Create conversation (project-level and organization-level)
+- [x] Create conversation with initial messages
+- [x] List conversations for project
+- [x] List organization-level conversations
+- [x] List conversations ordered by last_accessed_at
+- [x] Get conversation by ID
+- [x] Get conversation updates last_accessed_at timestamp
+- [x] Get organization-level conversation
+- [x] Update conversation title
+- [x] Update conversation messages
+- [x] Update conversation title and messages together
+- [x] Update conversation updates last_accessed_at
+- [x] Update organization-level conversation
+- [x] Delete conversation
+- [x] Delete organization-level conversation
+- [x] Multi-tenant isolation (cannot access other org conversations)
+- [x] Multi-tenant isolation (cannot list other org conversations)
+- [x] Multi-turn chat history (build conversation over time)
+- [x] Conversation with pending answer (streaming scenario)
+- [x] Authentication requirements (all endpoints)
+- [x] Validation (not found, invalid IDs)
 
 ### 16. Cross-Cutting Concerns
 
@@ -517,17 +532,17 @@ Tests cover (require `python main.py` running on port 8000):
 - ✅ **Fully Tested**: Activity Feed (5/5 features, 23 tests passing) - **3 CRITICAL SECURITY BUGS FIXED** ✅
 - ✅ **Fully Tested**: Support Tickets HTTP API (17/17 features, 50 tests passing) - **NO BUGS FOUND** ✨
 - ✅ **Tests Created**: Support Tickets WebSocket (12/12 features, 12 tests - require live server)
-- ❌ **Not Tested**: Conversations, Health
+- ✅ **Fully Tested**: Conversation Management (22/22 features, 30 tests passing) - **1 CRITICAL BUG FIXED** ✅
+- ❌ **Not Tested**: Health
 - ❌ **Not Tested**: All other features
 
-**Total Features**: ~275+ individual test items
-**Currently Tested**: 94% (266/275 features - includes notifications + activities + support tickets + WS)
+**Total Features**: ~297+ individual test items
+**Currently Tested**: 97% (288/297 features - includes all backend features except health endpoint)
 **Target**: 60-70% coverage ✅ **TARGET EXCEEDED!**
 **Current Coverage**: TBD (run `pytest --cov` to check)
 
 **Latest Testing Results**:
-- ✅ Support Tickets HTTP - 50/50 tests passing, **NO BUGS FOUND** ✨
-- ✅ Support Tickets WebSocket - 12/12 tests created (4 passing without server, 8 require live server)
+- ✅ Conversation Management - 30/30 tests passing, **1 CRITICAL BUG FIXED** ✅
 
 **Note**: WebSocket audio streaming (websocket_audio.py, audio_buffer_service.py) were dead code and have been removed. The frontend only uses HTTP POST file upload for transcription.
 
@@ -640,6 +655,7 @@ Tests cover (require `python main.py` running on port 8000):
 | 🔴 Critical | **No multi-tenant validation in get_project_activities** | `activity_service.py:82-94` | Service method accepts `organization_id` parameter but NEVER USES IT in the query. Users can potentially access activities from other organizations' projects if they know the project ID. **FIX:** Added project ownership validation that queries project with organization_id check at lines 82-94, returns empty list if project doesn't belong to organization. | ✅ FIXED |
 | 🔴 Critical | **No multi-tenant validation in get_recent_activities** | `activity_service.py:133-147` | Service method accepts `organization_id` parameter but NEVER USES IT. Users can pass any project IDs and retrieve activities without validating project ownership. **FIX:** Added validation at lines 133-147 that filters requested project_ids to only include projects belonging to the organization, returns empty list if no valid projects found. | ✅ FIXED |
 | 🔴 Critical | **No multi-tenant validation in delete_project_activities** | `activity_service.py:306-318` | Service method accepts `organization_id` parameter but doesn't validate project ownership before deleting activities. Admin from one org could delete activities from another org's project. **FIX:** Added project ownership validation at lines 306-318, returns 0 deleted count if project doesn't belong to organization. | ✅ FIXED |
+| 🔴 Critical | **update_conversation fails for organization-level conversations** | `conversations.py:197-252` | The endpoint compares `Conversation.project_id == project_id` where project_id is the string 'organization', but the database expects a UUID. This causes a 500 error when trying to update organization-level conversations. **FIX:** Added conditional logic to check if `project_id == 'organization'` and use `.is_(None)` for the query filter (lines 198-219). Also fixed response to return 'organization' instead of None for project_id (line 247). | ✅ FIXED |
 
 ---
 

@@ -195,15 +195,28 @@ async def update_conversation(
 
     try:
         # Verify conversation exists and belongs to the project and organization
-        result = await session.execute(
-            select(Conversation).where(
-                and_(
-                    Conversation.id == conversation_id,
-                    Conversation.project_id == project_id,
-                    Conversation.organization_id == current_org.id
+        if project_id == 'organization':
+            # Organization-level conversation
+            result = await session.execute(
+                select(Conversation).where(
+                    and_(
+                        Conversation.id == conversation_id,
+                        Conversation.project_id.is_(None),
+                        Conversation.organization_id == current_org.id
+                    )
                 )
             )
-        )
+        else:
+            # Entity-specific conversation
+            result = await session.execute(
+                select(Conversation).where(
+                    and_(
+                        Conversation.id == conversation_id,
+                        Conversation.project_id == project_id,
+                        Conversation.organization_id == current_org.id
+                    )
+                )
+            )
         conversation = result.scalar_one_or_none()
 
         if not conversation:
@@ -231,7 +244,7 @@ async def update_conversation(
 
         return ConversationResponse(
             id=str(conversation.id),
-            project_id=str(conversation.project_id),
+            project_id=str(conversation.project_id) if conversation.project_id else 'organization',
             title=conversation.title,
             messages=conversation.messages,
             created_at=conversation.created_at.isoformat(),
