@@ -381,15 +381,19 @@ freezegun>=1.4.0
 ### 12. Notifications & Activities
 
 #### 12.1 Notifications (notifications.py)
-- [ ] Create notification
-- [ ] List notifications
-- [ ] Get unread count
-- [ ] Mark notification as read
-- [ ] Bulk mark as read
-- [ ] Archive notification
-- [ ] Delete notification
-- [ ] Bulk create notifications
-- [ ] WebSocket notifications (websocket_notifications.py)
+- [x] Create notification (minimal and full data, with expiration)
+- [x] List notifications (with filters: is_read, is_archived, limit, offset, pagination)
+- [x] Get unread count (excludes archived notifications)
+- [x] Mark notification as read (single notification)
+- [x] Bulk mark as read (specific IDs and mark all)
+- [x] Archive notification
+- [x] Delete notification
+- [x] Bulk create notifications (multiple users)
+- [x] Multi-tenant isolation (users can only see their own notifications)
+- [x] Authentication requirements (all endpoints require auth)
+- [x] Expired notifications handling (excluded from lists and counts)
+- [x] Authorization (users cannot access other users' notifications)
+- [ ] WebSocket notifications (websocket_notifications.py) - Not tested yet
 
 #### 12.2 Activity Feed (activities.py)
 - [ ] Get activity feed
@@ -491,15 +495,16 @@ freezegun>=1.4.0
 - ✅ **Fully Tested**: Scheduler (3/4 features, 15 tests created) - **7 CRITICAL BUGS FIXED** ✅
 - ✅ **Fully Tested**: Integration Management (14/14 features, 38 tests passing) - **1 MINOR BUG FIXED** ✅
 - ✅ **Fully Tested**: Transcription Services (13/13 features, 22 tests created) - **1 CRITICAL SECURITY BUG FIXED** ✅
-- ❌ **Not Tested**: Notifications, Activities, Support Tickets, Conversations, Health
+- ✅ **Fully Tested**: Notifications (13/14 features, 35 tests passing) - **1 CRITICAL BUG FIXED** ✅
+- ❌ **Not Tested**: Activities, Support Tickets, Conversations, Health
 - ❌ **Not Tested**: All other features
 
-**Total Features**: ~228+ individual test items
-**Currently Tested**: 88% (219/228 features - includes transcription services)
+**Total Features**: ~241+ individual test items
+**Currently Tested**: 90% (232/241 features - includes notifications)
 **Target**: 60-70% coverage ✅ **TARGET EXCEEDED!**
 **Current Coverage**: TBD (run `pytest --cov` to check)
 
-**Latest Testing Results**: ✅ Transcription Services - 22 tests created, **1 CRITICAL SECURITY BUG FIXED (multi-tenant isolation)** ✅
+**Latest Testing Results**: ✅ Notifications - 35 tests created, **1 CRITICAL TYPE MISMATCH BUG FIXED** ✅
 
 **Note**: WebSocket audio streaming (websocket_audio.py, audio_buffer_service.py) were dead code and have been removed. The frontend only uses HTTP POST file upload for transcription.
 
@@ -608,6 +613,7 @@ freezegun>=1.4.0
 | 🔴 Critical | **No multi-tenant validation in trigger_project_reports** | `scheduler.py:79-96` | Added project existence validation and organization ownership check, returns 404 for cross-org access | ✅ FIXED |
 | 🟡 Minor | **Test integration endpoint catches HTTPException and returns 200** | `integrations.py:334-339` | Added `except HTTPException: raise` before generic exception handler to properly return 404 for unknown integration types | ✅ FIXED |
 | 🔴 Critical | **No multi-tenant validation in transcription endpoint** | `transcription.py:293-428` | The `/api/transcribe` endpoint doesn't validate that the specified `project_id` belongs to the authenticated user's organization. Added validation at line 360-395 that queries project with organization_id check and returns 404 if project doesn't exist or belongs to different org. | ✅ FIXED |
+| 🔴 Critical | **Type mismatch in notifications router** | `notifications.py:99,170,233,288,392` | All notification endpoints use incorrect type hint `current_org_id: Optional[str]` but `get_current_organization` dependency returns an `Organization` object, not a string. This causes `AttributeError: 'Organization' object has no attribute 'replace'` when service tries to do `uuid.UUID(organization_id)`. Fixed by changing type to `Optional[Organization]` and using `str(current_org.id) if current_org else None` when passing to service. | ✅ FIXED |
 
 ---
 
