@@ -238,7 +238,9 @@ async def upload_content(
                     chunk_count=0,  # Will be updated after processing
                     job_id=job_id
                 )
-                
+
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
             except HTTPException:
                 raise
             except Exception as e:
