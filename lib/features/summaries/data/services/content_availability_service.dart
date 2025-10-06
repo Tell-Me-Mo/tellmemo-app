@@ -4,7 +4,7 @@ import '../../../../core/network/dio_client.dart';
 class ContentAvailabilityService {
   final Dio _dio;
 
-  ContentAvailabilityService() : _dio = DioClient.instance;
+  ContentAvailabilityService(this._dio);
 
   /// Check content availability for an entity
   Future<ContentAvailability> checkAvailability({
@@ -211,4 +211,4 @@ enum ContentSeverity {
 }
 
 // Singleton instance
-final contentAvailabilityService = ContentAvailabilityService();
+final contentAvailabilityService = ContentAvailabilityService(DioClient.instance);

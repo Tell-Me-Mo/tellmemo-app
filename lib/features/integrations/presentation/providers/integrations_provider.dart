@@ -4,11 +4,12 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/integration.dart';
 import '../../data/services/integrations_service.dart';
+import '../../../../core/network/dio_client.dart';
 
 part 'integrations_provider.g.dart';
 
 final integrationsServiceProvider = Provider<IntegrationsService>((ref) {
-  return IntegrationsService();
+  return IntegrationsService(DioClient.instance);
 });
 
 @riverpod

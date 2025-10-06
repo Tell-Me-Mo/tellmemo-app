@@ -1,13 +1,14 @@
 import 'package:dio/dio.dart';
-import '../../../../core/network/dio_client.dart';
 import '../../domain/models/integration.dart';
 
 class IntegrationsService {
-  IntegrationsService();
+  final Dio _dio;
+
+  IntegrationsService(this._dio);
 
   Future<List<Integration>> getIntegrations() async {
     try {
-      final response = await DioClient.instance.get('/api/integrations');
+      final response = await _dio.get('/api/integrations');
       
       if (response.statusCode == 200) {
         final List<dynamic> data = response.data;
@@ -25,7 +26,7 @@ class IntegrationsService {
     Map<String, dynamic> config,
   ) async {
     try {
-      final response = await DioClient.instance.post(
+      final response = await _dio.post(
         '/api/integrations/$integrationId/connect',
         data: {
           'api_key': config['apiKey'],
@@ -46,7 +47,7 @@ class IntegrationsService {
 
   Future<void> disconnectIntegration(String integrationId) async {
     try {
-      final response = await DioClient.instance.post(
+      final response = await _dio.post(
         '/api/integrations/$integrationId/disconnect',
       );
 
@@ -60,7 +61,7 @@ class IntegrationsService {
 
   Future<void> syncIntegration(String integrationId) async {
     try {
-      final response = await DioClient.instance.post(
+      final response = await _dio.post(
         '/api/integrations/$integrationId/sync',
       );
 
@@ -77,7 +78,7 @@ class IntegrationsService {
     int limit = 50,
   }) async {
     try {
-      final response = await DioClient.instance.get(
+      final response = await _dio.get(
         '/api/integrations/$integrationId/activity',
         queryParameters: {'limit': limit},
       );
