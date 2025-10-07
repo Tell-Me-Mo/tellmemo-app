@@ -140,6 +140,44 @@ body {
     border-color: var(--text-tertiary);
 }
 
+.btn-secondary-alt {
+    background: transparent;
+    color: var(--accent-primary);
+    padding: 10px 24px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 14px;
+    border: 2px solid var(--accent-primary);
+    transition: var(--transition);
+    display: inline-block;
+}
+
+.btn-secondary-alt:hover {
+    background: rgba(99, 102, 241, 0.1);
+    border-color: var(--accent-secondary);
+    color: var(--accent-secondary);
+}
+
+.btn-tertiary {
+    background: transparent;
+    color: var(--text-secondary);
+    padding: 10px 24px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 14px;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    transition: var(--transition);
+    display: inline-block;
+}
+
+.btn-tertiary:hover {
+    background: rgba(99, 102, 241, 0.1);
+    border-color: var(--accent-primary);
+    color: var(--text-primary);
+}
+
 .btn-large {
     padding: 14px 32px;
     font-size: 16px;
@@ -219,6 +257,25 @@ body {
     gap: 16px;
     justify-content: center;
     margin-bottom: 80px;
+    flex-wrap: wrap;
+}
+
+.cta-buttons {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+/* Desktop: side-by-side buttons */
+@media (min-width: 769px) {
+    .hero-cta {
+        max-width: 700px;
+        margin-left: auto;
+        margin-right: auto;
+    }
 }
 
 .hero-stats {
@@ -234,18 +291,20 @@ body {
 }
 
 .stat-number {
-    font-size: 36px;
-    font-weight: 700;
+    font-size: 48px;
+    font-weight: 800;
     background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
     margin-bottom: 8px;
+    line-height: 1;
 }
 
 .stat-label {
     font-size: 14px;
-    color: var(--text-tertiary);
+    color: var(--text-secondary);
+    font-weight: 500;
 }
 
 /* Features Section */
@@ -422,7 +481,7 @@ body {
 
 .footer-links {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 40px;
 }
 
@@ -963,6 +1022,7 @@ button:focus-visible {
     align-items: center;
     justify-content: space-between;
     gap: 20px;
+    flex-wrap: wrap;
 }
 
 .cookie-content p {
@@ -970,6 +1030,9 @@ button:focus-visible {
     font-size: 14px;
     color: var(--text-secondary);
     line-height: 1.5;
+    flex: 1 1 auto;
+    max-width: 800px;
+    min-width: 280px;
 }
 
 .cookie-content a {
@@ -998,6 +1061,47 @@ button:focus-visible {
 .btn-accept:hover {
     transform: translateY(-1px);
     opacity: 0.9;
+}
+
+/* Responsive - Tablet */
+@media (max-width: 1024px) {
+    /* Hero CTA - Tablet: 2x2 Grid Layout */
+    .hero-cta {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        max-width: 560px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .hero-cta .btn-tertiary {
+        grid-column: 1 / -1;
+    }
+
+    /* CTA Section - Tablet */
+    .cta-buttons {
+        gap: 12px;
+    }
+
+    /* Stats - Tablet */
+    .stat-number {
+        font-size: 42px;
+    }
+
+    /* Cookie Banner - Tablet */
+    .cookie-content {
+        gap: 16px;
+    }
+
+    .cookie-content p {
+        max-width: 600px;
+        font-size: 13px;
+    }
+
+    .btn-accept {
+        flex-shrink: 0;
+    }
 }
 
 /* Responsive - Mobile First Design */
@@ -1092,6 +1196,7 @@ button:focus-visible {
     }
 
     .hero-cta {
+        display: flex;
         flex-direction: column;
         align-items: stretch;
         gap: 12px;
@@ -1113,7 +1218,7 @@ button:focus-visible {
     }
 
     .hero-cta .btn-primary {
-        padding: 14px 20px;
+        padding: 16px 20px;
         background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
         box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
     }
@@ -1123,16 +1228,29 @@ button:focus-visible {
         transform: translateY(-1px);
     }
 
-    .hero-cta .btn-secondary {
-        padding: 13px 20px;
+    .hero-cta .btn-secondary-alt {
+        padding: 15px 20px;
         background: transparent;
-        border: 1.5px solid var(--border-color);
-        color: var(--text-primary);
+        border: 2px solid var(--accent-primary);
+        color: var(--accent-primary);
     }
 
-    .hero-cta .btn-secondary:hover {
-        background: var(--bg-tertiary);
+    .hero-cta .btn-secondary-alt:hover {
+        background: rgba(99, 102, 241, 0.1);
+        border-color: var(--accent-secondary);
+    }
+
+    .hero-cta .btn-tertiary {
+        padding: 14px 20px;
+        background: transparent;
+        border: 1px solid rgba(99, 102, 241, 0.3);
+        color: var(--text-secondary);
+    }
+
+    .hero-cta .btn-tertiary:hover {
+        background: rgba(99, 102, 241, 0.1);
         border-color: var(--accent-primary);
+        color: var(--text-primary);
     }
 
     /* Hero Stats - Simple Design (same as desktop) */
@@ -1152,18 +1270,20 @@ button:focus-visible {
     }
 
     .stat-number {
-        font-size: 28px;
-        font-weight: 700;
+        font-size: 36px;
+        font-weight: 800;
         background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
         margin-bottom: 8px;
+        line-height: 1;
     }
 
     .stat-label {
         font-size: 12px;
-        color: var(--text-tertiary);
+        color: var(--text-secondary);
+        font-weight: 500;
         line-height: 1.4;
     }
 
@@ -1578,10 +1698,24 @@ button:focus-visible {
         line-height: 1.5;
     }
 
-    .cta .btn-large {
+    .cta-buttons {
+        flex-direction: column;
+        width: 100%;
+        gap: 12px;
+    }
+
+    .cta-buttons .btn-primary {
         width: 100%;
         max-width: 100%;
         padding: 16px 32px;
+        font-size: 16px;
+        border-radius: 10px;
+    }
+
+    .cta-buttons .btn-secondary-alt {
+        width: 100%;
+        max-width: 100%;
+        padding: 15px 32px;
         font-size: 16px;
         border-radius: 10px;
     }

@@ -269,6 +269,90 @@ void main() {
 
       expect(find.textContaining(':'), findsNothing);
     });
+
+    testWidgets('shows confirmation dialog when tapping main button while recording', (tester) async {
+      final state = RecordingStateModel(
+        state: RecordingState.recording,
+        duration: const Duration(seconds: 10),
+      );
+
+      await tester.pumpWidget(createTestWidget(state: state));
+      await tester.pump();
+
+      // Tap the main red recording button (the one with fiber_manual_record icon)
+      final mainButton = find.ancestor(
+        of: find.byIcon(Icons.fiber_manual_record),
+        matching: find.byType(InkWell),
+      );
+      await tester.tap(mainButton);
+      await tester.pumpAndSettle();
+
+      // Verify confirmation dialog appears
+      expect(find.text('Stop Recording?'), findsOneWidget);
+      expect(find.text('Your recording will be saved and automatically transcribed.'), findsOneWidget);
+      expect(find.text('Continue'), findsOneWidget);
+      expect(find.text('Stop & Save'), findsOneWidget);
+    });
+
+    testWidgets('shows confirmation dialog when tapping stop button', (tester) async {
+      final state = RecordingStateModel(
+        state: RecordingState.recording,
+        duration: const Duration(seconds: 10),
+      );
+
+      await tester.pumpWidget(createTestWidget(state: state));
+      await tester.pump();
+
+      // Tap the stop button
+      await tester.tap(find.byTooltip('Stop Recording'));
+      await tester.pumpAndSettle();
+
+      // Verify confirmation dialog appears
+      expect(find.text('Stop Recording?'), findsOneWidget);
+      expect(find.text('Continue'), findsOneWidget);
+      expect(find.text('Stop & Save'), findsOneWidget);
+    });
+
+    testWidgets('shows cancel confirmation dialog when tapping cancel button', (tester) async {
+      final state = RecordingStateModel(
+        state: RecordingState.recording,
+        duration: const Duration(seconds: 10),
+      );
+
+      await tester.pumpWidget(createTestWidget(state: state));
+      await tester.pump();
+
+      // Tap the cancel button
+      await tester.tap(find.byTooltip('Cancel'));
+      await tester.pumpAndSettle();
+
+      // Verify cancel confirmation dialog appears
+      expect(find.text('Cancel Recording?'), findsOneWidget);
+      expect(find.text('Are you sure you want to cancel this recording? All recorded audio will be lost.'), findsOneWidget);
+      expect(find.text('Keep Recording'), findsOneWidget);
+      expect(find.text('Cancel'), findsOneWidget);
+    });
+
+    testWidgets('dismisses stop dialog when tapping Continue', (tester) async {
+      final state = RecordingStateModel(
+        state: RecordingState.recording,
+        duration: const Duration(seconds: 10),
+      );
+
+      await tester.pumpWidget(createTestWidget(state: state));
+      await tester.pump();
+
+      // Tap the stop button
+      await tester.tap(find.byTooltip('Stop Recording'));
+      await tester.pumpAndSettle();
+
+      // Tap Continue button
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+
+      // Dialog should be dismissed
+      expect(find.text('Stop Recording?'), findsNothing);
+    });
   });
 }
 

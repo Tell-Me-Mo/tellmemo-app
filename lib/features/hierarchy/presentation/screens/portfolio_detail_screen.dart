@@ -38,6 +38,7 @@ class _PortfolioDetailScreenState extends ConsumerState<PortfolioDetailScreen> {
   final ScrollController _scrollController = ScrollController();
   List<Activity> _recentActivities = [];
   bool _hasInitialized = false;
+  bool _isActionMenuOpen = false;
 
   @override
   void initState() {
@@ -221,10 +222,14 @@ class _PortfolioDetailScreenState extends ConsumerState<PortfolioDetailScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 1200;
 
+    final isMobile = screenWidth <= 768;
+
     return Scaffold(
       backgroundColor: colorScheme.surface,
-      body: SafeArea(
-        child: SingleChildScrollView(
+      body: Stack(
+        children: [
+          SafeArea(
+            child: SingleChildScrollView(
           controller: _scrollController,
           child: Padding(
             padding: EdgeInsets.all(isDesktop ? 32 : 16),
@@ -259,8 +264,13 @@ class _PortfolioDetailScreenState extends ConsumerState<PortfolioDetailScreen> {
                 ),
               ),
             ),
+            ),
           ),
         ),
+        // Speed dial overlay for mobile
+        if (_isActionMenuOpen && isMobile)
+          _buildSpeedDialOverlay(context, portfolio),
+      ],
       ),
       floatingActionButton: _buildFloatingActionButton(context, portfolio),
     );
@@ -913,10 +923,9 @@ class _PortfolioDetailScreenState extends ConsumerState<PortfolioDetailScreen> {
 
     return Column(
       children: [
-        // Quick Actions Card
-        _buildQuickActionsCard(context, portfolio),
-        // Activities Section - Only show on desktop
+        // Quick Actions Card - Only show on desktop/tablet
         if (!isMobile) ...[
+          _buildQuickActionsCard(context, portfolio),
           const SizedBox(height: 16),
           _buildActivitiesCard(context, portfolio),
         ],
@@ -1694,8 +1703,29 @@ class _PortfolioDetailScreenState extends ConsumerState<PortfolioDetailScreen> {
   Widget? _buildFloatingActionButton(BuildContext context, Portfolio portfolio) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth <= 768;
 
-    // Always show Ask AI FAB
+    // Mobile: Show "+" FAB that toggles speed dial menu
+    if (isMobile) {
+      return SafeArea(
+        child: FloatingActionButton(
+          onPressed: () {
+            setState(() {
+              _isActionMenuOpen = !_isActionMenuOpen;
+            });
+          },
+          backgroundColor: colorScheme.primary,
+          child: AnimatedRotation(
+            duration: const Duration(milliseconds: 200),
+            turns: _isActionMenuOpen ? 0.125 : 0,
+            child: Icon(_isActionMenuOpen ? Icons.close : Icons.add),
+          ),
+        ),
+      );
+    }
+
+    // Desktop/Tablet: Show Ask AI FAB
     return FloatingActionButton.extended(
       onPressed: () => _showQueryDialog(context, portfolio),
       icon: const Icon(Icons.psychology_outlined),
@@ -1703,6 +1733,156 @@ class _PortfolioDetailScreenState extends ConsumerState<PortfolioDetailScreen> {
       backgroundColor: colorScheme.primary,
       foregroundColor: colorScheme.onPrimary,
       elevation: 4,
+    );
+  }
+
+  Widget _buildSpeedDialOverlay(BuildContext context, Portfolio portfolio) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final actions = [
+      {
+        'icon': Icons.psychology_outlined,
+        'label': 'Ask AI',
+        'color': colorScheme.primary,
+        'onTap': () {
+          setState(() => _isActionMenuOpen = false);
+          _showQueryDialog(context, portfolio);
+        },
+      },
+      {
+        'icon': Icons.add,
+        'label': 'Add Program',
+        'color': Colors.blue,
+        'onTap': () {
+          setState(() => _isActionMenuOpen = false);
+          _showCreateProgramDialog(portfolio);
+        },
+      },
+      {
+        'icon': Icons.work_outline,
+        'label': 'Add Project',
+        'color': Colors.green,
+        'onTap': () {
+          setState(() => _isActionMenuOpen = false);
+          _showCreateProjectDialog(portfolio);
+        },
+      },
+      {
+        'icon': Icons.summarize_outlined,
+        'label': 'Generate Summary',
+        'color': Colors.purple,
+        'onTap': () {
+          setState(() => _isActionMenuOpen = false);
+          _showPortfolioSummaryDialog(context, portfolio);
+        },
+      },
+      {
+        'icon': Icons.edit_outlined,
+        'label': 'Edit Portfolio',
+        'color': Colors.orange,
+        'onTap': () {
+          setState(() => _isActionMenuOpen = false);
+          _showEditDialog(portfolio);
+        },
+      },
+    ];
+
+    return GestureDetector(
+      onTap: () {
+        setState(() => _isActionMenuOpen = false);
+      },
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.5),
+        child: SafeArea(
+          child: Align(
+            alignment: Alignment.bottomRight,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 16, bottom: 88),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: actions.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final action = entry.value;
+                  return TweenAnimationBuilder<double>(
+                    duration: Duration(milliseconds: 200 + (index * 50)),
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    builder: (context, value, child) {
+                      return Transform.scale(
+                        scale: value,
+                        alignment: Alignment.centerRight,
+                        child: Opacity(
+                          opacity: value,
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Label
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: colorScheme.surface,
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.1),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              action['label'] as String,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          // Action button
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: action['onTap'] as VoidCallback,
+                              borderRadius: BorderRadius.circular(28),
+                              child: Container(
+                                width: 56,
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  color: colorScheme.surface,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.2),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  action['icon'] as IconData,
+                                  color: action['color'] as Color,
+                                  size: 24,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 

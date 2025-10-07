@@ -126,6 +126,27 @@ class ProjectMatcherService:
                 }
         
         if match_result["action"] == "create_new":
+            # Check if a project with this name already exists
+            # (Claude might suggest a name that already exists)
+            existing_project = next(
+                (p for p in existing_projects if p.name.lower() == match_result["project_name"].lower()),
+                None
+            )
+
+            if existing_project:
+                # Project with this name exists - match to it instead of creating duplicate
+                logger.info(
+                    f"Claude suggested creating '{match_result['project_name']}' but it already exists. "
+                    f"Matching to existing project instead."
+                )
+                return {
+                    "project_id": existing_project.id,
+                    "project_name": existing_project.name,
+                    "is_new": False,
+                    "confidence": match_result.get("confidence", 0.8),  # High confidence since names match
+                    "reasoning": f"Matched to existing project with same name. {match_result.get('reasoning', '')}"
+                }
+
             # Create new project using ProjectService
             new_project = await ProjectService.create_project(
                 session=session,
@@ -134,12 +155,12 @@ class ProjectMatcherService:
                 description=match_result["project_description"],
                 created_by="fireflies_ai_matcher"
             )
-            
+
             logger.info(
                 f"Created new project: {new_project.name} "
                 f"(confidence: {match_result['confidence']})"
             )
-            
+
             return {
                 "project_id": new_project.id,
                 "project_name": new_project.name,

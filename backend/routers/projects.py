@@ -63,7 +63,7 @@ class AddMemberRequest(BaseModel):
 
 
 
-@router.post("", response_model=ProjectResponse, status_code=201)
+@router.post("/", response_model=ProjectResponse, status_code=201)
 async def create_project(
     request: CreateProjectRequest,
     session: AsyncSession = Depends(get_db),
@@ -117,7 +117,7 @@ async def create_project(
         raise HTTPException(status_code=500, detail="Failed to create project")
 
 
-@router.get("", response_model=List[ProjectResponse])
+@router.get("/", response_model=List[ProjectResponse])
 async def list_projects(
     status: Optional[str] = None,
     session: AsyncSession = Depends(get_db),

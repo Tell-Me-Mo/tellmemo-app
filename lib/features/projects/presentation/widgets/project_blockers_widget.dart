@@ -157,9 +157,14 @@ class ProjectBlockersWidget extends ConsumerWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+      padding: EdgeInsets.symmetric(
+        vertical: isMobile ? 20 : 40,
+        horizontal: isMobile ? 16 : 24,
+      ),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
@@ -171,23 +176,24 @@ class ProjectBlockersWidget extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(isMobile ? 8 : 12),
               decoration: BoxDecoration(
                 color: colorScheme.error.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 Icons.block_outlined,
-                size: 32,
+                size: isMobile ? 24 : 32,
                 color: colorScheme.error.withValues(alpha: 0.6),
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: isMobile ? 12 : 16),
             Text(
               'No blockers identified',
               style: textTheme.titleSmall?.copyWith(
                 color: colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w500,
+                fontSize: isMobile ? 13 : null,
               ),
             ),
             const SizedBox(height: 4),
@@ -195,6 +201,7 @@ class ProjectBlockersWidget extends ConsumerWidget {
               'Track critical issues that are blocking project progress',
               style: textTheme.bodySmall?.copyWith(
                 color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                fontSize: isMobile ? 11 : null,
               ),
               textAlign: TextAlign.center,
             ),

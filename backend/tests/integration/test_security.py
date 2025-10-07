@@ -41,7 +41,7 @@ class TestInputSanitization:
 
         for malicious_name in malicious_names:
             response = await client.post(
-                "/api/v1/projects",
+                "/api/v1/projects/",
                 json={"name": malicious_name, "description": "Test"}
             )
 
@@ -73,7 +73,7 @@ class TestInputSanitization:
 
         for idx, xss_payload in enumerate(xss_payloads):
             response = await client.post(
-                "/api/v1/projects",
+                "/api/v1/projects/",
                 json={
                     "name": f"XSS Test Project {idx}",  # Unique name for each test
                     "description": xss_payload
@@ -149,7 +149,7 @@ class TestInputSanitization:
         for payload in path_traversal_payloads:
             # Try in project name
             response = await client.post(
-                "/api/v1/projects",
+                "/api/v1/projects/",
                 json={"name": payload}
             )
 
@@ -172,7 +172,7 @@ class TestInputSanitization:
 
         for payload in ldap_payloads:
             response = await client.post(
-                "/api/v1/projects",
+                "/api/v1/projects/",
                 json={"name": payload}
             )
 
@@ -232,7 +232,7 @@ class TestSQLInjectionPrevention:
         }
 
         response = await client.get(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             params=malicious_params
         )
 
@@ -249,7 +249,7 @@ class TestCORSConfiguration:
         """Test that CORS headers are present in responses"""
         client = await client_factory(test_user, test_organization)
 
-        response = await client.get("/api/v1/projects")
+        response = await client.get("/api/v1/projects/")
 
         # Check for CORS headers
         headers = response.headers
@@ -262,7 +262,7 @@ class TestCORSConfiguration:
     @pytest.mark.asyncio
     async def test_options_request_handling(self, async_client: AsyncClient):
         """Test preflight OPTIONS request handling"""
-        response = await async_client.options("/api/v1/projects")
+        response = await async_client.options("/api/v1/projects/")
 
         # OPTIONS should be handled (either 200 or 405 if not configured)
         assert response.status_code in [200, 405]
@@ -278,7 +278,7 @@ class TestJWTValidation:
         expired_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiZXhwIjoxNTE2MjM5MDIyfQ.4Adcj0pE8T1cTe7TpqVxZBP9MKsOqGCj1BLpN-CfKUQ"
 
         response = await async_client.get(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             headers={"Authorization": f"Bearer {expired_token}"}
         )
 
@@ -298,7 +298,7 @@ class TestJWTValidation:
 
         for token in malformed_tokens:
             response = await async_client.get(
-                "/api/v1/projects",
+                "/api/v1/projects/",
                 headers={"Authorization": f"Bearer {token}"}
             )
 
@@ -309,7 +309,7 @@ class TestJWTValidation:
     @pytest.mark.asyncio
     async def test_missing_token_rejected(self, async_client: AsyncClient):
         """Test that requests without tokens are rejected"""
-        response = await async_client.get("/api/v1/projects")
+        response = await async_client.get("/api/v1/projects/")
 
         # Should reject with 401 or 403
         assert response.status_code in [401, 403], \
@@ -322,7 +322,7 @@ class TestJWTValidation:
         invalid_signature_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.InvalidSignatureHere"
 
         response = await async_client.get(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             headers={"Authorization": f"Bearer {invalid_signature_token}"}
         )
 
@@ -342,7 +342,7 @@ class TestMultiTenantIsolation:
         # Create project in org 1
         client1 = await client_factory(test_user, test_organization)
         project_response = await client1.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Org 1 Project"}
         )
         assert project_response.status_code == 201
@@ -372,7 +372,7 @@ class TestMultiTenantIsolation:
         # Create project in org 1
         client1 = await client_factory(test_user, test_organization)
         project_response = await client1.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Org 1 Project"}
         )
         project_id = project_response.json()["id"]
@@ -397,7 +397,7 @@ class TestMultiTenantIsolation:
         # Create project in org 1
         client1 = await client_factory(test_user, test_organization)
         project_response = await client1.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Org 1 Project"}
         )
         project_id = project_response.json()["id"]
@@ -425,7 +425,7 @@ class TestHeaderSecurity:
         """Test that security headers are present in responses"""
         client = await client_factory(test_user, test_organization)
 
-        response = await client.get("/api/v1/projects")
+        response = await client.get("/api/v1/projects/")
 
         headers = response.headers
 
@@ -462,7 +462,7 @@ class TestInputValidation:
         long_name = "A" * 100000
 
         response = await client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": long_name}
         )
 
@@ -483,7 +483,7 @@ class TestInputValidation:
         client = await client_factory(test_user, test_organization)
 
         response = await client.get(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             params={"limit": -1, "offset": -1}
         )
 

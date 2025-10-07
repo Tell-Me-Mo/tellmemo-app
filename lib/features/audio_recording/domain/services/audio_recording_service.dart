@@ -228,18 +228,13 @@ class AudioRecordingService {
   Future<void> cancelRecording() async {
     _durationTimer?.cancel();
     _amplitudeTimer?.cancel();
-    
-    // Stop recording
+
+    // Cancel recording - this automatically discards the recording file
+    // The recorder.cancel() method handles file cleanup internally
     await _recorder.cancel();
-    
-    // Delete the recording file if it exists
-    if (_currentRecordingPath != null) {
-      final file = File(_currentRecordingPath!);
-      if (await file.exists()) {
-        await file.delete();
-      }
-    }
-    
+
+    print('[AudioRecordingService] Recording cancelled and file discarded');
+
     _updateState(RecordingState.idle);
     _recordingStartTime = null;
     _pausedDuration = Duration.zero;

@@ -664,6 +664,33 @@ class TestListSummaries:
         assert len(data) >= 1
 
     @pytest.mark.asyncio
+    async def test_list_summaries_with_auto_entity_id(
+        self,
+        authenticated_org_client: AsyncClient,
+        test_summary: Summary
+    ):
+        """Test that 'auto' entity_id is handled gracefully without error."""
+        # Arrange
+        filters = {
+            "entity_type": "project",
+            "entity_id": "auto",
+            "limit": 100,
+            "offset": 0
+        }
+
+        # Act
+        response = await authenticated_org_client.post(
+            "/api/v1/summaries/list",
+            json=filters
+        )
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        # 'auto' is a sentinel value, so it returns all org summaries
+
+    @pytest.mark.asyncio
     async def test_list_summaries_pagination(
         self,
         authenticated_org_client: AsyncClient,

@@ -35,7 +35,7 @@ class TestPortfolioCreation:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/v1/portfolios",
+            "/api/v1/portfolios/",
             json=portfolio_data
         )
 
@@ -69,7 +69,7 @@ class TestPortfolioCreation:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/v1/portfolios",
+            "/api/v1/portfolios/",
             json=portfolio_data
         )
 
@@ -92,10 +92,10 @@ class TestPortfolioCreation:
         """Test that duplicate portfolio names are rejected."""
         # Arrange
         portfolio_data = {"name": "Duplicate Portfolio"}
-        await authenticated_org_client.post("/api/v1/portfolios", json=portfolio_data)
+        await authenticated_org_client.post("/api/v1/portfolios/", json=portfolio_data)
 
         # Act
-        response = await authenticated_org_client.post("/api/v1/portfolios", json=portfolio_data)
+        response = await authenticated_org_client.post("/api/v1/portfolios/", json=portfolio_data)
 
         # Assert
         assert response.status_code == 400
@@ -106,7 +106,7 @@ class TestPortfolioCreation:
         """Test that creating portfolio requires authentication."""
         # Act
         response = await client.post(
-            "/api/v1/portfolios",
+            "/api/v1/portfolios/",
             json={"name": "Test Portfolio"}
         )
 
@@ -122,7 +122,7 @@ class TestPortfolioCreation:
         """Test that owner defaults to current user email."""
         # Act
         response = await authenticated_org_client.post(
-            "/api/v1/portfolios",
+            "/api/v1/portfolios/",
             json={"name": "Auto-Owner Portfolio"}
         )
 
