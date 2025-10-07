@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List, Literal
 from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_
+from sqlalchemy import select, and_
 import uuid
 
 from utils.logger import get_logger, sanitize_for_log
@@ -119,7 +119,7 @@ async def generate_summary(
     **Response:**
     Returns either the generated summary or job information if `use_job=true`.
     """
-    logger.info(f"Generating {sanitize_for_log(request.summary_type)} summary for {sanitize_for_log(request.entity_type)} {request.entity_id}")
+    logger.info(f"Generating {sanitize_for_log(request.summary_type)} summary for {sanitize_for_log(request.entity_type)} {sanitize_for_log(request.entity_id)}")
 
     try:
         # Validate and convert entity_id to UUID
@@ -316,8 +316,8 @@ async def generate_summary(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to generate summary: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate summary: {str(e)}")
+        logger.error(f"Failed to generate summary: {sanitize_for_log(str(e))}")
+        raise HTTPException(status_code=500, detail="Failed to generate summary")
 
 
 @router.get("/{summary_id}", response_model=UnifiedSummaryResponse)
@@ -410,7 +410,7 @@ async def get_summary(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to fetch summary: {e}")
+        logger.error(f"Failed to fetch summary: {sanitize_for_log(str(e))}")
         raise HTTPException(status_code=500, detail="Failed to fetch summary")
 
 
@@ -526,7 +526,7 @@ async def list_summaries(
         return response_summaries
 
     except Exception as e:
-        logger.error(f"Failed to list summaries: {e}")
+        logger.error(f"Failed to list summaries: {sanitize_for_log(str(e))}")
         raise HTTPException(status_code=500, detail="Failed to list summaries")
 
 
@@ -562,7 +562,7 @@ async def delete_summary(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to delete summary: {e}")
+        logger.error(f"Failed to delete summary: {sanitize_for_log(str(e))}")
         await session.rollback()
         raise HTTPException(status_code=500, detail="Failed to delete summary")
 
@@ -662,10 +662,10 @@ async def generate_summary_with_job(
             )
 
     except Exception as e:
-        logger.error(f"Failed to generate summary in job {job_id}: {e}")
+        logger.error(f"Failed to generate summary in job {job_id}: {sanitize_for_log(str(e))}")
         await upload_job_service.fail_job(
             job_id,
-            error_message=f"Failed to generate summary: {str(e)}"
+            error_message="Failed to generate summary"
         )
 
 
@@ -824,6 +824,6 @@ async def update_summary(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to update summary {sanitize_for_log(summary_id)}: {e}")
+        logger.error(f"Failed to update summary {sanitize_for_log(summary_id)}: {sanitize_for_log(str(e))}")
         await session.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to update summary: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to update summary")

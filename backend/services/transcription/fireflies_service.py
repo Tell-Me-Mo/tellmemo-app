@@ -3,6 +3,7 @@ Fireflies.ai API integration service
 """
 import logging
 import httpx
+from utils.logger import sanitize_for_log
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 import re
@@ -82,9 +83,9 @@ class FirefliesService:
                     "query": query,
                     "variables": variables
                 }
-                logger.info(f"Sending Fireflies API request for meeting {meeting_id}")
-                # Don't log sensitive headers containing API keys
-                logger.debug(f"Request body: {request_body}")
+                logger.info(f"Sending Fireflies API request for meeting {sanitize_for_log(meeting_id)}")
+                # Don't log sensitive headers or user-provided data
+                logger.debug("Fireflies API request prepared")
                 
                 response = await client.post(
                     self.BASE_URL,
@@ -95,42 +96,41 @@ class FirefliesService:
                 
                 # Log response for debugging
                 logger.info(f"Fireflies API response status: {response.status_code}")
-                response_text = response.text
-                logger.debug(f"Response body: {response_text[:500]}")  # First 500 chars
-                
+                # Don't log response body as it may contain sensitive meeting content
+
                 # Check for errors before raising status
                 if response.status_code != 200:
                     try:
                         error_data = response.json()
                         if "errors" in error_data:
                             error_msg = error_data["errors"][0].get("message", "Unknown error")
-                            logger.error(f"Fireflies API error: {error_msg}")
-                            raise Exception(f"Fireflies API error: {error_msg}")
+                            logger.error(f"Fireflies API error: {sanitize_for_log(error_msg)}")
+                            raise Exception("Fireflies API returned an error")
                     except:
                         pass
-                
+
                 response.raise_for_status()
-                
+
                 data = response.json()
-                
+
                 if "errors" in data:
                     error_msg = data["errors"][0].get("message", "Unknown error")
-                    logger.error(f"Fireflies API error: {error_msg}")
-                    raise Exception(f"Fireflies API error: {error_msg}")
-                
+                    logger.error(f"Fireflies API error: {sanitize_for_log(error_msg)}")
+                    raise Exception("Fireflies API returned an error")
+
                 transcript_data = data.get("data", {}).get("transcript")
-                
+
                 if not transcript_data:
-                    raise Exception(f"No transcript found for meeting ID: {meeting_id}")
+                    raise Exception("No transcript found for the requested meeting")
                 
                 # Process and format the response
                 return await self._format_meeting_data(transcript_data)
                 
         except httpx.HTTPStatusError as e:
-            logger.error(f"HTTP error when fetching Fireflies transcript: {e}")
-            raise Exception(f"Failed to fetch transcript: {e}")
+            logger.error(f"HTTP error when fetching Fireflies transcript: {sanitize_for_log(str(e))}")
+            raise Exception("Failed to fetch transcript from Fireflies")
         except Exception as e:
-            logger.error(f"Error fetching Fireflies transcript: {e}")
+            logger.error(f"Error fetching Fireflies transcript: {sanitize_for_log(str(e))}")
             raise
     
     @monitor_operation(
@@ -163,7 +163,7 @@ class FirefliesService:
                 response.raise_for_status()
                 return response.text
         except Exception as e:
-            logger.error(f"Failed to fetch transcript from URL: {e}")
+            logger.error(f"Failed to fetch transcript from URL: {sanitize_for_log(str(e))}")
             return ""
     
     @monitor_operation(
@@ -375,5 +375,5 @@ class FirefliesService:
                 data = response.json()
                 return "data" in data and "user" in data.get("data", {})
         except Exception as e:
-            logger.error(f"Failed to test Fireflies connection: {e}")
+            logger.error(f"Failed to test Fireflies connection: {sanitize_for_log(str(e))}")
             return False

@@ -4,6 +4,7 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   app_links
+  desktop_drop
   file_selector_windows
   firebase_core
   printing

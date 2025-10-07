@@ -178,8 +178,8 @@ async def connect_integration(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to connect integration {sanitize_for_log(integration_id)}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to connect integration {sanitize_for_log(integration_id)}: {sanitize_for_log(str(e))}")
+        raise HTTPException(status_code=500, detail="Failed to connect integration. Please check your configuration.")
 
 @router.post("/{integration_id}/disconnect")
 async def disconnect_integration(
@@ -218,8 +218,8 @@ async def disconnect_integration(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to disconnect integration {sanitize_for_log(integration_id)}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to disconnect integration {sanitize_for_log(integration_id)}: {sanitize_for_log(str(e))}")
+        raise HTTPException(status_code=500, detail="Failed to disconnect integration")
 
 @router.post("/{integration_id}/test")
 async def test_integration_connection(
@@ -394,8 +394,8 @@ async def sync_integration(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to sync integration {sanitize_for_log(integration_id)}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to sync integration {sanitize_for_log(integration_id)}: {sanitize_for_log(str(e))}")
+        raise HTTPException(status_code=500, detail="Failed to sync integration")
 
 @router.post("/webhooks/fireflies/{integration_id}")
 async def fireflies_webhook(
@@ -488,8 +488,8 @@ async def fireflies_webhook(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error processing Fireflies webhook: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error processing Fireflies webhook: {sanitize_for_log(str(e))}")
+        raise HTTPException(status_code=500, detail="Failed to process webhook")
 
 async def process_fireflies_webhook(
     meeting_id: str,

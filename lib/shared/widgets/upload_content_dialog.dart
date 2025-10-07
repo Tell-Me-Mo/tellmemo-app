@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show Uint8List;
+import 'package:flutter/foundation.dart' show Uint8List, kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:desktop_drop/desktop_drop.dart';
 import 'dart:io';
 import '../../features/projects/domain/entities/project.dart';
 import '../../features/meetings/presentation/providers/upload_provider.dart';
@@ -93,50 +94,7 @@ class _UploadContentDialogState extends ConsumerState<UploadContentDialog> {
       );
 
       if (result != null) {
-        setState(() {
-          _isTextInput = false;
-
-          if (result.files.length == 1) {
-            // Single file mode
-            _isMultiFileMode = false;
-            final file = result.files.single;
-
-            if (file.bytes != null) {
-              _selectedFileBytes = file.bytes;
-              _selectedFilePath = null;
-            } else {
-              _selectedFilePath = file.path;
-              _selectedFileBytes = null;
-            }
-            _selectedFileName = file.name;
-
-            if (_titleController.text.isEmpty) {
-              _titleController.text = file.name.replaceAll(RegExp(r'\.[^.]+$'), '');
-            }
-          } else {
-            // Multiple files mode
-            _isMultiFileMode = true;
-            _selectedFilePath = null;
-            _selectedFileBytes = null;
-            _selectedFileName = null;
-
-            // Add files to multi-file upload provider
-            final multiFileUpload = ref.read(multiFileUploadProvider.notifier);
-            final fileItems = result.files.map((platformFile) {
-              final fileId = '${DateTime.now().microsecondsSinceEpoch}_${platformFile.name}';
-              return FileUploadItem(
-                id: fileId,
-                platformFile: platformFile,
-              );
-            }).toList();
-
-            multiFileUpload.addFiles(fileItems);
-
-            if (_titleController.text.isEmpty) {
-              _titleController.text = '${result.files.length} files';
-            }
-          }
-        });
+        _handleFiles(result.files);
       }
     } catch (e) {
       if (mounted) {
@@ -148,6 +106,53 @@ class _UploadContentDialogState extends ConsumerState<UploadContentDialog> {
         );
       }
     }
+  }
+
+  void _handleFiles(List<PlatformFile> files) {
+    setState(() {
+      _isTextInput = false;
+
+      if (files.length == 1) {
+        // Single file mode
+        _isMultiFileMode = false;
+        final file = files.single;
+
+        if (file.bytes != null) {
+          _selectedFileBytes = file.bytes;
+          _selectedFilePath = null;
+        } else {
+          _selectedFilePath = file.path;
+          _selectedFileBytes = null;
+        }
+        _selectedFileName = file.name;
+
+        if (_titleController.text.isEmpty) {
+          _titleController.text = file.name.replaceAll(RegExp(r'\.[^.]+$'), '');
+        }
+      } else {
+        // Multiple files mode
+        _isMultiFileMode = true;
+        _selectedFilePath = null;
+        _selectedFileBytes = null;
+        _selectedFileName = null;
+
+        // Add files to multi-file upload provider
+        final multiFileUpload = ref.read(multiFileUploadProvider.notifier);
+        final fileItems = files.map((platformFile) {
+          final fileId = '${DateTime.now().microsecondsSinceEpoch}_${platformFile.name}';
+          return FileUploadItem(
+            id: fileId,
+            platformFile: platformFile,
+          );
+        }).toList();
+
+        multiFileUpload.addFiles(fileItems);
+
+        if (_titleController.text.isEmpty) {
+          _titleController.text = '${files.length} files';
+        }
+      }
+    });
   }
 
   bool _isAudioFile(String? fileName) {
@@ -507,6 +512,7 @@ class _UploadContentDialogState extends ConsumerState<UploadContentDialog> {
                     contentController: _contentController,
                     onInputTypeChanged: (isText) => setState(() => _isTextInput = isText),
                     onPickFile: _pickFile,
+                    onFilesDropped: _handleFiles,
                     colorScheme: colorScheme,
                     textTheme: textTheme,
                   ),
@@ -994,6 +1000,7 @@ class _ContentInputSection extends StatelessWidget {
   final TextEditingController contentController;
   final Function(bool) onInputTypeChanged;
   final VoidCallback onPickFile;
+  final Function(List<PlatformFile>) onFilesDropped;
   final ColorScheme colorScheme;
   final TextTheme textTheme;
 
@@ -1005,6 +1012,7 @@ class _ContentInputSection extends StatelessWidget {
     required this.contentController,
     required this.onInputTypeChanged,
     required this.onPickFile,
+    required this.onFilesDropped,
     required this.colorScheme,
     required this.textTheme,
   });
@@ -1030,6 +1038,7 @@ class _ContentInputSection extends StatelessWidget {
               hasFile: selectedFilePath != null || selectedFileBytes != null,
               onPickFile: onPickFile,
               onSwitchToPaste: () => onInputTypeChanged(true),
+              onFilesDropped: onFilesDropped,
               colorScheme: colorScheme,
               textTheme: textTheme,
             )
@@ -1044,13 +1053,14 @@ class _ContentInputSection extends StatelessWidget {
 }
 
 // Unified Upload Area with integrated paste option
-class _UnifiedUploadArea extends StatelessWidget {
+class _UnifiedUploadArea extends StatefulWidget {
   final String? selectedFileName;
   final bool hasFile;
   final VoidCallback onPickFile;
   final VoidCallback onSwitchToPaste;
   final ColorScheme colorScheme;
   final TextTheme textTheme;
+  final Function(List<PlatformFile>) onFilesDropped;
 
   const _UnifiedUploadArea({
     required this.selectedFileName,
@@ -1059,7 +1069,15 @@ class _UnifiedUploadArea extends StatelessWidget {
     required this.onSwitchToPaste,
     required this.colorScheme,
     required this.textTheme,
+    required this.onFilesDropped,
   });
+
+  @override
+  State<_UnifiedUploadArea> createState() => _UnifiedUploadAreaState();
+}
+
+class _UnifiedUploadAreaState extends State<_UnifiedUploadArea> {
+  bool _isDragging = false;
 
   @override
   Widget build(BuildContext context) {
@@ -1073,138 +1091,212 @@ class _UnifiedUploadArea extends StatelessWidget {
     final containerPadding = isMobile ? 16.0 : _DialogConstants.padding;
     final dividerVerticalPadding = isMobile ? 12.0 : _DialogConstants.smallPadding;
 
-    return Container(
-      padding: EdgeInsets.all(containerPadding),
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: hasFile ?
-            Colors.blue.withValues(alpha: _DialogConstants.highOpacity) :
-            colorScheme.outline.withValues(alpha: _DialogConstants.mediumOpacity),
-          width: hasFile ? 2 : 1.5,
-          style: hasFile ? BorderStyle.solid : BorderStyle.solid,
+    final isDragActive = _isDragging;
+    final hasFile = widget.hasFile;
+
+    return DropTarget(
+      onDragEntered: (details) {
+        setState(() => _isDragging = true);
+      },
+      onDragExited: (details) {
+        setState(() => _isDragging = false);
+      },
+      onDragDone: (details) async {
+        setState(() => _isDragging = false);
+
+        // Capture context before async operations
+        final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+        // Filter files by extension
+        final allowedExtensions = _DialogConstants.allExtensions;
+        final validFiles = <PlatformFile>[];
+
+        for (final file in details.files) {
+          final extension = file.name.split('.').last.toLowerCase();
+          if (allowedExtensions.contains(extension)) {
+            // Read file bytes for web
+            Uint8List? bytes;
+            if (kIsWeb) {
+              bytes = await file.readAsBytes();
+            }
+
+            validFiles.add(PlatformFile(
+              name: file.name,
+              size: await file.length(),
+              path: kIsWeb ? null : file.path,
+              bytes: bytes,
+            ));
+          }
+        }
+
+        if (validFiles.isNotEmpty) {
+          widget.onFilesDropped(validFiles);
+        } else {
+          // Show error if no valid files
+          if (mounted) {
+            scaffoldMessenger.showSnackBar(
+              SnackBar(
+                content: Text('Please drop files with valid extensions: ${allowedExtensions.join(', ')}'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+        }
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.all(containerPadding),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: isDragActive
+                ? Colors.blue
+                : hasFile
+                    ? Colors.blue.withValues(alpha: _DialogConstants.highOpacity)
+                    : widget.colorScheme.outline.withValues(alpha: _DialogConstants.mediumOpacity),
+            width: isDragActive ? 3 : (hasFile ? 2 : 1.5),
+            style: BorderStyle.solid,
+          ),
+          borderRadius: BorderRadius.circular(_DialogConstants.borderRadius),
+          color: isDragActive
+              ? Colors.blue.withValues(alpha: 0.15)
+              : hasFile
+                  ? Colors.blue.withValues(alpha: _DialogConstants.minimalOpacity)
+                  : widget.colorScheme.surfaceContainerHighest.withValues(alpha: 0.05),
         ),
-        borderRadius: BorderRadius.circular(_DialogConstants.borderRadius),
-        color: hasFile ?
-          Colors.blue.withValues(alpha: _DialogConstants.minimalOpacity) :
-          colorScheme.surfaceContainerHighest.withValues(alpha: 0.05),
-      ),
-      child: Column(
-        children: [
-          // File upload area
-          InkWell(
-            onTap: onPickFile,
-            borderRadius: BorderRadius.circular(10),
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: verticalPadding),
-              child: Column(
-                children: [
-                  Icon(
-                    hasFile ? Icons.insert_drive_file : Icons.cloud_upload_outlined,
-                    size: iconSize,
-                    color: hasFile ?
-                      Colors.blue :
-                      colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                  ),
-                  const SizedBox(height: _DialogConstants.tinyPadding),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: isMobile ? 8.0 : 0.0),
-                    child: Text(
-                      selectedFileName ?? 'Click to select meeting transcript',
-                      style: textTheme.bodyLarge?.copyWith(
-                        color: hasFile ? colorScheme.onSurface : colorScheme.onSurfaceVariant,
-                        fontWeight: hasFile ? FontWeight.w500 : FontWeight.normal,
-                        fontSize: isMobile ? 15 : null,
-                      ),
-                      textAlign: TextAlign.center,
-                      maxLines: isMobile ? 2 : null,
-                      overflow: isMobile ? TextOverflow.ellipsis : null,
+        child: Column(
+          children: [
+            // File upload area
+            InkWell(
+              onTap: widget.onPickFile,
+              borderRadius: BorderRadius.circular(10),
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: verticalPadding),
+                child: Column(
+                  children: [
+                    Icon(
+                      isDragActive
+                          ? Icons.file_download
+                          : hasFile
+                              ? Icons.insert_drive_file
+                              : Icons.cloud_upload_outlined,
+                      size: iconSize,
+                      color: isDragActive
+                          ? Colors.blue
+                          : hasFile
+                              ? Colors.blue
+                              : widget.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                     ),
-                  ),
-                  SizedBox(height: isMobile ? 6 : _DialogConstants.tinySpacing),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: isMobile ? 12.0 : 0.0),
-                    child: Text(
-                      isMobile
-                        ? 'Audio or text files: TXT, PDF, DOC, DOCX, JSON, MP3, WAV, M4A, AAC, OGG, WMA, FLAC'
-                        : 'Audio or text files: ${_DialogConstants.allExtensions.map((e) => e.toUpperCase()).join(', ')}',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                        fontSize: isMobile ? 10 : 11,
+                    const SizedBox(height: _DialogConstants.tinyPadding),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: isMobile ? 8.0 : 0.0),
+                      child: Text(
+                        isDragActive
+                            ? 'Drop files here'
+                            : (widget.selectedFileName ?? 'Click to select meeting transcript'),
+                        style: widget.textTheme.bodyLarge?.copyWith(
+                          color: isDragActive
+                              ? Colors.blue
+                              : hasFile
+                                  ? widget.colorScheme.onSurface
+                                  : widget.colorScheme.onSurfaceVariant,
+                          fontWeight: (isDragActive || hasFile) ? FontWeight.w600 : FontWeight.normal,
+                          fontSize: isMobile ? 15 : null,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: isMobile ? 2 : null,
+                        overflow: isMobile ? TextOverflow.ellipsis : null,
                       ),
-                      textAlign: TextAlign.center,
-                      maxLines: isMobile ? 2 : null,
                     ),
-                  ),
-                ],
+                    if (!isDragActive) ...[
+                      SizedBox(height: isMobile ? 6 : _DialogConstants.tinySpacing),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: isMobile ? 12.0 : 0.0),
+                        child: Text(
+                          isMobile
+                              ? 'Audio or text files: TXT, PDF, DOC, DOCX, JSON, MP3, WAV, M4A, AAC, OGG, WMA, FLAC'
+                              : 'Audio or text files: ${_DialogConstants.allExtensions.map((e) => e.toUpperCase()).join(', ')}',
+                          style: widget.textTheme.bodySmall?.copyWith(
+                            color: widget.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                            fontSize: isMobile ? 10 : 11,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: isMobile ? 2 : null,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
-          ),
 
-          // Divider with "OR" text
-          Padding(
-            padding: EdgeInsets.symmetric(vertical: dividerVerticalPadding),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Divider(
-                    color: colorScheme.outline.withValues(alpha: _DialogConstants.mediumOpacity),
-                    thickness: 1,
-                  ),
+            // Divider with "OR" text
+            if (!isDragActive) ...[
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: dividerVerticalPadding),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Divider(
+                        color: widget.colorScheme.outline.withValues(alpha: _DialogConstants.mediumOpacity),
+                        thickness: 1,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: _DialogConstants.smallPadding),
+                      child: Text(
+                        'OR',
+                        style: widget.textTheme.bodySmall?.copyWith(
+                          color: widget.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Divider(
+                        color: widget.colorScheme.outline.withValues(alpha: _DialogConstants.mediumOpacity),
+                        thickness: 1,
+                      ),
+                    ),
+                  ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: _DialogConstants.smallPadding),
-                  child: Text(
-                    'OR',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+              ),
+
+              // Paste text button
+              SizedBox(
+                width: isMobile ? double.infinity : null,
+                child: OutlinedButton.icon(
+                  onPressed: widget.onSwitchToPaste,
+                  icon: Icon(
+                    Icons.text_fields,
+                    size: isMobile ? 18 : 20,
+                    color: widget.colorScheme.primary,
+                  ),
+                  label: Text(
+                    'Paste Text',
+                    style: TextStyle(
+                      color: widget.colorScheme.primary,
                       fontWeight: FontWeight.w500,
+                      fontSize: isMobile ? 14 : null,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isMobile ? 20 : 24,
+                      vertical: isMobile ? 10 : 12,
+                    ),
+                    side: BorderSide(
+                      color: widget.colorScheme.primary.withValues(alpha: 0.5),
+                      width: 1.5,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(_DialogConstants.smallSpacing),
                     ),
                   ),
                 ),
-                Expanded(
-                  child: Divider(
-                    color: colorScheme.outline.withValues(alpha: _DialogConstants.mediumOpacity),
-                    thickness: 1,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Paste text button
-          SizedBox(
-            width: isMobile ? double.infinity : null,
-            child: OutlinedButton.icon(
-              onPressed: onSwitchToPaste,
-              icon: Icon(
-                Icons.text_fields,
-                size: isMobile ? 18 : 20,
-                color: colorScheme.primary,
               ),
-              label: Text(
-                'Paste Text',
-                style: TextStyle(
-                  color: colorScheme.primary,
-                  fontWeight: FontWeight.w500,
-                  fontSize: isMobile ? 14 : null,
-                ),
-              ),
-              style: OutlinedButton.styleFrom(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isMobile ? 20 : 24,
-                  vertical: isMobile ? 10 : 12,
-                ),
-                side: BorderSide(
-                  color: colorScheme.primary.withValues(alpha: 0.5),
-                  width: 1.5,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(_DialogConstants.smallSpacing),
-                ),
-              ),
-            ),
-          ),
-        ],
+            ],
+          ],
+        ),
       ),
     );
   }

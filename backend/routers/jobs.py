@@ -273,7 +273,7 @@ async def stream_job_progress(
             logger.info(f"Job stream cancelled for {sanitize_for_log(job_id)}")
             yield f"event: cancelled\ndata: {json.dumps({'message': 'Stream cancelled'})}\n\n"
         except Exception as e:
-            logger.error(f"Error in job stream for {sanitize_for_log(job_id)}: {e}", exc_info=True)
+            logger.error(f"Error in job stream for {sanitize_for_log(job_id)}: {sanitize_for_log(str(e))}", exc_info=True)
             yield f"event: error\ndata: {json.dumps({'message': 'Internal error occurred'})}\n\n"
     
     return StreamingResponse(
@@ -428,7 +428,7 @@ async def stream_project_jobs(
             logger.info(f"Project job stream cancelled for {sanitize_for_log(project_id)}")
             yield f"event: cancelled\ndata: {json.dumps({'message': 'Stream cancelled'})}\n\n"
         except Exception as e:
-            logger.error(f"Error in project job stream for {sanitize_for_log(project_id)}: {e}", exc_info=True)
+            logger.error(f"Error in project job stream for {sanitize_for_log(project_id)}: {sanitize_for_log(str(e))}", exc_info=True)
             yield f"event: error\ndata: {json.dumps({'message': 'Internal error occurred'})}\n\n"
     
     return StreamingResponse(

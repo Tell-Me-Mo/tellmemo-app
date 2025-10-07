@@ -654,7 +654,21 @@ async def upload_attachment(
         # Create upload directory if it doesn't exist
         # Validate base directory exists and is safe
         base_upload_dir = Path("uploads").resolve()
-        upload_dir = (base_upload_dir / "support_tickets" / str(organization.id) / str(ticket_id)).resolve()
+
+        # Validate organization_id and ticket_id are proper UUIDs (not paths)
+        # This prevents any path traversal attempts
+        try:
+            org_uuid_str = str(organization.id)
+            ticket_uuid_str = str(ticket_id)
+            # Ensure they're valid UUID format (no path separators)
+            if '/' in org_uuid_str or '\\' in org_uuid_str or '..' in org_uuid_str:
+                raise ValueError("Invalid organization ID")
+            if '/' in ticket_uuid_str or '\\' in ticket_uuid_str or '..' in ticket_uuid_str:
+                raise ValueError("Invalid ticket ID")
+        except (ValueError, AttributeError):
+            raise HTTPException(status_code=400, detail="Invalid organization or ticket ID")
+
+        upload_dir = (base_upload_dir / "support_tickets" / org_uuid_str / ticket_uuid_str).resolve()
 
         # Ensure the resolved path is within the base upload directory (prevent path traversal)
         if not str(upload_dir).startswith(str(base_upload_dir)):

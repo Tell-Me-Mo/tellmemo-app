@@ -6,14 +6,13 @@ Uses Salad's transcription endpoint for fast, scalable transcription.
 import os
 import asyncio
 import logging
-from utils.logger import sanitize_for_log
 import aiohttp
 import json
-import base64
 import ssl
 import certifi
 from typing import Optional, Dict, Any, Callable
 from pathlib import Path
+from utils.logger import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)  # Temporarily set to DEBUG for troubleshooting
@@ -45,7 +44,7 @@ class SaladTranscriptionService:
             "Accept": "application/json"
         }
 
-        logger.info(f"Initialized Salad transcription service for organization: {sanitize_for_log(organization_name)}")
+        logger.info("Initialized Salad transcription service")
 
     async def test_connection(self) -> Dict[str, Any]:
         """
@@ -88,11 +87,11 @@ class SaladTranscriptionService:
                 ) as response:
                     if response.status == 200:
                         # Successfully connected and authenticated
-                        data = await response.json()
-                        logger.info(f"Salad API test successful for organization: {self.organization_name}")
+                        _ = await response.json()  # Validate JSON response
+                        logger.info("Salad API test successful")
                         return {
                             "success": True,
-                            "message": f"Successfully connected to Salad API for organization: {self.organization_name}",
+                            "message": "Successfully connected to Salad API",
                             "organization": self.organization_name
                         }
                     elif response.status == 401:
@@ -118,16 +117,16 @@ class SaladTranscriptionService:
                         }
 
         except aiohttp.ClientError as e:
-            logger.error(f"Network error testing Salad connection: {e}")
+            logger.error(f"Network error testing Salad connection: {sanitize_for_log(str(e))}")
             return {
                 "success": False,
-                "error": f"Network error: {str(e)}. Please check your internet connection."
+                "error": "Network error. Please check your internet connection."
             }
         except Exception as e:
-            logger.error(f"Unexpected error testing Salad connection: {e}")
+            logger.error(f"Unexpected error testing Salad connection: {sanitize_for_log(str(e))}")
             return {
                 "success": False,
-                "error": f"Unexpected error: {str(e)}"
+                "error": "Unexpected error occurred"
             }
 
     async def upload_to_s4(
@@ -189,7 +188,7 @@ class SaladTranscriptionService:
                     return signed_url
 
         except Exception as e:
-            logger.error(f"S4 upload error: {e}", exc_info=True)
+            logger.error(f"S4 upload error: {sanitize_for_log(str(e))}", exc_info=True)
             raise
 
     async def transcribe_audio_file(
@@ -247,8 +246,8 @@ class SaladTranscriptionService:
                 logger.info(f"Audio uploaded to S4, got signed URL")
 
             except Exception as e:
-                logger.error(f"Failed to upload to S4: {e}")
-                raise Exception(f"S4 upload failed: {str(e)}")
+                logger.error(f"Failed to upload to S4: {sanitize_for_log(str(e))}")
+                raise Exception("S4 upload failed")
 
             # Get file size for logging
             file_size_mb = Path(audio_path).stat().st_size / (1024 * 1024)
@@ -273,7 +272,7 @@ class SaladTranscriptionService:
             # If not specified, Salad will auto-detect the language
             if language:
                 input_config["language_code"] = language
-                logger.info(f"Using specified language: {language}")
+                logger.info("Using specified language for transcription")
             else:
                 # Let Salad auto-detect the language for optimal results
                 # This is especially useful for multilingual content
@@ -304,12 +303,10 @@ class SaladTranscriptionService:
                     json=payload
                 ) as response:
                     if response.status == 401:
-                        error_text = await response.text()
-                        logger.error(f"Salad API authentication failed: {response.status}")
+                        logger.error("Salad API authentication failed")
                         raise Exception("Authentication failed: Invalid API key or organization name. Please check your Salad API credentials.")
                     elif response.status == 403:
-                        error_text = await response.text()
-                        logger.error(f"Salad API access denied: {response.status}")
+                        logger.error("Salad API access denied")
                         raise Exception("Access denied: Your API key doesn't have permission to access this endpoint.")
                     elif response.status == 404:
                         logger.error(f"Salad API endpoint not found")
@@ -523,7 +520,7 @@ class SaladTranscriptionService:
                 raise Exception("Transcription timed out after 15 minutes")
 
         except Exception as e:
-            logger.error(f"Salad transcription error: {e}", exc_info=True)
+            logger.error(f"Salad transcription error: {sanitize_for_log(str(e))}", exc_info=True)
             raise
 
     async def check_service_health(self) -> bool:
@@ -553,7 +550,7 @@ class SaladTranscriptionService:
                         return False
 
         except Exception as e:
-            logger.error(f"Salad health check error: {e}")
+            logger.error(f"Salad health check error: {sanitize_for_log(str(e))}")
             return False
 
     def is_model_loaded(self) -> bool:
