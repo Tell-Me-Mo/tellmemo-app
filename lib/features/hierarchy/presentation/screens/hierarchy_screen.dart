@@ -30,6 +30,7 @@ class _HierarchyScreenState extends ConsumerState<HierarchyScreen> {
   HierarchyItemType? _typeFilter;
   HierarchyViewMode _viewMode = HierarchyViewMode.tree;
   bool _showFavoritesOnly = false;
+  bool _isActionMenuOpen = false;
 
   @override
   void initState() {
@@ -54,9 +55,11 @@ class _HierarchyScreenState extends ConsumerState<HierarchyScreen> {
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
+      body: Stack(
+        children: [
+          SafeArea(
+            bottom: false,
+            child: Column(
           children: [
             // Fixed Header with Gradient Background - Reduced height for mobile
             Container(
@@ -183,16 +186,6 @@ class _HierarchyScreenState extends ConsumerState<HierarchyScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Quick Actions
-                                if (!isTablet) ...[
-                                  _buildQuickActions(context),
-                                  const SizedBox(height: 24),
-                                ],
-                                if (isTablet) ...[
-                                  // Quick Actions Grid
-                                  _buildQuickActions(context),
-                                  const SizedBox(height: 24),
-                                ],
                                 // Projects Section
                                 _buildProjectsSection(context, hierarchy),
                               ],
@@ -206,8 +199,13 @@ class _HierarchyScreenState extends ConsumerState<HierarchyScreen> {
                 ),    // SingleChildScrollView
               ),            // RefreshIndicator
             ),              // Expanded
-          ],
+            ],
+          ),
         ),
+        // Speed dial overlay for mobile
+        if (_isActionMenuOpen && isMobile)
+          _buildSpeedDialOverlay(context),
+      ],
       ),
       floatingActionButton: hierarchyAsync.maybeWhen(
         data: (hierarchy) => _buildFloatingActionButtons(context, hierarchy, screenWidth),
@@ -219,34 +217,28 @@ class _HierarchyScreenState extends ConsumerState<HierarchyScreen> {
   Widget? _buildFloatingActionButtons(BuildContext context, List<HierarchyItem> hierarchy, double screenWidth) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final isMobile = screenWidth <= 768;
 
-    // Count total projects in hierarchy
-    int projectCount = 0;
-    void countProjects(List<HierarchyItem> items) {
-      for (final item in items) {
-        if (item.type == HierarchyItemType.project) {
-          projectCount++;
-        }
-        countProjects(item.children);
-      }
-    }
-    countProjects(hierarchy);
-
-    final hasProjects = projectCount > 0;
-
-    // If no projects, show "New Project" FAB
-    if (!hasProjects) {
+    // Mobile: Show "+" FAB that toggles speed dial menu
+    if (isMobile) {
       return SafeArea(
-        child: FloatingActionButton.extended(
-          onPressed: () => _showCreateProjectDialog(),
+        child: FloatingActionButton(
+          onPressed: () {
+            setState(() {
+              _isActionMenuOpen = !_isActionMenuOpen;
+            });
+          },
           backgroundColor: colorScheme.primary,
-          icon: const Icon(Icons.add),
-          label: const Text('New Project'),
+          child: AnimatedRotation(
+            duration: const Duration(milliseconds: 200),
+            turns: _isActionMenuOpen ? 0.125 : 0,
+            child: Icon(_isActionMenuOpen ? Icons.close : Icons.add),
+          ),
         ),
       );
     }
 
-    // If there are projects, show "Ask AI" FAB
+    // Desktop/Tablet: Show "Ask AI" FAB
     return SafeArea(
       child: FloatingActionButton.extended(
         onPressed: () => _showAskAIDialog(context),
@@ -712,117 +704,6 @@ class _HierarchyScreenState extends ConsumerState<HierarchyScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildQuickActions(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final textTheme = theme.textTheme;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isMobile = screenWidth <= 768;
-
-    final actions = [
-      {
-        'icon': Icons.business_center,
-        'label': 'Portfolio',
-        'color': Colors.purple,
-        'onTap': () => _showCreatePortfolioDialog(),
-      },
-      {
-        'icon': Icons.folder,
-        'label': 'Program',
-        'color': Colors.blue,
-        'onTap': () => _showCreateProgramDialog(null),
-      },
-      {
-        'icon': Icons.work,
-        'label': 'Project',
-        'color': Colors.green,
-        'onTap': () => _showCreateProjectDialog(),
-      },
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: EdgeInsets.only(left: 4, bottom: isMobile ? 8 : 12),
-          child: Text(
-            'ACTIONS',
-            style: textTheme.labelSmall?.copyWith(
-              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
-              fontSize: isMobile ? 9 : 10,
-            ),
-          ),
-        ),
-        SizedBox(
-          height: isMobile ? 50 : null,
-          child: isMobile
-            ? ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: actions.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (context, index) => SizedBox(
-                  width: 110,
-                  child: _buildActionCard(actions[index]),
-                ),
-              )
-            : GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 3,
-                childAspectRatio: 2.5,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                children: actions.map((action) => _buildActionCard(action)).toList(),
-              ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionCard(Map<String, dynamic> action) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final textTheme = theme.textTheme;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: action['onTap'] as VoidCallback,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: colorScheme.outline.withValues(alpha: 0.1),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                action['icon'] as IconData,
-                color: action['color'] as Color,
-                size: 18,
-              ),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  action['label'] as String,
-                  style: textTheme.bodySmall,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
@@ -2017,6 +1898,147 @@ class _HierarchyScreenState extends ConsumerState<HierarchyScreen> {
           },
         );
       },
+    );
+  }
+
+  Widget _buildSpeedDialOverlay(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final actions = [
+      {
+        'icon': Icons.psychology_outlined,
+        'label': 'Ask AI',
+        'color': colorScheme.primary,
+        'onTap': () {
+          setState(() => _isActionMenuOpen = false);
+          _showAskAIDialog(context);
+        },
+      },
+      {
+        'icon': Icons.business_center,
+        'label': 'Add Portfolio',
+        'color': Colors.purple,
+        'onTap': () {
+          setState(() => _isActionMenuOpen = false);
+          _showCreatePortfolioDialog();
+        },
+      },
+      {
+        'icon': Icons.folder,
+        'label': 'Add Program',
+        'color': Colors.blue,
+        'onTap': () {
+          setState(() => _isActionMenuOpen = false);
+          _showCreateProgramDialog(null);
+        },
+      },
+      {
+        'icon': Icons.work,
+        'label': 'Add Project',
+        'color': Colors.green,
+        'onTap': () {
+          setState(() => _isActionMenuOpen = false);
+          _showCreateProjectDialog();
+        },
+      },
+    ];
+
+    return GestureDetector(
+      onTap: () {
+        setState(() => _isActionMenuOpen = false);
+      },
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.5),
+        child: SafeArea(
+          child: Align(
+            alignment: Alignment.bottomRight,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 16, bottom: 88),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: actions.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final action = entry.value;
+                  return TweenAnimationBuilder<double>(
+                    duration: Duration(milliseconds: 200 + (index * 50)),
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    builder: (context, value, child) {
+                      return Transform.scale(
+                        scale: value,
+                        alignment: Alignment.centerRight,
+                        child: Opacity(
+                          opacity: value,
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Label
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: colorScheme.surface,
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.1),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              action['label'] as String,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          // Action button
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: action['onTap'] as VoidCallback,
+                              borderRadius: BorderRadius.circular(28),
+                              child: Container(
+                                width: 56,
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  color: colorScheme.surface,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.2),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  action['icon'] as IconData,
+                                  color: action['color'] as Color,
+                                  size: 24,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 

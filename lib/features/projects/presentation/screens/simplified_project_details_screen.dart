@@ -61,6 +61,7 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
   bool _isCheckingAvailability = false;
   final ScrollController _scrollController = ScrollController();
   bool _isDescriptionExpanded = false;
+  bool _isActionMenuOpen = false;
 
   @override
   void initState() {
@@ -188,15 +189,10 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
 
     return Scaffold(
           backgroundColor: colorScheme.surface,
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => _showQueryDialog(context, project),
-            icon: const Icon(Icons.psychology_outlined),
-            label: const Text('Ask AI'),
-            backgroundColor: colorScheme.primary,
-            foregroundColor: colorScheme.onPrimary,
-            elevation: 4,
-          ),
-          body: SafeArea(
+          floatingActionButton: _buildFloatingActionButton(context, project, screenWidth, colorScheme),
+          body: Stack(
+            children: [
+              SafeArea(
             child: Padding(
               padding: EdgeInsets.all(isDesktop ? 32 : 16),
               child: Center(
@@ -1117,16 +1113,13 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Quick Actions
-                              _buildQuickActions(context, project),
-
                               // Description Section
                               if (project.description?.isNotEmpty == true) ...[
-                                const SizedBox(height: 24),
+                                const SizedBox(height: 16),
                                 _buildDescriptionSection(context, project),
                               ],
 
-                              const SizedBox(height: 32),
+                              const SizedBox(height: 16),
 
                               // Summaries Section
                               Row(
@@ -1144,7 +1137,7 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 4),
                               summariesAsync.when(
                                 data: (summaries) {
                                   // Check if there are any processing jobs with summaries being generated
@@ -1191,7 +1184,7 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                                 error: (_, __) => _buildEmptyCard('Error loading'),
                               ),
 
-                              const SizedBox(height: 24),
+                              const SizedBox(height: 16),
 
                               // Tasks Section
                               ProjectTasksWidget(
@@ -1222,6 +1215,11 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
             ),
           ),
         ),
+              // Speed dial overlay for mobile
+              if (_isActionMenuOpen && screenWidth < 600)
+                _buildSpeedDialOverlay(context, project),
+            ],
+          ),
       );
   }
 
@@ -1587,6 +1585,177 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
+  Widget? _buildFloatingActionButton(BuildContext context, Project project, double screenWidth, ColorScheme colorScheme) {
+    final isMobile = screenWidth < 600;
+
+    // Mobile: Show "+" FAB that toggles speed dial menu
+    if (isMobile) {
+      return FloatingActionButton(
+        onPressed: () {
+          setState(() {
+            _isActionMenuOpen = !_isActionMenuOpen;
+          });
+        },
+        backgroundColor: colorScheme.primary,
+        child: AnimatedRotation(
+          duration: const Duration(milliseconds: 200),
+          turns: _isActionMenuOpen ? 0.125 : 0,
+          child: Icon(_isActionMenuOpen ? Icons.close : Icons.add),
+        ),
+      );
+    }
+
+    // Desktop/Tablet: Show "Ask AI" FAB
+    return FloatingActionButton.extended(
+      onPressed: () => _showQueryDialog(context, project),
+      backgroundColor: colorScheme.primary,
+      icon: const Icon(Icons.psychology_outlined),
+      label: const Text('Ask AI'),
+      elevation: 4,
+    );
+  }
+
+  Widget _buildSpeedDialOverlay(BuildContext context, Project project) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final actions = [
+      {
+        'icon': Icons.psychology_outlined,
+        'label': 'Ask AI',
+        'color': colorScheme.primary,
+        'onTap': () {
+          setState(() => _isActionMenuOpen = false);
+          _showQueryDialog(context, project);
+        },
+      },
+      {
+        'icon': Icons.upload_file_outlined,
+        'label': 'Upload',
+        'color': Colors.blue,
+        'onTap': () {
+          setState(() => _isActionMenuOpen = false);
+          _showUploadDialog(context, project);
+        },
+      },
+      {
+        'icon': Icons.auto_awesome_outlined,
+        'label': 'Generate',
+        'color': Colors.purple,
+        'onTap': () {
+          setState(() => _isActionMenuOpen = false);
+          _showGenerateSummaryDialog(context, project);
+        },
+      },
+      {
+        'icon': Icons.mic_outlined,
+        'label': 'Record',
+        'color': Colors.red,
+        'onTap': () {
+          setState(() => _isActionMenuOpen = false);
+          _showRecordingDialog(context, project);
+        },
+      },
+    ];
+
+    return GestureDetector(
+      onTap: () {
+        setState(() => _isActionMenuOpen = false);
+      },
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.5),
+        child: SafeArea(
+          child: Align(
+            alignment: Alignment.bottomRight,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 16, bottom: 88),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: actions.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final action = entry.value;
+                  return TweenAnimationBuilder<double>(
+                    duration: Duration(milliseconds: 200 + (index * 50)),
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    builder: (context, value, child) {
+                      return Transform.scale(
+                        scale: value,
+                        alignment: Alignment.centerRight,
+                        child: Opacity(
+                          opacity: value,
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Label
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: colorScheme.surface,
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.1),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              action['label'] as String,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          // Action button
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: action['onTap'] as VoidCallback,
+                              borderRadius: BorderRadius.circular(28),
+                              child: Container(
+                                width: 56,
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  color: colorScheme.surface,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.2),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  action['icon'] as IconData,
+                                  color: action['color'] as Color,
+                                  size: 24,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildQuickActions(BuildContext context, Project project) {
     final colorScheme = Theme.of(context).colorScheme;
     final screenWidth = MediaQuery.of(context).size.width;
@@ -1758,8 +1927,14 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
   }
 
   Widget _buildEmptyCard(String message) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.symmetric(
+        vertical: isMobile ? 20 : 24,
+        horizontal: isMobile ? 16 : 24,
+      ),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(8),

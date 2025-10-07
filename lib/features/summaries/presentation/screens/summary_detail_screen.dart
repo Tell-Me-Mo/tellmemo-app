@@ -26,6 +26,8 @@ class SummaryDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _SummaryDetailScreenState extends ConsumerState<SummaryDetailScreen> {
+  bool _isActionMenuOpen = false;
+
   @override
   void initState() {
     super.initState();
@@ -49,37 +51,204 @@ class _SummaryDetailScreenState extends ConsumerState<SummaryDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final summaryState = ref.watch(summaryDetailProvider);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth <= 768;
 
     // Build the scaffold directly without requiring project context
     return Scaffold(
       floatingActionButton: summaryState.summary != null
-          ? FloatingActionButton.extended(
-              onPressed: () => _showQueryDialog(context, summaryState.summary!),
-              icon: const Icon(Icons.psychology_outlined),
-              label: const Text('Ask AI'),
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              foregroundColor: Theme.of(context).colorScheme.onPrimary,
-              elevation: 4,
-            )
+          ? _buildFloatingActionButton(context, summaryState.summary!, isMobile)
           : null,
-      body: summaryState.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : summaryState.error != null
-              ? _buildErrorContent(summaryState.error!)
-              : summaryState.summary != null
-                  ? FormatAwareSummaryViewer(
-                      summary: summaryState.summary!,
-                      format: summaryState.summary!.format,
-                      breadcrumbs: _buildBreadcrumbs(summaryState.summary!),
-                      onExport: () => _exportSummary(),
-                      onCopy: () => _copySummary(),
-                      onBack: () {
-                        // Clear the summary state when going back
-                        ref.read(summaryDetailProvider.notifier).clearSummary();
-                        context.pop();
-                      },
-                    )
-                  : _buildNotFoundContent(),
+      body: Stack(
+        children: [
+          summaryState.isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : summaryState.error != null
+                  ? _buildErrorContent(summaryState.error!)
+                  : summaryState.summary != null
+                      ? FormatAwareSummaryViewer(
+                          summary: summaryState.summary!,
+                          format: summaryState.summary!.format,
+                          breadcrumbs: _buildBreadcrumbs(summaryState.summary!),
+                          onExport: () => _exportSummary(),
+                          onCopy: () => _copySummary(),
+                          onBack: () {
+                            // Clear the summary state when going back
+                            ref.read(summaryDetailProvider.notifier).clearSummary();
+                            context.pop();
+                          },
+                        )
+                      : _buildNotFoundContent(),
+          // Speed dial overlay for mobile
+          if (_isActionMenuOpen && isMobile && summaryState.summary != null)
+            _buildSpeedDialOverlay(context, summaryState.summary!),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFloatingActionButton(BuildContext context, SummaryModel summary, bool isMobile) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    // Mobile: Show "+" FAB that toggles speed dial menu
+    if (isMobile) {
+      return SafeArea(
+        child: FloatingActionButton(
+          onPressed: () {
+            setState(() {
+              _isActionMenuOpen = !_isActionMenuOpen;
+            });
+          },
+          backgroundColor: colorScheme.primary,
+          child: AnimatedRotation(
+            duration: const Duration(milliseconds: 200),
+            turns: _isActionMenuOpen ? 0.125 : 0,
+            child: Icon(_isActionMenuOpen ? Icons.close : Icons.add),
+          ),
+        ),
+      );
+    }
+
+    // Desktop/Tablet: Show Ask AI FAB
+    return FloatingActionButton.extended(
+      onPressed: () => _showQueryDialog(context, summary),
+      icon: const Icon(Icons.psychology_outlined),
+      label: const Text('Ask AI'),
+      backgroundColor: colorScheme.primary,
+      foregroundColor: colorScheme.onPrimary,
+      elevation: 4,
+    );
+  }
+
+  Widget _buildSpeedDialOverlay(BuildContext context, SummaryModel summary) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final actions = [
+      {
+        'icon': Icons.psychology_outlined,
+        'label': 'Ask AI',
+        'color': colorScheme.primary,
+        'onTap': () {
+          setState(() => _isActionMenuOpen = false);
+          _showQueryDialog(context, summary);
+        },
+      },
+      {
+        'icon': Icons.download_outlined,
+        'label': 'Export',
+        'color': Colors.blue,
+        'onTap': () {
+          setState(() => _isActionMenuOpen = false);
+          _exportSummary();
+        },
+      },
+      {
+        'icon': Icons.copy_outlined,
+        'label': 'Copy',
+        'color': Colors.green,
+        'onTap': () {
+          setState(() => _isActionMenuOpen = false);
+          _copySummary();
+        },
+      },
+    ];
+
+    return GestureDetector(
+      onTap: () {
+        setState(() => _isActionMenuOpen = false);
+      },
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.5),
+        child: SafeArea(
+          child: Align(
+            alignment: Alignment.bottomRight,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 16, bottom: 88),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: actions.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final action = entry.value;
+                  return TweenAnimationBuilder<double>(
+                    duration: Duration(milliseconds: 200 + (index * 50)),
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    builder: (context, value, child) {
+                      return Transform.scale(
+                        scale: value,
+                        alignment: Alignment.centerRight,
+                        child: Opacity(
+                          opacity: value,
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Label
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: colorScheme.surface,
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.1),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              action['label'] as String,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          // Action button
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: action['onTap'] as VoidCallback,
+                              borderRadius: BorderRadius.circular(28),
+                              child: Container(
+                                width: 56,
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  color: colorScheme.surface,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.2),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  action['icon'] as IconData,
+                                  color: action['color'] as Color,
+                                  size: 24,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
