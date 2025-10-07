@@ -438,13 +438,25 @@ async def list_summaries(
         conditions.append(Summary.organization_id == current_org.id)
 
         if filters.entity_type and filters.entity_id:
-            entity_uuid = uuid.UUID(filters.entity_id)
-            if filters.entity_type == "project":
-                conditions.append(Summary.project_id == entity_uuid)
-            elif filters.entity_type == "program":
-                conditions.append(Summary.program_id == entity_uuid)
-            elif filters.entity_type == "portfolio":
-                conditions.append(Summary.portfolio_id == entity_uuid)
+            # Handle special 'auto' project identifier
+            # 'auto' is a sentinel value meaning "use AI to determine project"
+            # When querying summaries with 'auto', skip entity filtering to return all summaries
+            if filters.entity_id == "auto":
+                logger.debug("Skipping entity_id filtering for 'auto' sentinel value")
+                # Don't add any entity filter condition - will return all summaries for the organization
+            else:
+                # Normal UUID parsing
+                try:
+                    entity_uuid = uuid.UUID(filters.entity_id)
+                    if filters.entity_type == "project":
+                        conditions.append(Summary.project_id == entity_uuid)
+                    elif filters.entity_type == "program":
+                        conditions.append(Summary.program_id == entity_uuid)
+                    elif filters.entity_type == "portfolio":
+                        conditions.append(Summary.portfolio_id == entity_uuid)
+                except ValueError:
+                    logger.error(f"Invalid entity_id format: {sanitize_for_log(filters.entity_id)}")
+                    raise HTTPException(status_code=400, detail=f"Invalid entity_id format. Expected UUID, got: {filters.entity_id}")
 
         if filters.summary_type:
             try:
