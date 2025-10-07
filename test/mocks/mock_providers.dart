@@ -276,6 +276,9 @@ class MockPortfolioList extends PortfolioList {
     required String portfolioId,
     String? name,
     String? description,
+    String? owner,
+    HealthStatus? healthStatus,
+    String? riskSummary,
   })? _onUpdate;
   final Future<void> Function({required String portfolioId, bool cascadeDelete})? _onDelete;
 
@@ -287,6 +290,9 @@ class MockPortfolioList extends PortfolioList {
       required String portfolioId,
       String? name,
       String? description,
+      String? owner,
+      HealthStatus? healthStatus,
+      String? riskSummary,
     })? onUpdate,
     Future<void> Function({required String portfolioId, bool cascadeDelete})? onDelete,
   })  : _portfolios = portfolios,
@@ -328,7 +334,14 @@ class MockPortfolioList extends PortfolioList {
     String? riskSummary,
   }) async {
     if (_onUpdate != null) {
-      return _onUpdate!(portfolioId: portfolioId, name: name, description: description);
+      return _onUpdate!(
+        portfolioId: portfolioId,
+        name: name,
+        description: description,
+        owner: owner,
+        healthStatus: healthStatus,
+        riskSummary: riskSummary,
+      );
     }
     // Default mock portfolio
     final existing = _portfolios.firstWhere((p) => p.id == portfolioId);
@@ -473,6 +486,9 @@ Override createPortfolioListOverride({
     required String portfolioId,
     String? name,
     String? description,
+    String? owner,
+    HealthStatus? healthStatus,
+    String? riskSummary,
   })? onUpdate,
   Future<void> Function({required String portfolioId, bool cascadeDelete})? onDelete,
 }) {

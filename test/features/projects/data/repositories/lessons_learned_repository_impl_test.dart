@@ -7,7 +7,7 @@ import 'package:pm_master_v2/features/projects/domain/entities/lesson_learned.da
 
 import 'lessons_learned_repository_impl_test.mocks.dart';
 
-@GenerateMocks([Dio])
+@GenerateNiceMocks([MockSpec<Dio>()])
 void main() {
   late LessonsLearnedRepositoryImpl repository;
   late MockDio mockDio;
@@ -45,8 +45,14 @@ void main() {
           },
         ];
 
-        when(mockDio.get('/api/projects/$projectId/lessons-learned'))
-            .thenAnswer((_) async => Response(
+        when(mockDio.get(
+          '/api/projects/$projectId/lessons-learned',
+          data: anyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+          onReceiveProgress: anyNamed('onReceiveProgress'),
+        )).thenAnswer((_) async => Response(
                   data: responseData,
                   statusCode: 200,
                   requestOptions: RequestOptions(path: '/api/projects/$projectId/lessons-learned'),
@@ -68,13 +74,26 @@ void main() {
         expect(result[1].category, LessonCategory.process);
         expect(result[1].lessonType, LessonType.improvement);
         expect(result[1].impact, LessonImpact.medium);
-        verify(mockDio.get('/api/projects/$projectId/lessons-learned')).called(1);
+        verify(mockDio.get(
+          '/api/projects/$projectId/lessons-learned',
+          data: anyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+          onReceiveProgress: anyNamed('onReceiveProgress'),
+        )).called(1);
       });
 
       test('returns empty list when response data is not a list', () async {
         // Arrange
-        when(mockDio.get('/api/projects/$projectId/lessons-learned'))
-            .thenAnswer((_) async => Response(
+        when(mockDio.get(
+          '/api/projects/$projectId/lessons-learned',
+          data: anyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+          onReceiveProgress: anyNamed('onReceiveProgress'),
+        )).thenAnswer((_) async => Response(
                   data: {'message': 'Not a list'},
                   statusCode: 200,
                   requestOptions: RequestOptions(path: '/api/projects/$projectId/lessons-learned'),
@@ -85,13 +104,26 @@ void main() {
 
         // Assert
         expect(result, isEmpty);
-        verify(mockDio.get('/api/projects/$projectId/lessons-learned')).called(1);
+        verify(mockDio.get(
+          '/api/projects/$projectId/lessons-learned',
+          data: anyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+          onReceiveProgress: anyNamed('onReceiveProgress'),
+        )).called(1);
       });
 
       test('returns empty list when response data is empty list', () async {
         // Arrange
-        when(mockDio.get('/api/projects/$projectId/lessons-learned'))
-            .thenAnswer((_) async => Response(
+        when(mockDio.get(
+          '/api/projects/$projectId/lessons-learned',
+          data: anyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+          onReceiveProgress: anyNamed('onReceiveProgress'),
+        )).thenAnswer((_) async => Response(
                   data: [],
                   statusCode: 200,
                   requestOptions: RequestOptions(path: '/api/projects/$projectId/lessons-learned'),
@@ -102,13 +134,26 @@ void main() {
 
         // Assert
         expect(result, isEmpty);
-        verify(mockDio.get('/api/projects/$projectId/lessons-learned')).called(1);
+        verify(mockDio.get(
+          '/api/projects/$projectId/lessons-learned',
+          data: anyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+          onReceiveProgress: anyNamed('onReceiveProgress'),
+        )).called(1);
       });
 
       test('throws exception on DioException', () async {
         // Arrange
-        when(mockDio.get('/api/projects/$projectId/lessons-learned'))
-            .thenThrow(DioException(
+        when(mockDio.get(
+          '/api/projects/$projectId/lessons-learned',
+          data: anyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+          onReceiveProgress: anyNamed('onReceiveProgress'),
+        )).thenThrow(DioException(
           requestOptions: RequestOptions(path: '/api/projects/$projectId/lessons-learned'),
           response: Response(
             statusCode: 404,
@@ -121,20 +166,40 @@ void main() {
           () => repository.getProjectLessonsLearned(projectId),
           throwsA(isA<Exception>()),
         );
-        verify(mockDio.get('/api/projects/$projectId/lessons-learned')).called(1);
+        verify(mockDio.get(
+          '/api/projects/$projectId/lessons-learned',
+          data: anyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+          onReceiveProgress: anyNamed('onReceiveProgress'),
+        )).called(1);
       });
 
       test('throws exception on generic error', () async {
         // Arrange
-        when(mockDio.get('/api/projects/$projectId/lessons-learned'))
-            .thenThrow(Exception('Network error'));
+        when(mockDio.get(
+          '/api/projects/$projectId/lessons-learned',
+          data: anyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+          onReceiveProgress: anyNamed('onReceiveProgress'),
+        )).thenThrow(Exception('Network error'));
 
         // Act & Assert
         expect(
           () => repository.getProjectLessonsLearned(projectId),
           throwsA(isA<Exception>()),
         );
-        verify(mockDio.get('/api/projects/$projectId/lessons-learned')).called(1);
+        verify(mockDio.get(
+          '/api/projects/$projectId/lessons-learned',
+          data: anyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+          onReceiveProgress: anyNamed('onReceiveProgress'),
+        )).called(1);
       });
     });
 
@@ -172,6 +237,11 @@ void main() {
         when(mockDio.post(
           '/api/projects/$projectId/lessons-learned',
           data: anyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+          onSendProgress: anyNamed('onSendProgress'),
+          onReceiveProgress: anyNamed('onReceiveProgress'),
         )).thenAnswer((_) async => Response(
               data: responseData,
               statusCode: 201,
@@ -191,6 +261,11 @@ void main() {
         verify(mockDio.post(
           '/api/projects/$projectId/lessons-learned',
           data: anyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+          onSendProgress: anyNamed('onSendProgress'),
+          onReceiveProgress: anyNamed('onReceiveProgress'),
         )).called(1);
       });
 
@@ -210,6 +285,11 @@ void main() {
         when(mockDio.post(
           '/api/projects/$projectId/lessons-learned',
           data: anyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+          onSendProgress: anyNamed('onSendProgress'),
+          onReceiveProgress: anyNamed('onReceiveProgress'),
         )).thenAnswer((_) async => Response(
               data: {
                 'id': 'new-id',
@@ -232,6 +312,11 @@ void main() {
         final captured = verify(mockDio.post(
           '/api/projects/$projectId/lessons-learned',
           data: captureAnyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+          onSendProgress: anyNamed('onSendProgress'),
+          onReceiveProgress: anyNamed('onReceiveProgress'),
         )).captured.single as Map<String, dynamic>;
 
         // Verify toCreateJson excludes id, project_id, ai_generated
@@ -261,6 +346,11 @@ void main() {
         when(mockDio.post(
           '/api/projects/$projectId/lessons-learned',
           data: anyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+          onSendProgress: anyNamed('onSendProgress'),
+          onReceiveProgress: anyNamed('onReceiveProgress'),
         )).thenThrow(DioException(
           requestOptions: RequestOptions(path: '/api/projects/$projectId/lessons-learned'),
           response: Response(
@@ -311,6 +401,11 @@ void main() {
         when(mockDio.put(
           '/api/lessons-learned/$lessonId',
           data: anyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+          onSendProgress: anyNamed('onSendProgress'),
+          onReceiveProgress: anyNamed('onReceiveProgress'),
         )).thenAnswer((_) async => Response(
               data: responseData,
               statusCode: 200,
@@ -330,6 +425,11 @@ void main() {
         verify(mockDio.put(
           '/api/lessons-learned/$lessonId',
           data: anyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+          onSendProgress: anyNamed('onSendProgress'),
+          onReceiveProgress: anyNamed('onReceiveProgress'),
         )).called(1);
       });
 
@@ -352,6 +452,11 @@ void main() {
         when(mockDio.put(
           '/api/lessons-learned/$lessonId',
           data: anyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+          onSendProgress: anyNamed('onSendProgress'),
+          onReceiveProgress: anyNamed('onReceiveProgress'),
         )).thenAnswer((_) async => Response(
               data: {
                 'id': lessonId,
@@ -373,6 +478,11 @@ void main() {
         final captured = verify(mockDio.put(
           '/api/lessons-learned/$lessonId',
           data: captureAnyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+          onSendProgress: anyNamed('onSendProgress'),
+          onReceiveProgress: anyNamed('onReceiveProgress'),
         )).captured.single as Map<String, dynamic>;
 
         expect(captured['title'], 'Title');
@@ -402,6 +512,11 @@ void main() {
         when(mockDio.put(
           '/api/lessons-learned/$lessonId',
           data: anyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+          onSendProgress: anyNamed('onSendProgress'),
+          onReceiveProgress: anyNamed('onReceiveProgress'),
         )).thenAnswer((_) async => Response(
               data: {
                 'id': lessonId,
@@ -423,6 +538,11 @@ void main() {
         final captured = verify(mockDio.put(
           '/api/lessons-learned/$lessonId',
           data: captureAnyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+          onSendProgress: anyNamed('onSendProgress'),
+          onReceiveProgress: anyNamed('onReceiveProgress'),
         )).captured.single as Map<String, dynamic>;
 
         expect(captured.containsKey('tags'), false);
@@ -444,6 +564,11 @@ void main() {
         when(mockDio.put(
           '/api/lessons-learned/$lessonId',
           data: anyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+          onSendProgress: anyNamed('onSendProgress'),
+          onReceiveProgress: anyNamed('onReceiveProgress'),
         )).thenThrow(DioException(
           requestOptions: RequestOptions(path: '/api/lessons-learned/$lessonId'),
           response: Response(
@@ -463,8 +588,13 @@ void main() {
     group('deleteLessonLearned', () {
       test('deletes lesson learned successfully', () async {
         // Arrange
-        when(mockDio.delete('/api/lessons-learned/$lessonId'))
-            .thenAnswer((_) async => Response(
+        when(mockDio.delete(
+          '/api/lessons-learned/$lessonId',
+          data: anyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+        )).thenAnswer((_) async => Response(
                   data: {'message': 'Deleted'},
                   statusCode: 204,
                   requestOptions: RequestOptions(path: '/api/lessons-learned/$lessonId'),
@@ -474,13 +604,24 @@ void main() {
         await repository.deleteLessonLearned(lessonId);
 
         // Assert
-        verify(mockDio.delete('/api/lessons-learned/$lessonId')).called(1);
+        verify(mockDio.delete(
+          '/api/lessons-learned/$lessonId',
+          data: anyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+        )).called(1);
       });
 
       test('throws exception on DioException', () async {
         // Arrange
-        when(mockDio.delete('/api/lessons-learned/$lessonId'))
-            .thenThrow(DioException(
+        when(mockDio.delete(
+          '/api/lessons-learned/$lessonId',
+          data: anyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+        )).thenThrow(DioException(
           requestOptions: RequestOptions(path: '/api/lessons-learned/$lessonId'),
           response: Response(
             statusCode: 404,
@@ -493,20 +634,37 @@ void main() {
           () => repository.deleteLessonLearned(lessonId),
           throwsA(isA<Exception>()),
         );
-        verify(mockDio.delete('/api/lessons-learned/$lessonId')).called(1);
+        verify(mockDio.delete(
+          '/api/lessons-learned/$lessonId',
+          data: anyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+        )).called(1);
       });
 
       test('throws exception on generic error', () async {
         // Arrange
-        when(mockDio.delete('/api/lessons-learned/$lessonId'))
-            .thenThrow(Exception('Network error'));
+        when(mockDio.delete(
+          '/api/lessons-learned/$lessonId',
+          data: anyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+        )).thenThrow(Exception('Network error'));
 
         // Act & Assert
         expect(
           () => repository.deleteLessonLearned(lessonId),
           throwsA(isA<Exception>()),
         );
-        verify(mockDio.delete('/api/lessons-learned/$lessonId')).called(1);
+        verify(mockDio.delete(
+          '/api/lessons-learned/$lessonId',
+          data: anyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+        )).called(1);
       });
     });
 
@@ -525,8 +683,14 @@ void main() {
           },
         ];
 
-        when(mockDio.get('/api/projects/$projectId/lessons-learned'))
-            .thenAnswer((_) async => Response(
+        when(mockDio.get(
+          '/api/projects/$projectId/lessons-learned',
+          data: anyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+          onReceiveProgress: anyNamed('onReceiveProgress'),
+        )).thenAnswer((_) async => Response(
                   data: responseData,
                   statusCode: 200,
                   requestOptions: RequestOptions(path: '/api/projects/$projectId/lessons-learned'),
@@ -557,6 +721,11 @@ void main() {
         when(mockDio.post(
           '/api/projects/$projectId/lessons-learned',
           data: anyNamed('data'),
+          queryParameters: anyNamed('queryParameters'),
+          options: anyNamed('options'),
+          cancelToken: anyNamed('cancelToken'),
+          onSendProgress: anyNamed('onSendProgress'),
+          onReceiveProgress: anyNamed('onReceiveProgress'),
         )).thenAnswer((_) async => Response(
               data: {
                 'id': 'lesson-new',

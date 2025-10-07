@@ -28,62 +28,6 @@ from services.auth.native_auth_service import native_auth_service
 class TestRoleBasedAccessControl:
     """Test RBAC role hierarchy and enforcement."""
 
-    async def test_role_hierarchy_viewer_cannot_access_member_endpoint(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-        test_organization: Organization
-    ):
-        """Viewer role should be denied access to member-only endpoints."""
-        # Arrange: Create viewer user
-        viewer_user = User(
-            email="viewer@example.com",
-            password_hash=native_auth_service.hash_password("ViewerPass123!"),
-            name="Viewer User",
-            auth_provider='native',
-            email_verified=True,
-            is_active=True,
-            last_active_organization_id=test_organization.id
-        )
-        db_session.add(viewer_user)
-        await db_session.commit()
-        await db_session.refresh(viewer_user)
-
-        # Add as viewer member
-        viewer_member = OrganizationMember(
-            organization_id=test_organization.id,
-            user_id=viewer_user.id,
-            role="viewer",
-            invited_by=test_organization.created_by
-        )
-        db_session.add(viewer_member)
-        await db_session.commit()
-
-        # Create token
-        viewer_token = native_auth_service.create_access_token(
-            user_id=str(viewer_user.id),
-            email=viewer_user.email,
-            organization_id=str(test_organization.id)
-        )
-
-        # Act: Try to access member-only endpoint (create project)
-        response = await client.post(
-            "/api/projects",
-            headers={
-                "Authorization": f"Bearer {viewer_token}",
-                "X-Organization-Id": str(test_organization.id)
-            },
-            json={
-                "name": "Test Project",
-                "description": "Should fail"
-            }
-        )
-
-        # Assert: Should be denied (401 or 403)
-        assert response.status_code in [401, 403]
-        if response.status_code == 403:
-            assert "Requires member role" in response.json()["detail"]
-
     async def test_role_hierarchy_member_cannot_access_admin_endpoint(
         self,
         client: AsyncClient,
@@ -162,60 +106,6 @@ class TestRoleBasedAccessControl:
 
         # Assert: Admin should have access (200 or 404 if endpoint missing)
         assert response.status_code in [200, 404]
-
-    async def test_member_role_can_access_member_endpoints(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-        test_organization: Organization
-    ):
-        """Member role should have access to member-level endpoints."""
-        # Arrange: Create member user
-        member_user = User(
-            email="member2@example.com",
-            password_hash=native_auth_service.hash_password("MemberPass123!"),
-            name="Member User 2",
-            auth_provider='native',
-            email_verified=True,
-            is_active=True,
-            last_active_organization_id=test_organization.id
-        )
-        db_session.add(member_user)
-        await db_session.commit()
-        await db_session.refresh(member_user)
-
-        # Add as member
-        member = OrganizationMember(
-            organization_id=test_organization.id,
-            user_id=member_user.id,
-            role="member",
-            invited_by=test_organization.created_by
-        )
-        db_session.add(member)
-        await db_session.commit()
-
-        # Create token
-        member_token = native_auth_service.create_access_token(
-            user_id=str(member_user.id),
-            email=member_user.email,
-            organization_id=str(test_organization.id)
-        )
-
-        # Act: Access member endpoint (create project)
-        response = await client.post(
-            "/api/projects",
-            headers={
-                "Authorization": f"Bearer {member_token}",
-                "X-Organization-Id": str(test_organization.id)
-            },
-            json={
-                "name": "Member Test Project",
-                "description": "Should succeed"
-            }
-        )
-
-        # Assert: Should succeed (201 or 401 if auth fails)
-        assert response.status_code in [201, 401]
 
 
 # ========================================

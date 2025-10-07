@@ -44,6 +44,7 @@ void main() {
             isRead: false,
           ),
         ],
+        hasUnread: true,
       );
 
       // Act
@@ -79,6 +80,7 @@ void main() {
             isRead: false,
           ),
         ],
+        hasUnread: true,
       );
 
       // Act
@@ -219,6 +221,7 @@ void main() {
             isRead: true,
           ),
         ],
+        hasUnread: true,
       );
 
       // Act
@@ -310,8 +313,8 @@ void main() {
           ),
           InvitationNotification(
             id: '3',
-            userName: 'Hours Ago User',
-            userEmail: 'hours@test.com',
+            userName: 'Days Ago User',
+            userEmail: 'days@test.com',
             organizationId: 'org-1',
             acceptedAt: now.subtract(const Duration(hours: 3)),
             isRead: false,
@@ -349,7 +352,7 @@ void main() {
       // Assert - Check time formatting
       expect(find.text('Just now'), findsOneWidget);
       expect(find.textContaining('min ago'), findsOneWidget);
-      expect(find.textContaining('hour'), findsOneWidget);
+      expect(find.text('3 hours ago'), findsOneWidget);
       expect(find.text('Yesterday'), findsOneWidget);
     });
 

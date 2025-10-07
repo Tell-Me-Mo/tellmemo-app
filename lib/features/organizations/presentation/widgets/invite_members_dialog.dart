@@ -112,11 +112,12 @@ class _InviteMembersDialogState extends ConsumerState<InviteMembersDialog> {
                       color: theme.colorScheme.primary,
                     ),
                     const SizedBox(width: 12),
-                    Text(
-                      'Invite Team Members',
-                      style: theme.textTheme.headlineSmall,
+                    Expanded(
+                      child: Text(
+                        'Invite Team Members',
+                        style: theme.textTheme.headlineSmall,
+                      ),
                     ),
-                    const Spacer(),
                     IconButton(
                       icon: const Icon(Icons.close),
                       onPressed: () => Navigator.of(context).pop(),
@@ -128,42 +129,48 @@ class _InviteMembersDialogState extends ConsumerState<InviteMembersDialog> {
                 // Mode Toggle
                 Row(
                   children: [
-                    ChoiceChip(
-                      label: const Text('Single Invite'),
-                      selected: !_isBulkMode,
-                      onSelected: (selected) {
-                        if (selected) {
-                          setState(() {
-                            _isBulkMode = false;
-                          });
-                        }
-                      },
+                    Flexible(
+                      child: ChoiceChip(
+                        label: const Text('Single Invite'),
+                        selected: !_isBulkMode,
+                        onSelected: (selected) {
+                          if (selected) {
+                            setState(() {
+                              _isBulkMode = false;
+                            });
+                          }
+                        },
+                      ),
                     ),
                     const SizedBox(width: 8),
-                    ChoiceChip(
-                      label: const Text('Bulk Invite'),
-                      selected: _isBulkMode,
-                      onSelected: (selected) {
-                        if (selected) {
-                          setState(() {
-                            _isBulkMode = true;
-                          });
-                        }
-                      },
+                    Flexible(
+                      child: ChoiceChip(
+                        label: const Text('Bulk Invite'),
+                        selected: _isBulkMode,
+                        onSelected: (selected) {
+                          if (selected) {
+                            setState(() {
+                              _isBulkMode = true;
+                            });
+                          }
+                        },
+                      ),
                     ),
                     const Spacer(),
-                    TextButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        showDialog(
-                          context: context,
-                          builder: (context) => CsvBulkInviteDialog(
-                            organizationId: widget.organizationId,
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.upload_file, size: 18),
-                      label: const Text('CSV Import'),
+                    Flexible(
+                      child: TextButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          showDialog(
+                            context: context,
+                            builder: (context) => CsvBulkInviteDialog(
+                              organizationId: widget.organizationId,
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.upload_file, size: 18),
+                        label: const Text('CSV Import'),
+                      ),
                     ),
                   ],
                 ),

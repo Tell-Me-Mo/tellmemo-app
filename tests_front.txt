@@ -1,0 +1,626 @@
+  mainAxisAlignment: start
+  mainAxisSize: min
+  crossAxisAlignment: start
+  textDirection: ltr
+  verticalDirection: down
+  spacing: 0.0
+◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤
+════════════════════════════════════════════════════════════════════════════════════════════════════
+01:11 +888 -98: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/organizations/presentation/widgets/csv_bulk_invite_dialog_test.dart: CsvBulkInviteDialog Widget Tests displays upload icon in empty state [E]
+  Test failed. See exception logs above.
+  The test description was: displays upload icon in empty state
+  
+
+To run this test again: /Users/nkondratyk/Desktop/development/flutter/bin/cache/dart-sdk/bin/dart test /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/organizations/presentation/widgets/invitation_notifications_widget_test.dart -p vm --plain-name 'InvitationNotificationsWidget Widget Tests displays unread count badge in header'
+
+To run this test again: /Users/nkondratyk/Desktop/development/flutter/bin/cache/dart-sdk/bin/dart test /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/organizations/presentation/widgets/csv_bulk_invite_dialog_test.dart -p vm --plain-name 'CsvBulkInviteDialog Widget Tests displays upload icon in empty state'
+01:11 +889 -98: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/organizations/presentation/widgets/csv_bulk_invite_dialog_test.dart: CsvBulkInviteDialog Widget Tests close button closes the dialog
+══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
+The following assertion was thrown during layout:
+A RenderFlex overflowed by 14 pixels on the bottom.
+
+The overflowing RenderFlex has an orientation of Axis.vertical.
+The edge of the RenderFlex that is overflowing has been marked in the rendering with a yellow and
+black striped pattern. This is usually caused by the contents being too big for the RenderFlex.
+Consider applying a flex factor (e.g. using an Expanded widget) to force the children of the
+RenderFlex to fit within the available space instead of being sized to their natural size.
+This is considered an error condition because it indicates that there is content that cannot be
+seen. If the content is legitimately bigger than the available space, consider clipping it with a
+ClipRect widget before putting it in the flex, or using a scrollable container rather than a Flex,
+like a ListView.
+The specific RenderFlex in question is: RenderFlex#88f0e DISPOSED OVERFLOWING:
+  creator: MultiChildRenderObjectElement#ec39b(DEFUNCT) ←
+    SingleChildRenderObjectElement#5d450(DEFUNCT) ← SingleChildRenderObjectElement#c0108(DEFUNCT) ←
+    InheritedElement#4f18f(DEFUNCT) ← StatefulElement#dbada(DEFUNCT) ←
+    SingleChildRenderObjectElement#46b17(DEFUNCT) ←
+    _NotificationElement<LayoutChangedNotification>#d32dd(DEFUNCT) ←
+    SingleChildRenderObjectElement#35316(DEFUNCT) ← StatelessElement#d4e24(DEFUNCT) ←
+    SingleChildRenderObjectElement#ae61a(DEFUNCT) ← StatefulElement#f06b4(DEFUNCT) ←
+    StatefulElement#753fc(DEFUNCT) ← ⋯
+  parentData: offset=Offset(24.0, 24.0) (can use size)
+  constraints: BoxConstraints(232.0<=w<=552.0, 0.0<=h<=504.0)
+  size: Size(552.0, 504.0)
+  direction: vertical
+  mainAxisAlignment: start
+  mainAxisSize: min
+  crossAxisAlignment: start
+  textDirection: ltr
+  verticalDirection: down
+  spacing: 0.0
+◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤
+════════════════════════════════════════════════════════════════════════════════════════════════════
+01:11 +889 -99: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/organizations/presentation/widgets/csv_bulk_invite_dialog_test.dart: CsvBulkInviteDialog Widget Tests close button closes the dialog [E]
+  Test failed. See exception logs above.
+  The test description was: close button closes the dialog
+  
+══╡ EXCEPTION CAUGHT BY WIDGET INSPECTOR ╞══════════════════════════════════════════════════════════
+The following assertion was thrown:
+Looking up a deactivated widget's ancestor is unsafe.
+At this point the state of the widget's element tree is no longer stable.
+To safely refer to a widget's ancestor in its dispose() method, save a reference to the ancestor by
+calling dependOnInheritedWidgetOfExactType() in the widget's didChangeDependencies() method.
+
+When the exception was thrown, this was the stack:
+#0      Element._debugCheckStateIsActiveForAncestorLookup.<anonymous closure> (package:flutter/src/widgets/framework.dart:4954:9)
+#1      Element._debugCheckStateIsActiveForAncestorLookup (package:flutter/src/widgets/framework.dart:4968:6)
+#2      Element.visitAncestorElements (package:flutter/src/widgets/framework.dart:5080:12)
+#3      _describeRelevantUserCode (package:flutter/src/widgets/widget_inspector.dart:4221:13)
+#4      _parseDiagnosticsNode (package:flutter/src/widgets/widget_inspector.dart:4140:12)
+#5      debugTransformDebugCreator (package:flutter/src/widgets/widget_inspector.dart:4119:21)
+#6      _FlutterErrorDetailsNode.builder (package:flutter/src/foundation/assertions.dart:1310:31)
+#7      DiagnosticableNode.getProperties (package:flutter/src/foundation/diagnostics.dart:2945:68)
+#8      TextTreeRenderer._debugRender (package:flutter/src/foundation/diagnostics.dart:1270:63)
+#9      TextTreeRenderer.render (package:flutter/src/foundation/diagnostics.dart:1137:14)
+#10     FlutterError.dumpErrorToConsole (package:flutter/src/foundation/assertions.dart:1040:13)
+#11     _defaultTestExceptionReporter (package:flutter_test/src/test_exception_reporter.dart:29:16)
+#12     TestWidgetsFlutterBinding._createTestCompletionHandler.<anonymous closure> (package:flutter_test/src/binding.dart:821:28)
+<asynchronous suspension>
+(elided 8 frames from dart:async and package:stack_trace)
+
+This exception was caught while trying to describe the user-relevant code of another error.
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY WIDGET INSPECTOR ╞══════════════════════════════════════════════════════════
+The following assertion was thrown:
+Looking up a deactivated widget's ancestor is unsafe.
+At this point the state of the widget's element tree is no longer stable.
+To safely refer to a widget's ancestor in its dispose() method, save a reference to the ancestor by
+calling dependOnInheritedWidgetOfExactType() in the widget's didChangeDependencies() method.
+
+When the exception was thrown, this was the stack:
+#0      Element._debugCheckStateIsActiveForAncestorLookup.<anonymous closure> (package:flutter/src/widgets/framework.dart:4954:9)
+#1      Element._debugCheckStateIsActiveForAncestorLookup (package:flutter/src/widgets/framework.dart:4968:6)
+#2      Element.visitAncestorElements (package:flutter/src/widgets/framework.dart:5080:12)
+#3      _describeRelevantUserCode (package:flutter/src/widgets/widget_inspector.dart:4221:13)
+#4      _parseDiagnosticsNode (package:flutter/src/widgets/widget_inspector.dart:4140:12)
+#5      debugTransformDebugCreator (package:flutter/src/widgets/widget_inspector.dart:4119:21)
+#6      _FlutterErrorDetailsNode.builder (package:flutter/src/foundation/assertions.dart:1310:31)
+#7      DiagnosticableNode.emptyBodyDescription (package:flutter/src/foundation/diagnostics.dart:2941:45)
+#8      TextTreeRenderer._debugRender (package:flutter/src/foundation/diagnostics.dart:1307:14)
+#9      TextTreeRenderer.render (package:flutter/src/foundation/diagnostics.dart:1137:14)
+#10     FlutterError.dumpErrorToConsole (package:flutter/src/foundation/assertions.dart:1040:13)
+#11     _defaultTestExceptionReporter (package:flutter_test/src/test_exception_reporter.dart:29:16)
+#12     TestWidgetsFlutterBinding._createTestCompletionHandler.<anonymous closure> (package:flutter_test/src/binding.dart:821:28)
+<asynchronous suspension>
+(elided 8 frames from dart:async and package:stack_trace)
+
+This exception was caught while trying to describe the user-relevant code of another error.
+════════════════════════════════════════════════════════════════════════════════════════════════════
+
+To run this test again: /Users/nkondratyk/Desktop/development/flutter/bin/cache/dart-sdk/bin/dart test /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/organizations/presentation/widgets/csv_bulk_invite_dialog_test.dart -p vm --plain-name 'CsvBulkInviteDialog Widget Tests close button closes the dialog'
+01:11 +891 -99: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/organizations/presentation/widgets/csv_bulk_invite_dialog_test.dart: CsvBulkInviteDialog Widget Tests cancel button closes the dialog
+══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
+The following assertion was thrown during layout:
+A RenderFlex overflowed by 14 pixels on the bottom.
+
+The overflowing RenderFlex has an orientation of Axis.vertical.
+The edge of the RenderFlex that is overflowing has been marked in the rendering with a yellow and
+black striped pattern. This is usually caused by the contents being too big for the RenderFlex.
+Consider applying a flex factor (e.g. using an Expanded widget) to force the children of the
+RenderFlex to fit within the available space instead of being sized to their natural size.
+This is considered an error condition because it indicates that there is content that cannot be
+seen. If the content is legitimately bigger than the available space, consider clipping it with a
+ClipRect widget before putting it in the flex, or using a scrollable container rather than a Flex,
+like a ListView.
+The specific RenderFlex in question is: RenderFlex#0b55d DISPOSED OVERFLOWING:
+  creator: MultiChildRenderObjectElement#084c0(DEFUNCT) ←
+    SingleChildRenderObjectElement#e1f9e(DEFUNCT) ← SingleChildRenderObjectElement#bfc05(DEFUNCT) ←
+    InheritedElement#2c63f(DEFUNCT) ← StatefulElement#25a8c(DEFUNCT) ←
+    SingleChildRenderObjectElement#1a5aa(DEFUNCT) ←
+    _NotificationElement<LayoutChangedNotification>#c89c4(DEFUNCT) ←
+    SingleChildRenderObjectElement#f6f1a(DEFUNCT) ← StatelessElement#81fdf(DEFUNCT) ←
+    SingleChildRenderObjectElement#d834f(DEFUNCT) ← StatefulElement#d5ab8(DEFUNCT) ←
+    StatefulElement#8b9b7(DEFUNCT) ← ⋯
+  parentData: offset=Offset(24.0, 24.0) (can use size)
+  constraints: BoxConstraints(232.0<=w<=552.0, 0.0<=h<=504.0)
+  size: Size(552.0, 504.0)
+  direction: vertical
+  mainAxisAlignment: start
+  mainAxisSize: min
+  crossAxisAlignment: start
+  textDirection: ltr
+  verticalDirection: down
+  spacing: 0.0
+◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤
+════════════════════════════════════════════════════════════════════════════════════════════════════
+01:11 +891 -100: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/organizations/presentation/widgets/csv_bulk_invite_dialog_test.dart: CsvBulkInviteDialog Widget Tests cancel button closes the dialog [E]
+  Test failed. See exception logs above.
+  The test description was: cancel button closes the dialog
+  
+══╡ EXCEPTION CAUGHT BY WIDGET INSPECTOR ╞══════════════════════════════════════════════════════════
+The following assertion was thrown:
+Looking up a deactivated widget's ancestor is unsafe.
+At this point the state of the widget's element tree is no longer stable.
+To safely refer to a widget's ancestor in its dispose() method, save a reference to the ancestor by
+calling dependOnInheritedWidgetOfExactType() in the widget's didChangeDependencies() method.
+
+When the exception was thrown, this was the stack:
+#0      Element._debugCheckStateIsActiveForAncestorLookup.<anonymous closure> (package:flutter/src/widgets/framework.dart:4954:9)
+#1      Element._debugCheckStateIsActiveForAncestorLookup (package:flutter/src/widgets/framework.dart:4968:6)
+#2      Element.visitAncestorElements (package:flutter/src/widgets/framework.dart:5080:12)
+#3      _describeRelevantUserCode (package:flutter/src/widgets/widget_inspector.dart:4221:13)
+#4      _parseDiagnosticsNode (package:flutter/src/widgets/widget_inspector.dart:4140:12)
+#5      debugTransformDebugCreator (package:flutter/src/widgets/widget_inspector.dart:4119:21)
+#6      _FlutterErrorDetailsNode.builder (package:flutter/src/foundation/assertions.dart:1310:31)
+#7      DiagnosticableNode.getProperties (package:flutter/src/foundation/diagnostics.dart:2945:68)
+#8      TextTreeRenderer._debugRender (package:flutter/src/foundation/diagnostics.dart:1270:63)
+#9      TextTreeRenderer.render (package:flutter/src/foundation/diagnostics.dart:1137:14)
+#10     FlutterError.dumpErrorToConsole (package:flutter/src/foundation/assertions.dart:1040:13)
+#11     _defaultTestExceptionReporter (package:flutter_test/src/test_exception_reporter.dart:29:16)
+#12     TestWidgetsFlutterBinding._createTestCompletionHandler.<anonymous closure> (package:flutter_test/src/binding.dart:821:28)
+<asynchronous suspension>
+(elided 8 frames from dart:async and package:stack_trace)
+
+This exception was caught while trying to describe the user-relevant code of another error.
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY WIDGET INSPECTOR ╞══════════════════════════════════════════════════════════
+The following assertion was thrown:
+Looking up a deactivated widget's ancestor is unsafe.
+At this point the state of the widget's element tree is no longer stable.
+To safely refer to a widget's ancestor in its dispose() method, save a reference to the ancestor by
+calling dependOnInheritedWidgetOfExactType() in the widget's didChangeDependencies() method.
+
+When the exception was thrown, this was the stack:
+#0      Element._debugCheckStateIsActiveForAncestorLookup.<anonymous closure> (package:flutter/src/widgets/framework.dart:4954:9)
+#1      Element._debugCheckStateIsActiveForAncestorLookup (package:flutter/src/widgets/framework.dart:4968:6)
+#2      Element.visitAncestorElements (package:flutter/src/widgets/framework.dart:5080:12)
+#3      _describeRelevantUserCode (package:flutter/src/widgets/widget_inspector.dart:4221:13)
+#4      _parseDiagnosticsNode (package:flutter/src/widgets/widget_inspector.dart:4140:12)
+#5      debugTransformDebugCreator (package:flutter/src/widgets/widget_inspector.dart:4119:21)
+#6      _FlutterErrorDetailsNode.builder (package:flutter/src/foundation/assertions.dart:1310:31)
+#7      DiagnosticableNode.emptyBodyDescription (package:flutter/src/foundation/diagnostics.dart:2941:45)
+#8      TextTreeRenderer._debugRender (package:flutter/src/foundation/diagnostics.dart:1307:14)
+#9      TextTreeRenderer.render (package:flutter/src/foundation/diagnostics.dart:1137:14)
+#10     FlutterError.dumpErrorToConsole (package:flutter/src/foundation/assertions.dart:1040:13)
+#11     _defaultTestExceptionReporter (package:flutter_test/src/test_exception_reporter.dart:29:16)
+#12     TestWidgetsFlutterBinding._createTestCompletionHandler.<anonymous closure> (package:flutter_test/src/binding.dart:821:28)
+<asynchronous suspension>
+(elided 8 frames from dart:async and package:stack_trace)
+
+This exception was caught while trying to describe the user-relevant code of another error.
+════════════════════════════════════════════════════════════════════════════════════════════════════
+
+To run this test again: /Users/nkondratyk/Desktop/development/flutter/bin/cache/dart-sdk/bin/dart test /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/organizations/presentation/widgets/csv_bulk_invite_dialog_test.dart -p vm --plain-name 'CsvBulkInviteDialog Widget Tests cancel button closes the dialog'
+01:11 +892 -100: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/organizations/presentation/widgets/csv_bulk_invite_dialog_test.dart: CsvBulkInviteDialog Widget Tests shows proper dialog structure with padding
+══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
+The following assertion was thrown during layout:
+A RenderFlex overflowed by 14 pixels on the bottom.
+
+The relevant error-causing widget was:
+  Column
+  Column:file:///Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/lib/features/organizations/presentation/widgets/csv_bulk_invite_dialog.dart:215:18
+
+The overflowing RenderFlex has an orientation of Axis.vertical.
+The edge of the RenderFlex that is overflowing has been marked in the rendering with a yellow and
+black striped pattern. This is usually caused by the contents being too big for the RenderFlex.
+Consider applying a flex factor (e.g. using an Expanded widget) to force the children of the
+RenderFlex to fit within the available space instead of being sized to their natural size.
+This is considered an error condition because it indicates that there is content that cannot be
+seen. If the content is legitimately bigger than the available space, consider clipping it with a
+ClipRect widget before putting it in the flex, or using a scrollable container rather than a Flex,
+like a ListView.
+The specific RenderFlex in question is: RenderFlex#adb18 relayoutBoundary=up7 OVERFLOWING:
+  creator: Column ← Padding ← ConstrainedBox ← DefaultTextStyle ← AnimatedDefaultTextStyle ←
+    _InkFeatures-[GlobalKey#1f972 ink renderer] ← NotificationListener<LayoutChangedNotification> ←
+    CustomPaint ← _ShapeBorderPaint ← PhysicalShape ← _MaterialInterior ← Material ← ⋯
+  parentData: offset=Offset(24.0, 24.0) (can use size)
+  constraints: BoxConstraints(232.0<=w<=552.0, 0.0<=h<=504.0)
+  size: Size(552.0, 504.0)
+  direction: vertical
+  mainAxisAlignment: start
+  mainAxisSize: min
+  crossAxisAlignment: start
+  textDirection: ltr
+  verticalDirection: down
+  spacing: 0.0
+◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤
+════════════════════════════════════════════════════════════════════════════════════════════════════
+01:11 +892 -101: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/organizations/presentation/widgets/csv_bulk_invite_dialog_test.dart: CsvBulkInviteDialog Widget Tests shows proper dialog structure with padding [E]
+  Test failed. See exception logs above.
+  The test description was: shows proper dialog structure with padding
+  
+
+To run this test again: /Users/nkondratyk/Desktop/development/flutter/bin/cache/dart-sdk/bin/dart test /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/organizations/presentation/widgets/csv_bulk_invite_dialog_test.dart -p vm --plain-name 'CsvBulkInviteDialog Widget Tests shows proper dialog structure with padding'
+01:11 +892 -101: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/organizations/presentation/widgets/csv_bulk_invite_dialog_test.dart: CsvBulkInviteDialog Widget Tests displays download icon on template button
+══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
+The following assertion was thrown during layout:
+A RenderFlex overflowed by 14 pixels on the bottom.
+
+The relevant error-causing widget was:
+  Column
+  Column:file:///Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/lib/features/organizations/presentation/widgets/csv_bulk_invite_dialog.dart:215:18
+
+The overflowing RenderFlex has an orientation of Axis.vertical.
+The edge of the RenderFlex that is overflowing has been marked in the rendering with a yellow and
+black striped pattern. This is usually caused by the contents being too big for the RenderFlex.
+Consider applying a flex factor (e.g. using an Expanded widget) to force the children of the
+RenderFlex to fit within the available space instead of being sized to their natural size.
+This is considered an error condition because it indicates that there is content that cannot be
+seen. If the content is legitimately bigger than the available space, consider clipping it with a
+ClipRect widget before putting it in the flex, or using a scrollable container rather than a Flex,
+like a ListView.
+The specific RenderFlex in question is: RenderFlex#b6d58 relayoutBoundary=up7 OVERFLOWING:
+  creator: Column ← Padding ← ConstrainedBox ← DefaultTextStyle ← AnimatedDefaultTextStyle ←
+    _InkFeatures-[GlobalKey#93b4d ink renderer] ← NotificationListener<LayoutChangedNotification> ←
+    CustomPaint ← _ShapeBorderPaint ← PhysicalShape ← _MaterialInterior ← Material ← ⋯
+  parentData: offset=Offset(24.0, 24.0) (can use size)
+  constraints: BoxConstraints(232.0<=w<=552.0, 0.0<=h<=504.0)
+  size: Size(552.0, 504.0)
+  direction: vertical
+  mainAxisAlignment: start
+  mainAxisSize: min
+  crossAxisAlignment: start
+  textDirection: ltr
+  verticalDirection: down
+  spacing: 0.0
+◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤
+════════════════════════════════════════════════════════════════════════════════════════════════════
+01:11 +892 -102: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/organizations/presentation/widgets/csv_bulk_invite_dialog_test.dart: CsvBulkInviteDialog Widget Tests displays download icon on template button [E]
+  Test failed. See exception logs above.
+  The test description was: displays download icon on template button
+  
+
+To run this test again: /Users/nkondratyk/Desktop/development/flutter/bin/cache/dart-sdk/bin/dart test /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/organizations/presentation/widgets/csv_bulk_invite_dialog_test.dart -p vm --plain-name 'CsvBulkInviteDialog Widget Tests displays download icon on template button'
+01:11 +893 -102: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/organizations/presentation/widgets/invitation_notifications_widget_test.dart: InvitationNotificationsWidget Widget Tests displays correct time format for notifications
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _TextContainingWidgetFinder:<Found 2 widgets with text containing hour: [
+            Text("hours@test.com", debugLabel: ((englishLike bodySmall
+2021).merge(((blackMountainView bodySmall).apply).merge(unknown))).copyWith, inherit: false, color:
+Color(alpha: 1.0000, red: 0.2863, green: 0.2706, blue: 0.3059, colorSpace: ColorSpace.sRGB), family:
+Roboto, size: 12.0, weight: 400, letterSpacing: 0.4, baseline: alphabetic, height: 1.3x,
+leadingDistribution: even, decoration: Color(alpha: 1.0000, red: 0.1137, green: 0.1059, blue:
+0.1255, colorSpace: ColorSpace.sRGB) TextDecoration.none, dependencies: [DefaultSelectionStyle,
+DefaultTextStyle, MediaQuery]),
+            Text("3 hours ago", debugLabel: ((englishLike bodySmall 2021).merge(((blackMountainView
+bodySmall).apply).merge(unknown))).copyWith, inherit: false, color: Color(alpha: 1.0000, red:
+0.2863, green: 0.2706, blue: 0.3059, colorSpace: ColorSpace.sRGB), family: Roboto, size: 11.0,
+weight: 400, letterSpacing: 0.4, baseline: alphabetic, height: 1.3x, leadingDistribution: even,
+decoration: Color(alpha: 1.0000, red: 0.1137, green: 0.1059, blue: 0.1255, colorSpace:
+ColorSpace.sRGB) TextDecoration.none, dependencies: [DefaultSelectionStyle, DefaultTextStyle,
+MediaQuery]),
+          ]>
+   Which: is too many
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure>.<anonymous closure> (file:///Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/organizations/presentation/widgets/invitation_notifications_widget_test.dart:352:7)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1059:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/organizations/presentation/widgets/invitation_notifications_widget_test.dart line 352
+The test description was:
+  displays correct time format for notifications
+════════════════════════════════════════════════════════════════════════════════════════════════════
+01:11 +893 -103: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/organizations/presentation/widgets/invitation_notifications_widget_test.dart: InvitationNotificationsWidget Widget Tests displays correct time format for notifications [E]
+  Test failed. See exception logs above.
+  The test description was: displays correct time format for notifications
+  
+
+To run this test again: /Users/nkondratyk/Desktop/development/flutter/bin/cache/dart-sdk/bin/dart test /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/organizations/presentation/widgets/invitation_notifications_widget_test.dart -p vm --plain-name 'InvitationNotificationsWidget Widget Tests displays correct time format for notifications'
+01:12 +893 -103: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/organizations/presentation/widgets/csv_bulk_invite_dialog_test.dart: CsvBulkInviteDialog Widget Tests renders with correct organization ID
+══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
+The following assertion was thrown during layout:
+A RenderFlex overflowed by 14 pixels on the bottom.
+
+The relevant error-causing widget was:
+  Column
+  Column:file:///Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/lib/features/organizations/presentation/widgets/csv_bulk_invite_dialog.dart:215:18
+
+The overflowing RenderFlex has an orientation of Axis.vertical.
+The edge of the RenderFlex that is overflowing has been marked in the rendering with a yellow and
+black striped pattern. This is usually caused by the contents being too big for the RenderFlex.
+Consider applying a flex factor (e.g. using an Expanded widget) to force the children of the
+RenderFlex to fit within the available space instead of being sized to their natural size.
+This is considered an error condition because it indicates that there is content that cannot be
+seen. If the content is legitimately bigger than the available space, consider clipping it with a
+ClipRect widget before putting it in the flex, or using a scrollable container rather than a Flex,
+like a ListView.
+The specific RenderFlex in question is: RenderFlex#1dcd7 relayoutBoundary=up7 OVERFLOWING:
+  creator: Column ← Padding ← ConstrainedBox ← DefaultTextStyle ← AnimatedDefaultTextStyle ←
+    _InkFeatures-[GlobalKey#2bf5d ink renderer] ← NotificationListener<LayoutChangedNotification> ←
+    CustomPaint ← _ShapeBorderPaint ← PhysicalShape ← _MaterialInterior ← Material ← ⋯
+  parentData: offset=Offset(24.0, 24.0) (can use size)
+  constraints: BoxConstraints(232.0<=w<=552.0, 0.0<=h<=504.0)
+  size: Size(552.0, 504.0)
+  direction: vertical
+  mainAxisAlignment: start
+  mainAxisSize: min
+  crossAxisAlignment: start
+  textDirection: ltr
+  verticalDirection: down
+  spacing: 0.0
+◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤
+════════════════════════════════════════════════════════════════════════════════════════════════════
+01:12 +893 -104: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/organizations/presentation/widgets/csv_bulk_invite_dialog_test.dart: CsvBulkInviteDialog Widget Tests renders with correct organization ID [E]
+  Test failed. See exception logs above.
+  The test description was: renders with correct organization ID
+  
+
+To run this test again: /Users/nkondratyk/Desktop/development/flutter/bin/cache/dart-sdk/bin/dart test /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/organizations/presentation/widgets/csv_bulk_invite_dialog_test.dart -p vm --plain-name 'CsvBulkInviteDialog Widget Tests renders with correct organization ID'
+01:17 +1010 ~1 -104: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/providers/favorites_provider_test.dart: FavoritesNotifier toggleFavorite adds item to favorites when not present
+Loading favorites: ["item-1"]
+Loaded favorites: {item-1}
+Saved favorites: [item-1]
+01:17 +1013 ~1 -104: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/providers/favorites_provider_test.dart: FavoritesNotifier isFavorite returns true for favorited item
+Loading favorites: ["item-1"]
+Loaded favorites: {item-1}
+Saved favorites: [item-1]
+01:17 +1016 ~1 -104: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/providers/favorites_provider_test.dart: FavoritesNotifier isFavorite returns false for non-favorited item
+Loading favorites: null
+No favorites found in storage
+01:18 +1018 ~1 -104: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/providers/favorites_provider_test.dart: FavoritesNotifier clearFavorites removes all favorites
+Loading favorites: ["item-1"]
+Loaded favorites: {item-1}
+Saved favorites: [item-1]
+Saved favorites: [item-1, item-2]
+Saved favorites: []
+01:18 +1021 ~1 -104: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/providers/favorites_provider_test.dart: FavoritesNotifier getFavorites returns empty set when no favorites
+Loading favorites: null
+No favorites found in storage
+01:19 +1022 ~1 -104: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/providers/favorites_provider_test.dart: FavoritesNotifier isFavoriteProvider updates when favorites change
+Loading favorites: ["item-1"]
+Loaded favorites: {item-1}
+Saved favorites: [item-1]
+01:19 +1023 ~1 -104: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/providers/favorites_provider_test.dart: FavoritesNotifier Edge cases handles multiple toggles of same item
+Loading favorites: ["item-1"]
+Loaded favorites: {item-1}
+Saved favorites: [item-1]
+Saved favorites: []
+Saved favorites: [item-1]
+01:19 +1024 ~1 -104: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/providers/favorites_provider_test.dart: FavoritesNotifier Edge cases handles empty string IDs
+Loading favorites: [""]
+Loaded favorites: {}
+Saved favorites: []
+01:19 +1025 ~1 -104: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/providers/favorites_provider_test.dart: FavoritesNotifier Edge cases handles very long IDs
+Loading favorites: ["AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"]
+Loaded favorites: {AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA}
+Saved favorites: [AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA]
+01:20 +1026 ~1 -104: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/providers/favorites_provider_test.dart: FavoritesNotifier Edge cases handles special characters in IDs
+Loading favorites: ["item-<>&\"'"]
+Loaded favorites: {item-<>&"'}
+Saved favorites: [item-<>&"']
+01:33 +1090 ~1 -104: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/widgets/create_project_from_hierarchy_dialog_test.dart: CreateProjectDialogFromHierarchy creates project with valid data
+CreateProjectDialog: Caught error: 'package:go_router/src/router.dart': Failed assertion: line 544 pos 12: 'inherited != null': No GoRouter found in context
+CreateProjectDialog: Error type: _AssertionError
+_extractErrorMessage: Processing error: 'package:go_router/src/router.dart': Failed assertion: line 544 pos 12: 'inherited != null': No GoRouter found in context
+_extractErrorMessage: Error type: _AssertionError
+_extractErrorMessage: Converting to string: 'package:go_router/src/router.dart': Failed assertion: line 544 pos 12: 'inherited != null': No GoRouter found in context
+CreateProjectDialog: Extracted error message: 'package:go_router/src/router.dart': Failed assertion: line 544 pos 12: 'inherited != null': No GoRouter found in context
+CreateProjectDialog: Set extracted error message: 'package:go_router/src/router.dart': Failed assertion: line 544 pos 12: 'inherited != null': No GoRouter found in context
+CreateProjectDialog: Final _errorMessage: 'package:go_router/src/router.dart': Failed assertion: line 544 pos 12: 'inherited != null': No GoRouter found in context
+CreateProjectDialog: Rendering error message widget with: 'package:go_router/src/router.dart': Failed assertion: line 544 pos 12: 'inherited != null': No GoRouter found in context
+01:33 +1092 ~1 -104: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/widgets/create_project_from_hierarchy_dialog_test.dart: CreateProjectDialogFromHierarchy handles creation error
+CreateProjectDialog: Caught error: Exception: Failed to create project
+CreateProjectDialog: Error type: _Exception
+_extractErrorMessage: Processing error: Exception: Failed to create project
+_extractErrorMessage: Error type: _Exception
+_extractErrorMessage: Converting to string: Exception: Failed to create project
+CreateProjectDialog: Extracted error message: Exception: Failed to create project
+CreateProjectDialog: Set extracted error message: Exception: Failed to create project
+CreateProjectDialog: Final _errorMessage: Exception: Failed to create project
+CreateProjectDialog: Rendering error message widget with: Exception: Failed to create project
+01:35 +1125 ~1 -104: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/widgets/edit_portfolio_dialog_test.dart: EditPortfolioDialog updates health status
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: HealthStatus:<HealthStatus.amber>
+  Actual: <null>
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure>.<anonymous closure> (file:///Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/widgets/edit_portfolio_dialog_test.dart:203:7)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1059:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/widgets/edit_portfolio_dialog_test.dart line 203
+The test description was:
+  updates health status
+════════════════════════════════════════════════════════════════════════════════════════════════════
+01:36 +1125 ~1 -105: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/widgets/edit_portfolio_dialog_test.dart: EditPortfolioDialog updates health status [E]
+  Test failed. See exception logs above.
+  The test description was: updates health status
+  
+
+To run this test again: /Users/nkondratyk/Desktop/development/flutter/bin/cache/dart-sdk/bin/dart test /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/widgets/edit_portfolio_dialog_test.dart -p vm --plain-name 'EditPortfolioDialog updates health status'
+01:37 +1148 ~1 -105: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/widgets/edit_portfolio_dialog_test.dart: EditPortfolioDialog shows loading indicator during update
+Pending timers:
+Timer (duration: 0:00:00.100000, periodic: false), created:
+#0      new FakeTimer._ (package:fake_async/fake_async.dart:342:62)
+#1      FakeAsync._createTimer (package:fake_async/fake_async.dart:260:29)
+#2      FakeAsync.run.<anonymous closure> (package:fake_async/fake_async.dart:185:15)
+#6      main.<anonymous closure>.<anonymous closure>.<anonymous closure> (file:///Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/widgets/edit_portfolio_dialog_test.dart:322:24)
+#7      MockPortfolioList.updatePortfolio (file:///Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/mocks/mock_providers.dart:331:24)
+#8      _EditPortfolioDialogState._updatePortfolio (package:pm_master_v2/features/hierarchy/presentation/widgets/edit_portfolio_dialog.dart:65:54)
+#9      _InkResponseState.handleTap (package:flutter/src/material/ink_well.dart:1204:21)
+#10     GestureRecognizer.invokeCallback (package:flutter/src/gestures/recognizer.dart:345:24)
+#11     TapGestureRecognizer.handleTapUp (package:flutter/src/gestures/tap.dart:758:11)
+#12     BaseTapGestureRecognizer._checkUp (package:flutter/src/gestures/tap.dart:383:5)
+#13     BaseTapGestureRecognizer.handlePrimaryPointer (package:flutter/src/gestures/tap.dart:314:7)
+#14     PrimaryPointerGestureRecognizer.handleEvent (package:flutter/src/gestures/recognizer.dart:721:9)
+#15     PointerRouter._dispatch (package:flutter/src/gestures/pointer_router.dart:97:12)
+#16     PointerRouter._dispatchEventToRoutes.<anonymous closure> (package:flutter/src/gestures/pointer_router.dart:142:9)
+#17     _LinkedHashMapMixin.forEach (dart:_compact_hash:764:13)
+#18     PointerRouter._dispatchEventToRoutes (package:flutter/src/gestures/pointer_router.dart:140:18)
+#19     PointerRouter.route (package:flutter/src/gestures/pointer_router.dart:130:7)
+#20     GestureBinding.handleEvent (package:flutter/src/gestures/binding.dart:528:19)
+#21     GestureBinding.dispatchEvent (package:flutter/src/gestures/binding.dart:498:22)
+#22     RendererBinding.dispatchEvent (package:flutter/src/rendering/binding.dart:473:11)
+#23     GestureBinding._handlePointerEventImmediately (package:flutter/src/gestures/binding.dart:437:7)
+#24     GestureBinding.handlePointerEvent (package:flutter/src/gestures/binding.dart:394:5)
+#25     TestWidgetsFlutterBinding.handlePointerEventForSource.<anonymous closure> (package:flutter_test/src/binding.dart:678:42)
+#26     TestWidgetsFlutterBinding.withPointerEventSource (package:flutter_test/src/binding.dart:688:11)
+#27     TestWidgetsFlutterBinding.handlePointerEventForSource (package:flutter_test/src/binding.dart:678:5)
+#28     WidgetTester.sendEventToBinding.<anonymous closure> (package:flutter_test/src/widget_tester.dart:869:15)
+#31     TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#32     WidgetTester.sendEventToBinding (package:flutter_test/src/widget_tester.dart:868:27)
+#33     TestGesture.up.<anonymous closure> (package:flutter_test/src/test_pointer.dart:538:26)
+#36     TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#37     TestGesture.up (package:flutter_test/src/test_pointer.dart:531:27)
+#38     WidgetController.tapAt.<anonymous closure> (package:flutter_test/src/controller.dart:1113:21)
+<asynchronous suspension>
+#39     TestAsyncUtils.guard.<anonymous closure> (package:flutter_test/src/test_async_utils.dart:130:27)
+<asynchronous suspension>
+#40     main.<anonymous closure>.<anonymous closure> (file:///Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/widgets/edit_portfolio_dialog_test.dart:333:7)
+<asynchronous suspension>
+#41     testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#42     TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1059:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 8 frames from dart:async and package:stack_trace)
+
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following assertion was thrown running a test:
+A Timer is still pending even after the widget tree was disposed.
+'package:flutter_test/src/binding.dart':
+Failed assertion: line 1617 pos 12: '!timersPending'
+
+When the exception was thrown, this was the stack:
+#2      AutomatedTestWidgetsFlutterBinding._verifyInvariants (package:flutter_test/src/binding.dart:1617:12)
+#3      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1078:7)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 3 frames from class _AssertionError and package:stack_trace)
+
+The test description was:
+  shows loading indicator during update
+════════════════════════════════════════════════════════════════════════════════════════════════════
+01:37 +1148 ~1 -106: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/widgets/edit_portfolio_dialog_test.dart: EditPortfolioDialog shows loading indicator during update [E]
+  Test failed. See exception logs above.
+  The test description was: shows loading indicator during update
+  
+
+To run this test again: /Users/nkondratyk/Desktop/development/flutter/bin/cache/dart-sdk/bin/dart test /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/widgets/edit_portfolio_dialog_test.dart -p vm --plain-name 'EditPortfolioDialog shows loading indicator during update'
+01:38 +1155 ~1 -106: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/widgets/edit_portfolio_dialog_test.dart: EditPortfolioDialog disables submit button during loading
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following StateError was thrown running a test:
+Bad state: No element
+
+When the exception was thrown, this was the stack:
+#0      Iterable.single (dart:core/iterable.dart:694:25)
+#1      WidgetController.widget (package:flutter_test/src/controller.dart:804:30)
+#2      main.<anonymous closure>.<anonymous closure> (file:///Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/widgets/edit_portfolio_dialog_test.dart:443:29)
+<asynchronous suspension>
+#3      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#4      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1059:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+The test description was:
+  disables submit button during loading
+════════════════════════════════════════════════════════════════════════════════════════════════════
+01:38 +1155 ~1 -107: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/widgets/edit_portfolio_dialog_test.dart: EditPortfolioDialog disables submit button during loading [E]
+  Test failed. See exception logs above.
+  The test description was: disables submit button during loading
+  
+
+To run this test again: /Users/nkondratyk/Desktop/development/flutter/bin/cache/dart-sdk/bin/dart test /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/widgets/edit_portfolio_dialog_test.dart -p vm --plain-name 'EditPortfolioDialog disables submit button during loading'
+01:38 +1159 ~1 -107: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/widgets/edit_portfolio_dialog_test.dart: EditPortfolioDialog shows success snackbar on successful update
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _TextWidgetFinder:<Found 0 widgets with text "Portfolio updated successfully": []>
+   Which: means none were found but one was expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure>.<anonymous closure> (file:///Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/widgets/edit_portfolio_dialog_test.dart:474:7)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1059:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/widgets/edit_portfolio_dialog_test.dart line 474
+The test description was:
+  shows success snackbar on successful update
+════════════════════════════════════════════════════════════════════════════════════════════════════
+01:38 +1159 ~1 -108: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/widgets/edit_portfolio_dialog_test.dart: EditPortfolioDialog shows success snackbar on successful update [E]
+  Test failed. See exception logs above.
+  The test description was: shows success snackbar on successful update
+  
+
+To run this test again: /Users/nkondratyk/Desktop/development/flutter/bin/cache/dart-sdk/bin/dart test /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/widgets/edit_portfolio_dialog_test.dart -p vm --plain-name 'EditPortfolioDialog shows success snackbar on successful update'
+01:39 +1161 ~1 -108: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/widgets/edit_portfolio_dialog_test.dart: EditPortfolioDialog updates all fields correctly
+
+Warning: A call to tap() with finder "Found 1 widget with type "DropdownButtonFormField<HealthStatus>": [
+  DropdownButtonFormField<HealthStatus>(dependencies: [InheritedCupertinoTheme, UnmanagedRestorationScope, _FormScope, _InheritedTheme, _LocalizationsScope-[GlobalKey#7b2b5]], state: _DropdownButtonFormFieldState<HealthStatus>#a8907),
+]" derived an Offset (Offset(400.0, 422.0)) that would not hit test on the specified widget.
+Maybe the widget is actually off-screen, or another widget is obscuring it, or the widget cannot receive pointer events.
+The finder corresponds to this RenderBox: RenderSemanticsAnnotations#41278 relayoutBoundary=up22
+The hit test result at that offset is: HitTestResult(RenderPointerListener#67662@Offset(250.0, 298.0), RenderSemanticsGestureHandler#cfe33@Offset(250.0, 298.0), RenderPointerListener#728bc@Offset(250.0, 298.0), _RenderScrollSemantics#98077@Offset(250.0, 298.0), RenderClipRect#77b65@Offset(250.0, 298.0), RenderFlex#bce11@Offset(250.0, 398.0), RenderConstrainedBox#9ffbf@Offset(250.0, 398.0), _RenderInkFeatures#f37bf@Offset(250.0, 398.0), RenderCustomPaint#7ac3b@Offset(250.0, 398.0), RenderPhysicalShape#69b98@Offset(250.0, 398.0), RenderConstrainedBox#00621@Offset(250.0, 398.0), RenderPositionedBox#feded@Offset(360.0, 398.0), RenderPadding#7ef9c@Offset(400.0, 422.0), RenderSemanticsAnnotations#cf993@Offset(400.0, 422.0), RenderCustomMultiChildLayoutBox#075f6@Offset(400.0, 422.0), _RenderInkFeatures#21ce4@Offset(400.0, 422.0), RenderPhysicalModel#38eb5@Offset(400.0, 422.0), RenderSemanticsAnnotations#c4ecc@Offset(400.0, 422.0), RenderRepaintBoundary#b0f35@Offset(400.0, 422.0), RenderIgnorePointer#b17a1@Offset(400.0, 422.0), _RenderSnapshotWidget#d0ea8@Offset(400.0, 422.0), _RenderSnapshotWidget#09d4e@Offset(400.0, 422.0), _RenderSnapshotWidget#ef684@Offset(400.0, 422.0), _RenderSnapshotWidget#4490f@Offset(400.0, 422.0), RenderRepaintBoundary#65017@Offset(400.0, 422.0), RenderSemanticsAnnotations#536da@Offset(400.0, 422.0), RenderOffstage#b989c@Offset(400.0, 422.0), RenderSemanticsAnnotations#2dd84@Offset(400.0, 422.0), _RenderTheater#fe9ce@Offset(400.0, 422.0), RenderAbsorbPointer#5df75@Offset(400.0, 422.0), RenderPointerListener#e2eb4@Offset(400.0, 422.0), RenderSemanticsAnnotations#6c5a4@Offset(400.0, 422.0), RenderCustomPaint#e88db@Offset(400.0, 422.0), RenderSemanticsAnnotations#89a4e@Offset(400.0, 422.0), RenderSemanticsAnnotations#19b34@Offset(400.0, 422.0), RenderTapRegionSurface#a9377@Offset(400.0, 422.0), RenderSemanticsAnnotations#fc738@Offset(400.0, 422.0), RenderSemanticsAnnotations#2b9ed@Offset(400.0, 422.0), RenderSemanticsAnnotations#eee5c@Offset(400.0, 422.0), HitTestEntry<HitTestTarget>#9457f(_ReusableRenderView#743a0), HitTestEntry<HitTestTarget>#16839(<AutomatedTestWidgetsFlutterBinding>))
+#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2077:25)
+#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1861:12)
+#2      WidgetController.tap (package:flutter_test/src/controller.dart:1041:7)
+#3      main.<anonymous closure>.<anonymous closure> (file:///Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/widgets/edit_portfolio_dialog_test.dart:544:20)
+<asynchronous suspension>
+#4      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#5      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1059:5)
+<asynchronous suspension>
+#6      StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:42)
+<asynchronous suspension>
+To silence this warning, pass "warnIfMissed: false" to "tap()".
+To make this warning fatal, set WidgetController.hitTestWarningShouldBeFatal to true.
+
+01:39 +1163 ~1 -108: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/widgets/edit_portfolio_dialog_test.dart: EditPortfolioDialog updates all fields correctly
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following StateError was thrown running a test:
+Bad state: No element
+
+When the exception was thrown, this was the stack:
+#0      Iterable.last (dart:core/iterable.dart:679:7)
+#1      _LastFinderMixin.filter (package:flutter_test/src/finders.dart:1359:28)
+#3      Iterable.isEmpty (dart:core/iterable.dart:560:33)
+#4      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2008:18)
+#5      WidgetController.getCenter (package:flutter_test/src/controller.dart:1861:12)
+#6      WidgetController.tap (package:flutter_test/src/controller.dart:1041:7)
+#7      main.<anonymous closure>.<anonymous closure> (file:///Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/widgets/edit_portfolio_dialog_test.dart:546:20)
+<asynchronous suspension>
+#8      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#9      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1059:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 2 frames from dart:async-patch and package:stack_trace)
+
+The test description was:
+  updates all fields correctly
+════════════════════════════════════════════════════════════════════════════════════════════════════
+01:39 +1163 ~1 -109: /Users/nkondratyk/Desktop/flutter_projects/pm_master_v2/test/features/hierarchy/presentation/widgets/edit_portfolio_dialog_test.dart: EditPortfolioDialog updates all fields correctly [E]
+  Test failed. See exception logs above.
+  The test description was: updates all fields correctly

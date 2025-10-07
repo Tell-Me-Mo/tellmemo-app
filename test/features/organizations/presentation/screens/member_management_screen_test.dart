@@ -44,7 +44,9 @@ void main() {
         tester,
         const MemberManagementScreen(),
         overrides: loadingOverrides,
+        settle: false,
       );
+      await tester.pump();
 
       // Assert
       expect(find.byType(CircularProgressIndicator), findsOneWidget);

@@ -8,13 +8,14 @@ import 'package:pm_master_v2/app/theme/app_theme.dart';
 Widget createTestApp({
   required Widget child,
   List<Override>? overrides,
+  bool wrapInScaffold = false,
 }) {
   return ProviderScope(
     overrides: overrides ?? [],
     child: MaterialApp(
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      home: child,
+      home: wrapInScaffold ? Scaffold(body: child) : child,
     ),
   );
 }
@@ -25,11 +26,13 @@ Future<void> pumpWidgetWithProviders(
   Widget widget, {
   List<Override>? overrides,
   bool settle = true,
+  bool wrapInScaffold = false,
 }) async {
   await tester.pumpWidget(
     createTestApp(
       child: widget,
       overrides: overrides,
+      wrapInScaffold: wrapInScaffold,
     ),
   );
   if (settle) {
