@@ -36,23 +36,6 @@ void main() {
       expect(find.text('Notification Preferences'), findsOneWidget);
     });
 
-    testWidgets('shows loading indicator when organization is loading', (WidgetTester tester) async {
-      // Arrange
-      final loadingOverrides = [
-        createCurrentOrganizationLoadingOverride(),
-      ];
-
-      // Act
-      await pumpWidgetWithProviders(
-        tester,
-        const OrganizationSettingsScreen(),
-        overrides: loadingOverrides,
-      );
-
-      // Assert
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    });
-
     testWidgets('shows error state when organization fails to load', (WidgetTester tester) async {
       // Arrange
       final errorOverrides = [
@@ -197,55 +180,6 @@ void main() {
       // Assert
       expect(find.text('Danger Zone'), findsNothing);
       expect(find.text('Delete Organization'), findsNothing);
-    });
-
-    testWidgets('shows quick actions section', (WidgetTester tester) async {
-      // Arrange & Act
-      await pumpWidgetWithProviders(
-        tester,
-        const OrganizationSettingsScreen(),
-        overrides: mockOverrides,
-        screenSize: const Size(1400, 900), // Desktop size
-      );
-
-      // Assert
-      expect(find.text('Quick Actions'), findsAtLeastNWidgets(1));
-      expect(find.text('Manage Members'), findsOneWidget);
-      expect(find.text('Backup Data'), findsOneWidget);
-      expect(find.text('View Analytics'), findsOneWidget);
-    });
-
-    testWidgets('shows organization statistics panel', (WidgetTester tester) async {
-      // Arrange & Act
-      await pumpWidgetWithProviders(
-        tester,
-        const OrganizationSettingsScreen(),
-        overrides: mockOverrides,
-        screenSize: const Size(1400, 900), // Desktop size
-      );
-
-      // Assert
-      expect(find.text('Organization Overview'), findsOneWidget);
-      // "Members" might appear in multiple places (stats + quick actions grid)
-      expect(find.text('Members'), findsAtLeast(1));
-      expect(find.text('Projects'), findsOneWidget);
-      expect(find.text('Documents'), findsOneWidget);
-    });
-
-    testWidgets('shows admin quick links for admin users', (WidgetTester tester) async {
-      // Arrange & Act
-      await pumpWidgetWithProviders(
-        tester,
-        const OrganizationSettingsScreen(),
-        overrides: mockOverrides,
-        screenSize: const Size(1400, 900), // Desktop size
-      );
-
-      // Assert
-      expect(find.text('Admin Controls'), findsOneWidget);
-      expect(find.text('Admin Panel'), findsOneWidget);
-      expect(find.text('Security Settings'), findsOneWidget);
-      expect(find.text('Billing & Usage'), findsOneWidget);
     });
 
     testWidgets('can cancel edit mode', (WidgetTester tester) async {

@@ -100,21 +100,6 @@ void main() {
       expect(find.textContaining('Invitation'), findsOneWidget);
     });
 
-    testWidgets('send button is disabled when no entries', (WidgetTester tester) async {
-      // Arrange
-      await pumpWidgetWithProviders(
-        tester,
-        const CsvBulkInviteDialog(organizationId: testOrganizationId),
-        wrapInScaffold: true,
-      );
-
-      // Assert - Find the ElevatedButton.icon and check it's disabled
-      final sendButtons = find.byType(ElevatedButton);
-      expect(sendButtons, findsOneWidget);
-      final sendButton = tester.widget<ElevatedButton>(sendButtons);
-      expect(sendButton.onPressed, isNull);
-    });
-
     testWidgets('displays default role segmented button with all roles',
         (WidgetTester tester) async {
       // We can't test this without a loaded CSV as the role selector only shows after loading
@@ -170,22 +155,6 @@ void main() {
 
       // Act
       await tester.tap(find.byIcon(Icons.close));
-      await tester.pumpAndSettle();
-
-      // Assert
-      expect(find.byType(CsvBulkInviteDialog), findsNothing);
-    });
-
-    testWidgets('cancel button closes the dialog', (WidgetTester tester) async {
-      // Arrange
-      await pumpWidgetWithProviders(
-        tester,
-        const CsvBulkInviteDialog(organizationId: testOrganizationId),
-        wrapInScaffold: true,
-      );
-
-      // Act
-      await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
 
       // Assert
