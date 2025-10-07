@@ -16,6 +16,7 @@ from models.notification import (
 )
 from dependencies.auth import get_current_user, get_current_organization
 from models.user import User
+from models.organization import Organization
 
 
 # Pydantic models for request/response
@@ -86,7 +87,7 @@ class BulkNotificationCreate(BaseModel):
 
 
 # Create router
-router = APIRouter(prefix="/api/notifications", tags=["notifications"])
+router = APIRouter(prefix="/api/v1/notifications", tags=["notifications"])
 
 
 @router.get("/", response_model=NotificationListResponse)
@@ -96,7 +97,7 @@ async def get_notifications(
     limit: int = Query(50, ge=1, le=100, description="Maximum number of results"),
     offset: int = Query(0, ge=0, description="Number of results to skip"),
     current_user: User = Depends(get_current_user),
-    current_org_id: Optional[str] = Depends(get_current_organization),
+    current_org: Optional[Organization] = Depends(get_current_organization),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -108,7 +109,7 @@ async def get_notifications(
         limit: Maximum number of results (1-100)
         offset: Number of results to skip
         current_user: Current authenticated user
-        current_org_id: Current organization ID
+        current_org: Current organization
         db: Database session
 
     Returns:
@@ -118,7 +119,7 @@ async def get_notifications(
 
     notifications = await service.get_user_notifications(
         user_id=str(current_user.id),
-        organization_id=current_org_id,
+        organization_id=str(current_org.id) if current_org else None,
         is_read=is_read,
         is_archived=is_archived,
         limit=limit,
@@ -127,7 +128,7 @@ async def get_notifications(
 
     unread_count = await service.get_unread_count(
         user_id=str(current_user.id),
-        organization_id=current_org_id,
+        organization_id=str(current_org.id) if current_org else None,
     )
 
     # Convert to response models
@@ -167,7 +168,7 @@ async def get_notifications(
 async def create_notification(
     notification: NotificationCreate,
     current_user: User = Depends(get_current_user),
-    current_org_id: Optional[str] = Depends(get_current_organization),
+    current_org: Optional[Organization] = Depends(get_current_organization),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -179,7 +180,7 @@ async def create_notification(
     Args:
         notification: Notification creation data
         current_user: Current authenticated user
-        current_org_id: Current organization ID
+        current_org: Current organization
         db: Database session
 
     Returns:
@@ -194,7 +195,7 @@ async def create_notification(
         type=notification.type,
         priority=notification.priority,
         category=notification.category,
-        organization_id=current_org_id,
+        organization_id=str(current_org.id) if current_org else None,
         entity_type=notification.entity_type,
         entity_id=notification.entity_id,
         action_url=notification.action_url,
@@ -229,7 +230,7 @@ async def create_notification(
 @router.get("/unread-count")
 async def get_unread_count(
     current_user: User = Depends(get_current_user),
-    current_org_id: Optional[str] = Depends(get_current_organization),
+    current_org: Optional[Organization] = Depends(get_current_organization),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -237,7 +238,7 @@ async def get_unread_count(
 
     Args:
         current_user: Current authenticated user
-        current_org_id: Current organization ID
+        current_org: Current organization
         db: Database session
 
     Returns:
@@ -246,7 +247,7 @@ async def get_unread_count(
     service = NotificationService(db)
     count = await service.get_unread_count(
         user_id=str(current_user.id),
-        organization_id=current_org_id,
+        organization_id=str(current_org.id) if current_org else None,
     )
     return {"unread_count": count}
 
@@ -284,7 +285,7 @@ async def mark_as_read(
 async def mark_multiple_as_read(
     request: MarkReadRequest,
     current_user: User = Depends(get_current_user),
-    current_org_id: Optional[str] = Depends(get_current_organization),
+    current_org: Optional[Organization] = Depends(get_current_organization),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -293,7 +294,7 @@ async def mark_multiple_as_read(
     Args:
         request: Request containing notification IDs or mark_all flag
         current_user: Current authenticated user
-        current_org_id: Current organization ID
+        current_org: Current organization
         db: Database session
 
     Returns:
@@ -304,7 +305,7 @@ async def mark_multiple_as_read(
     if request.mark_all:
         count = await service.mark_all_as_read(
             user_id=str(current_user.id),
-            organization_id=current_org_id,
+            organization_id=str(current_org.id) if current_org else None,
         )
     elif request.notification_ids:
         count = 0
@@ -388,7 +389,7 @@ async def delete_notification(
 async def create_bulk_notifications(
     request: BulkNotificationCreate,
     current_user: User = Depends(get_current_user),
-    current_org_id: Optional[str] = Depends(get_current_organization),
+    current_org: Optional[Organization] = Depends(get_current_organization),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -397,7 +398,7 @@ async def create_bulk_notifications(
     Args:
         request: Bulk notification creation data
         current_user: Current authenticated user (must be admin)
-        current_org_id: Current organization ID
+        current_org: Current organization
         db: Database session
 
     Returns:
@@ -415,7 +416,7 @@ async def create_bulk_notifications(
         type=request.type,
         priority=request.priority,
         category=request.category,
-        organization_id=current_org_id,
+        organization_id=str(current_org.id) if current_org else None,
         metadata=request.metadata,
     )
 

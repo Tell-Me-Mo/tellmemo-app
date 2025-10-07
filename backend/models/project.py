@@ -46,7 +46,7 @@ class Project(Base):
     tasks = relationship("Task", back_populates="project", cascade="all, delete-orphan")
     lessons_learned = relationship("LessonLearned", back_populates="project", cascade="all, delete-orphan")
     blockers = relationship("Blocker", back_populates="project", cascade="all, delete-orphan")
-    conversations = relationship("Conversation", back_populates="project", cascade="all, delete-orphan")
+    # Note: conversations relationship removed - project_id in Conversation is now a generic entity ID field without FK constraint
 
 
 class ProjectMember(Base):

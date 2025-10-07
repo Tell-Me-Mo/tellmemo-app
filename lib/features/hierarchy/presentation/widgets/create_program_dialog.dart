@@ -483,6 +483,7 @@ class _StyledDropdownField extends StatelessWidget {
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
       value: value,
+      isExpanded: true,
       items: items,
       onChanged: enabled ? onChanged : null,
       validator: validator,

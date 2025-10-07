@@ -122,7 +122,7 @@ class TranscriptionService {
 
       // Send request to transcription endpoint
       final response = await _dio.post(
-        '/api/transcribe',
+        '/api/v1/transcribe',
         data: formData,
         onSendProgress: (sent, total) {
           // Progress callback for large files
@@ -167,7 +167,7 @@ class TranscriptionService {
   // Get supported languages
   Future<List<String>> getSupportedLanguages() async {
     try {
-      final response = await _dio.get('/api/languages');
+      final response = await _dio.get('/api/v1/languages');
       if (response.statusCode == 200) {
         return List<String>.from(response.data['languages'] ?? ['en']);
       }
@@ -180,7 +180,7 @@ class TranscriptionService {
   // Cancel ongoing transcription (if backend supports it)
   Future<void> cancelTranscription(String sessionId) async {
     try {
-      await _dio.post('/api/transcribe/cancel', data: {
+      await _dio.post('/api/v1/transcribe/cancel', data: {
         'session_id': sessionId,
       });
     } catch (e) {

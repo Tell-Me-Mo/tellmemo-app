@@ -1,0 +1,229 @@
+Project: Mobile Banking App Redesign
+Meeting: Sprint Planning - Week 3
+Date: January 15, 2025
+Duration: 45 minutes
+Attendees: Sarah Chen (PM), Marcus Rodriguez (Tech Lead), Emily Park (UX Designer), James Wilson (Backend Dev), Lisa Kumar (QA)
+
+================================================================================
+
+[00:00] Sarah Chen:
+Good morning everyone. Thanks for joining the sprint planning call. Let me share my screen. Okay, so we're starting week 3 of the mobile banking app redesign project. I want to review where we are and plan the next two weeks of work.
+
+[00:45] Sarah Chen:
+First, quick wins from last sprint. We completed the new login flow design and the backend API for transaction history. Emily, the prototype looked great in stakeholder review. They loved the fingerprint authentication flow.
+
+[01:15] Emily Park:
+Thanks Sarah. Yeah, the feedback was really positive. One thing though - the VP of Product asked if we could add Face ID support alongside fingerprint. Is that in scope for this sprint?
+
+[01:30] Marcus Rodriguez:
+That's doable from a technical standpoint. iOS has native support and Android has BiometricPrompt API. I'd estimate maybe 3-4 days of development work. James, you worked on the auth module, what do you think?
+
+[01:50] James Wilson:
+Yeah, I can handle that. The architecture is already set up for biometric auth. Adding Face ID is mostly configuration and testing across different devices. I'd say 3 days is realistic if we prioritize it.
+
+[02:10] Sarah Chen:
+Okay, let's add that to the sprint backlog as high priority. Emily, can you update the design specs to include Face ID flows?
+
+[02:20] Emily Park:
+Already on it. I'll have updated screens by end of day tomorrow.
+
+[02:25] Sarah Chen:
+Perfect. Now, the big item for this sprint is the transaction history redesign. Marcus, can you walk us through the technical approach?
+
+[02:40] Marcus Rodriguez:
+Sure. So we're moving from the old paginated list to an infinite scroll with smart categorization. The backend team finished the new API endpoints last week. We're using Redis for caching to keep load times under 200 milliseconds.
+
+[03:05] Marcus Rodriguez:
+One challenge we're facing - the legacy database schema doesn't have proper indexing on transaction dates. We're seeing query times around 2-3 seconds for users with large transaction histories. That's way above our performance target.
+
+[03:25] Sarah Chen:
+That sounds like a blocker. What's the solution?
+
+[03:30] James Wilson:
+I've been working with the DBA team on this. We need to add composite indexes on user_id and transaction_date columns. The issue is, the production database has 15 million records. The indexing operation will take about 4 hours and we need a maintenance window.
+
+[03:50] Sarah Chen:
+Okay, that's a risk we need to manage. When can we schedule this?
+
+[04:00] James Wilson:
+DBA team suggested next Saturday night, 11 PM to 3 AM when traffic is lowest. We'd need approval from operations and a rollback plan.
+
+[04:15] Sarah Chen:
+I'll talk to operations today and get that approved. Let's document this as a critical path item. If we can't get the maintenance window, we need a backup plan. Marcus, what's plan B?
+
+[04:30] Marcus Rodriguez:
+We could implement query result caching at the application layer, but that's a band-aid solution. It would buy us time but not solve the underlying performance issue. Long term we need those database indexes.
+
+[04:50] Sarah Chen:
+Understood. Let's pursue the maintenance window as plan A. James, you own that action item - coordinate with DBA and operations for Saturday maintenance window. I need confirmation by Wednesday EOD.
+
+[05:10] James Wilson:
+Got it. I'll send a calendar invite for the maintenance window and prepare the rollback procedure documentation.
+
+[05:20] Sarah Chen:
+Great. Emily, let's talk about the UX for transaction categorization. What's the latest?
+
+[05:30] Emily Park:
+We're going with automatic categorization using merchant data plus user ability to create custom categories. I ran user testing sessions last week with 12 participants. The feedback was mostly positive but one consistent piece of feedback - users want the ability to split transactions across multiple categories.
+
+[05:55] Emily Park:
+For example, a Walmart purchase might be partly groceries and partly household items. Users want to tag it as both. That wasn't in our original spec.
+
+[06:10] Sarah Chen:
+Interesting. That sounds like a nice-to-have but might be scope creep. Marcus, how complex is that to implement?
+
+[06:25] Marcus Rodriguez:
+It's not trivial. We'd need to redesign the data model to support transaction splitting. Instead of one category per transaction, we'd need a many-to-many relationship with percentage allocations. That's probably a full sprint of work - backend changes, API updates, UI implementation, testing.
+
+[06:50] Sarah Chen:
+Okay, let's put that in the backlog for consideration in a future sprint. For now, let's stick with one category per transaction. Emily, can you add an in-app feedback mechanism so users can request features like this?
+
+[07:05] Emily Park:
+Absolutely. I'll add a feedback button in the settings menu. Should be quick to implement.
+
+[07:15] Sarah Chen:
+Perfect. Lisa, let's talk testing strategy. What's your plan for this sprint?
+
+[07:25] Lisa Kumar:
+I'm concerned about test coverage for the infinite scroll implementation. We need to test with various data volumes - users with 10 transactions versus users with 10,000 transactions. I'm also worried about edge cases like network interruptions during scroll.
+
+[07:50] Lisa Kumar:
+I'd like to set up automated performance testing using our staging environment. We should simulate different user profiles and measure load times, memory usage, and error rates.
+
+[08:10] Marcus Rodriguez:
+That's a great idea. We can use the synthetic data generator I built last month. We can create test accounts with varying transaction volumes from 100 to 50,000 records.
+
+[08:25] Lisa Kumar:
+Perfect. I'll also need to test across different devices. We're supporting iOS 14 and above, Android 10 and above. That's a lot of device combinations.
+
+[08:40] Sarah Chen:
+Do we have enough test devices?
+
+[08:45] Lisa Kumar:
+We're good on iOS - we have iPhone 11, 12, 13, and 14 in the lab. Android is trickier. We only have Samsung Galaxy S21 and Pixel 6. We're missing coverage for older mid-range Android devices which represent about 30% of our user base.
+
+[09:05] Sarah Chen:
+That's a gap. Can we rent devices or use a cloud testing service?
+
+[09:15] Lisa Kumar:
+I've been looking at BrowserStack. They have a device cloud with all the models we need. It's about $200 per month for the team plan.
+
+[09:30] Sarah Chen:
+That's within budget. Go ahead and set that up. Add it to the project expenses and I'll get it approved.
+
+[09:40] Lisa Kumar:
+Will do. One more thing - security testing. We're handling financial data so we need to verify encryption, secure storage, and API authentication. I want to bring in the security team for a review before we ship.
+
+[10:00] Sarah Chen:
+Absolutely. Schedule that for week 4. I'll make sure the security team is available. This is critical for compliance.
+
+[10:15] Sarah Chen:
+Okay, shifting gears. Let's talk about the notification system. Marcus, where are we on push notifications for transaction alerts?
+
+[10:30] Marcus Rodriguez:
+We integrated Firebase Cloud Messaging for both iOS and Android. The infrastructure is ready. The challenge is determining what notifications to send and when. We don't want to spam users but we do want to alert them about important activity.
+
+[10:55] Emily Park:
+From the UX research, users want notifications for transactions over a certain threshold, suspicious activity, and low balance alerts. They also want granular control to customize what notifications they receive.
+
+[11:15] Sarah Chen:
+Makes sense. What's suspicious activity detection look like?
+
+[11:25] James Wilson:
+We're using a simple rule-based system for MVP. Transactions in unusual locations, unusually large amounts, or rapid succession of transactions within short time periods. For V2 we could implement machine learning but that's outside current scope.
+
+[11:50] Sarah Chen:
+Rule-based is fine for now. Let's get something working and iterate based on user feedback. James, can you define those rules and document them?
+
+[12:00] James Wilson:
+Sure. I'll create a specification document and share it for review by tomorrow.
+
+[12:10] Sarah Chen:
+Great. Now timeline concerns. We're three weeks into a 10-week project. Are we on track to hit the March 15th launch date?
+
+[12:25] Marcus Rodriguez:
+Honestly, it's tight. We have some risks. The database indexing maintenance window is one. If that gets delayed, it could push everything back. Also, the security review might surface issues that take time to fix.
+
+[12:50] Marcus Rodriguez:
+I think we're on track if nothing major breaks. But we need to be disciplined about scope. Any new feature requests need to go into the backlog for post-launch releases.
+
+[13:10] Sarah Chen:
+Agreed. I'll push back on any scope creep from stakeholders. Our MVP feature set is locked. Emily, can you create a feature prioritization matrix so we have a clear view of what's in and what's out?
+
+[13:25] Emily Park:
+Yes, I'll use the MoSCoW method - Must have, Should have, Could have, Won't have. I'll share it by end of week.
+
+[13:40] Sarah Chen:
+Perfect. Lisa, what's your confidence level on the March 15th date?
+
+[13:50] Lisa Kumar:
+If we get the test devices sorted and the security review happens on schedule, I'm about 70% confident. My main concern is the performance issues Marcus mentioned. If we can't get that database indexing done, we might need to slip the date or launch with degraded performance for power users.
+
+[14:15] Sarah Chen:
+Okay, so database indexing maintenance window is our critical path. James, you're driving that. Everyone else, let's identify dependencies and blockers early. I don't want surprises in week 8.
+
+[14:35] Sarah Chen:
+Action items recap. James - coordinate maintenance window, confirm by Wednesday. Emily - update Face ID designs by tomorrow, create feature prioritization matrix by Friday. Lisa - set up BrowserStack account and schedule security review for week 4. Marcus - support James on the database work and monitor performance metrics.
+
+[15:00] Sarah Chen:
+Anything else we need to discuss?
+
+[15:05] Emily Park:
+Quick question - are we doing a beta test before the public launch?
+
+[15:15] Sarah Chen:
+Yes, we're planning a two-week beta with 500 users starting March 1st. That gives us two weeks to fix critical bugs before the public launch. I'll send out beta program details next week.
+
+[15:30] Marcus Rodriguez:
+We should also plan for app store review time. Apple can take 2-5 days. We need to submit by March 8th at the latest to hit the March 15th launch.
+
+[15:50] Sarah Chen:
+Good point. Let's target code freeze on March 5th. That gives us 3 days for final testing and app store submission preparation.
+
+[16:05] Sarah Chen:
+Alright, I think that's everything. Great progress everyone. Let's keep the momentum going. Same time next week for sprint review?
+
+[16:15] Marcus Rodriguez:
+Works for me.
+
+[16:17] Emily Park:
+I'm in.
+
+[16:18] James Wilson:
+Sounds good.
+
+[16:20] Lisa Kumar:
+See you then.
+
+[16:22] Sarah Chen:
+Perfect. Thanks everyone. Meeting adjourned.
+
+================================================================================
+
+KEY ACTION ITEMS EXTRACTED:
+- James Wilson: Coordinate database maintenance window with DBA/operations, confirm by Wednesday EOD
+- James Wilson: Prepare rollback procedure documentation for database indexing
+- Emily Park: Update Face ID designs by end of day tomorrow
+- Emily Park: Create feature prioritization matrix (MoSCoW method) by Friday
+- Lisa Kumar: Set up BrowserStack account for device testing
+- Lisa Kumar: Schedule security review for week 4
+- Marcus Rodriguez: Support database indexing work and monitor performance metrics
+- Sarah Chen: Get operations approval for Saturday maintenance window
+- Sarah Chen: Send beta program details next week
+
+KEY RISKS IDENTIFIED:
+- Database performance issues (2-3 second query times for large transaction histories)
+- Tight timeline for March 15th launch (70% confidence level)
+- Missing test device coverage for 30% of user base (mid-range Android devices)
+- Maintenance window dependency (4-hour database indexing operation)
+- App store review timing (need to submit by March 8th)
+- Security review may surface blocking issues
+
+KEY DECISIONS MADE:
+- Add Face ID support to sprint backlog as high priority
+- Pursue database indexing maintenance window (Saturday 11 PM - 3 AM)
+- Defer transaction splitting feature to future sprint
+- Use BrowserStack for device testing ($200/month)
+- Lock MVP feature set - no more scope additions
+- Two-week beta test with 500 users starting March 1st
+- Code freeze on March 5th for final testing

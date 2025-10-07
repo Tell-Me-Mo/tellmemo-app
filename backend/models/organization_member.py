@@ -50,7 +50,7 @@ class OrganizationMember(Base):
     invitation_sent_at = Column(DateTime, nullable=True)
 
     # Timestamps
-    joined_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    joined_at = Column(DateTime, nullable=True)  # Nullable for pending invitations, set explicitly when member joins
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships

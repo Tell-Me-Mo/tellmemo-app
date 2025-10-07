@@ -9,6 +9,7 @@ from typing import Optional, Dict, Any
 from datetime import datetime, timedelta, timezone
 import jwt
 import logging
+from utils.logger import sanitize_for_log
 import secrets
 import bcrypt
 from sqlalchemy.ext.asyncio import AsyncSession

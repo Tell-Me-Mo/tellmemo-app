@@ -28,7 +28,7 @@ from qdrant_client.models import (
 from qdrant_client.http.exceptions import ResponseHandlingException, UnexpectedResponse
 
 from config import get_settings
-from utils.logger import get_logger
+from utils.logger import get_logger, sanitize_for_log
 from utils.monitoring import monitor_operation, MonitoringContext
 
 settings = get_settings()
@@ -267,7 +267,7 @@ class MultiTenantVectorStore:
             try:
                 # Check if collection exists
                 if await self._collection_exists(collection_name):
-                    logger.info(f"Deleting collection: {collection_name}")
+                    logger.info(f"Deleting collection: {sanitize_for_log(collection_name)}")
 
                     # Delete collection
                     await asyncio.get_event_loop().run_in_executor(
@@ -279,12 +279,12 @@ class MultiTenantVectorStore:
                     # Remove from cache
                     self._collection_cache.pop(collection_name, None)
 
-                    logger.info(f"Collection '{collection_name}' deleted successfully")
+                    logger.info(f"Collection '{sanitize_for_log(collection_name)}' deleted successfully")
                 else:
-                    logger.debug(f"Collection '{collection_name}' does not exist, skipping deletion")
+                    logger.debug(f"Collection '{sanitize_for_log(collection_name)}' does not exist, skipping deletion")
 
             except Exception as e:
-                logger.error(f"Failed to delete collection '{collection_name}': {e}")
+                logger.error(f"Failed to delete collection '{sanitize_for_log(collection_name)}': {e}")
                 # Continue with other collections even if one fails
 
     async def list_organization_collections(self, organization_id: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -339,6 +339,17 @@ class MultiTenantVectorStore:
 
         # Ensure collection exists
         await self.ensure_organization_collections(organization_id)
+
+        # Handle MRL named vectors - convert single vector to named vectors
+        if settings.enable_mrl:
+            for point in points:
+                # If point has a single vector list, convert to named vectors dict
+                if isinstance(point.vector, list):
+                    full_vector = point.vector
+                    named_vectors = {}
+                    for dim in settings.mrl_dimensions_list:
+                        named_vectors[f"vector_{dim}"] = full_vector[:dim]
+                    point.vector = named_vectors
 
         # Add organization_id to each point's payload
         for point in points:
@@ -740,6 +751,29 @@ class MultiTenantVectorStore:
                 None, self.client.get_collection, collection_name
             )
 
+            # Handle both single vector and named vectors (MRL)
+            vectors_config = info.config.params.vectors
+            if isinstance(vectors_config, dict):
+                # MRL enabled - multiple named vectors
+                # Use the largest dimension for reporting
+                largest_dim = max(settings.mrl_dimensions_list)
+                vector_info = vectors_config.get(f"vector_{largest_dim}")
+                config_dict = {
+                    "vector_type": "named_vectors",
+                    "dimensions": list(vectors_config.keys()),
+                    "largest_vector_size": vector_info.size if vector_info else largest_dim,
+                    "distance": vector_info.distance.value if vector_info else "COSINE",
+                    "on_disk": vector_info.on_disk if vector_info else True
+                }
+            else:
+                # Single vector
+                config_dict = {
+                    "vector_type": "single_vector",
+                    "vector_size": vectors_config.size,
+                    "distance": vectors_config.distance.value,
+                    "on_disk": vectors_config.on_disk
+                }
+
             return {
                 "name": collection_name,
                 "exists": True,
@@ -750,11 +784,7 @@ class MultiTenantVectorStore:
                 "indexed_vectors_count": info.indexed_vectors_count,
                 "points_count": info.points_count,
                 "segments_count": getattr(info, 'segments_count', 0),
-                "config": {
-                    "vector_size": info.config.params.vectors.size,
-                    "distance": info.config.params.vectors.distance.value,
-                    "on_disk": info.config.params.vectors.on_disk
-                }
+                "config": config_dict
             }
         except Exception as e:
             logger.error(f"Failed to get collection info: {e}")

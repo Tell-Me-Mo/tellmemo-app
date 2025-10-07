@@ -92,7 +92,7 @@ class _TranscriptionConnectionDialogState
           : 'local_whisper';
 
       final response = await DioClient.instance.post(
-        '/api/integrations/transcription/test',
+        '/api/v1/integrations/transcription/test',
         data: {
           'api_key': apiKey,
           'webhook_secret': null,

@@ -26,10 +26,11 @@ from services.transcription.salad_transcription_service import SaladTranscriptio
 from services.intelligence.project_matcher_service import project_matcher_service
 from services.integrations.integration_service import integration_service
 from models.content import ContentType
+from utils.logger import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/integrations", tags=["integrations"])
+router = APIRouter(prefix="/api/v1/integrations", tags=["integrations"])
 
 # Pydantic models for request/response
 class IntegrationConfig(BaseModel):
@@ -165,8 +166,8 @@ async def connect_integration(
         )
         
         await db.commit()
-        
-        logger.info(f"Connected integration: {integration_id}")
+
+        logger.info(f"Connected integration: {sanitize_for_log(integration_id)}")
         
         return {
             "status": "connected",
@@ -177,8 +178,8 @@ async def connect_integration(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to connect integration {integration_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to connect integration {sanitize_for_log(integration_id)}: {sanitize_for_log(str(e))}")
+        raise HTTPException(status_code=500, detail="Failed to connect integration. Please check your configuration.")
 
 @router.post("/{integration_id}/disconnect")
 async def disconnect_integration(
@@ -206,7 +207,7 @@ async def disconnect_integration(
         
         if success:
             await db.commit()
-            logger.info(f"Disconnected integration: {integration_id}")
+            logger.info(f"Disconnected integration: {sanitize_for_log(integration_id)}")
             return {
                 "status": "disconnected",
                 "message": f"Successfully disconnected from {integration_id}",
@@ -217,8 +218,8 @@ async def disconnect_integration(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to disconnect integration {integration_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to disconnect integration {sanitize_for_log(integration_id)}: {sanitize_for_log(str(e))}")
+        raise HTTPException(status_code=500, detail="Failed to disconnect integration")
 
 @router.post("/{integration_id}/test")
 async def test_integration_connection(
@@ -285,7 +286,19 @@ async def test_integration_connection(
                     organization_name=organization_name
                 )
                 result = await salad_service.test_connection()
-                return result
+                # Don't expose internal error details to API response - use generic messages only
+                if not result.get("success", False):
+                    # Log the actual error for debugging but don't expose it to the user
+                    if result.get("error"):
+                        logger.debug(f"Salad API test failed: {result.get('error')}")
+                    return {
+                        "success": False,
+                        "error": "Connection test failed. Please verify your API credentials."
+                    }
+                return {
+                    "success": True,
+                    "message": "Salad API connection successful"
+                }
             else:
                 # Local Whisper doesn't need testing
                 return {
@@ -320,22 +333,34 @@ async def test_integration_connection(
                 model=model
             )
 
-            return {
-                "success": result.get("success", False),
-                "message": result.get("message"),
-                "error": result.get("error")
-            }
+            # Don't expose internal error details to API response - use generic messages only
+            if result.get("success", False):
+                # Use generic success message, don't expose internal details
+                return {
+                    "success": True,
+                    "message": "Connection test successful"
+                }
+            else:
+                # Log the actual error for debugging but don't expose it to the user
+                if result.get("error"):
+                    logger.debug(f"AI Brain test failed: {result.get('error')}")
+                return {
+                    "success": False,
+                    "error": "Connection test failed. Please check your credentials."
+                }
 
         return {
             "success": False,
             "error": "Unknown integration type"
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Failed to test integration {integration_id}: {e}")
+        logger.error(f"Failed to test integration {sanitize_for_log(integration_id)}: {e}", exc_info=True)
         return {
             "success": False,
-            "error": str(e)
+            "error": "Connection test failed. Please check your configuration."
         }
 
 @router.post("/{integration_id}/sync")
@@ -367,9 +392,9 @@ async def sync_integration(
         # Update last sync time
         await integration_service.update_sync_time(db, integration_type, current_org.id)
         await db.commit()
-        
+
         # TODO: Implement actual sync logic
-        logger.info(f"Syncing integration: {integration_id}")
+        logger.info(f"Syncing integration: {sanitize_for_log(integration_id)}")
         
         return {
             "status": "syncing",
@@ -379,8 +404,8 @@ async def sync_integration(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to sync integration {integration_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to sync integration {sanitize_for_log(integration_id)}: {sanitize_for_log(str(e))}")
+        raise HTTPException(status_code=500, detail="Failed to sync integration")
 
 @router.post("/webhooks/fireflies/{integration_id}")
 async def fireflies_webhook(
@@ -415,12 +440,12 @@ async def fireflies_webhook(
                 ).hexdigest()
                 
                 if not hmac.compare_digest(expected_signature, x_fireflies_signature):
-                    logger.warning(f"Invalid webhook signature for integration {integration_id}")
+                    logger.warning(f"Invalid webhook signature for integration {sanitize_for_log(integration_id)}")
                     raise HTTPException(status_code=401, detail="Invalid signature")
         
         # Check if this is a transcription completed event
         if payload.eventType != "Transcription completed":
-            logger.info(f"Ignoring Fireflies event type: {payload.eventType}")
+            logger.info(f"Ignoring Fireflies event type: {sanitize_for_log(payload.eventType)}")
             return {
                 "status": "ignored",
                 "message": f"Event type '{payload.eventType}' not processed"
@@ -461,8 +486,8 @@ async def fireflies_webhook(
         if config and config.get('organization_id'):
             await integration_service.update_sync_time(db, IntegrationType.FIREFLIES, config['organization_id'])
         await db.commit()
-        
-        logger.info(f"Received Fireflies webhook for meeting ID: {payload.meetingId}")
+
+        logger.info(f"Received Fireflies webhook for meeting ID: {sanitize_for_log(payload.meetingId)}")
         
         return {
             "status": "accepted",
@@ -473,8 +498,8 @@ async def fireflies_webhook(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error processing Fireflies webhook: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error processing Fireflies webhook: {sanitize_for_log(str(e))}")
+        raise HTTPException(status_code=500, detail="Failed to process webhook")
 
 async def process_fireflies_webhook(
     meeting_id: str,

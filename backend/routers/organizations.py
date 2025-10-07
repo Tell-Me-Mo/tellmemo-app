@@ -23,7 +23,7 @@ from models.organization import Organization
 from models.organization_member import OrganizationMember, OrganizationRole
 from models.user import User
 from services.integrations.email_service import email_service
-from utils.logger import get_logger
+from utils.logger import get_logger, sanitize_for_log
 
 logger = get_logger(__name__)
 
@@ -114,13 +114,13 @@ class InvitationCreate(BaseModel):
 
 class InvitationResponse(BaseModel):
     """Response model for invitation details."""
-    id: int
-    organization_id: int
+    id: UUID
+    organization_id: UUID
     email: str
     role: str
     invitation_token: str
     invitation_sent_at: datetime
-    invited_by: int
+    invited_by: UUID
 
 
 class RoleUpdateRequest(BaseModel):
@@ -226,7 +226,8 @@ async def create_organization(
             organization_id=organization.id,
             user_id=current_user.id,
             role=OrganizationRole.ADMIN.value,  # Use string value for database
-            invited_by=None  # Self-joined as creator
+            invited_by=None,  # Self-joined as creator
+            joined_at=datetime.utcnow()
         )
         db.add(member)
 
@@ -477,7 +478,7 @@ async def update_organization(
         if request.settings is not None:
             organization.settings = request.settings
 
-        organization.updated_at = datetime.now(timezone.utc)
+        organization.updated_at = datetime.utcnow()
 
         await db.commit()
         await db.refresh(organization)
@@ -588,12 +589,12 @@ async def delete_organization(
         from db.multi_tenant_vector_store import multi_tenant_vector_store
         try:
             await multi_tenant_vector_store.delete_organization_collections(str(organization_id))
-            logger.info(f"Deleted Qdrant collections for organization {organization_id}")
+            logger.info(f"Deleted Qdrant collections for organization {sanitize_for_log(organization_id)}")
         except Exception as qdrant_error:
-            logger.error(f"Failed to delete Qdrant collections for organization {organization_id}: {qdrant_error}")
+            logger.error(f"Failed to delete Qdrant collections for organization {sanitize_for_log(organization_id)}: {qdrant_error}")
             # Continue even if Qdrant cleanup fails
 
-        logger.info(f"Organization {organization_id} deleted by user {current_user.id}")
+        logger.info(f"Organization {sanitize_for_log(organization_id)} deleted by user {sanitize_for_log(current_user.id)}")
 
     except HTTPException:
         raise
@@ -733,7 +734,7 @@ async def list_organization_members(
                 name=user.name,
                 avatar_url=user.avatar_url,
                 role=member.role,  # role is already a string
-                joined_at=member.joined_at,
+                joined_at=member.joined_at or member.updated_at,
                 invited_by=str(member.invited_by) if member.invited_by else None
             ))
 
@@ -755,7 +756,7 @@ async def list_organization_members(
     status_code=status.HTTP_201_CREATED
 )
 async def invite_member(
-    organization_id: int,
+    organization_id: UUID,
     invitation: InvitationCreate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -834,7 +835,8 @@ async def invite_member(
             invited_by=current_user.id,
             invitation_token=invitation_token,
             invitation_email=invitation.email,  # Store the email
-            invitation_sent_at=datetime.utcnow()
+            invitation_sent_at=datetime.utcnow(),
+            joined_at=None  # Pending invitation - not yet accepted
         )
 
         db.add(new_invitation)
@@ -851,7 +853,7 @@ async def invite_member(
         )
 
         if not email_sent:
-            logger.warning(f"Failed to send invitation email to {invitation.email}")
+            logger.warning(f"Failed to send invitation email to {sanitize_for_log(invitation.email)}")
             # Don't fail the request, invitation is still created
 
         # Return invitation details
@@ -881,7 +883,7 @@ async def invite_member(
     response_model=List[InvitationResponse]
 )
 async def list_pending_invitations(
-    organization_id: int,
+    organization_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
     user_role: str = Depends(get_current_user_role)
@@ -944,8 +946,8 @@ async def list_pending_invitations(
     response_model=OrganizationMemberResponse
 )
 async def update_member_role(
-    organization_id: int,
-    user_id: int,
+    organization_id: UUID,
+    user_id: UUID,
     role_update: RoleUpdateRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -996,13 +998,14 @@ async def update_member_role(
         await db.refresh(member)
 
         return OrganizationMemberResponse(
-            id=member.user.id,
+            id=str(member.id),
+            user_id=str(member.user_id),
             email=member.user.email,
             name=member.user.name,
             avatar_url=member.user.avatar_url,
             role=member.role,
-            joined_at=member.joined_at,
-            invited_by=member.invited_by
+            joined_at=member.joined_at or member.updated_at,
+            invited_by=str(member.invited_by) if member.invited_by else None
         )
 
     except HTTPException:
@@ -1021,8 +1024,8 @@ async def update_member_role(
     status_code=status.HTTP_204_NO_CONTENT
 )
 async def remove_member(
-    organization_id: int,
-    user_id: int,
+    organization_id: UUID,
+    user_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
     user_role: str = Depends(get_current_user_role)

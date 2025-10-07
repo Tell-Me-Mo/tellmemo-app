@@ -8,11 +8,11 @@ import asyncio
 import logging
 import aiohttp
 import json
-import base64
 import ssl
 import certifi
 from typing import Optional, Dict, Any, Callable
 from pathlib import Path
+from utils.logger import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)  # Temporarily set to DEBUG for troubleshooting
@@ -44,7 +44,7 @@ class SaladTranscriptionService:
             "Accept": "application/json"
         }
 
-        logger.info(f"Initialized Salad transcription service for organization: {organization_name}")
+        logger.info("Initialized Salad transcription service")
 
     async def test_connection(self) -> Dict[str, Any]:
         """
@@ -54,13 +54,30 @@ class SaladTranscriptionService:
             Dict with success status and message
         """
         try:
+            # Validate base_url to prevent SSRF attacks
+            from urllib.parse import urlparse
+            parsed_url = urlparse(self.base_url)
+
+            # Only allow HTTPS connections to salad.com domain
+            if parsed_url.scheme != 'https':
+                return {
+                    "success": False,
+                    "error": "Only HTTPS connections are allowed"
+                }
+
+            # Validate hostname to prevent SSRF
+            if not parsed_url.hostname or not parsed_url.hostname.endswith('.salad.com'):
+                if parsed_url.hostname != 'api.salad.com':
+                    return {
+                        "success": False,
+                        "error": "Invalid API endpoint. Must be a salad.com domain."
+                    }
+
             # Try to list container groups to verify API key and organization
             test_url = f"{self.base_url}/organizations/{self.organization_name}/container-groups"
 
-            ssl_context = ssl.create_default_context()
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
-
+            # Use proper SSL verification instead of disabling it
+            ssl_context = ssl.create_default_context(cafile=certifi.where())
             connector = aiohttp.TCPConnector(ssl=ssl_context)
             async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.get(
@@ -70,11 +87,11 @@ class SaladTranscriptionService:
                 ) as response:
                     if response.status == 200:
                         # Successfully connected and authenticated
-                        data = await response.json()
-                        logger.info(f"Salad API test successful for organization: {self.organization_name}")
+                        _ = await response.json()  # Validate JSON response
+                        logger.info("Salad API test successful")
                         return {
                             "success": True,
-                            "message": f"Successfully connected to Salad API for organization: {self.organization_name}",
+                            "message": "Successfully connected to Salad API",
                             "organization": self.organization_name
                         }
                     elif response.status == 401:
@@ -100,16 +117,16 @@ class SaladTranscriptionService:
                         }
 
         except aiohttp.ClientError as e:
-            logger.error(f"Network error testing Salad connection: {e}")
+            logger.error(f"Network error testing Salad connection: {sanitize_for_log(str(e))}")
             return {
                 "success": False,
-                "error": f"Network error: {str(e)}. Please check your internet connection."
+                "error": "Network error. Please check your internet connection."
             }
         except Exception as e:
-            logger.error(f"Unexpected error testing Salad connection: {e}")
+            logger.error(f"Unexpected error testing Salad connection: {sanitize_for_log(str(e))}")
             return {
                 "success": False,
-                "error": f"Unexpected error: {str(e)}"
+                "error": "Unexpected error occurred"
             }
 
     async def upload_to_s4(
@@ -135,11 +152,8 @@ class SaladTranscriptionService:
 
             logger.info(f"Uploading file to S4: {s4_path}")
 
-            # Create SSL context without verification (for development)
-            ssl_context = ssl.create_default_context()
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
-
+            # Use proper SSL verification
+            ssl_context = ssl.create_default_context(cafile=certifi.where())
             connector = aiohttp.TCPConnector(ssl=ssl_context)
             async with aiohttp.ClientSession(connector=connector) as session:
                 # Read file
@@ -174,7 +188,7 @@ class SaladTranscriptionService:
                     return signed_url
 
         except Exception as e:
-            logger.error(f"S4 upload error: {e}", exc_info=True)
+            logger.error(f"S4 upload error: {sanitize_for_log(str(e))}", exc_info=True)
             raise
 
     async def transcribe_audio_file(
@@ -232,8 +246,8 @@ class SaladTranscriptionService:
                 logger.info(f"Audio uploaded to S4, got signed URL")
 
             except Exception as e:
-                logger.error(f"Failed to upload to S4: {e}")
-                raise Exception(f"S4 upload failed: {str(e)}")
+                logger.error(f"Failed to upload to S4: {sanitize_for_log(str(e))}")
+                raise Exception("S4 upload failed")
 
             # Get file size for logging
             file_size_mb = Path(audio_path).stat().st_size / (1024 * 1024)
@@ -258,7 +272,7 @@ class SaladTranscriptionService:
             # If not specified, Salad will auto-detect the language
             if language:
                 input_config["language_code"] = language
-                logger.info(f"Using specified language: {language}")
+                logger.info("Using specified language for transcription")
             else:
                 # Let Salad auto-detect the language for optimal results
                 # This is especially useful for multilingual content
@@ -276,16 +290,10 @@ class SaladTranscriptionService:
             # Note: The endpoint name might need to be different based on your Salad configuration
             # Common endpoint names: "transcribe", "whisper", "speech-to-text"
             endpoint_url = f"{self.base_url}/organizations/{self.organization_name}/inference-endpoints/transcribe/jobs"
-            logger.info(f"Submitting transcription job to: {endpoint_url}")
+            logger.info(f"Submitting transcription job to endpoint")
 
-            # Create SSL context that doesn't verify certificates (for development)
-            ssl_context = ssl.create_default_context()
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
-
-            # Alternative: Use certifi for proper verification (commented out)
-            # ssl_context = ssl.create_default_context(cafile=certifi.where())
-
+            # Use proper SSL verification
+            ssl_context = ssl.create_default_context(cafile=certifi.where())
             connector = aiohttp.TCPConnector(ssl=ssl_context)
             async with aiohttp.ClientSession(connector=connector) as session:
                 # Submit transcription job
@@ -295,16 +303,14 @@ class SaladTranscriptionService:
                     json=payload
                 ) as response:
                     if response.status == 401:
-                        error_text = await response.text()
-                        logger.error(f"Salad API authentication failed: {response.status}")
+                        logger.error("Salad API authentication failed")
                         raise Exception("Authentication failed: Invalid API key or organization name. Please check your Salad API credentials.")
                     elif response.status == 403:
-                        error_text = await response.text()
-                        logger.error(f"Salad API access denied: {response.status}")
+                        logger.error("Salad API access denied")
                         raise Exception("Access denied: Your API key doesn't have permission to access this endpoint.")
                     elif response.status == 404:
-                        logger.error(f"Salad API endpoint not found: {endpoint_url}")
-                        raise Exception(f"Salad API endpoint not found. Please check your organization name: {self.organization_name}")
+                        logger.error(f"Salad API endpoint not found")
+                        raise Exception(f"Salad API endpoint not found. Please check your organization configuration.")
                     elif response.status != 201 and response.status != 200:
                         error_text = await response.text()
                         logger.error(f"Salad API error: {response.status} - {error_text}")
@@ -514,7 +520,7 @@ class SaladTranscriptionService:
                 raise Exception("Transcription timed out after 15 minutes")
 
         except Exception as e:
-            logger.error(f"Salad transcription error: {e}", exc_info=True)
+            logger.error(f"Salad transcription error: {sanitize_for_log(str(e))}", exc_info=True)
             raise
 
     async def check_service_health(self) -> bool:
@@ -528,11 +534,8 @@ class SaladTranscriptionService:
             # Check organization access
             org_url = f"{self.base_url}/organizations/{self.organization_name}"
 
-            # Create SSL context without verification (for development)
-            ssl_context = ssl.create_default_context()
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
-
+            # Use proper SSL verification
+            ssl_context = ssl.create_default_context(cafile=certifi.where())
             connector = aiohttp.TCPConnector(ssl=ssl_context)
             async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.get(
@@ -547,7 +550,7 @@ class SaladTranscriptionService:
                         return False
 
         except Exception as e:
-            logger.error(f"Salad health check error: {e}")
+            logger.error(f"Salad health check error: {sanitize_for_log(str(e))}")
             return False
 
     def is_model_loaded(self) -> bool:

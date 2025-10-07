@@ -5,10 +5,10 @@ from pydantic import BaseModel, Field
 from typing import Optional, List, Literal
 from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_
+from sqlalchemy import select, and_
 import uuid
 
-from utils.logger import get_logger
+from utils.logger import get_logger, sanitize_for_log
 from db.database import get_db
 from services.summaries.summary_service_refactored import summary_service
 from models.summary import Summary, SummaryType
@@ -119,7 +119,7 @@ async def generate_summary(
     **Response:**
     Returns either the generated summary or job information if `use_job=true`.
     """
-    logger.info(f"Generating {request.summary_type} summary for {request.entity_type} {request.entity_id}")
+    logger.info(f"Generating {sanitize_for_log(request.summary_type)} summary for {sanitize_for_log(request.entity_type)} {sanitize_for_log(request.entity_id)}")
 
     try:
         # Validate and convert entity_id to UUID
@@ -185,7 +185,8 @@ async def generate_summary(
                     "format": request.format,
                     "date_range_start": request.date_range_start.isoformat(),
                     "date_range_end": request.date_range_end.isoformat(),
-                    "created_by": request.created_by
+                    "created_by": current_user.email,
+                    "created_by_id": str(current_user.id)
                 },
                 total_steps=3
             )
@@ -315,17 +316,18 @@ async def generate_summary(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to generate summary: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate summary: {str(e)}")
+        logger.error(f"Failed to generate summary: {sanitize_for_log(str(e))}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/{summary_id}", response_model=UnifiedSummaryResponse)
 async def get_summary(
     summary_id: str,
-    session: AsyncSession = Depends(get_db)
+    session: AsyncSession = Depends(get_db),
+    current_org: Organization = Depends(get_current_organization)
 ):
     """Get any summary by ID, regardless of entity type."""
-    logger.info(f"Fetching summary {summary_id}")
+    logger.info(f"Fetching summary {sanitize_for_log(summary_id)}")
 
     try:
         summary_uuid = uuid.UUID(summary_id)
@@ -336,6 +338,10 @@ async def get_summary(
         summary = result.scalar_one_or_none()
 
         if not summary:
+            raise HTTPException(status_code=404, detail="Summary not found")
+
+        # Multi-tenant validation - ensure summary belongs to current organization
+        if summary.organization_id != current_org.id:
             raise HTTPException(status_code=404, detail="Summary not found")
 
         # Determine entity type and get entity name
@@ -404,7 +410,7 @@ async def get_summary(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to fetch summary: {e}")
+        logger.error(f"Failed to fetch summary: {sanitize_for_log(str(e))}")
         raise HTTPException(status_code=500, detail="Failed to fetch summary")
 
 
@@ -419,7 +425,7 @@ async def list_summaries(
     List summaries with flexible filtering.
     Can filter by entity type, entity ID, summary type, format, and date range.
     """
-    logger.info(f"Listing summaries with filters: {filters}")
+    logger.info(f"Listing summaries with filters: {sanitize_for_log(filters)}")
 
     try:
         # Build query
@@ -427,6 +433,9 @@ async def list_summaries(
 
         # Apply filters
         conditions = []
+
+        # Multi-tenant filtering - only show summaries from current organization
+        conditions.append(Summary.organization_id == current_org.id)
 
         if filters.entity_type and filters.entity_id:
             entity_uuid = uuid.UUID(filters.entity_id)
@@ -442,7 +451,7 @@ async def list_summaries(
                 type_enum = SummaryType(filters.summary_type.lower())
                 conditions.append(Summary.summary_type == type_enum)
             except ValueError:
-                logger.warning(f"Invalid summary type filter: {filters.summary_type}")
+                logger.warning(f"Invalid summary type filter: {sanitize_for_log(filters.summary_type)}")
 
         if filters.format:
             conditions.append(Summary.format == filters.format)
@@ -491,6 +500,7 @@ async def list_summaries(
                 entity_type=entity_type,
                 entity_id=str(entity_id) if entity_id else "",
                 entity_name=entity_name,
+                project_id=str(summary.project_id) if summary.project_id else None,
                 content_id=str(summary.content_id) if summary.content_id else None,
                 summary_type=summary.summary_type.value.upper(),
                 subject=summary.subject,
@@ -500,7 +510,7 @@ async def list_summaries(
                 action_items=summary.action_items,
                 sentiment_analysis=summary.sentiment_analysis,
                 risks=summary.risks,
-            blockers=summary.blockers,
+                blockers=summary.blockers,
                 communication_insights=summary.communication_insights,
                 next_meeting_agenda=summary.next_meeting_agenda,
                 format=getattr(summary, 'format', 'general'),
@@ -516,17 +526,18 @@ async def list_summaries(
         return response_summaries
 
     except Exception as e:
-        logger.error(f"Failed to list summaries: {e}")
+        logger.error(f"Failed to list summaries: {sanitize_for_log(str(e))}")
         raise HTTPException(status_code=500, detail="Failed to list summaries")
 
 
 @router.delete("/{summary_id}")
 async def delete_summary(
     summary_id: str,
-    session: AsyncSession = Depends(get_db)
+    session: AsyncSession = Depends(get_db),
+    current_org: Organization = Depends(get_current_organization)
 ):
     """Delete a summary by ID."""
-    logger.info(f"Deleting summary {summary_id}")
+    logger.info(f"Deleting summary {sanitize_for_log(summary_id)}")
 
     try:
         summary_uuid = uuid.UUID(summary_id)
@@ -539,6 +550,10 @@ async def delete_summary(
         if not summary:
             raise HTTPException(status_code=404, detail="Summary not found")
 
+        # Multi-tenant validation - ensure summary belongs to current organization
+        if summary.organization_id != current_org.id:
+            raise HTTPException(status_code=404, detail="Summary not found")
+
         await session.delete(summary)
         await session.commit()
 
@@ -547,7 +562,7 @@ async def delete_summary(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to delete summary: {e}")
+        logger.error(f"Failed to delete summary: {sanitize_for_log(str(e))}")
         await session.rollback()
         raise HTTPException(status_code=500, detail="Failed to delete summary")
 
@@ -562,6 +577,18 @@ async def generate_summary_with_job(
     try:
         # Import here to avoid circular dependency
         from db.database import db_manager
+
+        # Get job to retrieve metadata with user info
+        job = upload_job_service.get_job(job_id)
+        if not job or not job.metadata:
+            raise ValueError(f"Job {job_id} not found or missing metadata")
+
+        # Extract created_by info from metadata
+        created_by = job.metadata.get("created_by")
+        created_by_id = job.metadata.get("created_by_id")
+
+        if not created_by or not created_by_id:
+            raise ValueError("Job metadata missing created_by or created_by_id")
 
         # Update job progress
         await upload_job_service.update_job_progress_async(
@@ -589,8 +616,8 @@ async def generate_summary_with_job(
                     program_id=entity_uuid,
                     week_start=request.date_range_start,
                     week_end=request.date_range_end,
-                    created_by=current_user.email,
-                    created_by_id=str(current_user.id),
+                    created_by=created_by,
+                    created_by_id=created_by_id,
                     format_type=request.format
                 )
             elif request.summary_type == "portfolio":
@@ -599,8 +626,8 @@ async def generate_summary_with_job(
                     portfolio_id=entity_uuid,
                     week_start=request.date_range_start,
                     week_end=request.date_range_end,
-                    created_by=current_user.email,
-                    created_by_id=str(current_user.id),
+                    created_by=created_by,
+                    created_by_id=created_by_id,
                     format_type=request.format
                 )
             elif request.summary_type == "project":
@@ -609,8 +636,8 @@ async def generate_summary_with_job(
                     project_id=entity_uuid,
                     week_start=request.date_range_start,
                     week_end=request.date_range_end,
-                    created_by=current_user.email,
-                    created_by_id=str(current_user.id),
+                    created_by=created_by,
+                    created_by_id=created_by_id,
                     format_type=request.format
                 )
 
@@ -635,10 +662,10 @@ async def generate_summary_with_job(
             )
 
     except Exception as e:
-        logger.error(f"Failed to generate summary in job {job_id}: {e}")
+        logger.error(f"Failed to generate summary in job {job_id}: {sanitize_for_log(str(e))}")
         await upload_job_service.fail_job(
             job_id,
-            error_message=f"Failed to generate summary: {str(e)}"
+            error_message="Failed to generate summary"
         )
 
 
@@ -669,14 +696,15 @@ class UpdateSummaryRequest(BaseModel):
 async def update_summary(
     summary_id: str,
     update_request: UpdateSummaryRequest,
-    session: AsyncSession = Depends(get_db)
+    session: AsyncSession = Depends(get_db),
+    current_org: Organization = Depends(get_current_organization)
 ):
     """
     Update an existing summary's fields.
 
     Only the provided fields will be updated, others remain unchanged.
     """
-    logger.info(f"Updating summary {summary_id}")
+    logger.info(f"Updating summary {sanitize_for_log(summary_id)}")
 
     try:
         # Validate and convert summary_id to UUID
@@ -692,6 +720,10 @@ async def update_summary(
         summary = result.scalar_one_or_none()
 
         if not summary:
+            raise HTTPException(status_code=404, detail=f"Summary '{summary_id}' not found")
+
+        # Multi-tenant validation - ensure summary belongs to current organization
+        if summary.organization_id != current_org.id:
             raise HTTPException(status_code=404, detail=f"Summary '{summary_id}' not found")
 
         # Update fields if provided
@@ -792,6 +824,6 @@ async def update_summary(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to update summary {summary_id}: {e}")
+        logger.error(f"Failed to update summary {sanitize_for_log(summary_id)}: {sanitize_for_log(str(e))}")
         await session.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to update summary: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to update summary")

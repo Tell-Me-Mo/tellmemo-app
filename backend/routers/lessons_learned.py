@@ -13,13 +13,13 @@ from models.organization import Organization
 from models.user import User
 from models.lesson_learned import LessonLearned, LessonCategory, LessonType, LessonLearnedImpact
 from models.project import Project
-from utils.logger import get_logger
+from utils.logger import get_logger, sanitize_for_log
 from utils.monitoring import monitor_operation
 from pydantic import BaseModel
 from datetime import datetime
 
 logger = get_logger(__name__)
-router = APIRouter(prefix="/api", tags=["lessons-learned"])
+router = APIRouter(prefix="/api/v1", tags=["lessons-learned"])
 
 
 class LessonLearnedCreate(BaseModel):
@@ -73,10 +73,21 @@ async def get_project_lessons_learned(
     category: Optional[str] = Query(None),
     lesson_type: Optional[str] = Query(None),
     impact: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user),
+    current_org: Organization = Depends(get_current_organization),
     db: AsyncSession = Depends(get_db)
 ):
     """Get all lessons learned for a project with optional filtering."""
     try:
+        # Verify project exists and belongs to user's organization
+        project_result = await db.execute(
+            select(Project).where(Project.id == project_id)
+        )
+        project = project_result.scalar_one_or_none()
+
+        if not project or project.organization_id != current_org.id:
+            raise HTTPException(status_code=404, detail="Project not found")
+
         # Build query with filters
         query = select(LessonLearned).where(LessonLearned.project_id == project_id)
 
@@ -117,8 +128,10 @@ async def get_project_lessons_learned(
             for lesson in lessons
         ]
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Failed to get lessons learned for project {project_id}: {e}")
+        logger.error(f"Failed to get lessons learned for project {sanitize_for_log(project_id)}: {e}")
         raise HTTPException(status_code=500, detail="Failed to retrieve lessons learned")
 
 
@@ -127,17 +140,19 @@ async def get_project_lessons_learned(
 async def create_lesson_learned(
     project_id: UUID,
     lesson_data: LessonLearnedCreate,
+    current_user: User = Depends(get_current_user),
+    current_org: Organization = Depends(get_current_organization),
     db: AsyncSession = Depends(get_db)
 ):
     """Create a new lesson learned for a project."""
     try:
-        # Verify project exists
+        # Verify project exists and belongs to user's organization
         project_result = await db.execute(
             select(Project).where(Project.id == project_id)
         )
         project = project_result.scalar_one_or_none()
 
-        if not project:
+        if not project or project.organization_id != current_org.id:
             raise HTTPException(status_code=404, detail="Project not found")
 
         # Create lesson learned
@@ -161,7 +176,7 @@ async def create_lesson_learned(
         await db.commit()
         await db.refresh(lesson)
 
-        logger.info(f"Created lesson learned {lesson.id} for project {project_id}")
+        logger.info(f"Created lesson learned {sanitize_for_log(lesson.id)} for project {sanitize_for_log(project_id)}")
 
         return LessonLearnedResponse(
             id=str(lesson.id),
@@ -185,7 +200,7 @@ async def create_lesson_learned(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to create lesson learned for project {project_id}: {e}")
+        logger.error(f"Failed to create lesson learned for project {sanitize_for_log(project_id)}: {e}")
         raise HTTPException(status_code=500, detail="Failed to create lesson learned")
 
 
@@ -194,17 +209,25 @@ async def create_lesson_learned(
 async def update_lesson_learned(
     lesson_id: UUID,
     lesson_data: LessonLearnedUpdate,
+    current_user: User = Depends(get_current_user),
+    current_org: Organization = Depends(get_current_organization),
     db: AsyncSession = Depends(get_db)
 ):
     """Update an existing lesson learned."""
     try:
-        # Get lesson learned
+        # Get lesson learned with project to verify organization
         result = await db.execute(
-            select(LessonLearned).where(LessonLearned.id == lesson_id)
+            select(LessonLearned)
+            .options(selectinload(LessonLearned.project))
+            .where(LessonLearned.id == lesson_id)
         )
         lesson = result.scalar_one_or_none()
 
         if not lesson:
+            raise HTTPException(status_code=404, detail="Lesson learned not found")
+
+        # Verify lesson's project belongs to user's organization
+        if lesson.project.organization_id != current_org.id:
             raise HTTPException(status_code=404, detail="Lesson learned not found")
 
         # Update fields
@@ -231,7 +254,7 @@ async def update_lesson_learned(
         await db.commit()
         await db.refresh(lesson)
 
-        logger.info(f"Updated lesson learned {lesson_id}")
+        logger.info(f"Updated lesson learned {sanitize_for_log(lesson_id)}")
 
         return LessonLearnedResponse(
             id=str(lesson.id),
@@ -255,7 +278,7 @@ async def update_lesson_learned(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to update lesson learned {lesson_id}: {e}")
+        logger.error(f"Failed to update lesson learned {sanitize_for_log(lesson_id)}: {e}")
         raise HTTPException(status_code=500, detail="Failed to update lesson learned")
 
 
@@ -263,30 +286,38 @@ async def update_lesson_learned(
 @monitor_operation("delete_lesson_learned", "api")
 async def delete_lesson_learned(
     lesson_id: UUID,
+    current_user: User = Depends(get_current_user),
+    current_org: Organization = Depends(get_current_organization),
     db: AsyncSession = Depends(get_db)
 ):
     """Delete a lesson learned."""
     try:
-        # Get lesson learned
+        # Get lesson learned with project to verify organization
         result = await db.execute(
-            select(LessonLearned).where(LessonLearned.id == lesson_id)
+            select(LessonLearned)
+            .options(selectinload(LessonLearned.project))
+            .where(LessonLearned.id == lesson_id)
         )
         lesson = result.scalar_one_or_none()
 
         if not lesson:
             raise HTTPException(status_code=404, detail="Lesson learned not found")
 
+        # Verify lesson's project belongs to user's organization
+        if lesson.project.organization_id != current_org.id:
+            raise HTTPException(status_code=404, detail="Lesson learned not found")
+
         await db.delete(lesson)
         await db.commit()
 
-        logger.info(f"Deleted lesson learned {lesson_id}")
+        logger.info(f"Deleted lesson learned {sanitize_for_log(lesson_id)}")
 
         return {"message": "Lesson learned deleted successfully"}
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to delete lesson learned {lesson_id}: {e}")
+        logger.error(f"Failed to delete lesson learned {sanitize_for_log(lesson_id)}: {e}")
         raise HTTPException(status_code=500, detail="Failed to delete lesson learned")
 
 
@@ -295,18 +326,20 @@ async def delete_lesson_learned(
 async def batch_create_lessons_learned(
     project_id: UUID,
     lessons_data: List[dict],
-    source_content_id: Optional[UUID] = None,
+    source_content_id: Optional[UUID] = Query(None),
+    current_user: User = Depends(get_current_user),
+    current_org: Organization = Depends(get_current_organization),
     db: AsyncSession = Depends(get_db)
 ):
     """Create multiple lessons learned from AI extraction."""
     try:
-        # Verify project exists
+        # Verify project exists and belongs to user's organization
         project_result = await db.execute(
             select(Project).where(Project.id == project_id)
         )
         project = project_result.scalar_one_or_none()
 
-        if not project:
+        if not project or project.organization_id != current_org.id:
             raise HTTPException(status_code=404, detail="Project not found")
 
         created_lessons = []
@@ -339,7 +372,7 @@ async def batch_create_lessons_learned(
         for lesson in created_lessons:
             await db.refresh(lesson)
 
-        logger.info(f"Created {len(created_lessons)} lessons learned for project {project_id}")
+        logger.info(f"Created {len(created_lessons)} lessons learned for project {sanitize_for_log(project_id)}")
 
         return {
             "message": f"Created {len(created_lessons)} lessons learned",
@@ -349,5 +382,5 @@ async def batch_create_lessons_learned(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to batch create lessons learned for project {project_id}: {e}")
+        logger.error(f"Failed to batch create lessons learned for project {sanitize_for_log(project_id)}: {e}")
         raise HTTPException(status_code=500, detail="Failed to create lessons learned")

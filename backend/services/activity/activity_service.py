@@ -7,7 +7,8 @@ from sqlalchemy import select, desc, and_
 from uuid import UUID
 
 from models.activity import Activity, ActivityType
-from utils.logger import get_logger
+from models.project import Project
+from utils.logger import get_logger, sanitize_for_log
 from utils.monitoring import monitor_operation, monitor_sync_operation
 
 logger = get_logger(__name__)
@@ -50,7 +51,7 @@ class ActivityService:
             await db.commit()
             await db.refresh(activity)
             
-            logger.info(f"Created activity: {activity_type.value} for project {project_id}")
+            logger.info(f"Created activity: {sanitize_for_log(activity_type.value)} for project {sanitize_for_log(project_id)}")
             return activity
             
         except Exception as e:
@@ -76,22 +77,37 @@ class ActivityService:
     ) -> List[Activity]:
         """Get activities for a project with optional filtering."""
         try:
+            # SECURITY: Validate project belongs to organization (multi-tenant isolation)
+            project_query = select(Project).where(
+                and_(
+                    Project.id == project_id,
+                    Project.organization_id == organization_id
+                )
+            )
+            project_result = await db.execute(project_query)
+            project = project_result.scalar_one_or_none()
+
+            if not project:
+                logger.warning(f"Project {sanitize_for_log(project_id)} not found or doesn't belong to organization {sanitize_for_log(organization_id)}")
+                return []  # Return empty list instead of 404 to prevent information disclosure
+
+            # Now fetch activities for the validated project
             query = select(Activity).where(Activity.project_id == project_id)
-            
+
             if activity_type:
                 query = query.where(Activity.type == activity_type)
-            
+
             if since:
                 query = query.where(Activity.timestamp >= since)
-            
+
             query = query.order_by(desc(Activity.timestamp))
             query = query.limit(limit).offset(offset)
-            
+
             result = await db.execute(query)
             activities = result.scalars().all()
-            
+
             return activities
-            
+
         except Exception as e:
             logger.error(f"Error fetching activities: {e}")
             raise
@@ -112,22 +128,39 @@ class ActivityService:
     ) -> List[Activity]:
         """Get recent activities across multiple projects."""
         try:
+            # SECURITY: Validate all project_ids belong to organization (multi-tenant isolation)
+            # First, get the list of valid project IDs that belong to this organization
+            valid_projects_query = select(Project.id).where(
+                and_(
+                    Project.id.in_(project_ids),
+                    Project.organization_id == organization_id
+                )
+            )
+            valid_projects_result = await db.execute(valid_projects_query)
+            valid_project_ids = [row[0] for row in valid_projects_result.all()]
+
+            # If no valid projects found, return empty list (prevents cross-org access)
+            if not valid_project_ids:
+                logger.warning(f"No valid projects found for organization {organization_id} from requested IDs")
+                return []
+
+            # Now fetch activities only for validated projects
             since = datetime.utcnow() - timedelta(hours=hours)
-            
+
             query = select(Activity).where(
                 and_(
-                    Activity.project_id.in_(project_ids),
+                    Activity.project_id.in_(valid_project_ids),
                     Activity.timestamp >= since
                 )
             )
             query = query.order_by(desc(Activity.timestamp))
             query = query.limit(limit)
-            
+
             result = await db.execute(query)
             activities = result.scalars().all()
-            
+
             return activities
-            
+
         except Exception as e:
             logger.error(f"Error fetching recent activities: {e}")
             raise
@@ -268,19 +301,34 @@ class ActivityService:
     ) -> int:
         """Delete all activities for a project."""
         try:
+            # SECURITY: Validate project belongs to organization (multi-tenant isolation)
+            project_query = select(Project).where(
+                and_(
+                    Project.id == project_id,
+                    Project.organization_id == organization_id
+                )
+            )
+            project_result = await db.execute(project_query)
+            project = project_result.scalar_one_or_none()
+
+            if not project:
+                logger.warning(f"Project {sanitize_for_log(project_id)} not found or doesn't belong to organization {sanitize_for_log(organization_id)}")
+                return 0  # Return 0 deleted instead of raising error to prevent information disclosure
+
+            # Now delete activities for the validated project
             query = select(Activity).where(Activity.project_id == project_id)
             result = await db.execute(query)
             activities = result.scalars().all()
-            
+
             count = len(activities)
             for activity in activities:
                 await db.delete(activity)
-            
+
             await db.commit()
-            logger.info(f"Deleted {count} activities for project {project_id}")
-            
+            logger.info(f"Deleted {sanitize_for_log(count)} activities for project {sanitize_for_log(project_id)}")
+
             return count
-            
+
         except Exception as e:
             logger.error(f"Error deleting activities: {e}")
             await db.rollback()

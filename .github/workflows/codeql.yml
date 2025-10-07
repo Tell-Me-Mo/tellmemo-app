@@ -1,0 +1,43 @@
+name: "CodeQL Analysis"
+
+on:
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run at 00:00 UTC every Monday
+    - cron: '0 0 * * 1'
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # Analyze Python (backend) and JavaScript (Dart/Flutter frontend)
+        language: ['python', 'javascript']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          # Disable default queries to reduce noise
+          queries: security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{matrix.language}}"

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:dio_retry_plus/dio_retry_plus.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import '../config/api_config.dart';
 import '../services/auth_service.dart';
 import 'interceptors.dart';
@@ -30,6 +31,27 @@ class DioClient {
         HeaderInterceptor(),
         AuthInterceptor(authService),
         OrganizationInterceptor(),
+        RetryInterceptor(
+          dio: _dio!,
+          retries: 3,
+          retryDelays: const [
+            Duration(seconds: 1),
+            Duration(seconds: 2),
+            Duration(seconds: 3),
+          ],
+          toNoInternetPageNavigator: () async {
+            // No navigation needed - just log
+            if (kDebugMode) {
+              print('🔄 No internet connection detected');
+            }
+            return;
+          },
+          logPrint: (message) {
+            if (kDebugMode) {
+              print('🔄 Retry: $message');
+            }
+          },
+        ),
         LoggingInterceptor(),
         if (kIsWeb) WebRequestInterceptor(),
       ]);

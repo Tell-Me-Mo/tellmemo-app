@@ -18,6 +18,6 @@ class OrganizationInterceptor extends Interceptor {
       // If we can't read from storage, continue without organization header
     }
 
-    super.onRequest(options, handler);
+    handler.next(options);
   }
 }

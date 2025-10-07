@@ -11,7 +11,7 @@ class LessonsLearnedRepositoryImpl implements LessonsLearnedRepository {
   @override
   Future<List<LessonLearned>> getProjectLessonsLearned(String projectId) async {
     try {
-      final response = await dio.get('/api/projects/$projectId/lessons-learned');
+      final response = await dio.get('/api/v1/projects/$projectId/lessons-learned');
 
       if (response.data is List) {
         return (response.data as List)
@@ -42,7 +42,7 @@ class LessonsLearnedRepositoryImpl implements LessonsLearnedRepository {
       );
 
       final response = await dio.post(
-        '/api/projects/$projectId/lessons-learned',
+        '/api/v1/projects/$projectId/lessons-learned',
         data: lessonModel.toCreateJson(),
       );
 
@@ -67,7 +67,7 @@ class LessonsLearnedRepositoryImpl implements LessonsLearnedRepository {
       };
 
       final response = await dio.put(
-        '/api/lessons-learned/$lessonId',
+        '/api/v1/lessons-learned/$lessonId',
         data: updateData,
       );
 
@@ -80,7 +80,7 @@ class LessonsLearnedRepositoryImpl implements LessonsLearnedRepository {
   @override
   Future<void> deleteLessonLearned(String lessonId) async {
     try {
-      await dio.delete('/api/lessons-learned/$lessonId');
+      await dio.delete('/api/v1/lessons-learned/$lessonId');
     } catch (e) {
       throw Exception('Failed to delete lesson learned: $e');
     }

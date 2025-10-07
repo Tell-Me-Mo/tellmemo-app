@@ -457,6 +457,7 @@ class _StyledDropdown extends StatelessWidget {
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
       value: value,
+      isExpanded: true,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(

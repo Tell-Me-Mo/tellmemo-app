@@ -9,8 +9,8 @@ class ApiService {
 
   Future<List<Map<String, dynamic>>> getProjectActivities(String projectId) async {
     try {
-      final response = await DioClient.instance.get(
-        '/api/projects/$projectId/activities',
+      final response = await client.dio.get(
+        '/api/v1/projects/$projectId/activities',
       );
       return List<Map<String, dynamic>>.from(response.data);
     } catch (e) {
@@ -20,8 +20,8 @@ class ApiService {
 
   Future<List<Map<String, dynamic>>> getRecentActivities(List<String> projectIds) async {
     try {
-      final response = await DioClient.instance.get(
-        '/api/activities/recent',
+      final response = await client.dio.get(
+        '/api/v1/activities/recent',
         queryParameters: {
           'project_ids': projectIds.join(','),
         },
