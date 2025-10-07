@@ -5,12 +5,15 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import sentry_sdk
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from config import get_settings, configure_logging
+from utils.rate_limit import limiter
 from routers import health, projects, content, queries, admin, scheduler, activities, transcription, jobs, websocket_jobs, integrations, upload, portfolios, programs, hierarchy, hierarchy_summaries, content_availability, unified_summaries, risks_tasks, lessons_learned, auth, native_auth, organizations, invitations, websocket_notifications, support_tickets, websocket_tickets, conversations, notifications
 from utils.logger import get_logger
 from db.database import init_database, close_database
@@ -212,6 +215,10 @@ app = FastAPI(
     redoc_url=None,  # ReDoc disabled for security
     lifespan=lifespan
 )
+
+# Add rate limiter to app state
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,

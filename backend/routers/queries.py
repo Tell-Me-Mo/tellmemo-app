@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,6 +17,7 @@ from services.rag.enhanced_rag_service_refactored import enhanced_rag_service
 from services.rag.conversation_context_service import conversation_context_service
 from services.activity.activity_service import ActivityService
 from utils.logger import get_logger
+from utils.rate_limit import limiter, QUERY_RATE_LIMIT
 import uuid
 
 router = APIRouter()
@@ -37,7 +38,9 @@ class QueryResponse(BaseModel):
 
 
 @router.post("/organization/query", response_model=QueryResponse)
+@limiter.limit(QUERY_RATE_LIMIT)
 async def query_organization(
+    request_obj: Request,
     request: QueryRequest,
     session: AsyncSession = Depends(get_db),
     current_org: Organization = Depends(get_current_organization),
@@ -172,7 +175,9 @@ async def query_organization(
 
 
 @router.post("/{project_id}/query", response_model=QueryResponse)
+@limiter.limit(QUERY_RATE_LIMIT)
 async def query_project(
+    request_obj: Request,
     project_id: str,
     request: QueryRequest,
     session: AsyncSession = Depends(get_db),
@@ -315,7 +320,9 @@ async def query_project(
 
 
 @router.post("/program/{program_id}/query", response_model=QueryResponse)
+@limiter.limit(QUERY_RATE_LIMIT)
 async def query_program(
+    request_obj: Request,
     program_id: str,
     request: QueryRequest,
     session: AsyncSession = Depends(get_db),
@@ -470,7 +477,9 @@ async def query_program(
 
 
 @router.post("/portfolio/{portfolio_id}/query", response_model=QueryResponse)
+@limiter.limit(QUERY_RATE_LIMIT)
 async def query_portfolio(
+    request_obj: Request,
     portfolio_id: str,
     request: QueryRequest,
     session: AsyncSession = Depends(get_db),

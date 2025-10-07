@@ -115,11 +115,35 @@ async def client_factory(db_session: AsyncSession, monkeypatch):
     # Keep track of all clients created for cleanup
     clients = []
 
-    async def create_client(**headers) -> AsyncClient:
-        """Create a new client with optional headers."""
+    async def create_client(user: User = None, organization: Organization = None, **headers) -> AsyncClient:
+        """
+        Create a new client with optional headers or user/org context.
+
+        Args:
+            user: Optional User object to create auth token for
+            organization: Optional Organization object to set context
+            **headers: Additional headers to set
+
+        Returns:
+            AsyncClient with configured headers
+        """
         ac = AsyncClient(transport=transport, base_url="http://test")
 
-        # Set any provided headers
+        # If user is provided, create token
+        if user:
+            org_id = str(organization.id) if organization else None
+            token = native_auth_service.create_access_token(
+                user_id=str(user.id),
+                email=user.email,
+                organization_id=org_id
+            )
+            ac.headers["Authorization"] = f"Bearer {token}"
+
+            # If org is provided, set org header
+            if organization:
+                ac.headers["X-Organization-Id"] = str(organization.id)
+
+        # Set any additional provided headers
         for key, value in headers.items():
             ac.headers[key] = value
 
@@ -143,6 +167,16 @@ async def client(client_factory) -> AsyncClient:
 
     This is a convenience fixture that uses client_factory to create one client.
     For tests that need multiple clients with different auth, use client_factory directly.
+    """
+    return await client_factory()
+
+
+@pytest.fixture(scope="function")
+async def async_client(client_factory) -> AsyncClient:
+    """
+    Alias for client fixture - creates an unauthenticated async HTTP client.
+
+    This is used by some tests that need to test authentication failures.
     """
     return await client_factory()
 
@@ -360,3 +394,105 @@ def sample_profile_update() -> dict:
         "name": "Updated Name",
         "avatar_url": "https://example.com/avatar.png"
     }
+
+
+# Additional fixtures for multi-tenant testing
+
+@pytest.fixture
+async def test_project(db_session: AsyncSession, test_organization: Organization):
+    """
+    Create a test project within the test organization.
+
+    Args:
+        db_session: Database session
+        test_organization: Test organization for the project
+
+    Returns:
+        Project instance
+    """
+    from models.project import Project
+
+    project = Project(
+        name="Test Project",
+        description="Test project for security testing",
+        organization_id=test_organization.id,
+        status="active",
+        created_by=str(test_organization.created_by)  # Convert UUID to string
+    )
+
+    db_session.add(project)
+    await db_session.commit()
+    await db_session.refresh(project)
+
+    return project
+
+
+@pytest.fixture
+async def test_user_2(db_session: AsyncSession) -> User:
+    """
+    Create a second test user for multi-tenant testing.
+
+    Returns:
+        User instance with:
+        - Email: test2@example.com
+        - Password: TestPassword123!
+        - Name: Test User 2
+    """
+    password_hash = native_auth_service.hash_password("TestPassword123!")
+
+    user = User(
+        email="test2@example.com",
+        password_hash=password_hash,
+        name="Test User 2",
+        auth_provider='native',
+        email_verified=True,
+        is_active=True
+    )
+
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    return user
+
+
+@pytest.fixture
+async def test_org_2(db_session: AsyncSession, test_user_2: User) -> Organization:
+    """
+    Create a second test organization for multi-tenant testing.
+
+    Args:
+        db_session: Database session
+        test_user_2: Second test user who will own this organization
+
+    Returns:
+        Organization instance
+    """
+    org = Organization(
+        name="Test Organization 2",
+        slug="test-organization-2",
+        created_by=test_user_2.id
+    )
+
+    db_session.add(org)
+    await db_session.commit()
+    await db_session.refresh(org)
+
+    # Add user as organization member with admin role
+    member = OrganizationMember(
+        organization_id=org.id,
+        user_id=test_user_2.id,
+        role="admin",
+        invited_by=test_user_2.id,
+        joined_at=datetime.utcnow()
+    )
+
+    db_session.add(member)
+    await db_session.commit()
+
+    # Update user's last active organization
+    test_user_2.last_active_organization_id = org.id
+    await db_session.commit()
+    await db_session.refresh(test_user_2)
+
+    return org
