@@ -140,7 +140,12 @@ class RecordingButton extends ConsumerWidget {
               
               // Stop button
               IconButton(
-                onPressed: () => _stopRecording(context, ref, recordingNotifier),
+                onPressed: () async {
+                  final confirm = await _showStopConfirmationDialog(context);
+                  if (confirm == true && context.mounted) {
+                    await _stopRecording(context, ref, recordingNotifier);
+                  }
+                },
                 icon: const Icon(Icons.stop, size: 20),
                 style: IconButton.styleFrom(
                   backgroundColor: colorScheme.surfaceContainerHighest,
@@ -209,12 +214,12 @@ class RecordingButton extends ConsumerWidget {
     );
   }
   
-  void _handleButtonPress(
+  Future<void> _handleButtonPress(
     BuildContext context,
     WidgetRef ref,
     RecordingStateModel state,
     RecordingNotifier notifier,
-  ) {
+  ) async {
     if (state.state == RecordingState.idle) {
       notifier.startRecording(
         projectId: projectId,
@@ -222,7 +227,11 @@ class RecordingButton extends ConsumerWidget {
       );
     } else if (state.state == RecordingState.recording ||
                state.state == RecordingState.paused) {
-      _stopRecording(context, ref, notifier);
+      // Show confirmation dialog before stopping
+      final confirm = await _showStopConfirmationDialog(context);
+      if (confirm == true && context.mounted) {
+        await _stopRecording(context, ref, notifier);
+      }
     } else if (state.state == RecordingState.error) {
       notifier.clearError();
     }
@@ -312,7 +321,7 @@ class RecordingButton extends ConsumerWidget {
         ],
       ),
     );
-    
+
     if (confirm == true) {
       await notifier.cancelRecording();
       if (context.mounted) {
@@ -324,6 +333,71 @@ class RecordingButton extends ConsumerWidget {
         );
       }
     }
+  }
+
+  Future<bool?> _showStopConfirmationDialog(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: colorScheme.primaryContainer.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.stop_circle_outlined,
+                color: colorScheme.primary,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text('Stop Recording?'),
+            ),
+          ],
+        ),
+        content: Text(
+          'Your recording will be saved and automatically transcribed.',
+          style: textTheme.bodyMedium?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actions: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Continue'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () => Navigator.pop(context, true),
+                  icon: const Icon(Icons.check, size: 18),
+                  label: const Text('Stop & Save'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: colorScheme.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
   
   Color _getButtonColor(RecordingState state, ColorScheme colorScheme) {
