@@ -11,7 +11,6 @@ Tests coverage for TESTING_BACKEND.md section 1.3:
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
-from uuid import uuid4
 
 from models.user import User
 from models.organization import Organization

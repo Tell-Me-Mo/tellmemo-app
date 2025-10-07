@@ -34,9 +34,8 @@ from typing import AsyncGenerator, Generator
 from contextlib import asynccontextmanager
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.pool import NullPool
-from sqlalchemy import text
 from httpx import AsyncClient, ASGITransport
-from datetime import datetime, timezone
+from datetime import datetime
 
 from db.database import Base, get_db
 from main import app

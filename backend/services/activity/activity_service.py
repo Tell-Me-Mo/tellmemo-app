@@ -4,9 +4,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, and_
-from sqlalchemy.orm import selectinload
 from uuid import UUID
-from fastapi import HTTPException
 
 from models.activity import Activity, ActivityType
 from models.project import Project

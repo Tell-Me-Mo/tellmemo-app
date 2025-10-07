@@ -10,11 +10,9 @@ import pytest
 from datetime import datetime, timedelta
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
-from models.user import User
 from models.organization import Organization
 from models.project import Project
 from models.blocker import Blocker, BlockerImpact, BlockerStatus
-from models.organization_member import OrganizationMember
 
 
 @pytest.fixture

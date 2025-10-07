@@ -9,7 +9,6 @@ Status: TBD
 
 import pytest
 import io
-from datetime import date
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.user import User

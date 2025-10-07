@@ -32,7 +32,6 @@ from models.program import Program
 from models.portfolio import Portfolio
 from models.content import Content, ContentType
 from models.summary import Summary, SummaryType
-import uuid
 
 
 # ============================================================================

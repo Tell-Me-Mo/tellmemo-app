@@ -9,11 +9,9 @@ import json
 import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
-
 from services.core.upload_job_service import upload_job_service, JobStatus, JobType, UploadJob
 from utils.logger import get_logger
-from dependencies.auth import get_current_user, get_current_organization, require_role
+from dependencies.auth import get_current_user, get_current_organization
 from models.user import User
 from models.organization import Organization
 from models.project import Project

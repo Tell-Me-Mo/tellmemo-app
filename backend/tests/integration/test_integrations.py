@@ -21,7 +21,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 from uuid import uuid4
 import json
-import hashlib
 import hmac
 
 from models.user import User

@@ -10,11 +10,8 @@ Tests cover:
 - Vector DB error handling
 """
 
-import pytest
 from httpx import AsyncClient
-from unittest.mock import patch, MagicMock, AsyncMock
-from sqlalchemy.exc import OperationalError, IntegrityError, DatabaseError
-from sqlalchemy.ext.asyncio import AsyncSession
+from unittest.mock import patch, MagicMock
 from anthropic import APIError, APIConnectionError, RateLimitError
 from models.organization import Organization
 import uuid
