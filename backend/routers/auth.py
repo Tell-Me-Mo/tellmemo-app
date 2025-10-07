@@ -73,14 +73,15 @@ class MessageResponse(BaseModel):
 
 @router.post("/signup", response_model=AuthResponse)
 async def sign_up(
-    request: SignUpRequest,
+    request: Request,
+    signup_data: SignUpRequest,
     db: AsyncSession = Depends(get_db)
 ):
     """
     Register a new user account
 
     Args:
-        request: Sign up request with email and password
+        signup_data: Sign up request with email and password
         db: Database session
 
     Returns:
@@ -98,11 +99,11 @@ async def sign_up(
     try:
         # Create user in Supabase Auth
         response = auth_service.client.auth.sign_up({
-            "email": request.email,
-            "password": request.password,
+            "email": signup_data.email,
+            "password": signup_data.password,
             "options": {
                 "data": {
-                    "name": request.name
+                    "name": signup_data.name
                 }
             }
         })
@@ -159,14 +160,14 @@ async def sign_up(
 
 @router.post("/signin", response_model=AuthResponse)
 async def sign_in(
-    request: SignInRequest,
+    signin_data: SignInRequest,
     db: AsyncSession = Depends(get_db)
 ):
     """
     Sign in an existing user
 
     Args:
-        request: Sign in request with email and password
+        signin_data: Sign in request with email and password
         db: Database session
 
     Returns:
@@ -184,8 +185,8 @@ async def sign_in(
     try:
         # Authenticate with Supabase Auth
         response = auth_service.client.auth.sign_in_with_password({
-            "email": request.email,
-            "password": request.password
+            "email": signin_data.email,
+            "password": signin_data.password
         })
 
         if not response.user or not response.session:
@@ -237,14 +238,14 @@ async def sign_in(
 
 @router.post("/refresh", response_model=AuthResponse)
 async def refresh_token(
-    request: RefreshTokenRequest,
+    refresh_data: RefreshTokenRequest,
     db: AsyncSession = Depends(get_db)
 ):
     """
     Refresh an access token using a refresh token
 
     Args:
-        request: Refresh token request
+        refresh_data: Refresh token request
         db: Database session
 
     Returns:
@@ -258,7 +259,7 @@ async def refresh_token(
 
     try:
         # Try native auth first
-        payload = native_auth_service.verify_jwt_token(request.refresh_token)
+        payload = native_auth_service.verify_jwt_token(refresh_data.refresh_token)
 
         if payload and payload.get('type') == 'refresh':
             # Native auth refresh
@@ -313,7 +314,7 @@ async def refresh_token(
             )
 
         # Refresh the session
-        response = auth_service.client.auth.refresh_session(request.refresh_token)
+        response = auth_service.client.auth.refresh_session(refresh_data.refresh_token)
 
         if not response or not response.session:
             raise HTTPException(
@@ -362,13 +363,13 @@ async def refresh_token(
 
 @router.post("/forgot-password", response_model=MessageResponse)
 async def forgot_password(
-    request: ForgotPasswordRequest
+    forgot_password_data: ForgotPasswordRequest
 ):
     """
     Request a password reset email
 
     Args:
-        request: Forgot password request with email
+        forgot_password_data: Forgot password request with email
 
     Returns:
         Success message
@@ -385,7 +386,7 @@ async def forgot_password(
     try:
         # Request password reset
         auth_service.client.auth.reset_password_email(
-            request.email,
+            forgot_password_data.email,
             {
                 "redirect_to": "http://localhost:8100/reset-password"  # Configure this URL
             }
@@ -406,14 +407,14 @@ async def forgot_password(
 
 @router.post("/reset-password", response_model=MessageResponse)
 async def reset_password(
-    request: ResetPasswordRequest,
+    reset_password_data: ResetPasswordRequest,
     db: AsyncSession = Depends(get_db)
 ):
     """
     Reset password using a reset token
 
     Args:
-        request: Reset password request with token and new password
+        reset_password_data: Reset password request with token and new password
         db: Database session
 
     Returns:
@@ -432,9 +433,9 @@ async def reset_password(
         # Update password using the token
         response = auth_service.client.auth.update_user(
             {
-                "password": request.password
+                "password": reset_password_data.password
             },
-            access_token=request.token  # The reset token acts as an access token
+            access_token=reset_password_data.token  # The reset token acts as an access token
         )
 
         if not response or not response.user:

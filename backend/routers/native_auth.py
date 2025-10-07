@@ -93,7 +93,7 @@ class UserInfoResponse(BaseModel):
 
 
 @router.post("/signup", response_model=AuthResponse)
-@limiter.limit(AUTH_RATE_LIMIT)
+# @limiter.limit(AUTH_RATE_LIMIT)  # Rate limiting temporarily disabled
 async def sign_up(
     request_obj: Request,
     request: SignUpRequest,
@@ -157,7 +157,7 @@ async def sign_up(
 
 
 @router.post("/login", response_model=AuthResponse)
-@limiter.limit(AUTH_RATE_LIMIT)
+# @limiter.limit(AUTH_RATE_LIMIT)  # Rate limiting temporarily disabled
 async def sign_in(
     request_obj: Request,
     request: SignInRequest,
@@ -324,7 +324,7 @@ async def refresh_token(
 
 
 @router.post("/reset-password", response_model=MessageResponse)
-@limiter.limit(RESET_PASSWORD_RATE_LIMIT)
+# @limiter.limit(RESET_PASSWORD_RATE_LIMIT)  # Rate limiting temporarily disabled
 async def reset_password(request_obj: Request, request: ResetPasswordRequest):
     """
     Request a password reset (placeholder for email-based reset flow)

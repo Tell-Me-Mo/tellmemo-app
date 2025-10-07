@@ -25,9 +25,9 @@ if os.getenv("TESTING") == "1":
     limiter = NoOpLimiter()
 else:
     # This will be attached to the FastAPI app in main.py
+    # No default_limits - rate limiting is applied only to specific endpoints with @limiter.limit()
     limiter = Limiter(
         key_func=get_remote_address,
-        default_limits=["100/minute"],  # General API endpoints
         storage_uri="memory://",
         strategy="fixed-window"
     )
