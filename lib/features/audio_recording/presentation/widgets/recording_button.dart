@@ -242,27 +242,19 @@ class RecordingButton extends ConsumerWidget {
     WidgetRef ref,
     RecordingNotifier notifier,
   ) async {
-    print('[RecordingButton] Stopping recording and uploading...');
-
     // Stop recording and upload using same flow as file upload
     final result = await notifier.stopRecording(
       projectId: projectId,
       meetingTitle: meetingTitle,
     );
 
-    print('[RecordingButton] Stop recording returned: $result');
-
     if (result != null && context.mounted) {
       // Check if upload was successful
       final state = ref.read(recordingNotifierProvider);
       final jobId = result['jobId'] as String?;
 
-      print('[RecordingButton] Final state - JobId: $jobId, Error: ${state.errorMessage}');
-
       if (jobId != null) {
         // Recording uploaded successfully and being processed
-        print('[RecordingButton] Recording uploaded successfully with job ID: $jobId');
-
         // Close the dialog immediately - just like file upload does
         if (context.mounted) {
           Navigator.of(context).pop();
@@ -271,7 +263,6 @@ class RecordingButton extends ConsumerWidget {
         // The progress overlay will automatically show via WebSocket tracking
         // No need to show any snackbar - the overlay handles it
       } else if (state.errorMessage != null) {
-        print('[RecordingButton] Recording failed: ${state.errorMessage}');
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -282,7 +273,6 @@ class RecordingButton extends ConsumerWidget {
           );
         }
       } else {
-        print('[RecordingButton] Recording saved but no job ID');
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -292,8 +282,6 @@ class RecordingButton extends ConsumerWidget {
           );
         }
       }
-    } else {
-      print('[RecordingButton] No result returned or context not mounted');
     }
   }
   

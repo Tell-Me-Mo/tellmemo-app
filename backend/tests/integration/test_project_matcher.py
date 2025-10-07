@@ -46,7 +46,7 @@ class TestProjectMatcher:
         """Test that matcher uses existing project when AI suggests a duplicate name."""
         # Arrange - Create an existing project
         create_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Marketing Campaign"}
         )
         assert create_response.status_code == 201

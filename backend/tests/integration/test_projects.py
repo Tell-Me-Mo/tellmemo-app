@@ -244,7 +244,7 @@ class TestProjectList:
 
         # Act
         response = await authenticated_org_client.get(
-            "/api/v1/projects?status=active"
+            "/api/v1/projects/?status=active"
         )
 
         # Assert
@@ -272,7 +272,7 @@ class TestProjectList:
 
         # Act
         response = await authenticated_org_client.get(
-            "/api/v1/projects?status=archived"
+            "/api/v1/projects/?status=archived"
         )
 
         # Assert
@@ -291,7 +291,7 @@ class TestProjectList:
         """Test that invalid status filter returns 400."""
         # Act
         response = await authenticated_org_client.get(
-            "/api/v1/projects?status=invalid"
+            "/api/v1/projects/?status=invalid"
         )
 
         # Assert

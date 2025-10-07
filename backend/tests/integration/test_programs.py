@@ -257,7 +257,7 @@ class TestProgramListing:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/v1/programs?portfolio_id={portfolio.id}"
+            f"/api/v1/programs/?portfolio_id={portfolio.id}"
         )
 
         # Assert
@@ -284,7 +284,7 @@ class TestProgramListing:
         await db_session.commit()
 
         # Act
-        response = await authenticated_org_client.get("/api/v1/programs?skip=2&limit=2")
+        response = await authenticated_org_client.get("/api/v1/programs/?skip=2&limit=2")
 
         # Assert
         assert response.status_code == 200

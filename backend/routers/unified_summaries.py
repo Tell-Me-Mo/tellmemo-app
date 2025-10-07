@@ -71,7 +71,7 @@ class UnifiedSummaryResponse(BaseModel):
 class SummaryFilters(BaseModel):
     """Filters for querying summaries."""
     entity_type: Optional[Literal["project", "program", "portfolio"]] = None
-    entity_id: Optional[str] = None
+    entity_id: Optional[str] = Field(None, description="Entity UUID or 'auto' to return all summaries for the organization")
     summary_type: Optional[str] = None
     format: Optional[str] = None
     created_after: Optional[datetime] = None
@@ -456,7 +456,7 @@ async def list_summaries(
                         conditions.append(Summary.portfolio_id == entity_uuid)
                 except ValueError:
                     logger.error(f"Invalid entity_id format: {sanitize_for_log(filters.entity_id)}")
-                    raise HTTPException(status_code=400, detail=f"Invalid entity_id format. Expected UUID, got: {filters.entity_id}")
+                    raise HTTPException(status_code=400, detail="Invalid entity_id format. Expected UUID or 'auto'")
 
         if filters.summary_type:
             try:

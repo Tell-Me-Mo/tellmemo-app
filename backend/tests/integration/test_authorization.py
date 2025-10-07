@@ -310,7 +310,7 @@ class TestMultiTenantDataIsolation:
 
         # Act: Get projects
         response = await client.get(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             headers={
                 "Authorization": f"Bearer {user_token}",
                 "X-Organization-Id": str(test_organization.id)
@@ -422,7 +422,7 @@ class TestMultiTenantDataIsolation:
 
         # Act: Get projects for org1
         response1 = await client.get(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             headers={
                 "Authorization": f"Bearer {user_token}",
                 "X-Organization-Id": str(test_organization.id)
@@ -431,7 +431,7 @@ class TestMultiTenantDataIsolation:
 
         # Act: Get projects for org2
         response2 = await client.get(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             headers={
                 "Authorization": f"Bearer {user_token}",
                 "X-Organization-Id": str(org2.id)
@@ -471,7 +471,7 @@ class TestAuthorizationEdgeCases:
     ):
         """Unauthenticated requests should be rejected."""
         # Act: Request without token
-        response = await client.get("/api/v1/projects")
+        response = await client.get("/api/v1/projects/")
 
         # Assert: Should be 401 or 403 depending on middleware behavior
         assert response.status_code in [401, 403]
@@ -483,7 +483,7 @@ class TestAuthorizationEdgeCases:
         """Invalid JWT token should be rejected."""
         # Act: Request with invalid token
         response = await client.get(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             headers={"Authorization": "Bearer invalid.token.here"}
         )
 
@@ -514,7 +514,7 @@ class TestAuthorizationEdgeCases:
 
         # Act: Request with expired token
         response = await client.get(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             headers={"Authorization": f"Bearer {expired_token}"}
         )
 
@@ -548,7 +548,7 @@ class TestAuthorizationEdgeCases:
 
         # Act: Try to access protected endpoint
         response = await client.get(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             headers={"Authorization": f"Bearer {orphan_token}"}
         )
 
