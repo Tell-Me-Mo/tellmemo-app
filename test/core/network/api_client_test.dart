@@ -60,11 +60,11 @@ void main() {
         },
       ];
 
-      when(mockDio.get('/api/projects')).thenAnswer(
+      when(mockDio.get('/api/v1/projects')).thenAnswer(
         (_) async => Response(
           data: projectsData,
           statusCode: 200,
-          requestOptions: RequestOptions(path: '/api/projects'),
+          requestOptions: RequestOptions(path: '/api/v1/projects'),
         ),
       );
 
@@ -78,7 +78,7 @@ void main() {
       expect(result[0].name, 'Project A');
       expect(result[1].id, '2');
       expect(result[1].name, 'Project B');
-      verify(mockDio.get('/api/projects')).called(1);
+      verify(mockDio.get('/api/v1/projects')).called(1);
     });
 
     test('getProject returns single ProjectModel', () async {
@@ -92,11 +92,11 @@ void main() {
         'updated_at': '2024-01-01T00:00:00Z',
       };
 
-      when(mockDio.get('/api/projects/123')).thenAnswer(
+      when(mockDio.get('/api/v1/projects/123')).thenAnswer(
         (_) async => Response(
           data: projectData,
           statusCode: 200,
-          requestOptions: RequestOptions(path: '/api/projects/123'),
+          requestOptions: RequestOptions(path: '/api/v1/projects/123'),
         ),
       );
 
@@ -107,7 +107,7 @@ void main() {
       expect(result, isA<ProjectModel>());
       expect(result.id, '123');
       expect(result.name, 'Test Project');
-      verify(mockDio.get('/api/projects/123')).called(1);
+      verify(mockDio.get('/api/v1/projects/123')).called(1);
     });
   });
 
@@ -128,11 +128,11 @@ void main() {
         'updated_at': '2024-01-01T00:00:00Z',
       };
 
-      when(mockDio.post('/api/projects', data: projectRequest)).thenAnswer(
+      when(mockDio.post('/api/v1/projects', data: projectRequest)).thenAnswer(
         (_) async => Response(
           data: projectResponse,
           statusCode: 201,
-          requestOptions: RequestOptions(path: '/api/projects'),
+          requestOptions: RequestOptions(path: '/api/v1/projects'),
         ),
       );
 
@@ -143,20 +143,20 @@ void main() {
       expect(result, isA<ProjectModel>());
       expect(result.id, 'new-123');
       expect(result.name, 'New Project');
-      verify(mockDio.post('/api/projects', data: projectRequest)).called(1);
+      verify(mockDio.post('/api/v1/projects', data: projectRequest)).called(1);
     });
 
     test('createProject throws Exception with 409 conflict error', () async {
       // Arrange
       final projectRequest = {'name': 'Duplicate Project'};
 
-      when(mockDio.post('/api/projects', data: projectRequest)).thenThrow(
+      when(mockDio.post('/api/v1/projects', data: projectRequest)).thenThrow(
         DioException(
-          requestOptions: RequestOptions(path: '/api/projects'),
+          requestOptions: RequestOptions(path: '/api/v1/projects'),
           response: Response(
             data: {'detail': 'Project name already exists'},
             statusCode: 409,
-            requestOptions: RequestOptions(path: '/api/projects'),
+            requestOptions: RequestOptions(path: '/api/v1/projects'),
           ),
         ),
       );
@@ -176,13 +176,13 @@ void main() {
       // Arrange
       final projectRequest = {'name': 'Test Project'};
 
-      when(mockDio.post('/api/projects', data: projectRequest)).thenThrow(
+      when(mockDio.post('/api/v1/projects', data: projectRequest)).thenThrow(
         DioException(
-          requestOptions: RequestOptions(path: '/api/projects'),
+          requestOptions: RequestOptions(path: '/api/v1/projects'),
           response: Response(
             data: {'detail': 'Internal server error'},
             statusCode: 500,
-            requestOptions: RequestOptions(path: '/api/projects'),
+            requestOptions: RequestOptions(path: '/api/v1/projects'),
           ),
         ),
       );
@@ -212,11 +212,11 @@ void main() {
         'updated_at': '2024-01-02T00:00:00Z',
       };
 
-      when(mockDio.put('/api/projects/123', data: updateRequest)).thenAnswer(
+      when(mockDio.put('/api/v1/projects/123', data: updateRequest)).thenAnswer(
         (_) async => Response(
           data: updateResponse,
           statusCode: 200,
-          requestOptions: RequestOptions(path: '/api/projects/123'),
+          requestOptions: RequestOptions(path: '/api/v1/projects/123'),
         ),
       );
 
@@ -226,20 +226,20 @@ void main() {
       // Assert
       expect(result, isA<ProjectModel>());
       expect(result.name, 'Updated Project');
-      verify(mockDio.put('/api/projects/123', data: updateRequest)).called(1);
+      verify(mockDio.put('/api/v1/projects/123', data: updateRequest)).called(1);
     });
 
     test('updateProject throws Exception with 409 conflict error', () async {
       // Arrange
       final updateRequest = {'name': 'Duplicate Name'};
 
-      when(mockDio.put('/api/projects/123', data: updateRequest)).thenThrow(
+      when(mockDio.put('/api/v1/projects/123', data: updateRequest)).thenThrow(
         DioException(
-          requestOptions: RequestOptions(path: '/api/projects/123'),
+          requestOptions: RequestOptions(path: '/api/v1/projects/123'),
           response: Response(
             data: {'detail': 'Project name already exists'},
             statusCode: 409,
-            requestOptions: RequestOptions(path: '/api/projects/123'),
+            requestOptions: RequestOptions(path: '/api/v1/projects/123'),
           ),
         ),
       );
@@ -255,11 +255,11 @@ void main() {
   group('ApiClient - Projects PATCH', () {
     test('archiveProject completes successfully', () async {
       // Arrange
-      when(mockDio.patch('/api/projects/123/archive')).thenAnswer(
+      when(mockDio.patch('/api/v1/projects/123/archive')).thenAnswer(
         (_) async => Response(
           data: null,
           statusCode: 204,
-          requestOptions: RequestOptions(path: '/api/projects/123/archive'),
+          requestOptions: RequestOptions(path: '/api/v1/projects/123/archive'),
         ),
       );
 
@@ -267,16 +267,16 @@ void main() {
       await apiClient.archiveProject('123');
 
       // Assert
-      verify(mockDio.patch('/api/projects/123/archive')).called(1);
+      verify(mockDio.patch('/api/v1/projects/123/archive')).called(1);
     });
 
     test('restoreProject completes successfully', () async {
       // Arrange
-      when(mockDio.patch('/api/projects/123/restore')).thenAnswer(
+      when(mockDio.patch('/api/v1/projects/123/restore')).thenAnswer(
         (_) async => Response(
           data: null,
           statusCode: 204,
-          requestOptions: RequestOptions(path: '/api/projects/123/restore'),
+          requestOptions: RequestOptions(path: '/api/v1/projects/123/restore'),
         ),
       );
 
@@ -284,7 +284,7 @@ void main() {
       await apiClient.restoreProject('123');
 
       // Assert
-      verify(mockDio.patch('/api/projects/123/restore')).called(1);
+      verify(mockDio.patch('/api/v1/projects/123/restore')).called(1);
     });
   });
 

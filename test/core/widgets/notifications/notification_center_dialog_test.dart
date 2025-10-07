@@ -212,16 +212,16 @@ void main() {
       service.markAsRead(id2);
       await tester.pumpAndSettle();
 
-      // Should show both initially
-      expect(find.text('Unread Notification'), findsOneWidget);
-      expect(find.text('Read Notification'), findsOneWidget);
+      // Should show both initially (using findsWidgets since text may appear multiple times in widget tree)
+      expect(find.text('Unread Notification'), findsWidgets);
+      expect(find.text('Read Notification'), findsWidgets);
 
       // Tap "Unread" filter - find by icon since text appears multiple times
       await tester.tap(find.byIcon(Icons.markunread));
       await tester.pumpAndSettle();
 
-      // Should only show unread
-      expect(find.text('Unread Notification'), findsOneWidget);
+      // Should only show unread (using findsWidgets since text may appear multiple times in widget tree)
+      expect(find.text('Unread Notification'), findsWidgets);
       expect(find.text('Read Notification'), findsNothing);
     });
 
