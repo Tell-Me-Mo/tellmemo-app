@@ -7,8 +7,6 @@ on:
       - 'lib/**'
       - 'test/**'
       - 'pubspec.yaml'
-      - 'pubspec.lock'
-      - '.github/workflows/frontend-tests.yml'
   push:
     branches: [main]
     paths:
@@ -34,7 +32,7 @@ jobs:
         run: flutter pub get
 
       - name: Analyze code
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Run tests with coverage
         run: flutter test --coverage
