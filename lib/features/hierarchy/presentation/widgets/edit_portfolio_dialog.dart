@@ -475,6 +475,7 @@ class _HealthStatusDropdown extends StatelessWidget {
   Widget build(BuildContext context) {
     return DropdownButtonFormField<HealthStatus>(
       value: value,
+      isExpanded: true,
       decoration: InputDecoration(
         labelText: 'Health Status',
         prefixIcon: Icon(

@@ -14,7 +14,7 @@ sqlalchemy[asyncio]==2.0.43
 alembic==1.16.5
 
 # Validation & Settings
-pydantic==2.11.9
+pydantic==2.11.10
 pydantic-settings==2.11.0
 email-validator==2.3.0
 python-dotenv==1.1.1

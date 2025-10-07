@@ -56,6 +56,7 @@ class NotificationService extends StateNotifier<NotificationState> {
   final Map<String, Timer> _autoDissmissTimers = {};
   static const int _maxHistorySize = 100;
   static const int _maxActiveSize = 5;
+  int _idCounter = 0; // Counter to ensure unique IDs
 
   NotificationService() : super(NotificationState());
 
@@ -118,7 +119,8 @@ class NotificationService extends StateNotifier<NotificationState> {
     bool showInCenter = true,
     bool showAsToast = true,
   }) {
-    final id = DateTime.now().millisecondsSinceEpoch.toString();
+    // Generate unique ID using timestamp + counter to avoid collisions
+    final id = '${DateTime.now().millisecondsSinceEpoch}_${_idCounter++}';
 
     final notification = AppNotification(
       id: id,

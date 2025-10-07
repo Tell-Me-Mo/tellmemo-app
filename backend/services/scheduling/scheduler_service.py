@@ -11,7 +11,7 @@ from sqlalchemy import select
 from db.database import get_db
 from models.project import Project, ProjectStatus
 from services.summaries.summary_service_refactored import SummaryService
-from utils.logger import get_logger
+from utils.logger import get_logger, sanitize_for_log
 from utils.monitoring import monitor_operation, track_background_task
 
 logger = get_logger(__name__)
@@ -251,24 +251,67 @@ class SchedulerService:
     ):
         """
         Reschedule the weekly report generation time.
-        
+        If the job doesn't exist, it will be created.
+
         Args:
             day_of_week: Day of week (mon, tue, wed, thu, fri, sat, sun)
             hour: Hour (0-23)
             minute: Minute (0-59)
+
+        Returns:
+            datetime: Next run time of the job
         """
-        self.scheduler.reschedule_job(
-            job_id='weekly_reports',
-            trigger=CronTrigger(
-                day_of_week=day_of_week,
-                hour=hour,
-                minute=minute,
-                timezone='UTC'
+        trigger = CronTrigger(
+            day_of_week=day_of_week,
+            hour=hour,
+            minute=minute,
+            timezone='UTC'
+        )
+
+        # Check if job exists
+        existing_job = self.scheduler.get_job('weekly_reports')
+
+        if existing_job:
+            # Reschedule existing job
+            self.scheduler.reschedule_job(
+                job_id='weekly_reports',
+                trigger=trigger
             )
-        )
-        logger.info(
-            f"Rescheduled weekly reports to {day_of_week.upper()} at {hour:02d}:{minute:02d} UTC"
-        )
+            # Sanitize all user inputs before logging
+            safe_day = sanitize_for_log(day_of_week).upper()
+            safe_hour = sanitize_for_log(hour)
+            safe_minute = sanitize_for_log(minute)
+            logger.info(
+                f"Rescheduled weekly reports to {safe_day} at {safe_hour}:{safe_minute} UTC"
+            )
+        else:
+            # Add new job
+            self.scheduler.add_job(
+                func=self._generate_weekly_reports,
+                trigger=trigger,
+                id='weekly_reports',
+                name='Generate Weekly Reports',
+                replace_existing=True
+            )
+            # Sanitize all user inputs before logging
+            safe_day = sanitize_for_log(day_of_week).upper()
+            safe_hour = sanitize_for_log(hour)
+            safe_minute = sanitize_for_log(minute)
+            logger.info(
+                f"Created weekly reports job scheduled for {safe_day} at {safe_hour}:{safe_minute} UTC"
+            )
+
+        # Get the next run time
+        job = self.scheduler.get_job('weekly_reports')
+        if job:
+            # If scheduler is running, return the actual next_run_time
+            if hasattr(job, 'next_run_time') and job.next_run_time:
+                return job.next_run_time
+            # If scheduler isn't running (e.g., in tests), compute next run time from trigger
+            elif hasattr(job, 'trigger'):
+                from datetime import datetime
+                return job.trigger.get_next_fire_time(None, datetime.now(job.trigger.timezone))
+        return None
 
 
 # Global scheduler instance

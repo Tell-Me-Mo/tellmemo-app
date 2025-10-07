@@ -51,7 +51,7 @@ class _AIBrainConfigDialogState extends ConsumerState<AIBrainConfigDialog> {
 
     try {
       final response = await DioClient.instance.post(
-        '/api/integrations/ai_brain/test',
+        '/api/v1/integrations/ai_brain/test',
         data: {
           'api_key': _apiKeyController.text.trim(),
           'custom_settings': {
@@ -106,7 +106,7 @@ class _AIBrainConfigDialogState extends ConsumerState<AIBrainConfigDialog> {
 
     try {
       await DioClient.instance.post(
-        '/api/integrations/ai_brain/connect',
+        '/api/v1/integrations/ai_brain/connect',
         data: {
           'api_key': _apiKeyController.text.trim(),
           'auto_sync': false,

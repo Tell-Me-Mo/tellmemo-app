@@ -57,10 +57,10 @@ class FormValidators {
     if (value == null || value.trim().isEmpty) {
       return null; // URL is optional
     }
-    
+
     try {
       final uri = Uri.parse(value.trim());
-      if (!uri.hasScheme || !uri.hasAuthority) {
+      if (!uri.hasScheme || !uri.hasAuthority || uri.host.isEmpty) {
         return 'Please enter a valid URL';
       }
       return null;

@@ -455,6 +455,44 @@ def get_correlation_id() -> str:
     return str(uuid.uuid4())
 
 
+def sanitize_for_log(value: Any) -> str:
+    """Sanitize user input for safe logging to prevent log injection attacks.
+
+    Args:
+        value: Any user-provided value
+
+    Returns:
+        Sanitized string safe for logging
+
+    Security:
+        - Removes newlines, carriage returns, and other control characters
+        - Limits string length to prevent log flooding
+        - Converts to string representation safely
+    """
+    if value is None:
+        return "None"
+
+    # Convert to string
+    str_value = str(value)
+
+    # Remove control characters (newlines, carriage returns, tabs, etc.)
+    # Keep only printable ASCII and common unicode characters
+    sanitized = "".join(
+        char if char.isprintable() or char in (" ", "\t") else f"\\x{ord(char):02x}"
+        for char in str_value
+    )
+
+    # Replace newlines and carriage returns that might have been converted
+    sanitized = sanitized.replace("\n", "\\n").replace("\r", "\\r").replace("\t", " ")
+
+    # Limit length to prevent log flooding (max 500 characters)
+    max_length = 500
+    if len(sanitized) > max_length:
+        sanitized = sanitized[:max_length] + "...[truncated]"
+
+    return sanitized
+
+
 # Cache for logger instances
 _logger_cache = {}
 
@@ -527,6 +565,7 @@ __all__ = [
     # Utilities
     'log_execution_time',
     'get_correlation_id',
+    'sanitize_for_log',
 
     # Singleton instances
     'summary_logger',

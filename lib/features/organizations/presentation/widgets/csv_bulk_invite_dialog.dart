@@ -212,10 +212,11 @@ class _CsvBulkInviteDialogState extends ConsumerState<CsvBulkInviteDialog> {
         constraints: const BoxConstraints(maxWidth: 600, maxHeight: 600),
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               // Header
               Row(
                 children: [
@@ -235,7 +236,7 @@ class _CsvBulkInviteDialogState extends ConsumerState<CsvBulkInviteDialog> {
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
               // Instructions
               Container(
@@ -281,204 +282,22 @@ class _CsvBulkInviteDialogState extends ConsumerState<CsvBulkInviteDialog> {
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
 
               // File picker or entries list
-              if (_entries.isEmpty && !_isLoading) ...[
-                InkWell(
-                  onTap: _pickCsvFile,
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(32),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: theme.colorScheme.outline,
-                        width: 2,
-                        style: BorderStyle.solid,
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.cloud_upload,
-                          size: 48,
-                          color: theme.colorScheme.primary,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Click to upload CSV file',
-                          style: theme.textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'or drag and drop',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ] else if (_isLoading) ...[
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(32),
-                    child: CircularProgressIndicator(),
-                  ),
-                ),
-              ] else ...[
-                // Default role selector
-                Row(
-                  children: [
-                    Text(
-                      'Default Role:',
-                      style: theme.textTheme.titleSmall,
-                    ),
-                    const SizedBox(width: 16),
-                    SegmentedButton<String>(
-                      segments: const [
-                        ButtonSegment(
-                          value: 'admin',
-                          label: Text('Admin'),
-                        ),
-                        ButtonSegment(
-                          value: 'member',
-                          label: Text('Member'),
-                        ),
-                        ButtonSegment(
-                          value: 'viewer',
-                          label: Text('Viewer'),
-                        ),
-                      ],
-                      selected: {_defaultRole},
-                      onSelectionChanged: (Set<String> newSelection) {
-                        setState(() {
-                          _defaultRole = newSelection.first;
-                          // Update entries without explicit role
-                          for (var entry in _entries) {
-                            if (entry.role == 'member') {
-                              entry.role = _defaultRole;
-                            }
-                          }
-                        });
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Entries list
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: theme.dividerColor),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Column(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surfaceContainer,
-                            borderRadius: const BorderRadius.vertical(top: Radius.circular(7)),
-                          ),
-                          child: Row(
-                            children: [
-                              Text(
-                                '${_entries.length} invitation${_entries.length == 1 ? '' : 's'} to send',
-                                style: theme.textTheme.titleSmall,
-                              ),
-                              const Spacer(),
-                              TextButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _entries.clear();
-                                  });
-                                },
-                                child: const Text('Clear All'),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: ListView.separated(
-                            shrinkWrap: true,
-                            itemCount: _entries.length,
-                            separatorBuilder: (context, index) => const Divider(height: 1),
-                            itemBuilder: (context, index) {
-                              final entry = _entries[index];
-                              final hasError = _failureReasons.containsKey(entry.email);
-
-                              return ListTile(
-                                dense: true,
-                                leading: CircleAvatar(
-                                  radius: 16,
-                                  backgroundColor: hasError
-                                      ? Colors.red.withValues(alpha: 0.1)
-                                      : theme.colorScheme.primaryContainer,
-                                  child: Text(
-                                    entry.email[0].toUpperCase(),
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: hasError
-                                          ? Colors.red
-                                          : theme.colorScheme.onPrimaryContainer,
-                                    ),
-                                  ),
-                                ),
-                                title: Text(
-                                  entry.email,
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: hasError ? Colors.red : null,
-                                  ),
-                                ),
-                                subtitle: hasError
-                                    ? Text(
-                                        _failureReasons[entry.email] ?? 'Failed',
-                                        style: TextStyle(
-                                          color: Colors.red.shade700,
-                                          fontSize: 12,
-                                        ),
-                                      )
-                                    : entry.name != null
-                                        ? Text(
-                                            entry.name!,
-                                            style: theme.textTheme.bodySmall,
-                                          )
-                                        : null,
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Chip(
-                                      label: Text(
-                                        entry.role.toUpperCase(),
-                                        style: const TextStyle(fontSize: 11),
-                                      ),
-                                      visualDensity: VisualDensity.compact,
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.close, size: 18),
-                                      onPressed: () {
-                                        setState(() {
-                                          _entries.removeAt(index);
-                                        });
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 300, minHeight: 200),
+                child: _entries.isEmpty && !_isLoading
+                    ? _buildUploadArea(theme)
+                    : _isLoading
+                        ? const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(32),
+                              child: CircularProgressIndicator(),
+                            ),
+                          )
+                        : _buildEntriesList(theme),
+              ),
 
               // Error message
               if (_errorMessage != null) ...[
@@ -519,12 +338,12 @@ class _CsvBulkInviteDialogState extends ConsumerState<CsvBulkInviteDialog> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Sending invitations... ($_successCount/${ _entries.length})',
+                  'Sending invitations... ($_successCount/${_entries.length})',
                   style: theme.textTheme.bodySmall,
                 ),
               ],
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               // Actions
               Row(
@@ -555,9 +374,206 @@ class _CsvBulkInviteDialogState extends ConsumerState<CsvBulkInviteDialog> {
                 ],
               ),
             ],
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildUploadArea(ThemeData theme) {
+    return InkWell(
+      onTap: _pickCsvFile,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: theme.colorScheme.outline,
+            width: 2,
+            style: BorderStyle.solid,
+          ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.cloud_upload,
+              size: 48,
+              color: theme.colorScheme.primary,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Click to upload CSV file',
+              style: theme.textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'or drag and drop',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEntriesList(ThemeData theme) {
+    return Column(
+      children: [
+        // Default role selector
+        Row(
+          children: [
+            Text(
+              'Default Role:',
+              style: theme.textTheme.titleSmall,
+            ),
+            const SizedBox(width: 16),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(
+                  value: 'admin',
+                  label: Text('Admin'),
+                ),
+                ButtonSegment(
+                  value: 'member',
+                  label: Text('Member'),
+                ),
+                ButtonSegment(
+                  value: 'viewer',
+                  label: Text('Viewer'),
+                ),
+              ],
+              selected: {_defaultRole},
+              onSelectionChanged: (Set<String> newSelection) {
+                setState(() {
+                  _defaultRole = newSelection.first;
+                  // Update entries without explicit role
+                  for (var entry in _entries) {
+                    if (entry.role == 'member') {
+                      entry.role = _defaultRole;
+                    }
+                  }
+                });
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Entries list
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: theme.dividerColor),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainer,
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(7)),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(
+                        '${_entries.length} invitation${_entries.length == 1 ? '' : 's'} to send',
+                        style: theme.textTheme.titleSmall,
+                      ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            _entries.clear();
+                          });
+                        },
+                        child: const Text('Clear All'),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: _entries.length,
+                    separatorBuilder: (context, index) => const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final entry = _entries[index];
+                      final hasError = _failureReasons.containsKey(entry.email);
+
+                      return ListTile(
+                        dense: true,
+                        leading: CircleAvatar(
+                          radius: 16,
+                          backgroundColor: hasError
+                              ? Colors.red.withValues(alpha: 0.1)
+                              : theme.colorScheme.primaryContainer,
+                          child: Text(
+                            entry.email[0].toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: hasError
+                                  ? Colors.red
+                                  : theme.colorScheme.onPrimaryContainer,
+                            ),
+                          ),
+                        ),
+                        title: Text(
+                          entry.email,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: hasError ? Colors.red : null,
+                          ),
+                        ),
+                        subtitle: hasError
+                            ? Text(
+                                _failureReasons[entry.email] ?? 'Failed',
+                                style: TextStyle(
+                                  color: Colors.red.shade700,
+                                  fontSize: 12,
+                                ),
+                              )
+                            : entry.name != null
+                                ? Text(
+                                    entry.name!,
+                                    style: theme.textTheme.bodySmall,
+                                  )
+                                : null,
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Chip(
+                              label: Text(
+                                entry.role.toUpperCase(),
+                                style: const TextStyle(fontSize: 11),
+                              ),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close, size: 18),
+                              onPressed: () {
+                                setState(() {
+                                  _entries.removeAt(index);
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

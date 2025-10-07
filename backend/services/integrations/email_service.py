@@ -10,6 +10,7 @@ For custom emails (like weekly reports), we can use Edge Functions or external p
 """
 
 import logging
+from utils.logger import sanitize_for_log
 from typing import Optional, Dict, Any
 from datetime import datetime
 import os

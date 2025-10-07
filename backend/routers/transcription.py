@@ -20,6 +20,7 @@ from sqlalchemy import select
 from db.database import get_db
 from dependencies.auth import get_current_organization
 from models.organization import Organization
+from utils.logger import sanitize_for_log
 from services.transcription.whisper_service import get_whisper_service
 from services.transcription.salad_transcription_service import get_salad_service
 from services.core.content_service import ContentService
@@ -32,7 +33,7 @@ from config import get_settings
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api", tags=["transcription"])
+router = APIRouter(prefix="/api/v1", tags=["transcription"])
 
 
 async def process_audio_transcription(
@@ -140,7 +141,7 @@ async def process_audio_transcription(
                         progress_callback=transcription_progress
                     )
                 except Exception as e:
-                    raise Exception(f"Salad API error: {str(e)}")
+                    raise Exception("Salad API transcription failed")
             else:
                 # Use local Whisper service
                 whisper_service = get_whisper_service()
@@ -273,12 +274,12 @@ async def process_audio_transcription(
                     )
 
                 except Exception as e:
-                    logger.error(f"Failed to save to database: {e}")
+                    logger.error(f"Failed to save to database: {sanitize_for_log(str(e))}")
                     raise
 
     except Exception as e:
-        logger.error(f"Transcription background task error: {e}", exc_info=True)
-        await upload_job_service.fail_job(job_id, str(e))
+        logger.error(f"Transcription background task error: {sanitize_for_log(str(e))}", exc_info=True)
+        await upload_job_service.fail_job(job_id, "Transcription failed")
     finally:
         # Clean up temp file
         try:
@@ -286,7 +287,7 @@ async def process_audio_transcription(
                 os.unlink(temp_file_path)
                 logger.info(f"Cleaned up temp file: {temp_file_path}")
         except Exception as e:
-            logger.warning(f"Failed to delete temp file: {e}")
+            logger.warning(f"Failed to delete temp file: {sanitize_for_log(str(e))}")
 
 
 @router.post("/transcribe")
@@ -357,6 +358,43 @@ async def transcribe_audio(
 
         logger.info(f"Received audio file: {audio_file.filename}, size: {file_size} bytes")
 
+        # Validate project ownership (multi-tenant isolation)
+        # Skip validation only if using AI matching with "auto" project_id
+        if project_id != "auto" or not use_ai_matching:
+            try:
+                # Convert project_id to UUID and validate it belongs to current organization
+                project_uuid = uuid.UUID(project_id)
+
+                # Query project with organization check
+                from models.project import Project
+                result = await db.execute(
+                    select(Project).where(
+                        Project.id == project_uuid,
+                        Project.organization_id == current_org.id
+                    )
+                )
+                project = result.scalar_one_or_none()
+
+                if not project:
+                    # Clean up temp file before returning error
+                    if temp_file_path and os.path.exists(temp_file_path):
+                        os.unlink(temp_file_path)
+                    raise HTTPException(
+                        status_code=404,
+                        detail="Project not found"
+                    )
+
+                logger.info(f"Project validation passed: {project_uuid} belongs to org {current_org.id}")
+
+            except ValueError:
+                # Invalid UUID format
+                if temp_file_path and os.path.exists(temp_file_path):
+                    os.unlink(temp_file_path)
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid project_id format"
+                )
+
         # Create job for tracking transcription and processing progress
         job_id = upload_job_service.create_job(
             project_id=project_id,
@@ -412,10 +450,10 @@ async def transcribe_audio(
             await upload_job_service.fail_job(job_id, "Transcription failed")
         raise
     except Exception as e:
-        logger.error(f"Transcription error: {e}", exc_info=True)
+        logger.error(f"Transcription error: {sanitize_for_log(str(e))}", exc_info=True)
         # Update job as failed if exists
         if 'job_id' in locals():
-            await upload_job_service.fail_job(job_id, str(e))
+            await upload_job_service.fail_job(job_id, "Transcription failed")
         # Clean up temp file if it exists
         if temp_file_path and os.path.exists(temp_file_path):
             try:
@@ -479,11 +517,11 @@ async def check_transcription_health():
             "service": "transcription"
         })
     except Exception as e:
-        logger.error(f"Health check failed: {e}")
+        logger.error(f"Health check failed: {sanitize_for_log(str(e))}", exc_info=True)
         return JSONResponse(
             status_code=503,
             content={
                 "status": "unhealthy",
-                "error": str(e)
+                "error": "Service health check failed"
             }
         )

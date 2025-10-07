@@ -29,13 +29,11 @@ class _ActivityTimelineState extends ConsumerState<ActivityTimeline> {
     });
   }
 
-  @override
-  void dispose() {
-    if (!widget.compact) {
-      ref.read(activityProvider.notifier).stopPolling();
-    }
-    super.dispose();
-  }
+  // Note: Timer cleanup is handled by the provider's autoDispose mechanism
+  // in activity_provider.dart. The provider's ref.onDispose() callback
+  // calls stopPolling() automatically when the provider is disposed.
+  // Do NOT manually call ref.read() in dispose() as it causes
+  // "Cannot use ref after widget was disposed" error.
 
   @override
   Widget build(BuildContext context) {

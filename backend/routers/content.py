@@ -15,7 +15,7 @@ from services.core.content_service import ContentService
 from services.core.upload_job_service import upload_job_service, JobType
 from services.observability.langfuse_service import langfuse_service
 from services.intelligence.project_matcher_service import project_matcher_service
-from utils.logger import get_logger
+from utils.logger import get_logger, sanitize_for_log
 from config import get_settings
 
 settings = get_settings()
@@ -218,8 +218,8 @@ async def upload_content(
                             "file_size": file_size
                         }
                     )
-                
-                logger.info(f"Successfully uploaded content {content.id} for project {project_id}")
+
+                logger.info(f"Successfully uploaded content {content.id} for project {sanitize_for_log(project_id)}")
                 
                 # Prepare response message
                 if project_match_info:
@@ -238,7 +238,9 @@ async def upload_content(
                     chunk_count=0,  # Will be updated after processing
                     job_id=job_id
                 )
-                
+
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
             except HTTPException:
                 raise
             except Exception as e:
@@ -303,8 +305,8 @@ async def upload_content(
             
             # Trigger async processing with job tracking
             await ContentService.trigger_async_processing(content.id, job_id)
-            
-            logger.info(f"Successfully uploaded content {content.id} for project {project_id}")
+
+            logger.info(f"Successfully uploaded content {content.id} for project {sanitize_for_log(project_id)}")
             
             return UploadResponse(
                 id=str(content.id),
@@ -411,7 +413,7 @@ async def upload_text_content(
         # Create job for tracking
         content_size = len(request.content.encode('utf-8'))
         job_metadata = {"content_id": str(content.id), "title": request.title}
-        if 'project_match_info' in locals() and project_match_info:
+        if project_match_info:
             job_metadata.update({
                 "ai_matched": True,
                 "is_new_project": project_match_info['is_new'],
@@ -430,11 +432,11 @@ async def upload_text_content(
         
         # Trigger async processing with job tracking
         await ContentService.trigger_async_processing(content.id, job_id)
-        
-        logger.info(f"Successfully uploaded text content {content.id} for project {project_id}")
-        
+
+        logger.info(f"Successfully uploaded text content {content.id} for project {sanitize_for_log(project_id)}")
+
         # Prepare response message
-        if 'project_match_info' in locals() and project_match_info:
+        if project_match_info:
             message = f"Content uploaded and {'assigned to new' if project_match_info['is_new'] else 'matched to existing'} project: {project_match_info['project_name']}"
         else:
             message = "Content uploaded successfully and queued for processing"

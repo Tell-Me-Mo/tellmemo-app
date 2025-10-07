@@ -336,6 +336,7 @@ class _CreateTaskDialogState extends ConsumerState<CreateTaskDialog> {
                                 const SizedBox(height: 8),
                                 DropdownButtonFormField<TaskStatus>(
                                   value: _selectedStatus,
+                                  isExpanded: true,
                                   menuMaxHeight: 300,
                                   borderRadius: BorderRadius.circular(12),
                                   elevation: 8,
@@ -386,7 +387,12 @@ class _CreateTaskDialogState extends ConsumerState<CreateTaskDialog> {
                                             ),
                                           ),
                                           const SizedBox(width: 8),
-                                          Text(task.statusLabel),
+                                          Flexible(
+                                            child: Text(
+                                              task.statusLabel,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
                                         ],
                                       ),
                                     );
@@ -414,6 +420,7 @@ class _CreateTaskDialogState extends ConsumerState<CreateTaskDialog> {
                                 const SizedBox(height: 8),
                                 DropdownButtonFormField<TaskPriority>(
                                   value: _selectedPriority,
+                                  isExpanded: true,
                                   menuMaxHeight: 300,
                                   borderRadius: BorderRadius.circular(12),
                                   elevation: 8,
@@ -461,7 +468,12 @@ class _CreateTaskDialogState extends ConsumerState<CreateTaskDialog> {
                                             color: TaskUIHelpers.getPriorityColor(priority),
                                           ),
                                           const SizedBox(width: 8),
-                                          Text(task.priorityLabel),
+                                          Flexible(
+                                            child: Text(
+                                              task.priorityLabel,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
                                         ],
                                       ),
                                     );

@@ -313,6 +313,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.11"
+  desktop_drop:
+    dependency: "direct main"
+    description:
+      name: desktop_drop
+      sha256: "927511f590ce01ee90d0d80f79bc71b9c919d8522d01e495e89a00c6f4a4fb5b"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.6.1"
   diffutil_dart:
     dependency: transitive
     description:
@@ -329,6 +337,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "5.9.0"
+  dio_retry_plus:
+    dependency: "direct main"
+    description:
+      name: dio_retry_plus
+      sha256: "1e94acc930e3fb58d81e2002f60bb0eed3c6a9844f5fce83a870ecf6229ebe97"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.8"
   dio_web_adapter:
     dependency: transitive
     description:
@@ -346,7 +362,7 @@ packages:
     source: hosted
     version: "2.0.7"
   fake_async:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: fake_async
       sha256: "5368f224a74523e8d2e7399ea1638b37aecfca824a3cc4dfdf77bf1fa905ac44"
@@ -1484,6 +1500,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.0"
+  universal_platform:
+    dependency: transitive
+    description:
+      name: universal_platform
+      sha256: "64e16458a0ea9b99260ceb5467a214c1f298d647c659af1bff6d3bf82536b1ec"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.0"
   url_launcher:
     dependency: transitive
     description:

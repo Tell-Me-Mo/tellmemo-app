@@ -30,7 +30,7 @@ from services.prompts.rag_prompts import (
     get_intelligent_rag_prompt
 )
 from config import get_settings
-from utils.logger import get_logger
+from utils.logger import get_logger, sanitize_for_log
 
 logger = get_logger(__name__)
 
@@ -134,7 +134,7 @@ class EnhancedRAGService:
         # Detect if this is a context-enhanced query from conversation
         is_context_enhanced = self._detect_context_enhanced_query(question)
         if is_context_enhanced:
-            logger.info(f"Processing context-enhanced query for project {project_id}")
+            logger.info(f"Processing context-enhanced query for project {sanitize_for_log(project_id)}")
 
         # Auto-select strategy if requested
         if strategy == RAGStrategy.AUTO:
@@ -218,7 +218,7 @@ class EnhancedRAGService:
             return result
 
         except Exception as e:
-            logger.error(f"Enhanced RAG query failed for project {project_id}: {e}")
+            logger.error(f"Enhanced RAG query failed for project {sanitize_for_log(project_id)}: {e}")
             raise
 
     async def query_multiple_projects(
@@ -251,7 +251,7 @@ class EnhancedRAGService:
         if not project_ids:
             raise ValueError("project_ids cannot be empty")
 
-        logger.info(f"Querying {len(project_ids)} projects with unified search: {question[:100]}")
+        logger.info(f"Querying {sanitize_for_log(len(project_ids))} projects with unified search: {sanitize_for_log(question[:100])}")
 
         # Detect if this is a context-enhanced query
         is_context_enhanced = self._detect_context_enhanced_query(question)
@@ -331,12 +331,12 @@ class EnhancedRAGService:
         # Check cache first
         if project_id in self._org_cache:
             self._cache_hits += 1
-            logger.debug(f"Organization ID cache hit for project {project_id} (total hits: {self._cache_hits})")
+            logger.debug(f"Organization ID cache hit for project {sanitize_for_log(project_id)} (total hits: {sanitize_for_log(self._cache_hits)})")
             return self._org_cache[project_id]
 
         # Cache miss - fetch from database
         self._cache_misses += 1
-        logger.debug(f"Organization ID cache miss for project {project_id} (total misses: {self._cache_misses})")
+        logger.debug(f"Organization ID cache miss for project {sanitize_for_log(project_id)} (total misses: {sanitize_for_log(self._cache_misses)})")
 
         organization_id = None
         from db.database import get_db
@@ -346,7 +346,7 @@ class EnhancedRAGService:
                 organization_id = str(project.organization_id)
                 # Store in cache for future use
                 self._org_cache[project_id] = organization_id
-                logger.info(f"Cached organization {organization_id} for project {project_id}")
+                logger.info(f"Cached organization {sanitize_for_log(organization_id)} for project {sanitize_for_log(project_id)}")
             break
 
         if not organization_id:

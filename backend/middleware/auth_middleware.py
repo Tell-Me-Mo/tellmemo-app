@@ -54,8 +54,6 @@ class AuthMiddleware(BaseHTTPMiddleware):
         "/api/auth/logout",
         "/api/auth/refresh",  # Token refresh should be public
         "/api/auth/reset-password",
-        # Other public endpoints
-        "/api/v1/invitations/accept",  # Accept invitation with token
     ]
 
     async def dispatch(self, request: Request, call_next):

@@ -11,7 +11,7 @@ import json
 
 from sentence_transformers import SentenceTransformer, CrossEncoder
 
-from utils.logger import get_logger
+from utils.logger import get_logger, sanitize_for_log
 from utils.monitoring import monitor_operation, MonitoringContext
 from services.rag.embedding_service import embedding_service
 from services.rag.multi_query_retrieval import (
@@ -194,7 +194,7 @@ class HybridSearchService:
         if config:
             self.config = config
         
-        logger.info(f"Starting hybrid search for: '{query}'")
+        logger.info(f"Starting hybrid search for: '{sanitize_for_log(query)}'")
         
         try:
             # Stage 1: Semantic search
@@ -285,7 +285,7 @@ class HybridSearchService:
         # Get organization_id from project_id
         organization_id = await self._get_organization_id(project_id)
         if not organization_id:
-            logger.error(f"Could not determine organization for project {project_id}")
+            logger.error(f"Could not determine organization for project {sanitize_for_log(project_id)}")
             return []
 
         # Generate query embeddings at different dimensions
@@ -425,10 +425,10 @@ class HybridSearchService:
             # Use the cached organization lookup from enhanced RAG service
             from services.rag.enhanced_rag_service_refactored import enhanced_rag_service
             org_id = await enhanced_rag_service._get_organization_id(project_id)
-            logger.debug(f"Hybrid search organization lookup: project_id={project_id} -> organization_id={org_id}")
+            logger.debug(f"Hybrid search organization lookup: project_id={sanitize_for_log(project_id)} -> organization_id={sanitize_for_log(org_id)}")
             return org_id
         except Exception as e:
-            logger.error(f"Failed to get organization_id for project {project_id}: {e}")
+            logger.error(f"Failed to get organization_id for project {sanitize_for_log(project_id)}: {e}")
             return None
 
     async def _get_all_project_documents(self, project_id: str) -> List[Dict[str, Any]]:
@@ -437,7 +437,7 @@ class HybridSearchService:
             # Get organization_id from project_id
             organization_id = await self._get_organization_id(project_id)
             if not organization_id:
-                logger.error(f"Could not determine organization for project {project_id}")
+                logger.error(f"Could not determine organization for project {sanitize_for_log(project_id)}")
                 return []
 
             # Use scroll API to fetch documents without vector similarity
@@ -450,7 +450,7 @@ class HybridSearchService:
                 with_vectors=False  # Don't need vectors for keyword search
             )
 
-            logger.debug(f"Retrieved {len(results)} documents for keyword search from project {project_id}")
+            logger.debug(f"Retrieved {sanitize_for_log(len(results))} documents for keyword search from project {sanitize_for_log(project_id)}")
             return results
 
         except Exception as e:
@@ -955,7 +955,7 @@ class HybridSearchService:
                 break
 
             if not organization_id:
-                logger.error(f"Could not determine organization for project {project_id}")
+                logger.error(f"Could not determine organization for project {sanitize_for_log(project_id)}")
                 return []
 
             results = await multi_tenant_vector_store.search_vectors(

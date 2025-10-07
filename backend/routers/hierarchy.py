@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from uuid import UUID
@@ -12,7 +12,7 @@ from models.user import User
 from services.hierarchy.hierarchy_service import HierarchyService
 from utils.logger import get_logger
 
-router = APIRouter(prefix="/api/hierarchy", tags=["hierarchy"])
+router = APIRouter(prefix="/api/v1/hierarchy", tags=["hierarchy"])
 logger = get_logger(__name__)
 
 
@@ -457,7 +457,7 @@ async def get_hierarchy_path(
 @router.get("/search")
 async def search_hierarchy(
     query: str,
-    item_types: Optional[List[str]] = None,
+    item_types: Optional[List[str]] = Query(default=None),
     portfolio_id: Optional[str] = None,
     limit: int = 20,
     session: AsyncSession = Depends(get_db),
@@ -467,18 +467,190 @@ async def search_hierarchy(
 ):
     """Search across the hierarchy for items matching the query."""
     try:
+        from models.portfolio import Portfolio
+        from models.program import Program
+        from models.project import Project, ProjectStatus
+        from sqlalchemy import or_
+        from sqlalchemy.orm import selectinload
+
         if not query.strip():
             raise HTTPException(status_code=400, detail="Search query cannot be empty")
-        
-        # This would be implemented to search across portfolios, programs, and projects
-        # For now, return a placeholder response
+
+        # Validate item_types if provided
+        valid_types = {'portfolio', 'program', 'project'}
+        if item_types:
+            invalid_types = set(item_types) - valid_types
+            if invalid_types:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid item types: {', '.join(invalid_types)}. Must be one of: {', '.join(valid_types)}"
+                )
+
+        # Parse portfolio_id if provided
+        portfolio_uuid = None
+        if portfolio_id:
+            try:
+                portfolio_uuid = UUID(portfolio_id)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid portfolio ID format")
+
+        results = []
+        search_pattern = f"%{query.lower()}%"
+
+        # Search portfolios if included
+        if not item_types or 'portfolio' in item_types:
+            portfolio_query = select(Portfolio).where(
+                and_(
+                    Portfolio.organization_id == current_org.id,
+                    or_(
+                        Portfolio.name.ilike(search_pattern),
+                        Portfolio.description.ilike(search_pattern)
+                    )
+                )
+            )
+            if portfolio_uuid:
+                portfolio_query = portfolio_query.where(Portfolio.id == portfolio_uuid)
+
+            portfolio_query = portfolio_query.limit(limit)
+            portfolio_result = await session.execute(portfolio_query)
+            portfolios = portfolio_result.scalars().all()
+
+            for portfolio in portfolios:
+                results.append({
+                    'id': str(portfolio.id),
+                    'name': portfolio.name,
+                    'description': portfolio.description,
+                    'type': 'portfolio',
+                    'path': [{'id': str(portfolio.id), 'name': portfolio.name, 'type': 'portfolio'}],
+                    'created_at': portfolio.created_at.isoformat(),
+                    'updated_at': portfolio.updated_at.isoformat()
+                })
+
+        # Search programs if included
+        if not item_types or 'program' in item_types:
+            program_query = select(Program).options(
+                selectinload(Program.portfolio)
+            ).where(
+                and_(
+                    Program.organization_id == current_org.id,
+                    or_(
+                        Program.name.ilike(search_pattern),
+                        Program.description.ilike(search_pattern)
+                    )
+                )
+            )
+            if portfolio_uuid:
+                program_query = program_query.where(Program.portfolio_id == portfolio_uuid)
+
+            program_query = program_query.limit(limit)
+            program_result = await session.execute(program_query)
+            programs = program_result.scalars().all()
+
+            for program in programs:
+                path = []
+                if program.portfolio:
+                    path.append({
+                        'id': str(program.portfolio.id),
+                        'name': program.portfolio.name,
+                        'type': 'portfolio'
+                    })
+                path.append({
+                    'id': str(program.id),
+                    'name': program.name,
+                    'type': 'program'
+                })
+
+                results.append({
+                    'id': str(program.id),
+                    'name': program.name,
+                    'description': program.description,
+                    'type': 'program',
+                    'portfolio_id': str(program.portfolio_id) if program.portfolio_id else None,
+                    'path': path,
+                    'created_at': program.created_at.isoformat(),
+                    'updated_at': program.updated_at.isoformat()
+                })
+
+        # Search projects if included
+        if not item_types or 'project' in item_types:
+            project_query = select(Project).options(
+                selectinload(Project.portfolio),
+                selectinload(Project.program).selectinload(Program.portfolio)
+            ).where(
+                and_(
+                    Project.organization_id == current_org.id,
+                    Project.status != ProjectStatus.ARCHIVED,
+                    or_(
+                        Project.name.ilike(search_pattern),
+                        Project.description.ilike(search_pattern)
+                    )
+                )
+            )
+            if portfolio_uuid:
+                project_query = project_query.where(Project.portfolio_id == portfolio_uuid)
+
+            project_query = project_query.limit(limit)
+            project_result = await session.execute(project_query)
+            projects = project_result.scalars().all()
+
+            for project in projects:
+                path = []
+                portfolio = project.program.portfolio if project.program else project.portfolio
+                if portfolio:
+                    path.append({
+                        'id': str(portfolio.id),
+                        'name': portfolio.name,
+                        'type': 'portfolio'
+                    })
+                if project.program:
+                    path.append({
+                        'id': str(project.program.id),
+                        'name': project.program.name,
+                        'type': 'program'
+                    })
+                path.append({
+                    'id': str(project.id),
+                    'name': project.name,
+                    'type': 'project'
+                })
+
+                results.append({
+                    'id': str(project.id),
+                    'name': project.name,
+                    'description': project.description,
+                    'type': 'project',
+                    'status': project.status.value,
+                    'portfolio_id': str(project.portfolio_id) if project.portfolio_id else None,
+                    'program_id': str(project.program_id) if project.program_id else None,
+                    'path': path,
+                    'created_at': project.created_at.isoformat(),
+                    'updated_at': project.updated_at.isoformat()
+                })
+
+        # Sort results by relevance (exact match first, then by name)
+        def sort_key(item):
+            name_lower = item['name'].lower()
+            query_lower = query.lower()
+            if name_lower == query_lower:
+                return (0, name_lower)  # Exact match
+            elif name_lower.startswith(query_lower):
+                return (1, name_lower)  # Starts with query
+            else:
+                return (2, name_lower)  # Contains query
+
+        results.sort(key=sort_key)
+
+        # Apply limit across all result types
+        results = results[:limit]
+
         return {
             'query': query,
-            'results': [],
-            'total_count': 0,
-            'message': 'Hierarchy search functionality will be implemented'
+            'results': results,
+            'total_count': len(results),
+            'item_types_searched': item_types or ['portfolio', 'program', 'project'],
+            'portfolio_filter': portfolio_id
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:

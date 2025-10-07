@@ -36,10 +36,10 @@ class BackendAuthRepository implements AuthInterface {
   }) async {
     try {
       debugPrint('🔐 BackendAuthRepository.signUp: Starting signup for email: $email');
-      debugPrint('🔐 BackendAuthRepository.signUp: Request URL: ${_dio.options.baseUrl}/api/auth/signup');
+      debugPrint('🔐 BackendAuthRepository.signUp: Request URL: ${_dio.options.baseUrl}/api/v1/auth/signup');
       debugPrint('🔐 BackendAuthRepository.signUp: Request data: {email: $email, password: ***, metadata: $metadata}');
 
-      final response = await _dio.post('/api/auth/signup', data: {
+      final response = await _dio.post('/api/v1/auth/signup', data: {
         'email': email,
         'password': password,
         ...?metadata,
@@ -107,7 +107,7 @@ class BackendAuthRepository implements AuthInterface {
     required String password,
   }) async {
     try {
-      final response = await _dio.post('/api/auth/login', data: {
+      final response = await _dio.post('/api/v1/auth/login', data: {
         'email': email,
         'password': password,
       });
@@ -159,7 +159,7 @@ class BackendAuthRepository implements AuthInterface {
     try {
       // Call backend logout endpoint if available
       try {
-        await _dio.post('/api/auth/logout');
+        await _dio.post('/api/v1/auth/logout');
       } catch (_) {
         // Ignore backend errors during logout
       }
@@ -181,7 +181,7 @@ class BackendAuthRepository implements AuthInterface {
   @override
   Future<void> resetPassword(String email) async {
     try {
-      await _dio.post('/api/auth/reset-password', data: {
+      await _dio.post('/api/v1/auth/reset-password', data: {
         'email': email,
       });
     } on DioException catch (e) {
@@ -192,7 +192,7 @@ class BackendAuthRepository implements AuthInterface {
   @override
   Future<AuthResult> updatePassword(String newPassword) async {
     try {
-      final response = await _dio.put('/api/auth/password', data: {
+      final response = await _dio.put('/api/v1/auth/password', data: {
         'new_password': newPassword,
       });
 
@@ -217,7 +217,7 @@ class BackendAuthRepository implements AuthInterface {
     Map<String, dynamic>? data,
   }) async {
     try {
-      final response = await _dio.put('/api/auth/profile', data: {
+      final response = await _dio.put('/api/v1/auth/profile', data: {
         if (email != null) 'email': email,
         if (phone != null) 'phone': phone,
         if (data != null) ...data,
@@ -245,7 +245,7 @@ class BackendAuthRepository implements AuthInterface {
     required String token,
   }) async {
     try {
-      await _dio.post('/api/auth/verify-otp', data: {
+      await _dio.post('/api/v1/auth/verify-otp', data: {
         'email': email,
         'token': token,
       });
@@ -265,7 +265,7 @@ class BackendAuthRepository implements AuthInterface {
 
       // Verify token with backend
       try {
-        final response = await _dio.get('/api/auth/verify-token');
+        final response = await _dio.get('/api/v1/auth/verify-token');
         final data = response.data;
 
         final userId = data['user_id'] as String;
@@ -304,7 +304,7 @@ class BackendAuthRepository implements AuthInterface {
 
           try {
             // Try to refresh the token
-            final refreshResponse = await _dio.post('/api/auth/refresh', data: {
+            final refreshResponse = await _dio.post('/api/v1/auth/refresh', data: {
               'refresh_token': refreshToken,
             });
 

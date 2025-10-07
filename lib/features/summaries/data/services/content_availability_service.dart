@@ -4,7 +4,7 @@ import '../../../../core/network/dio_client.dart';
 class ContentAvailabilityService {
   final Dio _dio;
 
-  ContentAvailabilityService() : _dio = DioClient.instance;
+  ContentAvailabilityService(this._dio);
 
   /// Check content availability for an entity
   Future<ContentAvailability> checkAvailability({
@@ -23,7 +23,7 @@ class ContentAvailabilityService {
       }
 
       final response = await _dio.get(
-        '/api/content-availability/check/$entityType/$entityId',
+        '/api/v1/content-availability/check/$entityType/$entityId',
         queryParameters: queryParams,
       );
 
@@ -40,7 +40,7 @@ class ContentAvailabilityService {
   }) async {
     try {
       final response = await _dio.get(
-        '/api/content-availability/stats/$entityType/$entityId',
+        '/api/v1/content-availability/stats/$entityType/$entityId',
       );
 
       return SummaryStats.fromJson(response.data);
@@ -63,7 +63,7 @@ class ContentAvailabilityService {
       };
 
       final response = await _dio.post(
-        '/api/content-availability/batch-check',
+        '/api/v1/content-availability/batch-check',
         data: requestData,
       );
 
@@ -211,4 +211,4 @@ enum ContentSeverity {
 }
 
 // Singleton instance
-final contentAvailabilityService = ContentAvailabilityService();
+final contentAvailabilityService = ContentAvailabilityService(DioClient.instance);

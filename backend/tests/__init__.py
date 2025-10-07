@@ -1,1 +1,1 @@
-# Integration tests for PM Master V2 backend
+"""Backend test suite for PM Master V2."""

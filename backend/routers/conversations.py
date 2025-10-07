@@ -14,7 +14,7 @@ from models.conversation import Conversation
 from models.organization import Organization
 from models.user import User
 from models.project import Project
-from utils.logger import get_logger
+from utils.logger import get_logger, sanitize_for_log
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -66,7 +66,7 @@ async def get_conversations(
     Returns:
         List of conversations for the entity
     """
-    logger.info(f"Getting conversations for entity {project_id}")
+    logger.info(f"Getting conversations for entity {sanitize_for_log(project_id)}")
 
     try:
         # Handle organization-level conversations
@@ -111,7 +111,7 @@ async def get_conversations(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get conversations for entity {project_id}: {e}")
+        logger.error(f"Failed to get conversations for entity {sanitize_for_log(project_id)}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -135,7 +135,7 @@ async def create_conversation(
     Returns:
         Created conversation
     """
-    logger.info(f"Creating conversation for entity {project_id}: {request.title}")
+    logger.info(f"Creating conversation for entity {sanitize_for_log(project_id)}: {sanitize_for_log(request.title)}")
 
     try:
         # Create conversation (handle organization-level conversations)
@@ -165,7 +165,7 @@ async def create_conversation(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to create conversation for entity {project_id}: {e}")
+        logger.error(f"Failed to create conversation for entity {sanitize_for_log(project_id)}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -191,19 +191,32 @@ async def update_conversation(
     Returns:
         Updated conversation
     """
-    logger.info(f"Updating conversation {conversation_id} for project {project_id}")
+    logger.info(f"Updating conversation {sanitize_for_log(conversation_id)} for project {sanitize_for_log(project_id)}")
 
     try:
         # Verify conversation exists and belongs to the project and organization
-        result = await session.execute(
-            select(Conversation).where(
-                and_(
-                    Conversation.id == conversation_id,
-                    Conversation.project_id == project_id,
-                    Conversation.organization_id == current_org.id
+        if project_id == 'organization':
+            # Organization-level conversation
+            result = await session.execute(
+                select(Conversation).where(
+                    and_(
+                        Conversation.id == conversation_id,
+                        Conversation.project_id.is_(None),
+                        Conversation.organization_id == current_org.id
+                    )
                 )
             )
-        )
+        else:
+            # Entity-specific conversation
+            result = await session.execute(
+                select(Conversation).where(
+                    and_(
+                        Conversation.id == conversation_id,
+                        Conversation.project_id == project_id,
+                        Conversation.organization_id == current_org.id
+                    )
+                )
+            )
         conversation = result.scalar_one_or_none()
 
         if not conversation:
@@ -231,7 +244,7 @@ async def update_conversation(
 
         return ConversationResponse(
             id=str(conversation.id),
-            project_id=str(conversation.project_id),
+            project_id=str(conversation.project_id) if conversation.project_id else 'organization',
             title=conversation.title,
             messages=conversation.messages,
             created_at=conversation.created_at.isoformat(),
@@ -241,7 +254,7 @@ async def update_conversation(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to update conversation {conversation_id}: {e}")
+        logger.error(f"Failed to update conversation {sanitize_for_log(conversation_id)}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -265,7 +278,7 @@ async def delete_conversation(
     Returns:
         Success message
     """
-    logger.info(f"Deleting conversation {conversation_id} for project {project_id}")
+    logger.info(f"Deleting conversation {sanitize_for_log(conversation_id)} for project {sanitize_for_log(project_id)}")
 
     try:
         # Verify conversation exists and belongs to the project/organization
@@ -305,7 +318,7 @@ async def delete_conversation(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to delete conversation {conversation_id}: {e}")
+        logger.error(f"Failed to delete conversation {sanitize_for_log(conversation_id)}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -329,7 +342,7 @@ async def get_conversation(
     Returns:
         Conversation details
     """
-    logger.info(f"Getting conversation {conversation_id} for project {project_id}")
+    logger.info(f"Getting conversation {sanitize_for_log(conversation_id)} for project {sanitize_for_log(project_id)}")
 
     try:
         # Get conversation and update last accessed time
@@ -381,5 +394,5 @@ async def get_conversation(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get conversation {conversation_id}: {e}")
+        logger.error(f"Failed to get conversation {sanitize_for_log(conversation_id)}: {e}")
         raise HTTPException(status_code=500, detail=str(e))

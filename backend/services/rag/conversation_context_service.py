@@ -8,7 +8,7 @@ from sqlalchemy import select
 
 from models.conversation import Conversation
 from services.llm.multi_llm_client import get_multi_llm_client
-from utils.logger import get_logger
+from utils.logger import get_logger, sanitize_for_log
 
 logger = get_logger(__name__)
 
@@ -173,8 +173,8 @@ Answer only: YES or NO"""
 Question: {question}"""
 
         logger.info(f"Enhanced query created with {len(context_parts)} context pairs, {len(enhanced_query)} chars")
-        logger.debug(f"Original: {question}")
-        logger.debug(f"Enhanced: {enhanced_query[:200]}...")
+        logger.debug(f"Original: {sanitize_for_log(question)}")
+        logger.debug(f"Enhanced: {sanitize_for_log(enhanced_query[:200])}...")
 
         return enhanced_query
 
@@ -205,7 +205,7 @@ Question: {question}"""
             conversation = result.scalar_one_or_none()
 
             if not conversation:
-                logger.warning(f"Conversation {conversation_id} not found")
+                logger.warning(f"Conversation {sanitize_for_log(conversation_id)} not found")
                 return None, []
 
             messages = conversation.messages or []

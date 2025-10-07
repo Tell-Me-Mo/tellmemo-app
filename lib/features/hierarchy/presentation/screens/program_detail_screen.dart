@@ -82,7 +82,7 @@ class _ProgramDetailScreenState extends ConsumerState<ProgramDetailScreen> {
       for (final project in program.projects) {
         try {
           final response = await DioClient.instance.get(
-            '/api/projects/${project.id}/activities',
+            '/api/v1/projects/${project.id}/activities',
           );
 
           if (response.data != null && response.data is List) {
@@ -1612,7 +1612,7 @@ class _ProgramDetailScreenState extends ConsumerState<ProgramDetailScreen> {
         }) async {
           try {
             final response = await DioClient.instance.post(
-              '/api/hierarchy/program/${program.id}/summary',
+              '/api/v1/hierarchy/program/${program.id}/summary',
               data: {
                 'type': 'program',
                 'entity_id': program.id,

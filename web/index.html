@@ -35,6 +35,17 @@
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-analytics-compat.js"></script>
+
+  <!-- Prevent default browser drag-and-drop behavior -->
+  <script>
+    window.addEventListener('dragover', function(e) {
+      e.preventDefault();
+    }, false);
+
+    window.addEventListener('drop', function(e) {
+      e.preventDefault();
+    }, false);
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

@@ -102,17 +102,19 @@ class _OrganizationDropdownState extends ConsumerState<_OrganizationDropdown> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: colorScheme.outline.withValues(alpha: 0.3),
-          width: 1,
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: colorScheme.outline.withValues(alpha: 0.3),
+            width: 1,
+          ),
         ),
-      ),
-      child: DropdownButtonHideUnderline(
+        child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: widget.currentOrganization?.id,
           isDense: true,
@@ -243,6 +245,7 @@ class _OrganizationDropdownState extends ConsumerState<_OrganizationDropdown> {
           ],
           onChanged: _isSwitching ? null : _handleOrganizationChange,
         ),
+        ),
       ),
     );
   }
@@ -340,12 +343,15 @@ class _LoadingIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: const SizedBox(
-        width: 20,
-        height: 20,
-        child: CircularProgressIndicator(strokeWidth: 2),
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: const SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
       ),
     );
   }
@@ -358,21 +364,24 @@ class _ErrorIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return IconButton(
-      icon: Icon(
-        Icons.error_outline,
-        color: colorScheme.error,
-        size: 20,
+    return Material(
+      color: Colors.transparent,
+      child: IconButton(
+        icon: Icon(
+          Icons.error_outline,
+          color: colorScheme.error,
+          size: 20,
+        ),
+        onPressed: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to load organizations'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        },
+        tooltip: 'Failed to load organizations',
       ),
-      onPressed: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to load organizations'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      },
-      tooltip: 'Failed to load organizations',
     );
   }
 }

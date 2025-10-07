@@ -88,7 +88,7 @@ class AuthInterceptor extends Interceptor {
       }
     }
 
-    super.onRequest(options, handler);
+    handler.next(options);
   }
 
   @override
@@ -154,7 +154,7 @@ class AuthInterceptor extends Interceptor {
       // Call refresh endpoint
       final dio = Dio(BaseOptions(baseUrl: AppConfig.apiBaseUrl));
       final response = await dio.post(
-        '/api/auth/refresh',
+        '/api/v1/auth/refresh',
         data: {'refresh_token': refreshToken},
       );
 

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
 from uuid import UUID
@@ -13,7 +13,10 @@ from models.project import ProjectStatus
 from services.hierarchy.project_service import ProjectService
 from utils.logger import get_logger
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/api/v1/projects",
+    tags=["Projects"]
+)
 logger = get_logger(__name__)
 
 
@@ -24,7 +27,7 @@ class ProjectMemberModel(BaseModel):
 
 
 class CreateProjectRequest(BaseModel):
-    name: str
+    name: str = Field(..., min_length=1, description="Project name (cannot be empty)")
     description: Optional[str] = None
     members: Optional[List[ProjectMemberModel]] = []
     portfolio_id: Optional[str] = None
@@ -60,7 +63,7 @@ class AddMemberRequest(BaseModel):
 
 
 
-@router.post("", response_model=ProjectResponse)
+@router.post("", response_model=ProjectResponse, status_code=201)
 async def create_project(
     request: CreateProjectRequest,
     session: AsyncSession = Depends(get_db),

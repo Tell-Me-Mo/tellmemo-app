@@ -1,0 +1,13 @@
+# Testing dependencies for backend
+# Install with: pip install -r requirements-dev.txt
+
+# Test coverage
+pytest-cov>=4.1.0
+
+# Mocking and fixtures (if needed for future tests)
+pytest-mock>=3.12.0
+faker>=22.0.0
+freezegun>=1.4.0
+
+# HTTP testing
+httpx>=0.26.0

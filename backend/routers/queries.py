@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,7 +16,7 @@ from models.conversation import Conversation
 from services.rag.enhanced_rag_service_refactored import enhanced_rag_service
 from services.rag.conversation_context_service import conversation_context_service
 from services.activity.activity_service import ActivityService
-from utils.logger import get_logger
+from utils.logger import get_logger, sanitize_for_log
 import uuid
 
 router = APIRouter()
@@ -38,6 +38,7 @@ class QueryResponse(BaseModel):
 
 @router.post("/organization/query", response_model=QueryResponse)
 async def query_organization(
+    request_obj: Request,
     request: QueryRequest,
     session: AsyncSession = Depends(get_db),
     current_org: Organization = Depends(get_current_organization),
@@ -54,7 +55,7 @@ async def query_organization(
     Returns:
         QueryResponse with answer, sources, confidence, conversation_id, and is_followup
     """
-    logger.info(f"Querying organization {current_org.id}: {request.question}")
+    logger.info(f"Querying organization {sanitize_for_log(current_org.id)}: {sanitize_for_log(request.question)}")
 
     try:
         # Get all projects in this organization
@@ -98,7 +99,7 @@ async def query_organization(
                         question=request.question,
                         conversation_messages=conversation_messages
                     )
-                    logger.info(f"Enhanced follow-up question with context for conversation {request.conversation_id}")
+                    logger.info(f"Enhanced follow-up question with context for conversation {sanitize_for_log(request.conversation_id)}")
 
         # Use unified multi-project RAG query
         rag_response = await enhanced_rag_service.query_multiple_projects(
@@ -173,6 +174,7 @@ async def query_organization(
 
 @router.post("/{project_id}/query", response_model=QueryResponse)
 async def query_project(
+    request_obj: Request,
     project_id: str,
     request: QueryRequest,
     session: AsyncSession = Depends(get_db),
@@ -191,7 +193,7 @@ async def query_project(
     Returns:
         QueryResponse with answer, sources, confidence, conversation_id, and is_followup
     """
-    logger.info(f"Querying project {project_id}: {request.question}")
+    logger.info(f"Querying project {sanitize_for_log(project_id)}: {sanitize_for_log(request.question)}")
 
     try:
         # Verify project exists and belongs to current organization
@@ -235,7 +237,7 @@ async def query_project(
                         question=request.question,
                         conversation_messages=conversation_messages
                     )
-                    logger.info(f"Enhanced follow-up question with context for conversation {request.conversation_id}")
+                    logger.info(f"Enhanced follow-up question with context for conversation {sanitize_for_log(request.conversation_id)}")
 
         # Execute enhanced RAG query with context-aware question
         response = await enhanced_rag_service.query_project(
@@ -297,11 +299,11 @@ async def query_project(
             # Still commit conversation updates
             await session.commit()
 
-        logger.info(f"Query completed - conversation_id: {conversation_id}, is_followup: {is_followup}")
+        logger.info(f"Query completed - conversation_id: {sanitize_for_log(conversation_id)}, is_followup: {sanitize_for_log(is_followup)}")
 
         return QueryResponse(
             answer=response['answer'],
-            sources=response['sources'],
+            sources=response['sources'][:10],  # Limit to 10 sources for consistency
             confidence=response['confidence'],
             conversation_id=conversation_id,
             is_followup=is_followup
@@ -310,12 +312,13 @@ async def query_project(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Query failed for project {project_id}: {e}")
+        logger.error(f"Query failed for project {sanitize_for_log(project_id)}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/program/{program_id}/query", response_model=QueryResponse)
 async def query_program(
+    request_obj: Request,
     program_id: str,
     request: QueryRequest,
     session: AsyncSession = Depends(get_db),
@@ -334,7 +337,7 @@ async def query_program(
     Returns:
         QueryResponse with answer, sources, confidence, conversation_id, and is_followup
     """
-    logger.info(f"Querying program {program_id}: {request.question}")
+    logger.info(f"Querying program {sanitize_for_log(program_id)}: {sanitize_for_log(request.question)}")
 
     try:
         # Verify program exists and belongs to current organization
@@ -398,7 +401,7 @@ async def query_program(
                         question=request.question,
                         conversation_messages=conversation_messages
                     )
-                    logger.info(f"Enhanced follow-up question with context for conversation {request.conversation_id}")
+                    logger.info(f"Enhanced follow-up question with context for conversation {sanitize_for_log(request.conversation_id)}")
 
         # Use unified multi-project RAG query
         rag_response = await enhanced_rag_service.query_multiple_projects(
@@ -465,12 +468,13 @@ async def query_program(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Query failed for program {program_id}: {e}")
+        logger.error(f"Query failed for program {sanitize_for_log(program_id)}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/portfolio/{portfolio_id}/query", response_model=QueryResponse)
 async def query_portfolio(
+    request_obj: Request,
     portfolio_id: str,
     request: QueryRequest,
     session: AsyncSession = Depends(get_db),
@@ -489,7 +493,7 @@ async def query_portfolio(
     Returns:
         QueryResponse with answer, sources, confidence, conversation_id, and is_followup
     """
-    logger.info(f"Querying portfolio {portfolio_id}: {request.question}")
+    logger.info(f"Querying portfolio {sanitize_for_log(portfolio_id)}: {sanitize_for_log(request.question)}")
 
     try:
         # Verify portfolio exists and belongs to current organization
@@ -550,7 +554,8 @@ async def query_portfolio(
                 detail=f"No projects found in portfolio {portfolio_id}"
             )
 
-        project_ids = [str(p.id) for p in all_projects]
+        # Deduplicate project IDs (a project can be in both direct and program lists)
+        project_ids = list(set([str(p.id) for p in all_projects]))
         logger.info(f"Querying {len(project_ids)} projects in portfolio {portfolio.name}")
 
         # Handle conversation context
@@ -577,7 +582,7 @@ async def query_portfolio(
                         question=request.question,
                         conversation_messages=conversation_messages
                     )
-                    logger.info(f"Enhanced follow-up question with context for conversation {request.conversation_id}")
+                    logger.info(f"Enhanced follow-up question with context for conversation {sanitize_for_log(request.conversation_id)}")
 
         # Use unified multi-project RAG query
         rag_response = await enhanced_rag_service.query_multiple_projects(
@@ -643,6 +648,6 @@ async def query_portfolio(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Query failed for portfolio {portfolio_id}: {e}")
+        logger.error(f"Query failed for portfolio {sanitize_for_log(portfolio_id)}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 

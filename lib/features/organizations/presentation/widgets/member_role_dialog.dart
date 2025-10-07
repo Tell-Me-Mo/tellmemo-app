@@ -30,10 +30,11 @@ class _MemberRoleDialogState extends State<MemberRoleDialog> {
 
     return AlertDialog(
       title: const Text('Change Member Role'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           // Member Info
           Row(
             children: [
@@ -156,6 +157,7 @@ class _MemberRoleDialogState extends State<MemberRoleDialog> {
             ),
           ],
         ],
+        ),
       ),
       actions: [
         TextButton(

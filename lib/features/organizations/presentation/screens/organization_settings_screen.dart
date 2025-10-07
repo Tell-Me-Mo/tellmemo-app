@@ -421,23 +421,25 @@ class _OrganizationSettingsScreenState extends ConsumerState<OrganizationSetting
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Organization Settings',
-              style: textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.w600,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Organization Settings',
+                style: textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Manage your organization configuration and preferences',
-              style: textTheme.bodyLarge?.copyWith(
-                color: colorScheme.onSurfaceVariant,
+              const SizedBox(height: 4),
+              Text(
+                'Manage your organization configuration and preferences',
+                style: textTheme.bodyLarge?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         // Edit/Save Actions for desktop
         if (MediaQuery.of(context).size.width > 768)

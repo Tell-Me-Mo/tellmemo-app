@@ -67,7 +67,7 @@ class _FirefliesConfigDialogState extends ConsumerState<FirefliesConfigDialog> {
 
     try {
       final response = await DioClient.instance.post(
-        '/api/integrations/fireflies/test',
+        '/api/v1/integrations/fireflies/test',
         data: {
           'api_key': _apiKeyController.text.trim(),
           'webhook_secret': null,

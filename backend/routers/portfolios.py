@@ -31,7 +31,7 @@ from services.llm.multi_llm_client import get_multi_llm_client
 logger = get_logger(__name__)
 
 
-router = APIRouter(prefix="/api/portfolios", tags=["portfolios"])
+router = APIRouter(prefix="/api/v1/portfolios", tags=["portfolios"])
 
 
 class PortfolioCreate(BaseModel):
@@ -72,7 +72,7 @@ class PortfolioResponse(BaseModel):
         from_attributes = True
 
 
-@router.post("/", response_model=PortfolioResponse)
+@router.post("", response_model=PortfolioResponse, status_code=201)
 async def create_portfolio(
     portfolio: PortfolioCreate,
     db: AsyncSession = Depends(get_db),
@@ -778,7 +778,6 @@ async def query_portfolio(
 
         # Prepare portfolio context
         portfolio_context = {
-            "program_count": len(await db.execute(select(Program).where(Program.portfolio_id == portfolio_id)).then(lambda r: r.scalars().all())),
             "project_count": len(projects),
             "health_status": portfolio.health_status.value,
             "owner": portfolio.owner

@@ -11,7 +11,7 @@ import json
 import spacy
 from sentence_transformers import SentenceTransformer
 
-from utils.logger import get_logger
+from utils.logger import get_logger, sanitize_for_log
 from utils.monitoring import monitor_operation, monitor_sync_operation, MonitoringContext
 from services.rag.embedding_service import embedding_service
 from db.multi_tenant_vector_store import multi_tenant_vector_store
@@ -158,11 +158,11 @@ class MultiQueryRetrievalService:
         """Get organization ID with caching to avoid repeated DB lookups."""
         # Check cache first
         if project_id in self._org_cache:
-            logger.debug(f"Organization ID cache hit for project {project_id}")
+            logger.debug(f"Organization ID cache hit for project {sanitize_for_log(project_id)}")
             return self._org_cache[project_id]
 
         # Cache miss - fetch from database
-        logger.debug(f"Organization ID cache miss for project {project_id}")
+        logger.debug(f"Organization ID cache miss for project {sanitize_for_log(project_id)}")
         organization_id = None
         from db.database import get_db
         from models.project import Project
@@ -173,11 +173,11 @@ class MultiQueryRetrievalService:
                 organization_id = str(project.organization_id)
                 # Store in cache for future use
                 self._org_cache[project_id] = organization_id
-                logger.info(f"Cached organization {organization_id} for project {project_id}")
+                logger.info(f"Cached organization {sanitize_for_log(organization_id)} for project {sanitize_for_log(project_id)}")
             break
 
         if not organization_id:
-            logger.error(f"Could not determine organization for project {project_id}")
+            logger.error(f"Could not determine organization for project {sanitize_for_log(project_id)}")
             raise ValueError(f"Could not determine organization for project {project_id}")
 
         return organization_id
@@ -227,7 +227,7 @@ class MultiQueryRetrievalService:
         Returns:
             MultiQueryResults with comprehensive retrieval data
         """
-        logger.info(f"Starting multi-query retrieval for: '{query}'")
+        logger.info(f"Starting multi-query retrieval for: '{sanitize_for_log(query)}'")
         
         try:
             # Step 1: Analyze the query

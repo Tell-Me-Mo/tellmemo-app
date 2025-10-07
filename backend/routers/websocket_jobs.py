@@ -12,7 +12,7 @@ import uuid
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 from services.core.upload_job_service import upload_job_service, JobStatus, UploadJob
-from utils.logger import get_logger
+from utils.logger import get_logger, sanitize_for_log
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/ws", tags=["websocket"])
@@ -37,7 +37,7 @@ class JobConnectionManager:
         self.active_connections[client_id] = websocket
         self.client_subscriptions[client_id] = set()
         self.project_subscriptions[client_id] = None
-        logger.info(f"Job WebSocket connected: {client_id}")
+        logger.info(f"Job WebSocket connected: {sanitize_for_log(client_id)}")
         
         # Send initial connection confirmation
         await self.send_json(client_id, {
@@ -65,7 +65,7 @@ class JobConnectionManager:
             
             # Remove connection
             del self.active_connections[client_id]
-            logger.info(f"Job WebSocket disconnected: {client_id}")
+            logger.info(f"Job WebSocket disconnected: {sanitize_for_log(client_id)}")
             
     async def subscribe_to_job(self, client_id: str, job_id: str):
         """Subscribe client to specific job updates."""
@@ -76,7 +76,7 @@ class JobConnectionManager:
                 self.job_subscribers[job_id] = set()
             self.job_subscribers[job_id].add(client_id)
             
-            logger.debug(f"Client {client_id} subscribed to job {job_id}")
+            logger.debug(f"Client {sanitize_for_log(client_id)} subscribed to job {sanitize_for_log(job_id)}")
             
             # Send current job status immediately
             job = upload_job_service.get_job(job_id)
@@ -93,13 +93,13 @@ class JobConnectionManager:
             if not self.job_subscribers[job_id]:
                 del self.job_subscribers[job_id]
                 
-        logger.debug(f"Client {client_id} unsubscribed from job {job_id}")
+        logger.debug(f"Client {sanitize_for_log(client_id)} unsubscribed from job {sanitize_for_log(job_id)}")
     
     async def subscribe_to_project(self, client_id: str, project_id: str):
         """Subscribe client to all jobs in a project."""
         if client_id in self.project_subscriptions:
             self.project_subscriptions[client_id] = project_id
-            logger.debug(f"Client {client_id} subscribed to project {project_id}")
+            logger.debug(f"Client {sanitize_for_log(client_id)} subscribed to project {sanitize_for_log(project_id)}")
             
             # Send all active jobs for this project
             jobs = upload_job_service.get_project_jobs(project_id, limit=100)
@@ -115,7 +115,7 @@ class JobConnectionManager:
                 websocket = self.active_connections[client_id]
                 await websocket.send_json(data)
             except Exception as e:
-                logger.error(f"Error sending to client {client_id}: {e}")
+                logger.error(f"Error sending to client {sanitize_for_log(client_id)}: {e}")
                 self.disconnect(client_id)
     
     async def send_job_update(self, client_id: str, job: UploadJob):
@@ -249,7 +249,7 @@ async def websocket_job_updates(
     except WebSocketDisconnect:
         job_manager.disconnect(client_id)
     except Exception as e:
-        logger.error(f"WebSocket error for client {client_id}: {e}")
+        logger.error(f"WebSocket error for client {sanitize_for_log(client_id)}: {e}")
         job_manager.disconnect(client_id)
 
 
