@@ -213,8 +213,9 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Note: Rate limiting (slowapi) has been removed due to compatibility issues
-# Consider implementing rate limiting with a different approach if needed
+# Note: Rate limiting (slowapi) removed due to invasive Request parameter requirement
+# SlowAPI requires ALL endpoints to have Request parameter when app.state.limiter is set
+# TODO: Implement rate limiting using middleware-based approach or fastapi-limiter
 
 app.add_middleware(
     CORSMiddleware,

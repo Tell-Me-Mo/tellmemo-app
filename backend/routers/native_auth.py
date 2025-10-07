@@ -17,7 +17,6 @@ from db import get_db
 from services.auth.native_auth_service import native_auth_service
 from models.user import User
 from dependencies.auth import get_current_user_optional
-from utils.rate_limit import limiter, AUTH_RATE_LIMIT, RESET_PASSWORD_RATE_LIMIT
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +92,6 @@ class UserInfoResponse(BaseModel):
 
 
 @router.post("/signup", response_model=AuthResponse)
-# @limiter.limit(AUTH_RATE_LIMIT)  # Rate limiting temporarily disabled
 async def sign_up(
     request_obj: Request,
     request: SignUpRequest,
@@ -157,7 +155,6 @@ async def sign_up(
 
 
 @router.post("/login", response_model=AuthResponse)
-# @limiter.limit(AUTH_RATE_LIMIT)  # Rate limiting temporarily disabled
 async def sign_in(
     request_obj: Request,
     request: SignInRequest,
@@ -324,7 +321,6 @@ async def refresh_token(
 
 
 @router.post("/reset-password", response_model=MessageResponse)
-# @limiter.limit(RESET_PASSWORD_RATE_LIMIT)  # Rate limiting temporarily disabled
 async def reset_password(request_obj: Request, request: ResetPasswordRequest):
     """
     Request a password reset (placeholder for email-based reset flow)

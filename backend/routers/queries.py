@@ -17,7 +17,6 @@ from services.rag.enhanced_rag_service_refactored import enhanced_rag_service
 from services.rag.conversation_context_service import conversation_context_service
 from services.activity.activity_service import ActivityService
 from utils.logger import get_logger
-from utils.rate_limit import limiter, QUERY_RATE_LIMIT
 import uuid
 
 router = APIRouter()
@@ -38,7 +37,6 @@ class QueryResponse(BaseModel):
 
 
 @router.post("/organization/query", response_model=QueryResponse)
-# @limiter.limit(QUERY_RATE_LIMIT)  # Rate limiting temporarily disabled
 async def query_organization(
     request_obj: Request,
     request: QueryRequest,
@@ -175,7 +173,6 @@ async def query_organization(
 
 
 @router.post("/{project_id}/query", response_model=QueryResponse)
-# @limiter.limit(QUERY_RATE_LIMIT)  # Rate limiting temporarily disabled
 async def query_project(
     request_obj: Request,
     project_id: str,
@@ -320,7 +317,6 @@ async def query_project(
 
 
 @router.post("/program/{program_id}/query", response_model=QueryResponse)
-# @limiter.limit(QUERY_RATE_LIMIT)  # Rate limiting temporarily disabled
 async def query_program(
     request_obj: Request,
     program_id: str,
@@ -477,7 +473,6 @@ async def query_program(
 
 
 @router.post("/portfolio/{portfolio_id}/query", response_model=QueryResponse)
-# @limiter.limit(QUERY_RATE_LIMIT)  # Rate limiting temporarily disabled
 async def query_portfolio(
     request_obj: Request,
     portfolio_id: str,

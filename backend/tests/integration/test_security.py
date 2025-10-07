@@ -6,7 +6,6 @@ Tests cover:
 - SQL injection prevention
 - XSS prevention
 - CORS configuration
-- Rate limiting
 - JWT token validation
 - Multi-tenant data isolation (RLS)
 """
@@ -269,76 +268,6 @@ class TestCORSConfiguration:
         assert response.status_code in [200, 405]
 
 
-class TestRateLimiting:
-    """Test rate limiting on API endpoints"""
-
-    @pytest.mark.asyncio
-    async def test_rate_limiting_on_login(self, async_client: AsyncClient):
-        """Test rate limiting on login endpoint"""
-        # Note: This test assumes rate limiting is implemented
-        # If not implemented, this will document the security gap
-
-        login_data = {
-            "email": "test@example.com",
-            "password": "wrongpassword"
-        }
-
-        # Make multiple rapid requests
-        responses = []
-        for _ in range(15):  # Attempt 15 rapid requests
-            response = await async_client.post(
-                "/api/v1/auth/native/signin",
-                json=login_data
-            )
-            responses.append(response)
-
-        # Check if any request was rate limited (429 Too Many Requests)
-        status_codes = [r.status_code for r in responses]
-
-        # If rate limiting is implemented, we should see 429
-        # If not, all will be 401 (authentication failure)
-        has_rate_limit = 429 in status_codes
-
-        # Document the finding
-        if not has_rate_limit:
-            print("WARNING: Rate limiting may not be active in test client (slowapi middleware)")
-            print(f"Status codes received: {set(status_codes)}")
-            # This is expected - slowapi doesn't work well with TestClient
-            # Rate limiting is configured and will work in production
-        else:
-            print(f"✅ Rate limiting is working! Status codes: {set(status_codes)}")
-
-        # Test passes - rate limiting is configured even if not testable via TestClient
-        assert True, "Rate limiting test completed (rate limiting configured in main.py)"
-
-    @pytest.mark.asyncio
-    async def test_rate_limiting_on_expensive_operations(
-        self, client_factory, test_user, test_organization, test_project
-    ):
-        """Test rate limiting on expensive operations like queries"""
-        client = await client_factory(test_user, test_organization)
-
-        # Make multiple rapid expensive requests
-        responses = []
-        for i in range(20):
-            response = await client.post(
-                "/api/v1/queries/project",
-                json={
-                    "project_id": str(test_project.id),
-                    "query": f"test query {i}"
-                }
-            )
-            responses.append(response)
-
-        status_codes = [r.status_code for r in responses]
-        has_rate_limit = 429 in status_codes
-
-        if not has_rate_limit:
-            print("WARNING: No rate limiting on expensive query operations")
-
-        assert True, "Rate limiting test on queries completed"
-
-
 class TestJWTValidation:
     """Test JWT token validation and security"""
 
@@ -432,7 +361,7 @@ class TestMultiTenantIsolation:
     # - test_cannot_access_other_org_projects (projects endpoint)
     # - test_cannot_modify_other_org_data (modification endpoint)
     # - test_cannot_delete_other_org_data (deletion endpoint)
-    # Content/query tests were fragile due to async processing and rate limiting
+    # Content/query tests were fragile due to async processing
 
     @pytest.mark.asyncio
     async def test_cannot_modify_other_org_data(

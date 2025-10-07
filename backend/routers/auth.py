@@ -160,6 +160,7 @@ async def sign_up(
 
 @router.post("/signin", response_model=AuthResponse)
 async def sign_in(
+    request: Request,
     signin_data: SignInRequest,
     db: AsyncSession = Depends(get_db)
 ):
@@ -238,6 +239,7 @@ async def sign_in(
 
 @router.post("/refresh", response_model=AuthResponse)
 async def refresh_token(
+    request: Request,
     refresh_data: RefreshTokenRequest,
     db: AsyncSession = Depends(get_db)
 ):
@@ -363,6 +365,7 @@ async def refresh_token(
 
 @router.post("/forgot-password", response_model=MessageResponse)
 async def forgot_password(
+    request: Request,
     forgot_password_data: ForgotPasswordRequest
 ):
     """
@@ -407,6 +410,7 @@ async def forgot_password(
 
 @router.post("/reset-password", response_model=MessageResponse)
 async def reset_password(
+    request: Request,
     reset_password_data: ResetPasswordRequest,
     db: AsyncSession = Depends(get_db)
 ):
@@ -463,6 +467,7 @@ async def reset_password(
 
 @router.post("/signout", response_model=MessageResponse)
 async def sign_out(
+    request: Request,
     current_user: Optional[User] = Depends(get_optional_current_user)
 ):
     """
