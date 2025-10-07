@@ -1,6 +1,6 @@
 """
 Logstash Handler for Python Logging
-Sends logs directly to Logstash TCP input on port 5000
+Sends logs directly to Logstash HTTP input on port 8080
 """
 
 import logging
@@ -27,7 +27,7 @@ class LogstashHandler(logging.Handler):
         
         Args:
             host: Logstash host (default: localhost)
-            port: Logstash TCP port (default: 5000)
+            port: Logstash HTTP port (default: 8080)
             app_name: Application name for logging
             environment: Environment (development, staging, production)
         """

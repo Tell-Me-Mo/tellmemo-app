@@ -416,6 +416,7 @@ services:
       - logstash_data:/usr/share/logstash/data
     ports:
       - "127.0.0.1:5000:5000"  # TCP input for application logs (localhost only)
+      - "127.0.0.1:8080:8080"  # HTTP input for application logs (localhost only)
       - "127.0.0.1:9600:9600"  # Monitoring API (localhost only)
       - "127.0.0.1:12201:12201/udp"  # GELF UDP input for Docker containers (localhost only)
     networks:

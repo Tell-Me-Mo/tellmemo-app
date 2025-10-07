@@ -155,7 +155,7 @@ class Settings(BaseSettings):
     # Logging Configuration
     enable_logstash: bool = Field(default=False, env="ENABLE_LOGSTASH")
     logstash_host: str = Field(default="localhost", env="LOGSTASH_HOST")
-    logstash_port: int = Field(default=5000, env="LOGSTASH_PORT")
+    logstash_port: int = Field(default=8080, env="LOGSTASH_PORT")  # HTTP input port
 
     # Transcription Service Configuration (Defaults - can be overridden by UI integration settings)
     # Options: "whisper" (local) or "salad" (Salad API)
