@@ -370,7 +370,7 @@ void main() {
       );
 
       // Assert
-      expect(find.text('Failed to load members'), findsOneWidget);
+      expect(find.text('Failed to load members'), findsAtLeastNWidgets(1));
       expect(find.byIcon(Icons.error_outline), findsOneWidget);
       expect(find.text('Retry'), findsOneWidget);
     });

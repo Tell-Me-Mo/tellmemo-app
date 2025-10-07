@@ -118,12 +118,8 @@ void main() {
       await tester.pumpWidget(buildDialog());
       await tester.pumpAndSettle();
 
-      // Try to submit without entering name - find FilledButton that contains the text
-      final createButton = find.ancestor(
-        of: find.text('Create Program'),
-        matching: find.byType(FilledButton),
-      );
-      await tester.tap(createButton);
+      // Try to submit without entering name
+      await tester.tap(find.text('Create Program'));
       await tester.pumpAndSettle();
 
       // Should show validation error
@@ -137,13 +133,10 @@ void main() {
       // Enter a name that's too short
       final nameField = find.widgetWithText(TextFormField, 'Program Name');
       await tester.enterText(nameField, 'AB');
+      await tester.pumpAndSettle();
 
-      // Try to submit - find FilledButton that contains the text
-      final createButton = find.ancestor(
-        of: find.text('Create Program'),
-        matching: find.byType(FilledButton),
-      );
-      await tester.tap(createButton);
+      // Try to submit
+      await tester.tap(find.text('Create Program'));
       await tester.pumpAndSettle();
 
       // Should show validation error
@@ -157,13 +150,10 @@ void main() {
       // Enter a name that's too long
       final nameField = find.widgetWithText(TextFormField, 'Program Name');
       await tester.enterText(nameField, 'A' * 101);
+      await tester.pumpAndSettle();
 
-      // Try to submit - find FilledButton that contains the text
-      final createButton = find.ancestor(
-        of: find.text('Create Program'),
-        matching: find.byType(FilledButton),
-      );
-      await tester.tap(createButton);
+      // Try to submit
+      await tester.tap(find.text('Create Program'));
       await tester.pumpAndSettle();
 
       // Should show validation error
@@ -181,13 +171,10 @@ void main() {
       // Enter a description that's too long
       final descriptionField = find.widgetWithText(TextFormField, 'Description (Optional)');
       await tester.enterText(descriptionField, 'A' * 501);
+      await tester.pumpAndSettle();
 
-      // Try to submit - find FilledButton that contains the text
-      final createButton = find.ancestor(
-        of: find.text('Create Program'),
-        matching: find.byType(FilledButton),
-      );
-      await tester.tap(createButton);
+      // Try to submit
+      await tester.tap(find.text('Create Program'));
       await tester.pumpAndSettle();
 
       // Should show validation error
@@ -221,13 +208,10 @@ void main() {
       // Enter description
       final descriptionField = find.widgetWithText(TextFormField, 'Description (Optional)');
       await tester.enterText(descriptionField, 'Test description');
+      await tester.pumpAndSettle();
 
-      // Submit - find FilledButton that contains the text
-      final createButton = find.ancestor(
-        of: find.text('Create Program'),
-        matching: find.byType(FilledButton),
-      );
-      await tester.tap(createButton);
+      // Submit
+      await tester.tap(find.text('Create Program'));
       await tester.pumpAndSettle();
 
       // Verify creation was called
@@ -239,19 +223,43 @@ void main() {
     testWidgets('creates program with portfolio selection', (tester) async {
       Program? createdProgram;
 
-      await tester.pumpWidget(buildDialog(
-        onCreateProgram: ({required name, portfolioId, description}) async {
-          createdProgram = Program(
-            id: 'new-program-id',
-            name: name,
-            description: description,
-            portfolioId: portfolioId,
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-          );
-          return createdProgram!;
-        },
-      ));
+      // Need to override both null and portfolio-specific provider
+      Future<Program> onCreateProgram({required String name, String? portfolioId, String? description}) async {
+        createdProgram = Program(
+          id: 'new-program-id',
+          name: name,
+          description: description,
+          portfolioId: portfolioId,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        return createdProgram!;
+      }
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            createPortfolioListOverride(portfolios: testPortfolios),
+            createProgramListOverride(
+              programs: testPrograms,
+              portfolioId: null,
+              onCreate: onCreateProgram,
+            ),
+            // Override the portfolio-specific provider as well
+            createProgramListOverride(
+              programs: testPrograms,
+              portfolioId: 'portfolio-1',
+              onCreate: onCreateProgram,
+            ),
+            createHierarchyStateOverride(),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: CreateProgramDialog(),
+            ),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
 
       // Select a portfolio
@@ -266,13 +274,10 @@ void main() {
       // Enter program name
       final nameField = find.widgetWithText(TextFormField, 'Program Name');
       await tester.enterText(nameField, 'New Program');
+      await tester.pumpAndSettle();
 
-      // Submit - find FilledButton that contains the text
-      final createButton = find.ancestor(
-        of: find.text('Create Program'),
-        matching: find.byType(FilledButton),
-      );
-      await tester.tap(createButton);
+      // Submit
+      await tester.tap(find.text('Create Program'));
       await tester.pumpAndSettle();
 
       // Verify portfolio was set
@@ -302,13 +307,10 @@ void main() {
       // Enter program name
       final nameField = find.widgetWithText(TextFormField, 'Program Name');
       await tester.enterText(nameField, 'Standalone Program');
+      await tester.pumpAndSettle();
 
-      // Submit - find FilledButton that contains the text
-      final createButton = find.ancestor(
-        of: find.text('Create Program'),
-        matching: find.byType(FilledButton),
-      );
-      await tester.tap(createButton);
+      // Submit
+      await tester.tap(find.text('Create Program'));
       await tester.pumpAndSettle();
 
       // Verify no portfolio was set
@@ -318,33 +320,49 @@ void main() {
     testWidgets('creates program with pre-selected portfolio', (tester) async {
       Program? createdProgram;
 
-      await tester.pumpWidget(buildDialog(
-        portfolioId: 'portfolio-1',
-        portfolioName: 'Portfolio A',
-        onCreateProgram: ({required name, portfolioId, description}) async {
-          createdProgram = Program(
-            id: 'new-program-id',
-            name: name,
-            description: description,
-            portfolioId: portfolioId,
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-          );
-          return createdProgram!;
-        },
-      ));
+      Future<Program> onCreateProgram({required String name, String? portfolioId, String? description}) async {
+        createdProgram = Program(
+          id: 'new-program-id',
+          name: name,
+          description: description,
+          portfolioId: portfolioId,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        return createdProgram!;
+      }
+
+      // When portfolio is pre-selected, override the specific provider instance
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            createPortfolioListOverride(portfolios: testPortfolios),
+            createProgramListOverride(
+              programs: testPrograms,
+              portfolioId: 'portfolio-1',
+              onCreate: onCreateProgram,
+            ),
+            createHierarchyStateOverride(),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: CreateProgramDialog(
+                portfolioId: 'portfolio-1',
+                portfolioName: 'Portfolio A',
+              ),
+            ),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
 
       // Enter program name
       final nameField = find.widgetWithText(TextFormField, 'Program Name');
       await tester.enterText(nameField, 'New Program');
+      await tester.pumpAndSettle();
 
-      // Submit - find FilledButton that contains the text
-      final createButton = find.ancestor(
-        of: find.text('Create Program'),
-        matching: find.byType(FilledButton),
-      );
-      await tester.tap(createButton);
+      // Submit
+      await tester.tap(find.text('Create Program'));
       await tester.pumpAndSettle();
 
       // Verify pre-selected portfolio was used
@@ -362,13 +380,10 @@ void main() {
       // Enter program name
       final nameField = find.widgetWithText(TextFormField, 'Program Name');
       await tester.enterText(nameField, 'Duplicate Program');
+      await tester.pumpAndSettle();
 
-      // Submit - find FilledButton that contains the text
-      final createButton = find.ancestor(
-        of: find.text('Create Program'),
-        matching: find.byType(FilledButton),
-      );
-      await tester.tap(createButton);
+      // Submit
+      await tester.tap(find.text('Create Program'));
       await tester.pumpAndSettle();
 
       // Should show error message
@@ -386,13 +401,10 @@ void main() {
       // Enter program name
       final nameField = find.widgetWithText(TextFormField, 'Program Name');
       await tester.enterText(nameField, 'Duplicate Program');
+      await tester.pumpAndSettle();
 
-      // Submit - find FilledButton that contains the text
-      final createButton = find.ancestor(
-        of: find.text('Create Program'),
-        matching: find.byType(FilledButton),
-      );
-      await tester.tap(createButton);
+      // Submit
+      await tester.tap(find.text('Create Program'));
       await tester.pumpAndSettle();
 
       // Should show error message
@@ -410,13 +422,10 @@ void main() {
       // Enter program name
       final nameField = find.widgetWithText(TextFormField, 'Program Name');
       await tester.enterText(nameField, 'Test Program');
+      await tester.pumpAndSettle();
 
-      // Submit - find FilledButton that contains the text
-      final createButton = find.ancestor(
-        of: find.text('Create Program'),
-        matching: find.byType(FilledButton),
-      );
-      await tester.tap(createButton);
+      // Submit
+      await tester.tap(find.text('Create Program'));
       await tester.pumpAndSettle();
 
       // Should show generic error message
@@ -450,12 +459,8 @@ void main() {
     });
 
     testWidgets('disables inputs while creating', (tester) async {
-      // Use a completer to control when creation completes
-      bool isCreating = false;
-
       await tester.pumpWidget(buildDialog(
         onCreateProgram: ({required name, portfolioId, description}) async {
-          isCreating = true;
           await Future.delayed(const Duration(milliseconds: 100));
           return Program(
             id: 'new-program-id',
@@ -472,13 +477,10 @@ void main() {
       // Enter program name
       final nameField = find.widgetWithText(TextFormField, 'Program Name');
       await tester.enterText(nameField, 'Test Program');
+      await tester.pump();
 
-      // Submit - find FilledButton that contains the text
-      final createButton = find.ancestor(
-        of: find.text('Create Program'),
-        matching: find.byType(FilledButton),
-      );
-      await tester.tap(createButton);
+      // Submit
+      await tester.tap(find.text('Create Program'));
       await tester.pump(); // Pump once to start the async operation
 
       // Verify loading indicator is shown
@@ -514,13 +516,10 @@ void main() {
       // Enter description with whitespace
       final descriptionField = find.widgetWithText(TextFormField, 'Description (Optional)');
       await tester.enterText(descriptionField, '  Test description  ');
+      await tester.pumpAndSettle();
 
-      // Submit - find FilledButton that contains the text
-      final createButton = find.ancestor(
-        of: find.text('Create Program'),
-        matching: find.byType(FilledButton),
-      );
-      await tester.tap(createButton);
+      // Submit
+      await tester.tap(find.text('Create Program'));
       await tester.pumpAndSettle();
 
       // Verify whitespace was trimmed
@@ -549,15 +548,12 @@ void main() {
       // Enter program name only
       final nameField = find.widgetWithText(TextFormField, 'Program Name');
       await tester.enterText(nameField, 'Test Program');
+      await tester.pump();
 
       // Leave description empty
 
-      // Submit - find FilledButton that contains the text
-      final createButton = find.ancestor(
-        of: find.text('Create Program'),
-        matching: find.byType(FilledButton),
-      );
-      await tester.tap(createButton);
+      // Submit
+      await tester.tap(find.text('Create Program'));
       await tester.pumpAndSettle();
 
       // Verify description is null

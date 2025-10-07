@@ -68,7 +68,7 @@ class _PortfolioDetailScreenState extends ConsumerState<PortfolioDetailScreen> {
         try {
           // Fetch full program details to get its projects
           final programResponse = await DioClient.instance.get(
-            '/api/programs/${program.id}',
+            '/api/v1/programs/${program.id}',
           );
 
           if (programResponse.data != null && programResponse.data['projects'] != null) {

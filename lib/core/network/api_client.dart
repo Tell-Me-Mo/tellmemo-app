@@ -17,19 +17,19 @@ class ApiClient {
 
   // Projects endpoints
   Future<List<ProjectModel>> getProjects() async {
-    final response = await _dio.get('/api/projects');
+    final response = await _dio.get('/api/v1/projects');
     final List<dynamic> data = response.data;
     return data.map((json) => ProjectModel.fromJson(json)).toList();
   }
 
   Future<ProjectModel> getProject(String id) async {
-    final response = await _dio.get('/api/projects/$id');
+    final response = await _dio.get('/api/v1/projects/$id');
     return ProjectModel.fromJson(response.data);
   }
 
   Future<ProjectModel> createProject(Map<String, dynamic> project) async {
     try {
-      final response = await _dio.post('/api/projects', data: project);
+      final response = await _dio.post('/api/v1/projects', data: project);
       return ProjectModel.fromJson(response.data);
     } on DioException catch (e) {
       if (e.response?.statusCode == 409) {
@@ -42,7 +42,7 @@ class ApiClient {
 
   Future<ProjectModel> updateProject(String id, Map<String, dynamic> project) async {
     try {
-      final response = await _dio.put('/api/projects/$id', data: project);
+      final response = await _dio.put('/api/v1/projects/$id', data: project);
       return ProjectModel.fromJson(response.data);
     } on DioException catch (e) {
       if (e.response?.statusCode == 409) {
@@ -54,15 +54,15 @@ class ApiClient {
   }
 
   Future<void> archiveProject(String id) async {
-    await _dio.patch('/api/projects/$id/archive');
+    await _dio.patch('/api/v1/projects/$id/archive');
   }
 
   Future<void> restoreProject(String id) async {
-    await _dio.patch('/api/projects/$id/restore');
+    await _dio.patch('/api/v1/projects/$id/restore');
   }
 
   Future<void> deleteProject(String id) async {
-    await _dio.delete('/api/projects/$id');
+    await _dio.delete('/api/v1/projects/$id');
   }
 
   // Text content upload with optional AI matching

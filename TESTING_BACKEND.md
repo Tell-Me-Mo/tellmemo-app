@@ -497,13 +497,6 @@ Tests cover (require `python main.py` running on port 8000):
 - [x] JWT token validation (expired, malformed, missing, invalid signature all rejected)
 - [x] Multi-tenant data isolation (RLS - cross-org access prevented)
 
-#### 16.4 Data Validation
-- [ ] Pydantic schema validation
-- [ ] Type checking
-- [ ] Business logic validation
-- [ ] File type validation
-- [ ] File size limits
-
 ---
 
 **Test Coverage Status:**
@@ -540,7 +533,7 @@ Tests cover (require `python main.py` running on port 8000):
 - ✅ **Fully Tested**: Conversation Management (22/22 features, 30 tests passing) - **1 CRITICAL BUG FIXED** ✅
 - ✅ **Fully Tested**: Error Handling (7/7 categories, 23 tests - 17 passing, 6 skipped) - **5 BUGS FOUND & FIXED** ✅
 - ✅ **Fully Tested**: Observability (Langfuse) (9/9 features, 21 tests passing) - **NO BUGS FOUND** ✨
-- ✅ **Fully Tested**: Security (8/8 categories, 24 tests - 22 passing, 2 skipped) - **NO SECURITY GAPS** ✨
+- ✅ **Fully Tested**: Security (8/8 categories, 22 tests - all passing) - **NO SECURITY GAPS** ✨
 - ❌ **Not Tested**: Health
 - ❌ **Not Tested**: Data Validation (comprehensive)
 
@@ -567,7 +560,7 @@ Tests cover (require `python main.py` running on port 8000):
   - ✅ Fixed: POST endpoint trailing slash causing 307 redirects
   - ✅ Fixed: Test infrastructure - organization context switching now properly updates client headers
   - ✅ Updated: Frontend API service to match new backend routes (15 endpoints updated)
-- ✅ Security - 22/24 tests passing (2 skipped due to fixture issues), **NO SECURITY GAPS** ✨
+- ✅ Security - 22/22 tests passing, **NO SECURITY GAPS** ✨
   - ✅ Input Sanitization: SQL injection, XSS, command injection, path traversal, LDAP injection all prevented
   - ✅ SQL Injection Prevention: Parameterized queries working correctly, no syntax errors possible
   - ✅ XSS Prevention: Backend stores raw values (frontend must escape for display)

@@ -11,7 +11,7 @@ class ApiConfig {
   static Duration get timeout => Duration(milliseconds: AppConfig.apiTimeout);
 
   // API Endpoints
-  static const String projects = '/api/projects';
+  static const String projects = '/api/v1/projects';
   static const String health = '/api/health';
   static const String adminReset = '/api/admin/reset';
 

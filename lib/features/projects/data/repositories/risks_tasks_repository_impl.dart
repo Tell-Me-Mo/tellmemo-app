@@ -19,7 +19,7 @@ class RisksTasksRepositoryImpl implements RisksTasksRepository {
   Future<List<Risk>> getProjectRisks(String projectId) async {
     try {
       final response = await _dio.get(
-        '/api/projects/$projectId/risks',
+        '/api/v1/projects/$projectId/risks',
       );
 
       final risks = (response.data as List)
@@ -37,7 +37,7 @@ class RisksTasksRepositoryImpl implements RisksTasksRepository {
   Future<List<Task>> getProjectTasks(String projectId) async {
     try {
       final response = await _dio.get(
-        '/api/projects/$projectId/tasks',
+        '/api/v1/projects/$projectId/tasks',
       );
 
       final tasks = (response.data as List)
@@ -55,7 +55,7 @@ class RisksTasksRepositoryImpl implements RisksTasksRepository {
   Future<Risk> createRisk(String projectId, Risk risk) async {
     try {
       final response = await _dio.post(
-        '/api/projects/$projectId/risks',
+        '/api/v1/projects/$projectId/risks',
         data: {
           'title': risk.title,
           'description': risk.description,
@@ -80,7 +80,7 @@ class RisksTasksRepositoryImpl implements RisksTasksRepository {
   Future<Task> createTask(String projectId, Task task) async {
     try {
       final response = await _dio.post(
-        '/api/projects/$projectId/tasks',
+        '/api/v1/projects/$projectId/tasks',
         data: {
           'title': task.title,
           'description': task.description,
@@ -106,7 +106,7 @@ class RisksTasksRepositoryImpl implements RisksTasksRepository {
   Future<Risk> updateRisk(String riskId, Risk risk) async {
     try {
       final response = await _dio.patch(
-        '/api/risks/$riskId',
+        '/api/v1/risks/$riskId',
         data: {
           'title': risk.title,
           'description': risk.description,
@@ -131,7 +131,7 @@ class RisksTasksRepositoryImpl implements RisksTasksRepository {
   Future<Task> updateTask(String taskId, Task task) async {
     try {
       final response = await _dio.patch(
-        '/api/tasks/$taskId',
+        '/api/v1/tasks/$taskId',
         data: {
           'title': task.title,
           'description': task.description,
@@ -156,7 +156,7 @@ class RisksTasksRepositoryImpl implements RisksTasksRepository {
   @override
   Future<void> deleteRisk(String riskId) async {
     try {
-      await _dio.delete('/api/risks/$riskId');
+      await _dio.delete('/api/v1/risks/$riskId');
     } catch (e) {
       logger.Logger.error('Failed to delete risk', e);
       rethrow;
@@ -166,7 +166,7 @@ class RisksTasksRepositoryImpl implements RisksTasksRepository {
   @override
   Future<void> deleteTask(String taskId) async {
     try {
-      await _dio.delete('/api/tasks/$taskId');
+      await _dio.delete('/api/v1/tasks/$taskId');
     } catch (e) {
       logger.Logger.error('Failed to delete task', e);
       rethrow;
@@ -177,7 +177,7 @@ class RisksTasksRepositoryImpl implements RisksTasksRepository {
   Future<List<Blocker>> getProjectBlockers(String projectId) async {
     try {
       final response = await _dio.get(
-        '/api/projects/$projectId/blockers',
+        '/api/v1/projects/$projectId/blockers',
       );
 
       final blockers = (response.data as List)
@@ -195,7 +195,7 @@ class RisksTasksRepositoryImpl implements RisksTasksRepository {
   Future<Blocker> createBlocker(String projectId, Blocker blocker) async {
     try {
       final response = await _dio.post(
-        '/api/projects/$projectId/blockers',
+        '/api/v1/projects/$projectId/blockers',
         data: {
           'title': blocker.title,
           'description': blocker.description,
@@ -222,7 +222,7 @@ class RisksTasksRepositoryImpl implements RisksTasksRepository {
   Future<Blocker> updateBlocker(String blockerId, Blocker blocker) async {
     try {
       final response = await _dio.patch(
-        '/api/blockers/$blockerId',
+        '/api/v1/blockers/$blockerId',
         data: {
           'title': blocker.title,
           'description': blocker.description,
@@ -250,7 +250,7 @@ class RisksTasksRepositoryImpl implements RisksTasksRepository {
   @override
   Future<void> deleteBlocker(String blockerId) async {
     try {
-      await _dio.delete('/api/blockers/$blockerId');
+      await _dio.delete('/api/v1/blockers/$blockerId');
     } catch (e) {
       logger.Logger.error('Failed to delete blocker', e);
       rethrow;
