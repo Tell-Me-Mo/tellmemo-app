@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../domain/models/job_model.dart';
 import '../providers/job_websocket_provider.dart';
+import '../../../content/presentation/providers/processing_jobs_provider.dart';
 
 class UploadProgressIndicator extends ConsumerWidget {
   final String? jobId;
@@ -22,6 +23,51 @@ class UploadProgressIndicator extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
+    // First try to get job from processingJobsProvider for immediate display
+    final processingJobs = ref.watch(processingJobsProvider);
+
+    // Try to find the job in processing jobs
+    ProcessingJob? processingJob;
+    try {
+      processingJob = processingJobs.firstWhere(
+        (job) => job.jobId == jobId,
+      );
+    } catch (e) {
+      // Job not found in processing jobs, will use WebSocket fallback
+      processingJob = null;
+    }
+
+    // Use the jobModel from processingJob if available
+    if (processingJob != null) {
+      if (processingJob.jobModel != null) {
+        // Job has a model - display it
+        if (showCompact) {
+          return _buildCompactIndicator(context, processingJob.jobModel!);
+        }
+        return _buildFullIndicator(context, ref, processingJob.jobModel!);
+      } else {
+        // Job is tracked but no model yet - show pending state
+        final pendingJob = JobModel(
+          jobId: processingJob.jobId,
+          projectId: processingJob.projectId,
+          status: JobStatus.pending,
+          jobType: JobType.transcription,
+          progress: 0,
+          currentStep: 0,
+          totalSteps: 1,
+          createdAt: processingJob.startTime,
+          updatedAt: processingJob.startTime,
+          metadata: {},
+        );
+
+        if (showCompact) {
+          return _buildCompactIndicator(context, pendingJob);
+        }
+        return _buildFullIndicator(context, ref, pendingJob);
+      }
+    }
+
+    // Fallback to WebSocket provider if not in processing jobs
     final jobAsync = ref.watch(webSocketJobTrackerProvider(jobId!));
 
     return jobAsync.when(
@@ -559,88 +605,81 @@ class GlobalUploadProgressOverlay extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Use WebSocket-based provider for real-time updates
-    final activeJobs = ref.watch(webSocketActiveJobsTrackerProvider);
-    
+    // Watch processingJobsProvider for immediate job display
+    final processingJobs = ref.watch(processingJobsProvider);
+
     // Also watch connection state for debugging
     final connectionState = ref.watch(jobWebSocketConnectionStateProvider);
-    
+
     connectionState.whenData((isConnected) {
       if (!isConnected) {
         debugPrint('[GlobalUploadProgressOverlay] WebSocket disconnected');
       }
     });
 
+    // Debug: Print active jobs count
+    if (processingJobs.isNotEmpty) {
+      debugPrint('[GlobalUploadProgressOverlay] Active jobs: ${processingJobs.length}');
+      for (var job in processingJobs) {
+        debugPrint('  - Job ${job.jobId}: ${job.jobModel?.status.value ?? "pending"} (${job.progress.toInt()}%)');
+      }
+    }
+
+    if (processingJobs.isEmpty) {
+      return child;
+    }
+
     return Stack(
       children: [
         child,
-        activeJobs.when(
-          data: (jobs) {
-            // Debug: Print active jobs count
-            if (jobs.isNotEmpty) {
-              debugPrint('[GlobalUploadProgressOverlay] Active jobs via WebSocket: ${jobs.length}');
-              for (var job in jobs) {
-                debugPrint('  - Job ${job.jobId}: ${job.status.value} (${job.progress}%)');
-              }
-            }
-            
-            if (jobs.isEmpty) {
-              return const SizedBox.shrink();
-            }
-
-            // Show compact indicators at the bottom-middle
-            return Positioned(
-              bottom: 20, // Above bottom edge
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  constraints: const BoxConstraints(
-                    maxHeight: 220, // Fixed max height instead of percentage
-                    maxWidth: 480, // Max width for the container
-                  ),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.95),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Job indicators without animation for cleaner look
-                      ...jobs.take(3).map((job) { // Limit to 3 visible jobs
-                        return UploadProgressIndicator(
-                          key: ValueKey(job.jobId),
-                          jobId: job.jobId,
-                          showCompact: true,
-                          onDismiss: () {
-                            // Cancel the job if user dismisses
-                            ref.read(webSocketActiveJobsTrackerProvider.notifier)
-                                .cancelJob(job.jobId);
-                          },
-                        );
-                      }),
-                      if (jobs.length > 3)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-                          child: Text(
-                            '+${jobs.length - 3} more',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              fontSize: 13,
-                              color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
-                            ),
+        // Show compact indicators at the bottom-middle
+        Positioned(
+          bottom: 20, // Above bottom edge
+          left: 0,
+          right: 0,
+          child: Center(
+            child: Container(
+              constraints: const BoxConstraints(
+                maxHeight: 220, // Fixed max height instead of percentage
+                maxWidth: 480, // Max width for the container
+              ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.95),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Job indicators without animation for cleaner look
+                    ...processingJobs.take(3).map((job) { // Limit to 3 visible jobs
+                      return UploadProgressIndicator(
+                        key: ValueKey(job.jobId),
+                        jobId: job.jobId,
+                        showCompact: true,
+                        onDismiss: () {
+                          // Remove the job from processing tracker
+                          ref.read(processingJobsProvider.notifier).removeJob(job.jobId);
+                        },
+                      );
+                    }),
+                    if (processingJobs.length > 3)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                        child: Text(
+                          '+${processingJobs.length - 3} more',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontSize: 13,
+                            color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
                           ),
                         ),
-                    ],
-                  ),
+                      ),
+                  ],
                 ),
               ),
-              ),
-            );
-          },
-          loading: () => const SizedBox.shrink(),
-          error: (_, __) => const SizedBox.shrink(),
+            ),
+          ),
         ),
       ],
     );

@@ -439,7 +439,7 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
           )
         else
           Column(
-            children: insights.take(2).map((insight) =>
+            children: insights.take(1).map((insight) =>
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: _buildInsightCard(context, insight),
@@ -454,10 +454,12 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth <= 800;
 
     return Container(
       margin: const EdgeInsets.only(right: 8),
-      padding: const EdgeInsets.all(16),
+      padding: isMobile ? const EdgeInsets.all(12) : const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -478,7 +480,7 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: isMobile ? const EdgeInsets.all(6) : const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: (insight['color'] as Color).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -486,27 +488,31 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
                 child: Icon(
                   insight['icon'] as IconData,
                   color: insight['color'] as Color,
-                  size: 20,
+                  size: isMobile ? 18 : 20,
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: isMobile ? 10 : 12),
               Expanded(
                 child: Text(
                   insight['title'] as String,
                   style: textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
+                    fontSize: isMobile ? 14 : null,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: isMobile ? 8 : 12),
           Text(
             insight['message'] as String,
             style: textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
               height: 1.4,
+              fontSize: isMobile ? 12 : null,
             ),
+            maxLines: isMobile ? 2 : null,
+            overflow: isMobile ? TextOverflow.ellipsis : null,
           ),
         ],
       ),
