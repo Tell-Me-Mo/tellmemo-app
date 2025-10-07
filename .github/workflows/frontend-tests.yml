@@ -10,12 +10,6 @@ on:
       - 'lib/**'
       - 'test/**'
       - 'pubspec.yaml'
-  push:
-    branches: [main]
-    paths:
-      - 'lib/**'
-      - 'test/**'
-      - 'pubspec.yaml'
 
 jobs:
   test:

@@ -764,24 +764,26 @@ class _SummaryDetailViewerState extends ConsumerState<SummaryDetailViewer> {
 
             const SizedBox(width: 16),
 
-            // Action buttons
-            TextButton.icon(
-              onPressed: () => _showExportDialog(context),
-              icon: Icon(Icons.download_outlined, size: 18),
-              label: const Text('Export'),
-              style: TextButton.styleFrom(
-                foregroundColor: colorScheme.onSurfaceVariant,
+            // Action buttons - Hide on mobile (≤768px)
+            if (MediaQuery.of(context).size.width > 768) ...[
+              TextButton.icon(
+                onPressed: () => _showExportDialog(context),
+                icon: Icon(Icons.download_outlined, size: 18),
+                label: const Text('Export'),
+                style: TextButton.styleFrom(
+                  foregroundColor: colorScheme.onSurfaceVariant,
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            TextButton.icon(
-              onPressed: () => _copyToClipboard(context),
-              icon: Icon(Icons.copy_outlined, size: 18),
-              label: const Text('Copy'),
-              style: TextButton.styleFrom(
-                foregroundColor: colorScheme.onSurfaceVariant,
+              const SizedBox(width: 8),
+              TextButton.icon(
+                onPressed: () => _copyToClipboard(context),
+                icon: Icon(Icons.copy_outlined, size: 18),
+                label: const Text('Copy'),
+                style: TextButton.styleFrom(
+                  foregroundColor: colorScheme.onSurfaceVariant,
+                ),
               ),
-            ),
+            ],
           ],
         ),
         const SizedBox(height: 8),

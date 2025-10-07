@@ -60,11 +60,11 @@ void main() {
         },
       ];
 
-      when(mockDio.get('/api/v1/projects')).thenAnswer(
+      when(mockDio.get('/api/v1/projects/')).thenAnswer(
         (_) async => Response(
           data: projectsData,
           statusCode: 200,
-          requestOptions: RequestOptions(path: '/api/v1/projects'),
+          requestOptions: RequestOptions(path: '/api/v1/projects/'),
         ),
       );
 
@@ -78,7 +78,7 @@ void main() {
       expect(result[0].name, 'Project A');
       expect(result[1].id, '2');
       expect(result[1].name, 'Project B');
-      verify(mockDio.get('/api/v1/projects')).called(1);
+      verify(mockDio.get('/api/v1/projects/')).called(1);
     });
 
     test('getProject returns single ProjectModel', () async {
@@ -128,11 +128,11 @@ void main() {
         'updated_at': '2024-01-01T00:00:00Z',
       };
 
-      when(mockDio.post('/api/v1/projects', data: projectRequest)).thenAnswer(
+      when(mockDio.post('/api/v1/projects/', data: projectRequest)).thenAnswer(
         (_) async => Response(
           data: projectResponse,
           statusCode: 201,
-          requestOptions: RequestOptions(path: '/api/v1/projects'),
+          requestOptions: RequestOptions(path: '/api/v1/projects/'),
         ),
       );
 
@@ -143,20 +143,20 @@ void main() {
       expect(result, isA<ProjectModel>());
       expect(result.id, 'new-123');
       expect(result.name, 'New Project');
-      verify(mockDio.post('/api/v1/projects', data: projectRequest)).called(1);
+      verify(mockDio.post('/api/v1/projects/', data: projectRequest)).called(1);
     });
 
     test('createProject throws Exception with 409 conflict error', () async {
       // Arrange
       final projectRequest = {'name': 'Duplicate Project'};
 
-      when(mockDio.post('/api/v1/projects', data: projectRequest)).thenThrow(
+      when(mockDio.post('/api/v1/projects/', data: projectRequest)).thenThrow(
         DioException(
-          requestOptions: RequestOptions(path: '/api/v1/projects'),
+          requestOptions: RequestOptions(path: '/api/v1/projects/'),
           response: Response(
             data: {'detail': 'Project name already exists'},
             statusCode: 409,
-            requestOptions: RequestOptions(path: '/api/v1/projects'),
+            requestOptions: RequestOptions(path: '/api/v1/projects/'),
           ),
         ),
       );
@@ -176,13 +176,13 @@ void main() {
       // Arrange
       final projectRequest = {'name': 'Test Project'};
 
-      when(mockDio.post('/api/v1/projects', data: projectRequest)).thenThrow(
+      when(mockDio.post('/api/v1/projects/', data: projectRequest)).thenThrow(
         DioException(
-          requestOptions: RequestOptions(path: '/api/v1/projects'),
+          requestOptions: RequestOptions(path: '/api/v1/projects/'),
           response: Response(
             data: {'detail': 'Internal server error'},
             statusCode: 500,
-            requestOptions: RequestOptions(path: '/api/v1/projects'),
+            requestOptions: RequestOptions(path: '/api/v1/projects/'),
           ),
         ),
       );

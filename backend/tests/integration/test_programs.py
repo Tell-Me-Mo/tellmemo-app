@@ -35,7 +35,7 @@ class TestProgramCreation:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/v1/programs",
+            "/api/v1/programs/",
             json=program_data
         )
 
@@ -73,7 +73,7 @@ class TestProgramCreation:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/v1/programs",
+            "/api/v1/programs/",
             json=program_data
         )
 
@@ -104,7 +104,7 @@ class TestProgramCreation:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/v1/programs",
+            "/api/v1/programs/",
             json=program_data
         )
 
@@ -117,7 +117,7 @@ class TestProgramCreation:
         """Test that creating program requires authentication."""
         # Act
         response = await client.post(
-            "/api/v1/programs",
+            "/api/v1/programs/",
             json={"name": "Test Program"}
         )
 
@@ -133,7 +133,7 @@ class TestProgramCreation:
         """Test that created_by defaults to current user email."""
         # Act
         response = await authenticated_org_client.post(
-            "/api/v1/programs",
+            "/api/v1/programs/",
             json={"name": "Auto-Created Program"}
         )
 
@@ -163,7 +163,7 @@ class TestProgramCreation:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/v1/programs",
+            "/api/v1/programs/",
             json={
                 "name": "Test Program",
                 "portfolio_id": str(other_portfolio.id)
@@ -185,7 +185,7 @@ class TestProgramListing:
     ):
         """Test listing programs when none exist."""
         # Act
-        response = await authenticated_org_client.get("/api/v1/programs")
+        response = await authenticated_org_client.get("/api/v1/programs/")
 
         # Assert
         assert response.status_code == 200
@@ -210,7 +210,7 @@ class TestProgramListing:
         await db_session.commit()
 
         # Act
-        response = await authenticated_org_client.get("/api/v1/programs")
+        response = await authenticated_org_client.get("/api/v1/programs/")
 
         # Assert
         assert response.status_code == 200
@@ -257,7 +257,7 @@ class TestProgramListing:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/v1/programs?portfolio_id={portfolio.id}"
+            f"/api/v1/programs/?portfolio_id={portfolio.id}"
         )
 
         # Assert
@@ -284,7 +284,7 @@ class TestProgramListing:
         await db_session.commit()
 
         # Act
-        response = await authenticated_org_client.get("/api/v1/programs?skip=2&limit=2")
+        response = await authenticated_org_client.get("/api/v1/programs/?skip=2&limit=2")
 
         # Assert
         assert response.status_code == 200
@@ -315,7 +315,7 @@ class TestProgramListing:
         await db_session.commit()
 
         # Act
-        response = await authenticated_org_client.get("/api/v1/programs")
+        response = await authenticated_org_client.get("/api/v1/programs/")
 
         # Assert
         assert response.status_code == 200
@@ -353,7 +353,7 @@ class TestProgramListing:
         await db_session.commit()
 
         # Act
-        response = await authenticated_org_client.get("/api/v1/programs")
+        response = await authenticated_org_client.get("/api/v1/programs/")
 
         # Assert
         assert response.status_code == 200

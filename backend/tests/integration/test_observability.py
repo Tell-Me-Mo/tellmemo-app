@@ -506,8 +506,8 @@ class TestMiddlewareIntegration:
             with patch.object(type(langfuse_service), 'is_enabled', PropertyMock(return_value=True)):
                 # Simulate middleware tracking
                 with mock_client.start_as_current_span(
-                    name="GET /api/v1/projects",
-                    input={"method": "GET", "path": "/api/v1/projects"}
+                    name="GET /api/v1/projects/",
+                    input={"method": "GET", "path": "/api/v1/projects/"}
                 ) as span:
                     # Simulate successful request
                     span.update(

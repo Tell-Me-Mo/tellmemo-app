@@ -25,20 +25,20 @@ class TestClientErrorResponses:
     ):
         """Test 400 error for malformed JSON"""
         response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             content='{"name": invalid json}',  # Malformed JSON
         )
         assert response.status_code == 422  # FastAPI returns 422 for JSON decode errors
 
     async def test_401_unauthorized_missing_token(self, client: AsyncClient):
         """Test 401 error when no authentication token provided"""
-        response = await client.get("/api/v1/projects")
+        response = await client.get("/api/v1/projects/")
         assert response.status_code in [401, 403]  # Could be 401 or 403 depending on implementation
 
     async def test_401_unauthorized_invalid_token(self, client: AsyncClient):
         """Test 401 error with invalid authentication token"""
         response = await client.get(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             headers={"Authorization": "Bearer invalid_token_12345"}
         )
         assert response.status_code in [401, 403]
@@ -50,7 +50,7 @@ class TestClientErrorResponses:
         """Test 403 error when accessing resource from different organization"""
         # Create a project in the current org
         project_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Test Project", "description": "Test"}
         )
         assert project_response.status_code == 201
@@ -108,7 +108,7 @@ class TestClientErrorResponses:
     ):
         """Test 422 error when required field is missing"""
         response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"description": "Missing name field"}  # name is required
         )
         assert response.status_code == 422
@@ -121,7 +121,7 @@ class TestClientErrorResponses:
     ):
         """Test 422 error when field has wrong type"""
         response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": 12345}  # name should be string, not int
         )
         assert response.status_code == 422
@@ -132,7 +132,7 @@ class TestClientErrorResponses:
         """Test 422 error for invalid enum value"""
         # First create a project
         project_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Test Project"}
         )
         assert project_response.status_code == 201
@@ -158,7 +158,7 @@ class TestValidationErrorFormatting:
     ):
         """Test that validation errors have proper structure"""
         response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={}  # Missing required fields
         )
         assert response.status_code == 422
@@ -178,7 +178,7 @@ class TestValidationErrorFormatting:
     ):
         """Test that validation errors include field location"""
         response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": ""}  # Empty string when required
         )
         assert response.status_code == 422
@@ -195,7 +195,7 @@ class TestValidationErrorFormatting:
     ):
         """Test that multiple validation errors are returned together"""
         response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={
                 "name": "",  # Invalid: empty string
                 "description": 12345  # Invalid: should be string
@@ -223,7 +223,7 @@ class TestLLMAPIErrorHandling:
 
         # First create a project
         project_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Test Project"}
         )
         assert project_response.status_code == 201
@@ -268,7 +268,7 @@ class TestLLMAPIErrorHandling:
 
         # First create a project
         project_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Test Project"}
         )
         assert project_response.status_code == 201
@@ -311,7 +311,7 @@ class TestLLMAPIErrorHandling:
 
         # First create a project
         project_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Test Project"}
         )
         assert project_response.status_code == 201
@@ -354,7 +354,7 @@ class TestDatabaseErrorHandling:
         # Create a project
         project_data = {"name": "Test Project", "description": "Test"}
         response1 = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json=project_data
         )
         assert response1.status_code == 201
@@ -363,7 +363,7 @@ class TestDatabaseErrorHandling:
         # Note: This test depends on whether there are unique constraints in the schema
         # For now, we'll just verify that the system handles duplicate creates gracefully
         response2 = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json=project_data
         )
         # Should succeed or return appropriate error
@@ -376,7 +376,7 @@ class TestServerErrorResponses:
     async def test_error_response_no_sensitive_data(self, client: AsyncClient):
         """Test that error responses don't leak sensitive data"""
         # Trigger an auth error
-        response = await client.get("/api/v1/projects")
+        response = await client.get("/api/v1/projects/")
         assert response.status_code in [401, 403]
 
         data = response.json()
@@ -418,9 +418,9 @@ class TestErrorHandlingConsistency:
     ):
         """Test that validation errors have consistent format"""
         endpoints = [
-            "/api/v1/projects",
+            "/api/v1/projects/",
             "/api/v1/portfolios",
-            "/api/v1/programs",
+            "/api/v1/programs/",
         ]
 
         responses = []

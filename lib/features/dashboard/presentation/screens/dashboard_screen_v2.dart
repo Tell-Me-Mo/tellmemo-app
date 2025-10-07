@@ -27,6 +27,8 @@ class DashboardScreenV2 extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
+  bool _isActionMenuOpen = false;
+
   @override
   void initState() {
     super.initState();
@@ -65,144 +67,147 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(projectsListProvider);
-            ref.invalidate(meetingsListProvider);
-            ref.invalidate(currentOrganizationProvider);
+      body: Stack(
+        children: [
+          SafeArea(
+            child: RefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(projectsListProvider);
+                ref.invalidate(meetingsListProvider);
+                ref.invalidate(currentOrganizationProvider);
 
-            // Log dashboard refreshed
-            try {
-              await FirebaseAnalyticsService().logDashboardRefreshed(
-                refreshMethod: 'pull_to_refresh',
-              );
-            } catch (e) {
-              // Silently fail analytics
-            }
-          },
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Padding(
-              padding: EdgeInsets.all(isDesktop ? 32 : 16),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: isDesktop ? 1400 : double.infinity),
-                  child: isLoading
-                    ? const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(48),
-                          child: CircularProgressIndicator(),
-                        ),
-                      )
-                    : hasError
-                      ? ErrorStateWidget(
-                          error: projectsAsync.hasError
-                            ? projectsAsync.error.toString()
-                            : organizationAsync.error.toString(),
-                          onRetry: () {
-                            ref.invalidate(projectsListProvider);
-                            ref.invalidate(currentOrganizationProvider);
-                          },
-                        )
-                      : Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Header Section
-                            _buildHeader(context),
-                            const SizedBox(height: 32),
-
-                            // Main Content - we already checked loading state above
-                            Builder(
-                              builder: (_) {
-                                final projects = projectsAsync.valueOrNull ?? [];
-                                final activeProjects = projects.where((p) => p.status == ProjectStatus.active).toList();
-                                final recentProjects = projects.take(3).toList();
-
-                                // Desktop layout with right panel
-                                if (isDesktop || isTablet) {
-                                  return IntrinsicHeight(
-                                    child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        // Main Content Area (left side)
-                                        Expanded(
-                                          flex: 2,
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              // AI Insights Section
-                                              _buildAIInsights(context, projects),
-                                              const SizedBox(height: 32),
-
-                                              // Projects Section
-                                              _buildProjectsSection(context, recentProjects, activeProjects),
-                                              const SizedBox(height: 32),
-
-                                              // Recent Summaries Section
-                                              _buildRecentSummaries(context, projects),
-                                            ],
-                                          ),
-                                        ),
-
-                                  // Visual Separator
-                                  Container(
-                                    width: 1,
-                                    margin: const EdgeInsets.symmetric(horizontal: 24),
-                                    color: colorScheme.outline.withValues(alpha: 0.2),
-                                  ),
-
-                                  // Right Panel
-                                  SizedBox(
-                                    width: 320,
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        // Quick Actions
-                                        _buildCompactQuickActions(context),
-                                        const SizedBox(height: 24),
-
-                                        // Timeline Activity
-                                        Expanded(
-                                          child: _buildTimelineActivity(context, projects),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          } else {
-                            // Mobile layout
-                            return Column(
+                // Log dashboard refreshed
+                try {
+                  await FirebaseAnalyticsService().logDashboardRefreshed(
+                    refreshMethod: 'pull_to_refresh',
+                  );
+                } catch (e) {
+                  // Silently fail analytics
+                }
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Padding(
+                  padding: EdgeInsets.all(isDesktop ? 32 : 16),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: isDesktop ? 1400 : double.infinity),
+                      child: isLoading
+                        ? const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(48),
+                              child: CircularProgressIndicator(),
+                            ),
+                          )
+                        : hasError
+                          ? ErrorStateWidget(
+                              error: projectsAsync.hasError
+                                ? projectsAsync.error.toString()
+                                : organizationAsync.error.toString(),
+                              onRetry: () {
+                                ref.invalidate(projectsListProvider);
+                                ref.invalidate(currentOrganizationProvider);
+                              },
+                            )
+                          : Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Quick Actions
-                                _buildQuickActions(context),
+                                // Header Section
+                                _buildHeader(context),
                                 const SizedBox(height: 32),
 
-                                // AI Insights Section
-                                _buildAIInsights(context, projects),
-                                const SizedBox(height: 32),
+                                // Main Content - we already checked loading state above
+                                Builder(
+                                  builder: (_) {
+                                    final projects = projectsAsync.valueOrNull ?? [];
+                                    final activeProjects = projects.where((p) => p.status == ProjectStatus.active).toList();
+                                    final recentProjects = projects.take(3).toList();
 
-                                // Projects Section
-                                _buildProjectsSection(context, recentProjects, activeProjects),
-                                const SizedBox(height: 32),
+                                    // Desktop layout with right panel
+                                    if (isDesktop || isTablet) {
+                                      return IntrinsicHeight(
+                                        child: Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            // Main Content Area (left side)
+                                            Expanded(
+                                              flex: 2,
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  // AI Insights Section
+                                                  _buildAIInsights(context, projects),
+                                                  const SizedBox(height: 32),
 
-                                // Recent Summaries Section
-                                _buildRecentSummaries(context, projects),
-                              ],
-                            );
-                          }
-                        },
+                                                  // Projects Section
+                                                  _buildProjectsSection(context, recentProjects, activeProjects),
+                                                  const SizedBox(height: 32),
+
+                                                  // Recent Summaries Section
+                                                  _buildRecentSummaries(context, projects),
+                                                ],
+                                              ),
+                                            ),
+
+                                      // Visual Separator
+                                      Container(
+                                        width: 1,
+                                        margin: const EdgeInsets.symmetric(horizontal: 24),
+                                        color: colorScheme.outline.withValues(alpha: 0.2),
+                                      ),
+
+                                      // Right Panel
+                                      SizedBox(
+                                        width: 320,
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            // Quick Actions
+                                            _buildCompactQuickActions(context),
+                                            const SizedBox(height: 24),
+
+                                            // Timeline Activity
+                                            Expanded(
+                                              child: _buildTimelineActivity(context, projects),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              } else {
+                                // Mobile layout
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // AI Insights Section
+                                    _buildAIInsights(context, projects),
+                                    const SizedBox(height: 24),
+
+                                    // Projects Section
+                                    _buildProjectsSection(context, recentProjects, activeProjects),
+                                    const SizedBox(height: 24),
+
+                                    // Recent Summaries Section
+                                    _buildRecentSummaries(context, projects),
+                                  ],
+                                );
+                              }
+                            },
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
+          // Speed dial overlay for mobile
+          if (_isActionMenuOpen && screenWidth <= 768)
+            _buildSpeedDialOverlay(context),
+        ],
       ),
 
       // Floating Action Button
@@ -214,9 +219,29 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
   }
 
   Widget? _buildFloatingActionButton(BuildContext context, List<Project> projects, double screenWidth, ColorScheme colorScheme) {
+    final isMobile = screenWidth <= 768;
+
+    // Mobile: Show "+" FAB that toggles speed dial menu
+    if (isMobile) {
+      return FloatingActionButton(
+        onPressed: () {
+          setState(() {
+            _isActionMenuOpen = !_isActionMenuOpen;
+          });
+        },
+        backgroundColor: colorScheme.primary,
+        child: AnimatedRotation(
+          duration: const Duration(milliseconds: 200),
+          turns: _isActionMenuOpen ? 0.125 : 0,
+          child: Icon(_isActionMenuOpen ? Icons.close : Icons.add),
+        ),
+      );
+    }
+
+    // Desktop/Tablet: Keep original behavior
     final hasProjects = projects.isNotEmpty;
 
-    // If no projects, show "New Project" FAB for both mobile and desktop
+    // If no projects, show "New Project" FAB
     if (!hasProjects) {
       return FloatingActionButton.extended(
         onPressed: () => context.push(AppRoutes.createProject),
@@ -233,6 +258,156 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
       icon: const Icon(Icons.psychology_outlined),
       label: const Text('Ask AI'),
       elevation: 4,
+    );
+  }
+
+  Widget _buildSpeedDialOverlay(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final actions = [
+      {
+        'icon': Icons.psychology_outlined,
+        'label': 'Ask AI',
+        'color': colorScheme.primary,
+        'onTap': () {
+          setState(() => _isActionMenuOpen = false);
+          _showAskAIDialog(context);
+        },
+      },
+      {
+        'icon': Icons.add_circle_outline,
+        'label': 'New Project',
+        'color': Colors.blue,
+        'onTap': () {
+          setState(() => _isActionMenuOpen = false);
+          context.go('/hierarchy?action=create_project');
+        },
+      },
+      {
+        'icon': Icons.upload_file_outlined,
+        'label': 'Upload',
+        'color': Colors.green,
+        'onTap': () {
+          setState(() => _isActionMenuOpen = false);
+          _showUploadDialog(context);
+        },
+      },
+      {
+        'icon': Icons.auto_awesome_outlined,
+        'label': 'Summary',
+        'color': Colors.orange,
+        'onTap': () {
+          setState(() => _isActionMenuOpen = false);
+          _showGenerateSummaryDialog(context);
+        },
+      },
+      {
+        'icon': Icons.mic_outlined,
+        'label': 'Record',
+        'color': Colors.red,
+        'onTap': () {
+          setState(() => _isActionMenuOpen = false);
+          _showRecordingDialog(context);
+        },
+      },
+    ];
+
+    return GestureDetector(
+      onTap: () {
+        setState(() => _isActionMenuOpen = false);
+      },
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.5),
+        child: SafeArea(
+          child: Align(
+            alignment: Alignment.bottomRight,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 16, bottom: 88),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: actions.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final action = entry.value;
+                  return TweenAnimationBuilder<double>(
+                    duration: Duration(milliseconds: 200 + (index * 50)),
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    builder: (context, value, child) {
+                      return Transform.scale(
+                        scale: value,
+                        alignment: Alignment.centerRight,
+                        child: Opacity(
+                          opacity: value,
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Label
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: colorScheme.surface,
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.1),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              action['label'] as String,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          // Action button
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: action['onTap'] as VoidCallback,
+                              borderRadius: BorderRadius.circular(28),
+                              child: Container(
+                                width: 56,
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  color: colorScheme.surface,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.2),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  action['icon'] as IconData,
+                                  color: action['color'] as Color,
+                                  size: 24,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -269,6 +444,8 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
     final textTheme = theme.textTheme;
     final colorScheme = theme.colorScheme;
     final organizationAsync = ref.watch(currentOrganizationProvider);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth <= 768;
     final hour = DateTime.now().hour;
     String greeting;
 
@@ -286,22 +463,53 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              greeting,
-              style: textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.w600,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    greeting,
+                    style: textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    organizationName.isNotEmpty ? 'Welcome to $organizationName' : 'Welcome',
+                    style: textTheme.bodyLarge?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              organizationName.isNotEmpty ? 'Welcome to $organizationName' : 'Welcome',
-              style: textTheme.bodyLarge?.copyWith(
-                color: colorScheme.onSurfaceVariant,
+            // Compact record button for mobile only
+            if (isMobile)
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => _showRecordingDialog(context),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.red.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.mic,
+                      color: Colors.red,
+                      size: 24,
+                    ),
+                  ),
+                ),
               ),
-            ),
           ],
         ),
       ],
@@ -439,7 +647,7 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
           )
         else
           Column(
-            children: insights.take(2).map((insight) =>
+            children: insights.take(1).map((insight) =>
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: _buildInsightCard(context, insight),
@@ -454,10 +662,12 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth <= 800;
 
     return Container(
       margin: const EdgeInsets.only(right: 8),
-      padding: const EdgeInsets.all(16),
+      padding: isMobile ? const EdgeInsets.all(12) : const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -478,7 +688,7 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: isMobile ? const EdgeInsets.all(6) : const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: (insight['color'] as Color).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -486,27 +696,31 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
                 child: Icon(
                   insight['icon'] as IconData,
                   color: insight['color'] as Color,
-                  size: 20,
+                  size: isMobile ? 18 : 20,
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: isMobile ? 10 : 12),
               Expanded(
                 child: Text(
                   insight['title'] as String,
                   style: textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
+                    fontSize: isMobile ? 14 : null,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: isMobile ? 8 : 12),
           Text(
             insight['message'] as String,
             style: textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
               height: 1.4,
+              fontSize: isMobile ? 12 : null,
             ),
+            maxLines: isMobile ? 2 : null,
+            overflow: isMobile ? TextOverflow.ellipsis : null,
           ),
         ],
       ),

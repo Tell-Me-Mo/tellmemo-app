@@ -358,15 +358,18 @@ class RecordingNotifier extends _$RecordingNotifier {
     if (state.sessionId != null) {
       await _transcriptionService.cancelTranscription(state.sessionId!);
     }
-    
+
     // Cancel recording and delete file
     await _audioService.cancelRecording();
-    
+
     state = state.copyWith(
+      state: RecordingState.idle,
       transcriptionText: '',
       duration: Duration.zero,
       isProcessing: false,
       sessionId: null,
+      errorMessage: null,
+      currentRecordingPath: null,
     );
   }
   
