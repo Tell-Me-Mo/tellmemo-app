@@ -35,6 +35,38 @@ from qdrant_client.models import PointStruct
 
 
 # ============================================================================
+# Fixtures - Session-level Cleanup
+# ============================================================================
+
+@pytest.fixture(scope="session", autouse=True)
+def cleanup_qdrant_before_tests():
+    """Clean up all test collections before running tests to prevent Qdrant slowdown."""
+    from utils.logger import get_logger
+    logger = get_logger(__name__)
+
+    try:
+        # Delete all existing test collections synchronously at session start
+        collections = multi_tenant_vector_store.client.get_collections().collections
+        test_collections = [c for c in collections if c.name.startswith("org_")]
+
+        if test_collections:
+            logger.info(f"Cleaning up {len(test_collections)} existing test collections before tests")
+            for collection in test_collections:
+                try:
+                    multi_tenant_vector_store.client.delete_collection(collection.name)
+                except Exception as e:
+                    logger.warning(f"Failed to delete collection {collection.name}: {e}")
+
+            # Clear cache
+            multi_tenant_vector_store._collection_cache.clear()
+            logger.info("Cleanup complete")
+    except Exception as e:
+        logger.warning(f"Failed to cleanup existing collections: {e}")
+
+    yield
+
+
+# ============================================================================
 # Fixtures - Mock Embedding Service
 # ============================================================================
 
@@ -290,10 +322,39 @@ async def cleanup_qdrant_collections():
     # Yield first to let the test run
     yield
 
-    # Cleanup after test
+    # Cleanup after test - delete ALL collections
     try:
-        # Clear the collection cache so next test recreates fresh collections
+        import asyncio
+        from utils.logger import get_logger
+        logger = get_logger(__name__)
+
+        # Get all collections
+        def get_all_collections():
+            try:
+                return multi_tenant_vector_store.client.get_collections().collections
+            except Exception:
+                return []
+
+        collections = await asyncio.get_event_loop().run_in_executor(
+            None, get_all_collections
+        )
+
+        # Delete all test collections (org_* prefix)
+        for collection in collections:
+            if collection.name.startswith("org_"):
+                try:
+                    await asyncio.get_event_loop().run_in_executor(
+                        None,
+                        multi_tenant_vector_store.client.delete_collection,
+                        collection.name
+                    )
+                    logger.debug(f"Deleted test collection: {collection.name}")
+                except Exception as e:
+                    logger.warning(f"Failed to delete collection {collection.name}: {e}")
+
+        # Clear the collection cache
         multi_tenant_vector_store._collection_cache.clear()
+
     except Exception as e:
         # Don't fail tests if cleanup fails
         logger.warning(f"Failed to cleanup Qdrant collections: {e}")
