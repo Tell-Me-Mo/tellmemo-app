@@ -286,13 +286,19 @@ async def test_integration_connection(
                     organization_name=organization_name
                 )
                 result = await salad_service.test_connection()
-                # Don't expose internal error details to API response
+                # Don't expose internal error details to API response - use generic messages only
                 if not result.get("success", False):
+                    # Log the actual error for debugging but don't expose it to the user
+                    if result.get("error"):
+                        logger.debug(f"Salad API test failed: {result.get('error')}")
                     return {
                         "success": False,
-                        "error": result.get("error", "Connection test failed")
+                        "error": "Connection test failed. Please verify your API credentials."
                     }
-                return result
+                return {
+                    "success": True,
+                    "message": "Salad API connection successful"
+                }
             else:
                 # Local Whisper doesn't need testing
                 return {
@@ -327,13 +333,17 @@ async def test_integration_connection(
                 model=model
             )
 
-            # Don't expose internal error details to API response
+            # Don't expose internal error details to API response - use generic messages only
             if result.get("success", False):
+                # Use generic success message, don't expose internal details
                 return {
                     "success": True,
-                    "message": result.get("message", "Connection test successful")
+                    "message": "Connection test successful"
                 }
             else:
+                # Log the actual error for debugging but don't expose it to the user
+                if result.get("error"):
+                    logger.debug(f"AI Brain test failed: {result.get('error')}")
                 return {
                     "success": False,
                     "error": "Connection test failed. Please check your credentials."

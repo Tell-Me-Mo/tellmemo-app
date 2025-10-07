@@ -11,6 +11,9 @@ from pydantic import BaseModel, Field
 import uuid
 import aiofiles
 import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
 
 from db.database import get_db
 from models.support_ticket import SupportTicket, TicketComment, TicketAttachment
@@ -658,35 +661,56 @@ async def upload_attachment(
         # Validate organization_id and ticket_id are proper UUIDs (not paths)
         # This prevents any path traversal attempts
         try:
-            org_uuid_str = str(organization.id)
-            ticket_uuid_str = str(ticket_id)
-            # Ensure they're valid UUID format (no path separators)
+            # Convert to UUID to validate format, then to string
+            # This ensures only valid UUID characters are present
+            org_uuid = uuid.UUID(str(organization.id))
+            ticket_uuid = uuid.UUID(str(ticket_id))
+
+            # Use the validated UUID strings (guaranteed safe)
+            org_uuid_str = str(org_uuid)
+            ticket_uuid_str = str(ticket_uuid)
+
+            # Ensure they're valid UUID format (no path separators) - double check
             if '/' in org_uuid_str or '\\' in org_uuid_str or '..' in org_uuid_str:
-                raise ValueError("Invalid organization ID")
+                raise ValueError("Invalid organization ID format")
             if '/' in ticket_uuid_str or '\\' in ticket_uuid_str or '..' in ticket_uuid_str:
-                raise ValueError("Invalid ticket ID")
-        except (ValueError, AttributeError):
+                raise ValueError("Invalid ticket ID format")
+        except (ValueError, AttributeError, TypeError) as e:
+            logger.error(f"Invalid UUID in file upload: {e}")
             raise HTTPException(status_code=400, detail="Invalid organization or ticket ID")
 
-        upload_dir = (base_upload_dir / "support_tickets" / org_uuid_str / ticket_uuid_str).resolve()
+        # Construct path using validated UUIDs - safe from path traversal
+        upload_dir = base_upload_dir / "support_tickets" / org_uuid_str / ticket_uuid_str
+        upload_dir = upload_dir.resolve()
 
         # Ensure the resolved path is within the base upload directory (prevent path traversal)
         if not str(upload_dir).startswith(str(base_upload_dir)):
+            logger.error(f"Path traversal attempt detected in upload: {upload_dir}")
             raise HTTPException(status_code=400, detail="Invalid upload path")
 
         upload_dir.mkdir(parents=True, exist_ok=True)
 
         # Generate unique filename - sanitize the extension to prevent directory traversal
-        file_extension = Path(file.filename).suffix
-        # Only allow alphanumeric and common file extensions
-        if not file_extension or not file_extension.replace('.', '').isalnum():
-            file_extension = '.bin'  # Default extension for unknown types
+        # Use only the extension part, strip any directory components
+        file_extension = Path(file.filename).suffix.lower()
+        # Whitelist of safe file extensions
+        safe_extensions = {'.pdf', '.doc', '.docx', '.txt', '.png', '.jpg', '.jpeg', '.gif', '.zip', '.mp4', '.mov', '.avi'}
+        if not file_extension or file_extension not in safe_extensions:
+            # Check if it's at least alphanumeric for other file types
+            if not file_extension or not file_extension.replace('.', '').isalnum():
+                file_extension = '.bin'  # Default extension for unknown types
 
-        unique_filename = f"{uuid.uuid4()}{file_extension}"
-        file_path = (upload_dir / unique_filename).resolve()
+        # Generate unique filename with safe UUID
+        unique_uuid = uuid.uuid4()
+        unique_filename = f"{unique_uuid}{file_extension}"
+
+        # Construct file path and resolve it
+        file_path = upload_dir / unique_filename
+        file_path = file_path.resolve()
 
         # Final validation: ensure file_path is within upload_dir
         if not str(file_path).startswith(str(upload_dir)):
+            logger.error(f"Path traversal attempt detected in file path: {file_path}")
             raise HTTPException(status_code=400, detail="Invalid file path")
 
         # Save file
@@ -768,17 +792,33 @@ async def download_attachment(
         if attachment.ticket.organization_id != organization.id:
             raise HTTPException(status_code=403, detail="Access denied")
 
-        # Return file with path validation
+        # Return file with strict path validation
         base_upload_dir = Path("uploads").resolve()
-        file_path = Path(attachment.file_url).resolve()
 
-        # Ensure the file path is within the base upload directory (prevent path traversal)
-        if not str(file_path).startswith(str(base_upload_dir)):
-            logger.error(f"Path traversal attempt detected: {attachment.file_url}")
-            raise HTTPException(status_code=403, detail="Access denied")
+        # Validate the stored file path before using it
+        try:
+            # Get the file path from storage and resolve it
+            stored_file_path = Path(attachment.file_url)
 
-        if not file_path.exists():
-            raise HTTPException(status_code=404, detail="File not found on disk")
+            # Check for any suspicious patterns in the stored path
+            path_str = str(stored_file_path)
+            if '..' in path_str or path_str.startswith('/') or path_str.startswith('\\'):
+                logger.error(f"Suspicious path pattern in stored file URL: {attachment.file_url}")
+                raise HTTPException(status_code=403, detail="Access denied")
+
+            file_path = stored_file_path.resolve()
+
+            # Ensure the file path is within the base upload directory (prevent path traversal)
+            if not str(file_path).startswith(str(base_upload_dir)):
+                logger.error(f"Path traversal attempt detected during download: {attachment.file_url}")
+                raise HTTPException(status_code=403, detail="Access denied")
+
+            if not file_path.exists():
+                logger.warning(f"File not found on disk: {file_path}")
+                raise HTTPException(status_code=404, detail="File not found")
+        except (ValueError, OSError) as e:
+            logger.error(f"Invalid file path during download: {e}")
+            raise HTTPException(status_code=400, detail="Invalid file path")
 
         return FileResponse(
             path=str(file_path),

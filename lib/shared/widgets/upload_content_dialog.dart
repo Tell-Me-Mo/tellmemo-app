@@ -1079,6 +1079,12 @@ class _UnifiedUploadArea extends StatefulWidget {
 class _UnifiedUploadAreaState extends State<_UnifiedUploadArea> {
   bool _isDragging = false;
 
+  void _setDragging(bool value) {
+    if (_isDragging != value) {
+      setState(() => _isDragging = value);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Detect mobile screen
@@ -1096,13 +1102,13 @@ class _UnifiedUploadAreaState extends State<_UnifiedUploadArea> {
 
     return DropTarget(
       onDragEntered: (details) {
-        setState(() => _isDragging = true);
+        _setDragging(true);
       },
       onDragExited: (details) {
-        setState(() => _isDragging = false);
+        _setDragging(false);
       },
       onDragDone: (details) async {
-        setState(() => _isDragging = false);
+        _setDragging(false);
 
         // Capture context before async operations
         final scaffoldMessenger = ScaffoldMessenger.of(context);
@@ -1143,8 +1149,7 @@ class _UnifiedUploadAreaState extends State<_UnifiedUploadArea> {
           }
         }
       },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+      child: Container(
         padding: EdgeInsets.all(containerPadding),
         decoration: BoxDecoration(
           border: Border.all(
@@ -1163,71 +1168,73 @@ class _UnifiedUploadAreaState extends State<_UnifiedUploadArea> {
                   ? Colors.blue.withValues(alpha: _DialogConstants.minimalOpacity)
                   : widget.colorScheme.surfaceContainerHighest.withValues(alpha: 0.05),
         ),
-        child: Column(
-          children: [
-            // File upload area
-            InkWell(
-              onTap: widget.onPickFile,
-              borderRadius: BorderRadius.circular(10),
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: verticalPadding),
-                child: Column(
-                  children: [
-                    Icon(
-                      isDragActive
-                          ? Icons.file_download
-                          : hasFile
-                              ? Icons.insert_drive_file
-                              : Icons.cloud_upload_outlined,
-                      size: iconSize,
-                      color: isDragActive
-                          ? Colors.blue
-                          : hasFile
-                              ? Colors.blue
-                              : widget.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                    ),
-                    const SizedBox(height: _DialogConstants.tinyPadding),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: isMobile ? 8.0 : 0.0),
-                      child: Text(
+        child: IgnorePointer(
+          ignoring: isDragActive,
+          child: Column(
+            children: [
+              // File upload area
+              InkWell(
+                onTap: widget.onPickFile,
+                borderRadius: BorderRadius.circular(10),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: verticalPadding),
+                  child: Column(
+                    children: [
+                      Icon(
                         isDragActive
-                            ? 'Drop files here'
-                            : (widget.selectedFileName ?? 'Click to select meeting transcript'),
-                        style: widget.textTheme.bodyLarge?.copyWith(
-                          color: isDragActive
-                              ? Colors.blue
-                              : hasFile
-                                  ? widget.colorScheme.onSurface
-                                  : widget.colorScheme.onSurfaceVariant,
-                          fontWeight: (isDragActive || hasFile) ? FontWeight.w600 : FontWeight.normal,
-                          fontSize: isMobile ? 15 : null,
-                        ),
-                        textAlign: TextAlign.center,
-                        maxLines: isMobile ? 2 : null,
-                        overflow: isMobile ? TextOverflow.ellipsis : null,
+                            ? Icons.file_download
+                            : hasFile
+                                ? Icons.insert_drive_file
+                                : Icons.cloud_upload_outlined,
+                        size: iconSize,
+                        color: isDragActive
+                            ? Colors.blue
+                            : hasFile
+                                ? Colors.blue
+                                : widget.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                       ),
-                    ),
-                    if (!isDragActive) ...[
-                      SizedBox(height: isMobile ? 6 : _DialogConstants.tinySpacing),
+                      const SizedBox(height: _DialogConstants.tinyPadding),
                       Padding(
-                        padding: EdgeInsets.symmetric(horizontal: isMobile ? 12.0 : 0.0),
+                        padding: EdgeInsets.symmetric(horizontal: isMobile ? 8.0 : 0.0),
                         child: Text(
-                          isMobile
-                              ? 'Audio or text files: TXT, PDF, DOC, DOCX, JSON, MP3, WAV, M4A, AAC, OGG, WMA, FLAC'
-                              : 'Audio or text files: ${_DialogConstants.allExtensions.map((e) => e.toUpperCase()).join(', ')}',
-                          style: widget.textTheme.bodySmall?.copyWith(
-                            color: widget.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                            fontSize: isMobile ? 10 : 11,
+                          isDragActive
+                              ? 'Drop files here'
+                              : (widget.selectedFileName ?? 'Click to select meeting transcript'),
+                          style: widget.textTheme.bodyLarge?.copyWith(
+                            color: isDragActive
+                                ? Colors.blue
+                                : hasFile
+                                    ? widget.colorScheme.onSurface
+                                    : widget.colorScheme.onSurfaceVariant,
+                            fontWeight: (isDragActive || hasFile) ? FontWeight.w600 : FontWeight.normal,
+                            fontSize: isMobile ? 15 : null,
                           ),
                           textAlign: TextAlign.center,
                           maxLines: isMobile ? 2 : null,
+                          overflow: isMobile ? TextOverflow.ellipsis : null,
                         ),
                       ),
+                      if (!isDragActive) ...[
+                        SizedBox(height: isMobile ? 6 : _DialogConstants.tinySpacing),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: isMobile ? 12.0 : 0.0),
+                          child: Text(
+                            isMobile
+                                ? 'Audio or text files: TXT, PDF, DOC, DOCX, JSON, MP3, WAV, M4A, AAC, OGG, WMA, FLAC'
+                                : 'Audio or text files: ${_DialogConstants.allExtensions.map((e) => e.toUpperCase()).join(', ')}',
+                            style: widget.textTheme.bodySmall?.copyWith(
+                              color: widget.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                              fontSize: isMobile ? 10 : 11,
+                            ),
+                            textAlign: TextAlign.center,
+                            maxLines: isMobile ? 2 : null,
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
-            ),
 
             // Divider with "OR" text
             if (!isDragActive) ...[
@@ -1296,6 +1303,7 @@ class _UnifiedUploadAreaState extends State<_UnifiedUploadArea> {
               ),
             ],
           ],
+        ),
         ),
       ),
     );
