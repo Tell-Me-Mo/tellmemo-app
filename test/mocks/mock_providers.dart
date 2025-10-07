@@ -5,6 +5,7 @@ import 'package:pm_master_v2/features/organizations/data/models/organization_mod
 import 'package:pm_master_v2/features/organizations/data/models/create_organization_request.dart';
 import 'package:pm_master_v2/features/organizations/data/services/organization_api_service.dart';
 import 'package:pm_master_v2/features/organizations/presentation/providers/organization_provider.dart';
+import 'package:pm_master_v2/features/organizations/presentation/providers/organization_settings_provider.dart';
 import 'package:pm_master_v2/features/organizations/presentation/providers/members_provider.dart';
 import 'package:pm_master_v2/features/projects/domain/entities/project.dart';
 import 'package:pm_master_v2/features/projects/presentation/providers/projects_provider.dart';
@@ -598,3 +599,4 @@ Override createHierarchyStateOverride({
     return MockHierarchyState(items: items, error: error);
   });
 }
+

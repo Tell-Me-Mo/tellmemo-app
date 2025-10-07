@@ -212,9 +212,11 @@ class _CsvBulkInviteDialogState extends ConsumerState<CsvBulkInviteDialog> {
         constraints: const BoxConstraints(maxWidth: 600, maxHeight: 600),
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               // Header
               Row(
                 children: [
@@ -283,7 +285,8 @@ class _CsvBulkInviteDialogState extends ConsumerState<CsvBulkInviteDialog> {
               const SizedBox(height: 12),
 
               // File picker or entries list
-              Expanded(
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 300, minHeight: 200),
                 child: _entries.isEmpty && !_isLoading
                     ? _buildUploadArea(theme)
                     : _isLoading
@@ -371,6 +374,7 @@ class _CsvBulkInviteDialogState extends ConsumerState<CsvBulkInviteDialog> {
                 ],
               ),
             ],
+            ),
           ),
         ),
       ),

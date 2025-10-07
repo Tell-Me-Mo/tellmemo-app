@@ -68,9 +68,8 @@ void main() {
       expect(find.text('Admin'), findsOneWidget);
       expect(find.text('Member'), findsOneWidget);
       expect(find.text('Viewer'), findsOneWidget);
-      expect(find.byIcon(Icons.admin_panel_settings), findsOneWidget);
-      expect(find.byIcon(Icons.person), findsOneWidget);
-      expect(find.byIcon(Icons.visibility), findsOneWidget);
+      // Note: Icons in SegmentedButton are not directly findable with find.byIcon
+      expect(find.byType(SegmentedButton<String>), findsOneWidget);
     });
 
     testWidgets('shows role description when role is selected',

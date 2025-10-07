@@ -176,8 +176,14 @@ class _InviteMembersDialogState extends ConsumerState<InviteMembersDialog> {
                 ),
                 const SizedBox(height: 16),
 
-                // Email Input
-                if (!_isBulkMode) ...[
+                // Scrollable content
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Email Input
+                        if (!_isBulkMode) ...[
                   TextFormField(
                     controller: _emailController,
                     decoration: const InputDecoration(
@@ -274,6 +280,10 @@ class _InviteMembersDialogState extends ConsumerState<InviteMembersDialog> {
                       ),
                     ),
                   ],
+                ),
+                      ],
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 24),
 

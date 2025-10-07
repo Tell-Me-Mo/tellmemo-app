@@ -78,7 +78,7 @@ class TestCreateBlocker:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/blockers",
+            f"/api/v1/projects/{test_project.id}/blockers",
             json=blocker_data
         )
 
@@ -120,7 +120,7 @@ class TestCreateBlocker:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/blockers",
+            f"/api/v1/projects/{test_project.id}/blockers",
             json=blocker_data
         )
 
@@ -178,7 +178,7 @@ class TestCreateBlocker:
 
         # Act
         response = await client.post(
-            f"/api/projects/{test_project.id}/blockers",
+            f"/api/v1/projects/{test_project.id}/blockers",
             json=blocker_data
         )
 
@@ -199,7 +199,7 @@ class TestListBlockers:
         """Test listing all blockers for a project."""
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/blockers"
+            f"/api/v1/projects/{test_project.id}/blockers"
         )
 
         # Assert
@@ -240,7 +240,7 @@ class TestListBlockers:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/blockers?status=active"
+            f"/api/v1/projects/{test_project.id}/blockers?status=active"
         )
 
         # Assert
@@ -280,7 +280,7 @@ class TestListBlockers:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/blockers?impact=critical"
+            f"/api/v1/projects/{test_project.id}/blockers?impact=critical"
         )
 
         # Assert
@@ -320,7 +320,7 @@ class TestListBlockers:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/blockers"
+            f"/api/v1/projects/{test_project.id}/blockers"
         )
 
         # Assert
@@ -353,7 +353,7 @@ class TestListBlockers:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{empty_project.id}/blockers"
+            f"/api/v1/projects/{empty_project.id}/blockers"
         )
 
         # Assert
@@ -369,7 +369,7 @@ class TestListBlockers:
         """Test that listing blockers requires authentication."""
         # Act
         response = await client.get(
-            f"/api/projects/{test_project.id}/blockers"
+            f"/api/v1/projects/{test_project.id}/blockers"
         )
 
         # Assert
@@ -394,7 +394,7 @@ class TestUpdateBlocker:
 
         # Act
         response = await authenticated_org_client.patch(
-            f"/api/blockers/{test_blocker.id}",
+            f"/api/v1/blockers/{test_blocker.id}",
             json=update_data
         )
 
@@ -416,7 +416,7 @@ class TestUpdateBlocker:
 
         # Act
         response = await authenticated_org_client.patch(
-            f"/api/blockers/{test_blocker.id}",
+            f"/api/v1/blockers/{test_blocker.id}",
             json=update_data
         )
 
@@ -440,7 +440,7 @@ class TestUpdateBlocker:
 
         # Act
         response = await authenticated_org_client.patch(
-            f"/api/blockers/{test_blocker.id}",
+            f"/api/v1/blockers/{test_blocker.id}",
             json=update_data
         )
 
@@ -466,7 +466,7 @@ class TestUpdateBlocker:
 
         # Act
         response = await authenticated_org_client.patch(
-            f"/api/blockers/{test_blocker.id}",
+            f"/api/v1/blockers/{test_blocker.id}",
             json=update_data
         )
 
@@ -494,7 +494,7 @@ class TestUpdateBlocker:
 
         # Act
         response = await authenticated_org_client.patch(
-            f"/api/blockers/{test_blocker.id}",
+            f"/api/v1/blockers/{test_blocker.id}",
             json=update_data
         )
 
@@ -520,7 +520,7 @@ class TestUpdateBlocker:
 
         # Act
         response = await authenticated_org_client.patch(
-            f"/api/blockers/{test_blocker.id}",
+            f"/api/v1/blockers/{test_blocker.id}",
             json=update_data
         )
 
@@ -543,7 +543,7 @@ class TestUpdateBlocker:
 
         # Act
         response = await authenticated_org_client.patch(
-            f"/api/blockers/{test_blocker.id}",
+            f"/api/v1/blockers/{test_blocker.id}",
             json=update_data
         )
 
@@ -571,7 +571,7 @@ class TestUpdateBlocker:
 
         # Act
         response = await authenticated_org_client.patch(
-            f"/api/blockers/{test_blocker.id}",
+            f"/api/v1/blockers/{test_blocker.id}",
             json=update_data
         )
 
@@ -597,7 +597,7 @@ class TestUpdateBlocker:
 
         # Act
         response = await authenticated_org_client.patch(
-            f"/api/blockers/{fake_blocker_id}",
+            f"/api/v1/blockers/{fake_blocker_id}",
             json=update_data
         )
 
@@ -616,7 +616,7 @@ class TestUpdateBlocker:
 
         # Act
         response = await client.patch(
-            f"/api/blockers/{test_blocker.id}",
+            f"/api/v1/blockers/{test_blocker.id}",
             json=update_data
         )
 
@@ -636,7 +636,7 @@ class TestDeleteBlocker:
         """Test successful blocker deletion."""
         # Act
         response = await authenticated_org_client.delete(
-            f"/api/blockers/{test_blocker.id}"
+            f"/api/v1/blockers/{test_blocker.id}"
         )
 
         # Assert
@@ -667,13 +667,13 @@ class TestDeleteBlocker:
 
         # Act - Delete
         delete_response = await authenticated_org_client.delete(
-            f"/api/blockers/{blocker_id}"
+            f"/api/v1/blockers/{blocker_id}"
         )
         assert delete_response.status_code == 200
 
         # Act - Try to get deleted blocker via list
         list_response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/blockers"
+            f"/api/v1/projects/{test_project.id}/blockers"
         )
 
         # Assert
@@ -692,7 +692,7 @@ class TestDeleteBlocker:
 
         # Act
         response = await authenticated_org_client.delete(
-            f"/api/blockers/{fake_blocker_id}"
+            f"/api/v1/blockers/{fake_blocker_id}"
         )
 
         # Assert
@@ -707,7 +707,7 @@ class TestDeleteBlocker:
         """Test that deleting blockers requires authentication."""
         # Act
         response = await client.delete(
-            f"/api/blockers/{test_blocker.id}"
+            f"/api/v1/blockers/{test_blocker.id}"
         )
 
         # Assert
@@ -751,7 +751,7 @@ class TestMultiTenantIsolation:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{other_project.id}/blockers",
+            f"/api/v1/projects/{other_project.id}/blockers",
             json=blocker_data
         )
 
@@ -796,7 +796,7 @@ class TestMultiTenantIsolation:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{other_project.id}/blockers"
+            f"/api/v1/projects/{other_project.id}/blockers"
         )
 
         # Assert

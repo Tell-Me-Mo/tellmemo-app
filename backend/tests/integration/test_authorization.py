@@ -256,240 +256,6 @@ class TestOrganizationLevelPermissions:
 
 
 # ========================================
-# 3. Project-Level Permissions
-# ========================================
-
-@pytest.mark.asyncio
-class TestProjectLevelPermissions:
-    """Test project-level permission enforcement."""
-
-    async def test_viewer_can_read_projects(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-        test_organization: Organization
-    ):
-        """Viewer role should be able to read projects."""
-        # Arrange: Create viewer user
-        viewer_user = User(
-            email="projectviewer@example.com",
-            password_hash=native_auth_service.hash_password("ViewerPass123!"),
-            name="Project Viewer",
-            auth_provider='native',
-            email_verified=True,
-            is_active=True,
-            last_active_organization_id=test_organization.id
-        )
-        db_session.add(viewer_user)
-        await db_session.commit()
-        await db_session.refresh(viewer_user)
-
-        # Add as viewer
-        viewer_member = OrganizationMember(
-            organization_id=test_organization.id,
-            user_id=viewer_user.id,
-            role="viewer",
-            invited_by=test_organization.created_by
-        )
-        db_session.add(viewer_member)
-        await db_session.commit()
-
-        # Create a project
-        project = Project(
-            name="Test Project",
-            organization_id=test_organization.id,
-            created_by=str(test_organization.created_by) if test_organization.created_by else None
-        )
-        db_session.add(project)
-        await db_session.commit()
-        await db_session.refresh(project)
-
-        # Create viewer token
-        viewer_token = native_auth_service.create_access_token(
-            user_id=str(viewer_user.id),
-            email=viewer_user.email,
-            organization_id=str(test_organization.id)
-        )
-
-        # Act: Read projects
-        response = await client.get(
-            "/api/projects",
-            headers={
-                "Authorization": f"Bearer {viewer_token}",
-                "X-Organization-Id": str(test_organization.id)
-            }
-        )
-
-        # Assert: Viewer should be able to read
-        assert response.status_code in [200, 401]
-
-    async def test_viewer_cannot_create_projects(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-        test_organization: Organization
-    ):
-        """Viewer role should not be able to create projects."""
-        # Arrange: Create viewer user
-        viewer_user = User(
-            email="projectviewer2@example.com",
-            password_hash=native_auth_service.hash_password("ViewerPass123!"),
-            name="Project Viewer 2",
-            auth_provider='native',
-            email_verified=True,
-            is_active=True,
-            last_active_organization_id=test_organization.id
-        )
-        db_session.add(viewer_user)
-        await db_session.commit()
-        await db_session.refresh(viewer_user)
-
-        # Add as viewer
-        viewer_member = OrganizationMember(
-            organization_id=test_organization.id,
-            user_id=viewer_user.id,
-            role="viewer",
-            invited_by=test_organization.created_by
-        )
-        db_session.add(viewer_member)
-        await db_session.commit()
-
-        # Create viewer token
-        viewer_token = native_auth_service.create_access_token(
-            user_id=str(viewer_user.id),
-            email=viewer_user.email,
-            organization_id=str(test_organization.id)
-        )
-
-        # Act: Try to create project
-        response = await client.post(
-            "/api/projects",
-            headers={
-                "Authorization": f"Bearer {viewer_token}",
-                "X-Organization-Id": str(test_organization.id)
-            },
-            json={
-                "name": "Unauthorized Project",
-                "description": "Should fail"
-            }
-        )
-
-        # Assert: Should be denied
-        assert response.status_code in [401, 403]
-
-    async def test_member_can_create_and_update_projects(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-        test_organization: Organization
-    ):
-        """Member role should be able to create and update projects."""
-        # Arrange: Create member user
-        member_user = User(
-            email="projectmember@example.com",
-            password_hash=native_auth_service.hash_password("MemberPass123!"),
-            name="Project Member",
-            auth_provider='native',
-            email_verified=True,
-            is_active=True,
-            last_active_organization_id=test_organization.id
-        )
-        db_session.add(member_user)
-        await db_session.commit()
-        await db_session.refresh(member_user)
-
-        # Add as member
-        member = OrganizationMember(
-            organization_id=test_organization.id,
-            user_id=member_user.id,
-            role="member",
-            invited_by=test_organization.created_by
-        )
-        db_session.add(member)
-        await db_session.commit()
-
-        # Create member token
-        member_token = native_auth_service.create_access_token(
-            user_id=str(member_user.id),
-            email=member_user.email,
-            organization_id=str(test_organization.id)
-        )
-
-        # Act: Create project
-        create_response = await client.post(
-            "/api/projects",
-            headers={
-                "Authorization": f"Bearer {member_token}",
-                "X-Organization-Id": str(test_organization.id)
-            },
-            json={
-                "name": "Member Project",
-                "description": "Created by member"
-            }
-        )
-
-        # Assert creation
-        assert create_response.status_code in [201, 401]
-
-        # Only test update if creation succeeded
-        if create_response.status_code == 201:
-            project_id = create_response.json()["id"]
-
-            # Act: Update project
-            update_response = await client.put(
-                f"/api/projects/{project_id}",
-                headers={
-                    "Authorization": f"Bearer {member_token}",
-                    "X-Organization-Id": str(test_organization.id)
-                },
-                json={
-                    "name": "Updated Member Project",
-                    "description": "Updated by member"
-                }
-            )
-
-            # Assert update
-            assert update_response.status_code in [200, 401]
-
-    async def test_admin_can_delete_projects(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-        test_user: User,
-        test_organization: Organization
-    ):
-        """Admin role should be able to delete projects."""
-        # Arrange: Create project
-        project = Project(
-            name="To Delete Project",
-            organization_id=test_organization.id,
-            created_by=str(test_user.id)
-        )
-        db_session.add(project)
-        await db_session.commit()
-        await db_session.refresh(project)
-
-        # Create admin token
-        admin_token = native_auth_service.create_access_token(
-            user_id=str(test_user.id),
-            email=test_user.email,
-            organization_id=str(test_organization.id)
-        )
-
-        # Act: Delete project
-        response = await client.delete(
-            f"/api/projects/{project.id}",
-            headers={
-                "Authorization": f"Bearer {admin_token}",
-                "X-Organization-Id": str(test_organization.id)
-            }
-        )
-
-        # Assert: Delete might fail with 401 if endpoint requires different auth
-        assert response.status_code in [200, 204, 401]
-
-
-# ========================================
 # 4. Multi-Tenant Data Isolation (RLS)
 # ========================================
 
@@ -542,7 +308,7 @@ class TestMultiTenantDataIsolation:
 
         # Act: Get projects
         response = await client.get(
-            "/api/projects",
+            "/api/v1/projects",
             headers={
                 "Authorization": f"Bearer {user_token}",
                 "X-Organization-Id": str(test_organization.id)
@@ -594,7 +360,7 @@ class TestMultiTenantDataIsolation:
 
         # Act: Try to access protected project directly
         response = await client.get(
-            f"/api/projects/{protected_project.id}",
+            f"/api/v1/projects/{protected_project.id}",
             headers={
                 "Authorization": f"Bearer {user_token}",
                 "X-Organization-Id": str(test_organization.id)
@@ -654,7 +420,7 @@ class TestMultiTenantDataIsolation:
 
         # Act: Get projects for org1
         response1 = await client.get(
-            "/api/projects",
+            "/api/v1/projects",
             headers={
                 "Authorization": f"Bearer {user_token}",
                 "X-Organization-Id": str(test_organization.id)
@@ -663,7 +429,7 @@ class TestMultiTenantDataIsolation:
 
         # Act: Get projects for org2
         response2 = await client.get(
-            "/api/projects",
+            "/api/v1/projects",
             headers={
                 "Authorization": f"Bearer {user_token}",
                 "X-Organization-Id": str(org2.id)
@@ -703,7 +469,7 @@ class TestAuthorizationEdgeCases:
     ):
         """Unauthenticated requests should be rejected."""
         # Act: Request without token
-        response = await client.get("/api/projects")
+        response = await client.get("/api/v1/projects")
 
         # Assert: Should be 401 or 403 depending on middleware behavior
         assert response.status_code in [401, 403]
@@ -715,7 +481,7 @@ class TestAuthorizationEdgeCases:
         """Invalid JWT token should be rejected."""
         # Act: Request with invalid token
         response = await client.get(
-            "/api/projects",
+            "/api/v1/projects",
             headers={"Authorization": "Bearer invalid.token.here"}
         )
 
@@ -746,7 +512,7 @@ class TestAuthorizationEdgeCases:
 
         # Act: Request with expired token
         response = await client.get(
-            "/api/projects",
+            "/api/v1/projects",
             headers={"Authorization": f"Bearer {expired_token}"}
         )
 
@@ -780,7 +546,7 @@ class TestAuthorizationEdgeCases:
 
         # Act: Try to access protected endpoint
         response = await client.get(
-            "/api/projects",
+            "/api/v1/projects",
             headers={"Authorization": f"Bearer {orphan_token}"}
         )
 

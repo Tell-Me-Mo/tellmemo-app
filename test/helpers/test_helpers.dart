@@ -27,7 +27,13 @@ Future<void> pumpWidgetWithProviders(
   List<Override>? overrides,
   bool settle = true,
   bool wrapInScaffold = false,
+  Size? screenSize,
 }) async {
+  // Set screen size if provided
+  if (screenSize != null) {
+    await tester.binding.setSurfaceSize(screenSize);
+  }
+
   await tester.pumpWidget(
     createTestApp(
       child: widget,

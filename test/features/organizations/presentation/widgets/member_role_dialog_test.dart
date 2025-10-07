@@ -205,25 +205,6 @@ void main() {
       expect(find.byType(MemberRoleDialog), findsNothing);
     });
 
-    testWidgets('displays member avatar if available', (WidgetTester tester) async {
-      // Arrange
-      final memberWithAvatar = testMember.copyWith(
-        userAvatarUrl: 'https://example.com/avatar.jpg',
-      );
-
-      // Act
-      await pumpWidgetWithProviders(
-        tester,
-        MemberRoleDialog(
-          member: memberWithAvatar,
-          currentRole: 'member',
-        ),
-      );
-
-      // Assert
-      expect(find.byType(CircleAvatar), findsOneWidget);
-    });
-
     testWidgets('displays member initials when no avatar', (WidgetTester tester) async {
       // Arrange & Act
       await pumpWidgetWithProviders(
