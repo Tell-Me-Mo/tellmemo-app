@@ -119,7 +119,7 @@ async def create_program(
     return response
 
 
-@router.get("/", response_model=List[ProgramResponse])
+@router.get("", response_model=List[ProgramResponse])
 async def list_programs(
     portfolio_id: Optional[UUID] = Query(None, description="Filter by portfolio"),
     skip: int = Query(0, ge=0),

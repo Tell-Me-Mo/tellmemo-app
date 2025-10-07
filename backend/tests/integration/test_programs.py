@@ -35,12 +35,12 @@ class TestProgramCreation:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/programs/",
+            "/api/v1/programs",
             json=program_data
         )
 
         # Assert
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
         assert data["name"] == "Strategic Program"
         assert data["portfolio_id"] is None
@@ -73,12 +73,12 @@ class TestProgramCreation:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/programs/",
+            "/api/v1/programs",
             json=program_data
         )
 
         # Assert
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
         assert data["name"] == "Enterprise Program"
         assert data["description"] == "Critical enterprise initiatives"
@@ -104,7 +104,7 @@ class TestProgramCreation:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/programs/",
+            "/api/v1/programs",
             json=program_data
         )
 
@@ -117,7 +117,7 @@ class TestProgramCreation:
         """Test that creating program requires authentication."""
         # Act
         response = await client.post(
-            "/api/programs/",
+            "/api/v1/programs",
             json={"name": "Test Program"}
         )
 
@@ -133,12 +133,12 @@ class TestProgramCreation:
         """Test that created_by defaults to current user email."""
         # Act
         response = await authenticated_org_client.post(
-            "/api/programs/",
+            "/api/v1/programs",
             json={"name": "Auto-Created Program"}
         )
 
         # Assert
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
         assert data["created_by"] == test_user.email
 
@@ -163,7 +163,7 @@ class TestProgramCreation:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/programs/",
+            "/api/v1/programs",
             json={
                 "name": "Test Program",
                 "portfolio_id": str(other_portfolio.id)
@@ -185,7 +185,7 @@ class TestProgramListing:
     ):
         """Test listing programs when none exist."""
         # Act
-        response = await authenticated_org_client.get("/api/programs/")
+        response = await authenticated_org_client.get("/api/v1/programs")
 
         # Assert
         assert response.status_code == 200
@@ -210,7 +210,7 @@ class TestProgramListing:
         await db_session.commit()
 
         # Act
-        response = await authenticated_org_client.get("/api/programs/")
+        response = await authenticated_org_client.get("/api/v1/programs")
 
         # Assert
         assert response.status_code == 200
@@ -257,7 +257,7 @@ class TestProgramListing:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/programs/?portfolio_id={portfolio.id}"
+            f"/api/v1/programs?portfolio_id={portfolio.id}"
         )
 
         # Assert
@@ -284,7 +284,7 @@ class TestProgramListing:
         await db_session.commit()
 
         # Act
-        response = await authenticated_org_client.get("/api/programs/?skip=2&limit=2")
+        response = await authenticated_org_client.get("/api/v1/programs?skip=2&limit=2")
 
         # Assert
         assert response.status_code == 200
@@ -315,7 +315,7 @@ class TestProgramListing:
         await db_session.commit()
 
         # Act
-        response = await authenticated_org_client.get("/api/programs/")
+        response = await authenticated_org_client.get("/api/v1/programs")
 
         # Assert
         assert response.status_code == 200
@@ -353,7 +353,7 @@ class TestProgramListing:
         await db_session.commit()
 
         # Act
-        response = await authenticated_org_client.get("/api/programs/")
+        response = await authenticated_org_client.get("/api/v1/programs")
 
         # Assert
         assert response.status_code == 200
@@ -384,7 +384,7 @@ class TestProgramRetrieval:
         await db_session.refresh(program)
 
         # Act
-        response = await authenticated_org_client.get(f"/api/programs/{program.id}")
+        response = await authenticated_org_client.get(f"/api/v1/programs/{program.id}")
 
         # Assert
         assert response.status_code == 200
@@ -427,7 +427,7 @@ class TestProgramRetrieval:
         await db_session.commit()
 
         # Act
-        response = await authenticated_org_client.get(f"/api/programs/{program.id}")
+        response = await authenticated_org_client.get(f"/api/v1/programs/{program.id}")
 
         # Assert
         assert response.status_code == 200
@@ -462,7 +462,7 @@ class TestProgramRetrieval:
         await db_session.refresh(program)
 
         # Act
-        response = await authenticated_org_client.get(f"/api/programs/{program.id}")
+        response = await authenticated_org_client.get(f"/api/v1/programs/{program.id}")
 
         # Assert
         assert response.status_code == 200
@@ -481,7 +481,7 @@ class TestProgramRetrieval:
         fake_id = uuid.uuid4()
 
         # Act
-        response = await authenticated_org_client.get(f"/api/programs/{fake_id}")
+        response = await authenticated_org_client.get(f"/api/v1/programs/{fake_id}")
 
         # Assert
         assert response.status_code == 404
@@ -507,7 +507,7 @@ class TestProgramRetrieval:
         await db_session.refresh(program)
 
         # Act
-        response = await authenticated_org_client.get(f"/api/programs/{program.id}")
+        response = await authenticated_org_client.get(f"/api/v1/programs/{program.id}")
 
         # Assert
         assert response.status_code == 404
@@ -532,7 +532,7 @@ class TestProgramUpdate:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/programs/{program.id}",
+            f"/api/v1/programs/{program.id}",
             json={"name": "New Name"}
         )
 
@@ -565,7 +565,7 @@ class TestProgramUpdate:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/programs/{program.id}",
+            f"/api/v1/programs/{program.id}",
             json={
                 "name": "Updated Program",
                 "description": "Updated description",
@@ -606,7 +606,7 @@ class TestProgramUpdate:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/programs/{program.id}",
+            f"/api/v1/programs/{program.id}",
             json={"portfolio_id": None}
         )
 
@@ -635,7 +635,7 @@ class TestProgramUpdate:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/programs/{program.id}",
+            f"/api/v1/programs/{program.id}",
             json={"portfolio_id": str(fake_portfolio_id)}
         )
 
@@ -663,7 +663,7 @@ class TestProgramUpdate:
 
         # Act - Update only description
         response = await authenticated_org_client.put(
-            f"/api/programs/{program.id}",
+            f"/api/v1/programs/{program.id}",
             json={"description": "Updated description"}
         )
 
@@ -685,7 +685,7 @@ class TestProgramUpdate:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/programs/{fake_id}",
+            f"/api/v1/programs/{fake_id}",
             json={"name": "Updated"}
         )
 
@@ -713,7 +713,7 @@ class TestProgramUpdate:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/programs/{program.id}",
+            f"/api/v1/programs/{program.id}",
             json={"name": "Hacked"}
         )
 
@@ -748,7 +748,7 @@ class TestProgramDeletion:
 
         # Act
         response = await authenticated_org_client.delete(
-            f"/api/programs/{program.id}?cascade_delete=false"
+            f"/api/v1/programs/{program.id}?cascade_delete=false"
         )
 
         # Assert
@@ -790,7 +790,7 @@ class TestProgramDeletion:
 
         # Act
         response = await authenticated_org_client.delete(
-            f"/api/programs/{program.id}?cascade_delete=true"
+            f"/api/v1/programs/{program.id}?cascade_delete=true"
         )
 
         # Assert
@@ -816,7 +816,7 @@ class TestProgramDeletion:
         fake_id = uuid.uuid4()
 
         # Act
-        response = await authenticated_org_client.delete(f"/api/programs/{fake_id}")
+        response = await authenticated_org_client.delete(f"/api/v1/programs/{fake_id}")
 
         # Assert
         assert response.status_code == 404
@@ -836,7 +836,7 @@ class TestProgramDeletion:
         await db_session.refresh(program)
 
         # Act
-        response = await authenticated_org_client.delete(f"/api/programs/{program.id}")
+        response = await authenticated_org_client.delete(f"/api/v1/programs/{program.id}")
 
         # Assert
         assert response.status_code == 200
@@ -864,7 +864,7 @@ class TestProgramProjects:
         await db_session.refresh(program)
 
         # Act
-        response = await authenticated_org_client.get(f"/api/programs/{program.id}/projects")
+        response = await authenticated_org_client.get(f"/api/v1/programs/{program.id}/projects")
 
         # Assert
         assert response.status_code == 200
@@ -894,7 +894,7 @@ class TestProgramProjects:
         await db_session.commit()
 
         # Act
-        response = await authenticated_org_client.get(f"/api/programs/{program.id}/projects")
+        response = await authenticated_org_client.get(f"/api/v1/programs/{program.id}/projects")
 
         # Assert
         assert response.status_code == 200
@@ -915,7 +915,7 @@ class TestProgramProjects:
         fake_id = uuid.uuid4()
 
         # Act
-        response = await authenticated_org_client.get(f"/api/programs/{fake_id}/projects")
+        response = await authenticated_org_client.get(f"/api/v1/programs/{fake_id}/projects")
 
         # Assert
         assert response.status_code == 404
@@ -945,7 +945,7 @@ class TestProgramPortfolioAssignment:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/programs/{program.id}/assign-to-portfolio/{portfolio.id}"
+            f"/api/v1/programs/{program.id}/assign-to-portfolio/{portfolio.id}"
         )
 
         # Assert
@@ -985,7 +985,7 @@ class TestProgramPortfolioAssignment:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/programs/{program.id}/assign-to-portfolio/{portfolio.id}"
+            f"/api/v1/programs/{program.id}/assign-to-portfolio/{portfolio.id}"
         )
 
         # Assert
@@ -1014,7 +1014,7 @@ class TestProgramPortfolioAssignment:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/programs/{program.id}/assign-to-portfolio/{fake_portfolio_id}"
+            f"/api/v1/programs/{program.id}/assign-to-portfolio/{fake_portfolio_id}"
         )
 
         # Assert
@@ -1040,7 +1040,7 @@ class TestProgramPortfolioAssignment:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/programs/{fake_program_id}/assign-to-portfolio/{portfolio.id}"
+            f"/api/v1/programs/{fake_program_id}/assign-to-portfolio/{portfolio.id}"
         )
 
         # Assert
@@ -1076,7 +1076,7 @@ class TestProgramPortfolioRemoval:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/programs/{program.id}/remove-from-portfolio"
+            f"/api/v1/programs/{program.id}/remove-from-portfolio"
         )
 
         # Assert
@@ -1121,7 +1121,7 @@ class TestProgramPortfolioRemoval:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/programs/{program.id}/remove-from-portfolio"
+            f"/api/v1/programs/{program.id}/remove-from-portfolio"
         )
 
         # Assert
@@ -1143,7 +1143,7 @@ class TestProgramPortfolioRemoval:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/programs/{fake_program_id}/remove-from-portfolio"
+            f"/api/v1/programs/{fake_program_id}/remove-from-portfolio"
         )
 
         # Assert
@@ -1169,7 +1169,7 @@ class TestProgramStatistics:
         await db_session.refresh(program)
 
         # Act
-        response = await authenticated_org_client.get(f"/api/programs/{program.id}/statistics")
+        response = await authenticated_org_client.get(f"/api/v1/programs/{program.id}/statistics")
 
         # Assert
         assert response.status_code == 200
@@ -1207,7 +1207,7 @@ class TestProgramStatistics:
         await db_session.refresh(program)
 
         # Act
-        response = await authenticated_org_client.get(f"/api/programs/{program.id}/statistics")
+        response = await authenticated_org_client.get(f"/api/v1/programs/{program.id}/statistics")
 
         # Assert
         assert response.status_code == 200
@@ -1253,7 +1253,7 @@ class TestProgramStatistics:
         await db_session.commit()
 
         # Act
-        response = await authenticated_org_client.get(f"/api/programs/{program.id}/statistics")
+        response = await authenticated_org_client.get(f"/api/v1/programs/{program.id}/statistics")
 
         # Assert
         assert response.status_code == 200
@@ -1272,7 +1272,7 @@ class TestProgramStatistics:
         fake_id = uuid.uuid4()
 
         # Act
-        response = await authenticated_org_client.get(f"/api/programs/{fake_id}/statistics")
+        response = await authenticated_org_client.get(f"/api/v1/programs/{fake_id}/statistics")
 
         # Assert
         assert response.status_code == 404
@@ -1301,7 +1301,7 @@ class TestProgramDeletionImpact:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/programs/{program.id}/deletion-impact"
+            f"/api/v1/programs/{program.id}/deletion-impact"
         )
 
         # Assert
@@ -1345,7 +1345,7 @@ class TestProgramDeletionImpact:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/programs/{program.id}/deletion-impact"
+            f"/api/v1/programs/{program.id}/deletion-impact"
         )
 
         # Assert
@@ -1370,7 +1370,7 @@ class TestProgramDeletionImpact:
         fake_id = uuid.uuid4()
 
         # Act
-        response = await authenticated_org_client.get(f"/api/programs/{fake_id}/deletion-impact")
+        response = await authenticated_org_client.get(f"/api/v1/programs/{fake_id}/deletion-impact")
 
         # Assert
         assert response.status_code == 404

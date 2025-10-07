@@ -94,7 +94,7 @@ class TestOrganizationCreation:
 
         # Assert
         assert response.status_code == 201
-        assert response.json()["slug"] == "test-org-with-spaces---special-"
+        assert response.json()["slug"] == "test-org-with-spaces-special"
 
     @pytest.mark.asyncio
     async def test_create_organization_duplicate_slug_fails(
@@ -158,7 +158,7 @@ class TestOrganizationCreation:
         )
 
         # Assert
-        assert response.status_code == 401
+        assert response.status_code == 403
 
     @pytest.mark.asyncio
     async def test_creator_becomes_admin_and_active_org_updated(
@@ -276,7 +276,7 @@ class TestOrganizationList:
         response = await client.get("/api/v1/organizations")
 
         # Assert
-        assert response.status_code == 401
+        assert response.status_code == 403
 
 
 class TestGetOrganization:

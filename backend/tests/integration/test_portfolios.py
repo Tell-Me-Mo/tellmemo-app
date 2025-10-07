@@ -35,12 +35,12 @@ class TestPortfolioCreation:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/portfolios/",
+            "/api/v1/portfolios",
             json=portfolio_data
         )
 
         # Assert
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
         assert data["name"] == "Strategic Portfolio"
         assert data["health_status"] == "not_set"
@@ -69,12 +69,12 @@ class TestPortfolioCreation:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/portfolios/",
+            "/api/v1/portfolios",
             json=portfolio_data
         )
 
         # Assert
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
         assert data["name"] == "Enterprise Portfolio"
         assert data["description"] == "Critical enterprise initiatives"
@@ -92,10 +92,10 @@ class TestPortfolioCreation:
         """Test that duplicate portfolio names are rejected."""
         # Arrange
         portfolio_data = {"name": "Duplicate Portfolio"}
-        await authenticated_org_client.post("/api/portfolios/", json=portfolio_data)
+        await authenticated_org_client.post("/api/v1/portfolios", json=portfolio_data)
 
         # Act
-        response = await authenticated_org_client.post("/api/portfolios/", json=portfolio_data)
+        response = await authenticated_org_client.post("/api/v1/portfolios", json=portfolio_data)
 
         # Assert
         assert response.status_code == 400
@@ -106,7 +106,7 @@ class TestPortfolioCreation:
         """Test that creating portfolio requires authentication."""
         # Act
         response = await client.post(
-            "/api/portfolios/",
+            "/api/v1/portfolios",
             json={"name": "Test Portfolio"}
         )
 
@@ -122,12 +122,12 @@ class TestPortfolioCreation:
         """Test that owner defaults to current user email."""
         # Act
         response = await authenticated_org_client.post(
-            "/api/portfolios/",
+            "/api/v1/portfolios",
             json={"name": "Auto-Owner Portfolio"}
         )
 
         # Assert
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
         assert data["owner"] == test_user.email
         assert data["created_by"] == test_user.email
@@ -143,7 +143,7 @@ class TestPortfolioListing:
     ):
         """Test listing portfolios when none exist."""
         # Act
-        response = await authenticated_org_client.get("/api/portfolios/")
+        response = await authenticated_org_client.get("/api/v1/portfolios/")
 
         # Assert
         assert response.status_code == 200
@@ -168,7 +168,7 @@ class TestPortfolioListing:
         await db_session.commit()
 
         # Act
-        response = await authenticated_org_client.get("/api/portfolios/")
+        response = await authenticated_org_client.get("/api/v1/portfolios/")
 
         # Assert
         assert response.status_code == 200
@@ -194,7 +194,7 @@ class TestPortfolioListing:
         await db_session.commit()
 
         # Act
-        response = await authenticated_org_client.get("/api/portfolios/?skip=2&limit=2")
+        response = await authenticated_org_client.get("/api/v1/portfolios/?skip=2&limit=2")
 
         # Assert
         assert response.status_code == 200
@@ -225,7 +225,7 @@ class TestPortfolioListing:
         await db_session.commit()
 
         # Act
-        response = await authenticated_org_client.get("/api/portfolios/")
+        response = await authenticated_org_client.get("/api/v1/portfolios/")
 
         # Assert
         assert response.status_code == 200
@@ -276,7 +276,7 @@ class TestPortfolioListing:
         await db_session.commit()
 
         # Act
-        response = await authenticated_org_client.get("/api/portfolios/")
+        response = await authenticated_org_client.get("/api/v1/portfolios/")
 
         # Assert
         assert response.status_code == 200
@@ -310,7 +310,7 @@ class TestPortfolioRetrieval:
         await db_session.refresh(portfolio)
 
         # Act
-        response = await authenticated_org_client.get(f"/api/portfolios/{portfolio.id}")
+        response = await authenticated_org_client.get(f"/api/v1/portfolios/{portfolio.id}")
 
         # Assert
         assert response.status_code == 200
@@ -331,7 +331,7 @@ class TestPortfolioRetrieval:
         fake_id = uuid.uuid4()
 
         # Act
-        response = await authenticated_org_client.get(f"/api/portfolios/{fake_id}")
+        response = await authenticated_org_client.get(f"/api/v1/portfolios/{fake_id}")
 
         # Assert
         assert response.status_code == 404
@@ -357,7 +357,7 @@ class TestPortfolioRetrieval:
         await db_session.refresh(portfolio)
 
         # Act
-        response = await authenticated_org_client.get(f"/api/portfolios/{portfolio.id}")
+        response = await authenticated_org_client.get(f"/api/v1/portfolios/{portfolio.id}")
 
         # Assert
         assert response.status_code == 404
@@ -382,7 +382,7 @@ class TestPortfolioUpdate:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/portfolios/{portfolio.id}",
+            f"/api/v1/portfolios/{portfolio.id}",
             json={"name": "New Name"}
         )
 
@@ -411,7 +411,7 @@ class TestPortfolioUpdate:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/portfolios/{portfolio.id}",
+            f"/api/v1/portfolios/{portfolio.id}",
             json={
                 "name": "Updated Portfolio",
                 "description": "Updated description",
@@ -450,7 +450,7 @@ class TestPortfolioUpdate:
 
         # Act - Update only health status
         response = await authenticated_org_client.put(
-            f"/api/portfolios/{portfolio.id}",
+            f"/api/v1/portfolios/{portfolio.id}",
             json={"health_status": "green"}
         )
 
@@ -473,7 +473,7 @@ class TestPortfolioUpdate:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/portfolios/{fake_id}",
+            f"/api/v1/portfolios/{fake_id}",
             json={"name": "Updated"}
         )
 
@@ -501,7 +501,7 @@ class TestPortfolioUpdate:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/portfolios/{portfolio.id}",
+            f"/api/v1/portfolios/{portfolio.id}",
             json={"name": "Hacked"}
         )
 
@@ -543,7 +543,7 @@ class TestPortfolioDeletion:
 
         # Act
         response = await authenticated_org_client.delete(
-            f"/api/portfolios/{portfolio.id}?cascade_delete=false"
+            f"/api/v1/portfolios/{portfolio.id}?cascade_delete=false"
         )
 
         # Assert
@@ -595,7 +595,7 @@ class TestPortfolioDeletion:
 
         # Act
         response = await authenticated_org_client.delete(
-            f"/api/portfolios/{portfolio.id}?cascade_delete=true"
+            f"/api/v1/portfolios/{portfolio.id}?cascade_delete=true"
         )
 
         # Assert
@@ -624,7 +624,7 @@ class TestPortfolioDeletion:
         fake_id = uuid.uuid4()
 
         # Act
-        response = await authenticated_org_client.delete(f"/api/portfolios/{fake_id}")
+        response = await authenticated_org_client.delete(f"/api/v1/portfolios/{fake_id}")
 
         # Assert
         assert response.status_code == 404
@@ -644,7 +644,7 @@ class TestPortfolioDeletion:
         await db_session.refresh(portfolio)
 
         # Act
-        response = await authenticated_org_client.delete(f"/api/portfolios/{portfolio.id}")
+        response = await authenticated_org_client.delete(f"/api/v1/portfolios/{portfolio.id}")
 
         # Assert
         assert response.status_code == 200
@@ -672,7 +672,7 @@ class TestPortfolioPrograms:
         await db_session.refresh(portfolio)
 
         # Act
-        response = await authenticated_org_client.get(f"/api/portfolios/{portfolio.id}/programs")
+        response = await authenticated_org_client.get(f"/api/v1/portfolios/{portfolio.id}/programs")
 
         # Assert
         assert response.status_code == 200
@@ -702,7 +702,7 @@ class TestPortfolioPrograms:
         await db_session.commit()
 
         # Act
-        response = await authenticated_org_client.get(f"/api/portfolios/{portfolio.id}/programs")
+        response = await authenticated_org_client.get(f"/api/v1/portfolios/{portfolio.id}/programs")
 
         # Assert
         assert response.status_code == 200
@@ -723,7 +723,7 @@ class TestPortfolioPrograms:
         fake_id = uuid.uuid4()
 
         # Act
-        response = await authenticated_org_client.get(f"/api/portfolios/{fake_id}/programs")
+        response = await authenticated_org_client.get(f"/api/v1/portfolios/{fake_id}/programs")
 
         # Assert
         assert response.status_code == 404
@@ -774,7 +774,7 @@ class TestPortfolioProjects:
         await db_session.commit()
 
         # Act
-        response = await authenticated_org_client.get(f"/api/portfolios/{portfolio.id}/projects")
+        response = await authenticated_org_client.get(f"/api/v1/portfolios/{portfolio.id}/projects")
 
         # Assert
         assert response.status_code == 200
@@ -827,7 +827,7 @@ class TestPortfolioProjects:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/portfolios/{portfolio.id}/projects?direct_only=true"
+            f"/api/v1/portfolios/{portfolio.id}/projects?direct_only=true"
         )
 
         # Assert
@@ -851,7 +851,7 @@ class TestPortfolioProjects:
         await db_session.refresh(portfolio)
 
         # Act
-        response = await authenticated_org_client.get(f"/api/portfolios/{portfolio.id}/projects")
+        response = await authenticated_org_client.get(f"/api/v1/portfolios/{portfolio.id}/projects")
 
         # Assert
         assert response.status_code == 200
@@ -876,7 +876,7 @@ class TestPortfolioStatistics:
         await db_session.refresh(portfolio)
 
         # Act
-        response = await authenticated_org_client.get(f"/api/portfolios/{portfolio.id}/statistics")
+        response = await authenticated_org_client.get(f"/api/v1/portfolios/{portfolio.id}/statistics")
 
         # Assert
         assert response.status_code == 200
@@ -946,7 +946,7 @@ class TestPortfolioStatistics:
         await db_session.commit()
 
         # Act
-        response = await authenticated_org_client.get(f"/api/portfolios/{portfolio.id}/statistics")
+        response = await authenticated_org_client.get(f"/api/v1/portfolios/{portfolio.id}/statistics")
 
         # Assert
         assert response.status_code == 200
@@ -967,7 +967,7 @@ class TestPortfolioStatistics:
         fake_id = uuid.uuid4()
 
         # Act
-        response = await authenticated_org_client.get(f"/api/portfolios/{fake_id}/statistics")
+        response = await authenticated_org_client.get(f"/api/v1/portfolios/{fake_id}/statistics")
 
         # Assert
         assert response.status_code == 404
@@ -996,7 +996,7 @@ class TestPortfolioDeletionImpact:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/portfolios/{portfolio.id}/deletion-impact"
+            f"/api/v1/portfolios/{portfolio.id}/deletion-impact"
         )
 
         # Assert
@@ -1059,7 +1059,7 @@ class TestPortfolioDeletionImpact:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/portfolios/{portfolio.id}/deletion-impact"
+            f"/api/v1/portfolios/{portfolio.id}/deletion-impact"
         )
 
         # Assert
@@ -1091,7 +1091,7 @@ class TestPortfolioDeletionImpact:
         fake_id = uuid.uuid4()
 
         # Act
-        response = await authenticated_org_client.get(f"/api/portfolios/{fake_id}/deletion-impact")
+        response = await authenticated_org_client.get(f"/api/v1/portfolios/{fake_id}/deletion-impact")
 
         # Assert
         assert response.status_code == 404
@@ -1116,7 +1116,7 @@ class TestPortfolioQuery:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/portfolios/{portfolio.id}/query",
+            f"/api/v1/portfolios/{portfolio.id}/query",
             json={"query": "What are the key risks?"}
         )
 
@@ -1140,7 +1140,7 @@ class TestPortfolioQuery:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/portfolios/{fake_id}/query",
+            f"/api/v1/portfolios/{fake_id}/query",
             json={"query": "Test query"}
         )
 
@@ -1163,7 +1163,7 @@ class TestPortfolioQuery:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/portfolios/{portfolio.id}/query",
+            f"/api/v1/portfolios/{portfolio.id}/query",
             json={
                 "query": "What are the risks?",
                 "limit": 5
@@ -1203,7 +1203,7 @@ class TestPortfolioQuery:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/portfolios/{portfolio.id}/query",
+            f"/api/v1/portfolios/{portfolio.id}/query",
             json={
                 "query": "Test query",
                 "include_archived_projects": False

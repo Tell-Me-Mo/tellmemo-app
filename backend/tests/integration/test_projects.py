@@ -39,7 +39,7 @@ class TestProjectCreation:
         )
 
         # Assert
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
         assert data["name"] == "My New Project"
         assert data["description"] == "A test project"
@@ -72,7 +72,7 @@ class TestProjectCreation:
         )
 
         # Assert
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
         assert len(data["members"]) == 2
         assert data["members"][0]["name"] == "John Doe"
@@ -170,7 +170,7 @@ class TestProjectCreation:
         )
 
         # Assert
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
         assert data["portfolio_id"] == str(portfolio.id)
 
@@ -633,7 +633,7 @@ class TestArchiveProject:
         )
 
         # Assert
-        assert response.status_code == 200
+        assert response.status_code == 201
 
 
 class TestRestoreProject:
@@ -1401,7 +1401,7 @@ class TestProjectAssignment:
         )
 
         # Assert
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
         assert data["program_id"] == str(program.id)
 

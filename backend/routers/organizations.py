@@ -226,7 +226,8 @@ async def create_organization(
             organization_id=organization.id,
             user_id=current_user.id,
             role=OrganizationRole.ADMIN.value,  # Use string value for database
-            invited_by=None  # Self-joined as creator
+            invited_by=None,  # Self-joined as creator
+            joined_at=datetime.utcnow()
         )
         db.add(member)
 
@@ -733,7 +734,7 @@ async def list_organization_members(
                 name=user.name,
                 avatar_url=user.avatar_url,
                 role=member.role,  # role is already a string
-                joined_at=member.joined_at,
+                joined_at=member.joined_at or member.updated_at,
                 invited_by=str(member.invited_by) if member.invited_by else None
             ))
 
@@ -997,13 +998,14 @@ async def update_member_role(
         await db.refresh(member)
 
         return OrganizationMemberResponse(
-            id=member.user.id,
+            id=str(member.id),
+            user_id=str(member.user_id),
             email=member.user.email,
             name=member.user.name,
             avatar_url=member.user.avatar_url,
             role=member.role,
-            joined_at=member.joined_at,
-            invited_by=member.invited_by
+            joined_at=member.joined_at or member.updated_at,
+            invited_by=str(member.invited_by) if member.invited_by else None
         )
 
     except HTTPException:
