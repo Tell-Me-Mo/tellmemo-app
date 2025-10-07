@@ -17,7 +17,7 @@ class ApiClient {
 
   // Projects endpoints
   Future<List<ProjectModel>> getProjects() async {
-    final response = await _dio.get('/api/v1/projects');
+    final response = await _dio.get('/api/v1/projects/');
     final List<dynamic> data = response.data;
     return data.map((json) => ProjectModel.fromJson(json)).toList();
   }
@@ -29,7 +29,7 @@ class ApiClient {
 
   Future<ProjectModel> createProject(Map<String, dynamic> project) async {
     try {
-      final response = await _dio.post('/api/v1/projects', data: project);
+      final response = await _dio.post('/api/v1/projects/', data: project);
       return ProjectModel.fromJson(response.data);
     } on DioException catch (e) {
       if (e.response?.statusCode == 409) {

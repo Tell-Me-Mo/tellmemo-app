@@ -668,6 +668,7 @@ class _StyledDropdownField extends StatelessWidget {
       value: value,
       items: items,
       onChanged: enabled ? onChanged : null,
+      isExpanded: true,
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: TextStyle(

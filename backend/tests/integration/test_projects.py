@@ -34,7 +34,7 @@ class TestProjectCreation:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json=project_data
         )
 
@@ -67,7 +67,7 @@ class TestProjectCreation:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json=project_data
         )
 
@@ -89,13 +89,13 @@ class TestProjectCreation:
         """Test that duplicate project names are rejected."""
         # Arrange - Create first project
         await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Duplicate Project"}
         )
 
         # Act - Try to create project with same name
         response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Duplicate Project"}
         )
 
@@ -114,7 +114,7 @@ class TestProjectCreation:
 
         # Act
         response = await client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json=project_data
         )
 
@@ -132,7 +132,7 @@ class TestProjectCreation:
 
         # Act
         response = await authenticated_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json=project_data
         )
 
@@ -165,7 +165,7 @@ class TestProjectCreation:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json=project_data
         )
 
@@ -187,16 +187,16 @@ class TestProjectList:
         """Test listing organization's projects."""
         # Arrange - Create projects
         await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Project 1"}
         )
         await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Project 2"}
         )
 
         # Act
-        response = await authenticated_org_client.get("/api/v1/projects")
+        response = await authenticated_org_client.get("/api/v1/projects/")
 
         # Assert
         assert response.status_code == 200
@@ -213,7 +213,7 @@ class TestProjectList:
     ):
         """Test listing when no projects exist."""
         # Act
-        response = await authenticated_org_client.get("/api/v1/projects")
+        response = await authenticated_org_client.get("/api/v1/projects/")
 
         # Assert
         assert response.status_code == 200
@@ -229,13 +229,13 @@ class TestProjectList:
         """Test filtering projects by active status."""
         # Arrange - Create active and archived projects
         response1 = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Active Project"}
         )
         project1_id = response1.json()["id"]
 
         await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Another Active"}
         )
 
@@ -262,7 +262,7 @@ class TestProjectList:
         """Test filtering projects by archived status."""
         # Arrange
         response1 = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Project to Archive"}
         )
         project1_id = response1.json()["id"]
@@ -311,7 +311,7 @@ class TestGetProject:
         """Test getting project by ID."""
         # Arrange
         create_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={
                 "name": "Test Project",
                 "description": "Test description",
@@ -381,7 +381,7 @@ class TestUpdateProject:
         """Test updating project name."""
         # Arrange
         create_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Original Name"}
         )
         project_id = create_response.json()["id"]
@@ -407,7 +407,7 @@ class TestUpdateProject:
         """Test updating project description."""
         # Arrange
         create_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Test Project", "description": "Original"}
         )
         project_id = create_response.json()["id"]
@@ -431,7 +431,7 @@ class TestUpdateProject:
         """Test updating project status."""
         # Arrange
         create_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Test Project"}
         )
         project_id = create_response.json()["id"]
@@ -455,7 +455,7 @@ class TestUpdateProject:
         """Test updating project members (replaces all)."""
         # Arrange
         create_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={
                 "name": "Test Project",
                 "members": [{"name": "John", "email": "john@test.com", "role": "lead"}]
@@ -490,11 +490,11 @@ class TestUpdateProject:
         """Test that updating to duplicate name fails."""
         # Arrange
         await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Existing Project"}
         )
         create_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Project to Rename"}
         )
         project_id = create_response.json()["id"]
@@ -518,7 +518,7 @@ class TestUpdateProject:
         """Test that invalid status fails."""
         # Arrange
         create_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Test Project"}
         )
         project_id = create_response.json()["id"]
@@ -542,7 +542,7 @@ class TestUpdateProject:
         """Test that updating requires at least member role."""
         # Arrange
         create_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Test Project"}
         )
         project_id = create_response.json()["id"]
@@ -569,7 +569,7 @@ class TestArchiveProject:
         """Test archiving a project."""
         # Arrange
         create_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Project to Archive"}
         )
         project_id = create_response.json()["id"]
@@ -616,7 +616,7 @@ class TestArchiveProject:
         """Test that archiving allows creating new project with same name."""
         # Arrange
         create_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Reusable Name"}
         )
         project_id = create_response.json()["id"]
@@ -628,7 +628,7 @@ class TestArchiveProject:
 
         # Act - Create new project with same name
         response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Reusable Name"}
         )
 
@@ -648,7 +648,7 @@ class TestRestoreProject:
         """Test restoring an archived project."""
         # Arrange
         create_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Project to Restore"}
         )
         project_id = create_response.json()["id"]
@@ -682,7 +682,7 @@ class TestRestoreProject:
         """Test that restoring fails if active project with same name exists."""
         # Arrange
         create_response1 = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Duplicate Name"}
         )
         project1_id = create_response1.json()["id"]
@@ -694,7 +694,7 @@ class TestRestoreProject:
 
         # Create new project with same name
         await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Duplicate Name"}
         )
 
@@ -739,7 +739,7 @@ class TestDeleteProject:
         """Test permanently deleting a project as admin."""
         # Arrange
         create_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Project to Delete"}
         )
         project_id = create_response.json()["id"]
@@ -855,7 +855,7 @@ class TestProjectMemberManagement:
         """Test adding a member to a project."""
         # Arrange
         create_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Test Project"}
         )
         project_id = create_response.json()["id"]
@@ -889,7 +889,7 @@ class TestProjectMemberManagement:
         """Test that adding duplicate member fails."""
         # Arrange
         create_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={
                 "name": "Test Project",
                 "members": [{"name": "John", "email": "john@test.com", "role": "lead"}]
@@ -915,7 +915,7 @@ class TestProjectMemberManagement:
         """Test removing a member from a project."""
         # Arrange
         create_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={
                 "name": "Test Project",
                 "members": [{"name": "John", "email": "john@test.com", "role": "lead"}]
@@ -947,7 +947,7 @@ class TestProjectMemberManagement:
         """Test that removing non-existent member fails."""
         # Arrange
         create_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Test Project"}
         )
         project_id = create_response.json()["id"]
@@ -985,7 +985,7 @@ class TestProjectAssignment:
 
         # Create a standalone project
         create_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Standalone Project"}
         )
         project_id = create_response.json()["id"]
@@ -1024,7 +1024,7 @@ class TestProjectAssignment:
 
         # Create a standalone project
         create_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Portfolio Project"}
         )
         project_id = create_response.json()["id"]
@@ -1069,7 +1069,7 @@ class TestProjectAssignment:
 
         # Create project assigned to program1
         create_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={
                 "name": "Moving Project",
                 "program_id": str(program1.id)
@@ -1128,7 +1128,7 @@ class TestProjectAssignment:
 
         # Create project
         create_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Hierarchical Project"}
         )
         project_id = create_response.json()["id"]
@@ -1168,7 +1168,7 @@ class TestProjectAssignment:
         await db_session.refresh(program)
 
         create_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={
                 "name": "Assigned Project",
                 "program_id": str(program.id)
@@ -1208,7 +1208,7 @@ class TestProjectAssignment:
         await db_session.refresh(portfolio)
 
         create_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={
                 "name": "Portfolio Project",
                 "portfolio_id": str(portfolio.id)
@@ -1236,7 +1236,7 @@ class TestProjectAssignment:
         """Test that assigning to non-existent program fails with 409."""
         # Arrange
         create_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Test Project"}
         )
         project_id = create_response.json()["id"]
@@ -1261,7 +1261,7 @@ class TestProjectAssignment:
         """Test that assigning to non-existent portfolio fails with 409."""
         # Arrange
         create_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Test Project"}
         )
         project_id = create_response.json()["id"]
@@ -1357,7 +1357,7 @@ class TestProjectAssignment:
 
         # Create project in org1
         create_response = await client1.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={"name": "Org1 Project"}
         )
         project_id = create_response.json()["id"]
@@ -1393,7 +1393,7 @@ class TestProjectAssignment:
 
         # Act - Create project with program assignment
         response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={
                 "name": "Pre-assigned Project",
                 "program_id": str(program.id)
@@ -1434,7 +1434,7 @@ class TestProjectAssignment:
 
         # Create project in portfolio
         create_response = await authenticated_org_client.post(
-            "/api/v1/projects",
+            "/api/v1/projects/",
             json={
                 "name": "Moving Project",
                 "portfolio_id": str(portfolio.id)

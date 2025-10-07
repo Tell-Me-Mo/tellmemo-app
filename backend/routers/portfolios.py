@@ -72,7 +72,7 @@ class PortfolioResponse(BaseModel):
         from_attributes = True
 
 
-@router.post("", response_model=PortfolioResponse, status_code=201)
+@router.post("/", response_model=PortfolioResponse, status_code=201)
 async def create_portfolio(
     portfolio: PortfolioCreate,
     db: AsyncSession = Depends(get_db),

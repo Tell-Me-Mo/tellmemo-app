@@ -422,7 +422,7 @@ body {
 
 .footer-links {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 40px;
 }
 
@@ -963,6 +963,7 @@ button:focus-visible {
     align-items: center;
     justify-content: space-between;
     gap: 20px;
+    flex-wrap: wrap;
 }
 
 .cookie-content p {
@@ -970,6 +971,9 @@ button:focus-visible {
     font-size: 14px;
     color: var(--text-secondary);
     line-height: 1.5;
+    flex: 1 1 auto;
+    max-width: 800px;
+    min-width: 280px;
 }
 
 .cookie-content a {
@@ -998,6 +1002,23 @@ button:focus-visible {
 .btn-accept:hover {
     transform: translateY(-1px);
     opacity: 0.9;
+}
+
+/* Responsive - Tablet */
+@media (max-width: 1024px) {
+    /* Cookie Banner - Tablet */
+    .cookie-content {
+        gap: 16px;
+    }
+
+    .cookie-content p {
+        max-width: 600px;
+        font-size: 13px;
+    }
+
+    .btn-accept {
+        flex-shrink: 0;
+    }
 }
 
 /* Responsive - Mobile First Design */

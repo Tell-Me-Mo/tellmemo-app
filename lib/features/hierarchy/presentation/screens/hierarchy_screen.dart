@@ -1287,6 +1287,8 @@ class _HierarchyScreenState extends ConsumerState<HierarchyScreen> {
       final theme = Theme.of(context);
       final colorScheme = theme.colorScheme;
       final textTheme = theme.textTheme;
+      final screenWidth = MediaQuery.of(context).size.width;
+      final isMobile = screenWidth <= 768;
 
       IconData iconData;
       Color iconColor;
@@ -1311,17 +1313,21 @@ class _HierarchyScreenState extends ConsumerState<HierarchyScreen> {
       }
 
       return Container(
-        margin: const EdgeInsets.only(bottom: 8, right: 8, left: 4),
+        margin: EdgeInsets.only(
+          bottom: 8,
+          right: isMobile ? 4 : 8,
+          left: isMobile ? 2 : 4,
+        ),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: () => _handleItemTap(item.id, item.type.name),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(isMobile ? 10 : 12),
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(isMobile ? 10 : 12),
               decoration: BoxDecoration(
                 color: colorScheme.surface,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(isMobile ? 10 : 12),
                 border: Border.all(
                   color: colorScheme.outline.withValues(alpha: 0.1),
                 ),
@@ -1353,12 +1359,18 @@ class _HierarchyScreenState extends ConsumerState<HierarchyScreen> {
                       children: [
                         Text(
                           item.name,
-                          style: textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: isMobile
+                            ? textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                height: 1.3,
+                              )
+                            : textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                          maxLines: isMobile ? 2 : 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        if (item.description?.isNotEmpty == true) ...[
+                        if (item.description?.isNotEmpty == true && !isMobile) ...[
                           const SizedBox(height: 2),
                           Text(
                             item.description!,
@@ -1369,6 +1381,16 @@ class _HierarchyScreenState extends ConsumerState<HierarchyScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ],
+                        if (node.children.isNotEmpty && isMobile) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            '${node.children.length} ${_getCountLabel(item.type)}',
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -1376,7 +1398,8 @@ class _HierarchyScreenState extends ConsumerState<HierarchyScreen> {
                   // Type Badge and Actions
                   Row(
                     children: [
-                      if (node.children.isNotEmpty) ...[
+                      // Desktop: Show count badge
+                      if (node.children.isNotEmpty && !isMobile) ...[
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
@@ -1400,42 +1423,57 @@ class _HierarchyScreenState extends ConsumerState<HierarchyScreen> {
                         const SizedBox(width: 8),
                       ],
 
+                      // Type Badge - compact for mobile
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isMobile ? 6 : 8,
+                          vertical: isMobile ? 3 : 4,
+                        ),
                         decoration: BoxDecoration(
-                          color: iconColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
+                          color: iconColor.withValues(alpha: isMobile ? 0.15 : 0.1),
+                          borderRadius: BorderRadius.circular(isMobile ? 4 : 8),
+                          border: isMobile ? Border.all(
+                            color: iconColor.withValues(alpha: 0.3),
+                            width: 1,
+                          ) : null,
                         ),
                         child: Text(
                           typeLabel,
                           style: textTheme.labelSmall?.copyWith(
                             color: iconColor,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
                             fontSize: 10,
+                            letterSpacing: isMobile ? 0.5 : 0,
                           ),
                         ),
                       ),
 
-                      const SizedBox(width: 8),
+                      SizedBox(width: isMobile ? 6 : 8),
 
-                      // Favorite Button
-                      IconButton(
-                        icon: Icon(
-                          ref.watch(isFavoriteProvider(item.id)) ? Icons.star : Icons.star_border,
-                          color: ref.watch(isFavoriteProvider(item.id)) ? Colors.amber : colorScheme.onSurfaceVariant,
-                          size: 18,
+                      // Favorite Button - hide on mobile
+                      if (!isMobile)
+                        IconButton(
+                          icon: Icon(
+                            ref.watch(isFavoriteProvider(item.id)) ? Icons.star : Icons.star_border,
+                            color: ref.watch(isFavoriteProvider(item.id)) ? Colors.amber : colorScheme.onSurfaceVariant,
+                            size: 18,
+                          ),
+                          onPressed: () {
+                            ref.read(favoritesProvider.notifier).toggleFavorite(item.id);
+                          },
+                          tooltip: ref.watch(isFavoriteProvider(item.id)) ? 'Remove from favorites' : 'Add to favorites',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
                         ),
-                        onPressed: () {
-                          ref.read(favoritesProvider.notifier).toggleFavorite(item.id);
-                        },
-                        tooltip: ref.watch(isFavoriteProvider(item.id)) ? 'Remove from favorites' : 'Add to favorites',
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
 
-                      // Actions Menu
+                      // Actions Menu - more compact on mobile
                       PopupMenuButton<String>(
-                        icon: Icon(Icons.more_vert, size: 18, color: colorScheme.onSurfaceVariant),
+                        padding: EdgeInsets.zero,
+                        icon: Icon(
+                          Icons.more_vert,
+                          size: isMobile ? 18 : 18,
+                          color: colorScheme.onSurfaceVariant.withValues(alpha: isMobile ? 0.5 : 1.0),
+                        ),
                         onSelected: (value) => _handleItemAction(context, value, item),
                         itemBuilder: (context) => [
                           const PopupMenuItem(
@@ -1520,7 +1558,7 @@ class _HierarchyScreenState extends ConsumerState<HierarchyScreen> {
                         IconButton(
                           icon: Icon(
                             node.isExpanded ? Icons.expand_less : Icons.expand_more,
-                            size: 20,
+                            size: isMobile ? 18 : 20,
                             color: colorScheme.onSurfaceVariant,
                           ),
                           onPressed: () {
@@ -1980,6 +2018,17 @@ class _HierarchyScreenState extends ConsumerState<HierarchyScreen> {
         );
       },
     );
+  }
+
+  String _getCountLabel(HierarchyItemType type) {
+    switch (type) {
+      case HierarchyItemType.portfolio:
+        return 'programs';
+      case HierarchyItemType.program:
+        return 'projects';
+      case HierarchyItemType.project:
+        return 'items';
+    }
   }
 }
 
