@@ -34,22 +34,51 @@ void main() {
     });
 
     Widget createTestWidget(List<BreadcrumbItem> items, {bool showOnMobile = true}) {
-      return MaterialApp.router(
-        routerConfig: router,
-        builder: (context, child) {
-          return Scaffold(
-            body: Column(
-              children: [
-                BreadcrumbNavigation(
-                  items: items,
-                  showOnMobile: showOnMobile,
-                ),
-                Expanded(child: child ?? const SizedBox.shrink()),
-              ],
+      // Create a router that includes the breadcrumb in each route
+      final testRouter = GoRouter(
+        initialLocation: '/home',
+        routes: [
+          GoRoute(
+            path: '/home',
+            builder: (context, state) => Scaffold(
+              body: Column(
+                children: [
+                  BreadcrumbNavigation(items: items, showOnMobile: showOnMobile),
+                  const Expanded(child: Center(child: Text('Home Page'))),
+                ],
+              ),
             ),
-          );
+          ),
+          GoRoute(
+            path: '/dashboard',
+            builder: (context, state) => Scaffold(
+              body: Column(
+                children: [
+                  BreadcrumbNavigation(items: items, showOnMobile: showOnMobile),
+                  const Expanded(child: Center(child: Text('Dashboard Page'))),
+                ],
+              ),
+            ),
+          ),
+          GoRoute(
+            path: '/projects',
+            builder: (context, state) => Scaffold(
+              body: Column(
+                children: [
+                  BreadcrumbNavigation(items: items, showOnMobile: showOnMobile),
+                  const Expanded(child: Center(child: Text('Projects Page'))),
+                ],
+              ),
+            ),
+          ),
+        ],
+        redirect: (context, state) {
+          lastNavigatedRoute = state.uri.toString();
+          return null;
         },
       );
+
+      return MaterialApp.router(routerConfig: testRouter);
     }
 
     testWidgets('displays all breadcrumb items', (tester) async {

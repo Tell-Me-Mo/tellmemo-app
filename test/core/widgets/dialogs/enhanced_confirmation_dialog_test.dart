@@ -261,6 +261,7 @@ void main() {
             body: EnhancedConfirmationDialog(
               title: 'Delete Project',
               message: 'This will permanently delete the project',
+              severity: ConfirmationSeverity.danger,
               requireExplicitConfirmation: true,
             ),
           ),
@@ -284,6 +285,7 @@ void main() {
             body: EnhancedConfirmationDialog(
               title: 'Delete Project',
               message: 'Confirm deletion',
+              severity: ConfirmationSeverity.danger,
               requireExplicitConfirmation: true,
             ),
           ),
@@ -308,6 +310,7 @@ void main() {
             body: EnhancedConfirmationDialog(
               title: 'Delete',
               message: 'Confirm deletion',
+              severity: ConfirmationSeverity.danger,
               requireExplicitConfirmation: true,
               explicitConfirmationText: 'PERMANENTLY DELETE',
             ),

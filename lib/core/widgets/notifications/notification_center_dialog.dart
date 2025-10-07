@@ -234,11 +234,19 @@ class _NotificationCenterDialogState extends ConsumerState<NotificationCenterDia
                       ? notificationState.persistentNotifications.where((n) => !n.isRead).toList()
                       : notificationState.persistentNotifications;
 
-                  final filteredHistory = showUnreadOnly
-                      ? notificationState.history.where((n) => !n.isRead).toList()
-                      : notificationState.history;
+                  // Get non-persistent active notifications for RECENT section
+                  final nonPersistentActive = notificationState.active
+                      .where((n) => !n.persistent)
+                      .toList();
 
-                  final hasAnyNotifications = filteredPersistent.isNotEmpty || filteredHistory.isNotEmpty;
+                  // Combine non-persistent active and history for RECENT section
+                  final recentNotifications = [...nonPersistentActive, ...notificationState.history];
+
+                  final filteredRecent = showUnreadOnly
+                      ? recentNotifications.where((n) => !n.isRead).toList()
+                      : recentNotifications;
+
+                  final hasAnyNotifications = filteredPersistent.isNotEmpty || filteredRecent.isNotEmpty;
 
                   if (!hasAnyNotifications) {
                     return _buildEmptyState(theme, showUnreadOnly);
@@ -259,10 +267,10 @@ class _NotificationCenterDialogState extends ConsumerState<NotificationCenterDia
                                   )),
                           const SizedBox(height: 16),
                         ],
-                        if (filteredHistory.isNotEmpty) ...[
+                        if (filteredRecent.isNotEmpty) ...[
                           _buildSectionHeader('RECENT', theme),
                           const SizedBox(height: 8),
-                          ...filteredHistory
+                          ...filteredRecent
                               .take(20)
                               .map((notification) => _buildNotificationCard(
                                     context,

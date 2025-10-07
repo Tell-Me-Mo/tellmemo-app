@@ -141,7 +141,7 @@ void main() {
         showInCenter: true,
         showAsToast: false,
       );
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(find.text('Test Notification'), findsOneWidget);
       expect(find.text('Test message'), findsOneWidget);
@@ -157,13 +157,13 @@ void main() {
         showInCenter: true,
         showAsToast: false,
       );
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(service.state.unreadCount, 1);
 
       // Tap on the notification card
       await tester.tap(find.byType(Card).first);
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(service.state.unreadCount, 0);
     });
@@ -193,7 +193,7 @@ void main() {
       service.show(title: 'Important', persistent: true, showInCenter: true, showAsToast: false);
       // Then add non-persistent (to create the RECENT section)
       service.show(title: 'Recent', persistent: false, showInCenter: true, showAsToast: false);
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(find.text('RECENT'), findsOneWidget);
     });
@@ -204,25 +204,25 @@ void main() {
       await tester.pumpWidget(buildTestWidget(service));
 
       // Add both read and unread notifications (persistent to avoid timer issues)
-      final id1 = service.show(title: 'Unread', showInCenter: true, showAsToast: false, persistent: true);
-      final id2 = service.show(title: 'Read', showInCenter: true, showAsToast: false, persistent: true);
-      await tester.pump();
+      final id1 = service.show(title: 'Unread Notification', showInCenter: true, showAsToast: false, persistent: true);
+      final id2 = service.show(title: 'Read Notification', showInCenter: true, showAsToast: false, persistent: true);
+      await tester.pumpAndSettle();
 
       // Mark one as read
       service.markAsRead(id2);
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       // Should show both initially
-      expect(find.text('Unread'), findsOneWidget);
-      expect(find.text('Read'), findsOneWidget);
+      expect(find.text('Unread Notification'), findsOneWidget);
+      expect(find.text('Read Notification'), findsOneWidget);
 
-      // Tap "Unread" filter
-      await tester.tap(find.text('Unread'));
-      await tester.pump();
+      // Tap "Unread" filter - find by icon since text appears multiple times
+      await tester.tap(find.byIcon(Icons.markunread));
+      await tester.pumpAndSettle();
 
       // Should only show unread
-      expect(find.text('Unread'), findsOneWidget);
-      expect(find.text('Read'), findsNothing);
+      expect(find.text('Unread Notification'), findsOneWidget);
+      expect(find.text('Read Notification'), findsNothing);
     });
 
     testWidgets('shows empty state message when filtering to unread with no unread notifications', (tester) async {

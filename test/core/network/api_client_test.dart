@@ -291,11 +291,11 @@ void main() {
   group('ApiClient - Projects DELETE', () {
     test('deleteProject completes successfully', () async {
       // Arrange
-      when(mockDio.delete('/api/projects/123')).thenAnswer(
+      when(mockDio.delete('/api/v1/projects/123')).thenAnswer(
         (_) async => Response(
           data: null,
           statusCode: 204,
-          requestOptions: RequestOptions(path: '/api/projects/123'),
+          requestOptions: RequestOptions(path: '/api/v1/projects/123'),
         ),
       );
 
@@ -303,7 +303,7 @@ void main() {
       await apiClient.deleteProject('123');
 
       // Assert
-      verify(mockDio.delete('/api/projects/123')).called(1);
+      verify(mockDio.delete('/api/v1/projects/123')).called(1);
     });
   });
 
