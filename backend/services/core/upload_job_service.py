@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from collections import defaultdict
 import traceback
 
-from utils.logger import get_logger
+from utils.logger import get_logger, sanitize_for_log
 from utils.monitoring import monitor_operation, monitor_sync_operation, track_background_task, MonitoringContext
 
 logger = get_logger(__name__)
@@ -357,7 +357,7 @@ class UploadJobService:
         # Trigger callbacks
         self._trigger_callbacks(job_id, job)
         
-        logger.info(f"Cancelled job {job_id}")
+        logger.info(f"Cancelled job {sanitize_for_log(job_id)}")
         return True
     
     @monitor_operation("complete_job", "job_management", capture_args=True)
@@ -496,7 +496,7 @@ class UploadJobService:
             try:
                 asyncio.create_task(self._safe_callback(callback, job_id, job))
             except Exception as e:
-                logger.error(f"Error triggering callback for job {job_id}: {e}")
+                logger.error(f"Error triggering callback for job {sanitize_for_log(job_id)}: {e}")
     
     async def _safe_callback(self, callback: callable, job_id: str, job: UploadJob):
         """Safely execute a callback."""
@@ -506,7 +506,7 @@ class UploadJobService:
             else:
                 callback(job_id, job)
         except Exception as e:
-            logger.error(f"Callback error for job {job_id}: {e}")
+            logger.error(f"Callback error for job {sanitize_for_log(job_id)}: {e}")
     
     def _cleanup_job(self, job_id: str):
         """Clean up old job data."""

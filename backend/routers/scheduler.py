@@ -7,7 +7,7 @@ from datetime import datetime
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from utils.logger import get_logger
+from utils.logger import get_logger, sanitize_for_log
 from services.scheduling.scheduler_service import scheduler_service
 from config import get_settings
 from models.user import User
@@ -77,7 +77,7 @@ async def trigger_project_reports(
     try:
         if request.project_id:
             # Trigger for specific project
-            logger.info(f"Manual trigger for project report - Project: {request.project_id}")
+            logger.info(f"Manual trigger for project report - Project: {sanitize_for_log(request.project_id)}")
 
             # Validate UUID format
             try:

@@ -10,7 +10,7 @@ from fastapi import HTTPException
 
 from models.activity import Activity, ActivityType
 from models.project import Project
-from utils.logger import get_logger
+from utils.logger import get_logger, sanitize_for_log
 from utils.monitoring import monitor_operation, monitor_sync_operation
 
 logger = get_logger(__name__)
@@ -90,7 +90,7 @@ class ActivityService:
             project = project_result.scalar_one_or_none()
 
             if not project:
-                logger.warning(f"Project {project_id} not found or doesn't belong to organization {organization_id}")
+                logger.warning(f"Project {sanitize_for_log(project_id)} not found or doesn't belong to organization {sanitize_for_log(organization_id)}")
                 return []  # Return empty list instead of 404 to prevent information disclosure
 
             # Now fetch activities for the validated project
@@ -314,7 +314,7 @@ class ActivityService:
             project = project_result.scalar_one_or_none()
 
             if not project:
-                logger.warning(f"Project {project_id} not found or doesn't belong to organization {organization_id}")
+                logger.warning(f"Project {sanitize_for_log(project_id)} not found or doesn't belong to organization {sanitize_for_log(organization_id)}")
                 return 0  # Return 0 deleted instead of raising error to prevent information disclosure
 
             # Now delete activities for the validated project

@@ -11,7 +11,7 @@ from sqlalchemy import select
 from db.database import get_db
 from models.project import Project, ProjectStatus
 from services.summaries.summary_service_refactored import SummaryService
-from utils.logger import get_logger
+from utils.logger import get_logger, sanitize_for_log
 from utils.monitoring import monitor_operation, track_background_task
 
 logger = get_logger(__name__)
@@ -278,7 +278,7 @@ class SchedulerService:
                 trigger=trigger
             )
             logger.info(
-                f"Rescheduled weekly reports to {day_of_week.upper()} at {hour:02d}:{minute:02d} UTC"
+                f"Rescheduled weekly reports to {sanitize_for_log(day_of_week.upper())} at {hour:02d}:{minute:02d} UTC"
             )
         else:
             # Add new job
@@ -290,7 +290,7 @@ class SchedulerService:
                 replace_existing=True
             )
             logger.info(
-                f"Created weekly reports job scheduled for {day_of_week.upper()} at {hour:02d}:{minute:02d} UTC"
+                f"Created weekly reports job scheduled for {sanitize_for_log(day_of_week.upper())} at {hour:02d}:{minute:02d} UTC"
             )
 
         # Get the next run time

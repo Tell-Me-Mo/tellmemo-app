@@ -9,7 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from models.project import Project, ProjectMember, ProjectStatus
 from services.activity.activity_service import ActivityService
-from utils.logger import get_logger
+from utils.logger import get_logger, sanitize_for_log
 from utils.monitoring import monitor_operation
 
 logger = get_logger(__name__)
@@ -468,10 +468,10 @@ class ProjectService:
             result = await session.execute(stmt)
             
             if result.rowcount > 0:
-                logger.info(f"Removed member {member_email} from project {project_id}")
+                logger.info(f"Removed member {sanitize_for_log(member_email)} from project {project_id}")
                 return True
             else:
-                logger.warning(f"Member {member_email} not found in project {project_id}")
+                logger.warning(f"Member {sanitize_for_log(member_email)} not found in project {project_id}")
                 return False
                 
         except Exception as e:

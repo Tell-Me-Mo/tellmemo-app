@@ -383,7 +383,7 @@ async def transcribe_audio(
                         detail="Project not found"
                     )
 
-                logger.info(f"Project validation passed: {project_id} belongs to org {current_org.id}")
+                logger.info(f"Project validation passed: {project_uuid} belongs to org {current_org.id}")
 
             except ValueError:
                 # Invalid UUID format

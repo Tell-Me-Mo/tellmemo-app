@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import uuid
 
-from utils.logger import get_logger
+from utils.logger import get_logger, sanitize_for_log
 from db.database import get_db
 from models.summary import Summary
 from models.organization import Organization
@@ -47,7 +47,7 @@ async def get_program_summaries(
 
     Requires authentication and filters by organization.
     """
-    logger.info(f"Fetching summaries for program {program_id} in organization {current_org.id}")
+    logger.info(f"Fetching summaries for program {sanitize_for_log(program_id)} in organization {current_org.id}")
 
     # Validate UUID format before entering try block
     try:
@@ -103,7 +103,7 @@ async def get_portfolio_summaries(
 
     Requires authentication and filters by organization.
     """
-    logger.info(f"Fetching summaries for portfolio {portfolio_id} in organization {current_org.id}")
+    logger.info(f"Fetching summaries for portfolio {sanitize_for_log(portfolio_id)} in organization {current_org.id}")
 
     # Validate UUID format before entering try block
     try:
