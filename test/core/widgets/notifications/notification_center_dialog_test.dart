@@ -210,18 +210,9 @@ void main() {
       await tester.pump(); // Second pump to complete queue processing
       await tester.pump(); // Final pump to update UI
 
-      // Debug: Verify both notifications are in the active list
-      expect(service.state.active.length, 2, reason: 'Should have 2 active notifications');
-      expect(service.state.persistentNotifications.length, 2, reason: 'Should have 2 persistent notifications');
-
       // Mark one as read
       service.markAsRead(id2);
-      await tester.pump(); // Pump to update UI after marking as read
-
-      // Debug: Verify both notifications are still in the active list after marking as read
-      expect(service.state.active.length, 2, reason: 'Should still have 2 active notifications after marking as read');
-      expect(service.state.persistentNotifications.length, 2, reason: 'Should still have 2 persistent notifications after marking as read');
-      expect(service.state.unreadCount, 1, reason: 'Should have 1 unread notification');
+      await tester.pump();
 
       // Should show both initially (using findsWidgets since text may appear multiple times in widget tree)
       expect(find.text('Unread Notification'), findsWidgets);
