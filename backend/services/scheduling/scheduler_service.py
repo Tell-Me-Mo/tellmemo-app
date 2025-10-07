@@ -251,24 +251,51 @@ class SchedulerService:
     ):
         """
         Reschedule the weekly report generation time.
-        
+        If the job doesn't exist, it will be created.
+
         Args:
             day_of_week: Day of week (mon, tue, wed, thu, fri, sat, sun)
             hour: Hour (0-23)
             minute: Minute (0-59)
+
+        Returns:
+            datetime: Next run time of the job
         """
-        self.scheduler.reschedule_job(
-            job_id='weekly_reports',
-            trigger=CronTrigger(
-                day_of_week=day_of_week,
-                hour=hour,
-                minute=minute,
-                timezone='UTC'
+        trigger = CronTrigger(
+            day_of_week=day_of_week,
+            hour=hour,
+            minute=minute,
+            timezone='UTC'
+        )
+
+        # Check if job exists
+        existing_job = self.scheduler.get_job('weekly_reports')
+
+        if existing_job:
+            # Reschedule existing job
+            self.scheduler.reschedule_job(
+                job_id='weekly_reports',
+                trigger=trigger
             )
-        )
-        logger.info(
-            f"Rescheduled weekly reports to {day_of_week.upper()} at {hour:02d}:{minute:02d} UTC"
-        )
+            logger.info(
+                f"Rescheduled weekly reports to {day_of_week.upper()} at {hour:02d}:{minute:02d} UTC"
+            )
+        else:
+            # Add new job
+            self.scheduler.add_job(
+                func=self._generate_weekly_reports,
+                trigger=trigger,
+                id='weekly_reports',
+                name='Generate Weekly Reports',
+                replace_existing=True
+            )
+            logger.info(
+                f"Created weekly reports job scheduled for {day_of_week.upper()} at {hour:02d}:{minute:02d} UTC"
+            )
+
+        # Get the next run time
+        job = self.scheduler.get_job('weekly_reports')
+        return job.next_run_time if job else None
 
 
 # Global scheduler instance

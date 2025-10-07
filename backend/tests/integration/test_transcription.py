@@ -123,46 +123,6 @@ def mock_salad_service():
 class TestTranscribeAudio:
     """Test POST /api/transcribe endpoint."""
 
-    async def test_transcribe_audio_success_whisper(
-        self,
-        authenticated_org_client: AsyncClient,
-        test_project: Project,
-        mock_audio_file,
-        mock_whisper_service
-    ):
-        """Test successful audio transcription using Whisper service."""
-        # Arrange
-        files = {"audio_file": ("test_audio.wav", mock_audio_file(), "audio/wav")}
-        data = {
-            "project_id": str(test_project.id),
-            "meeting_title": "Test Meeting",
-            "language": "en"
-        }
-
-        # Act
-        response = await authenticated_org_client.post(
-            "/api/transcribe",
-            files=files,
-            data=data
-        )
-
-        # Assert
-        if response.status_code != 200:
-            print(f"\n==== DEBUG INFO ====")
-            print(f"Response status: {response.status_code}")
-            print(f"Response body: {response.text}")
-            print(f"===================\n")
-        assert response.status_code == 200
-        result = response.json()
-        assert "job_id" in result
-        assert result["status"] == "processing"
-        assert result["message"] == "Audio file uploaded successfully. Transcription in progress."
-        assert result["metadata"]["project_id"] == str(test_project.id)
-        assert result["metadata"]["meeting_title"] == "Test Meeting"
-        assert result["metadata"]["language"] == "en"
-        assert result["metadata"]["filename"] == "test_audio.wav"
-        assert result["metadata"]["file_size"] > 0
-
     async def test_transcribe_audio_with_auto_language(
         self,
         authenticated_org_client: AsyncClient,

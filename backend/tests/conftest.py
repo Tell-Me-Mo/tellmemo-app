@@ -24,6 +24,7 @@ from typing import AsyncGenerator, Generator
 from contextlib import asynccontextmanager
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.pool import NullPool
+from sqlalchemy import text
 from httpx import AsyncClient, ASGITransport
 from datetime import datetime, timezone
 
@@ -64,7 +65,7 @@ def event_loop() -> Generator:
     loop.close()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="function", autouse=False)
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
     """
     Create a fresh database session for each test.
@@ -72,7 +73,7 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
     This fixture:
     - Creates all tables before the test
     - Yields a database session
-    - Rolls back any changes and drops all tables after the test
+    - Drops all tables after the test to ensure clean state
     """
     # Create tables
     async with engine.begin() as conn:
@@ -83,7 +84,7 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
         yield session
         await session.rollback()
 
-    # Drop tables
+    # Drop tables to ensure clean state for next test
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
 

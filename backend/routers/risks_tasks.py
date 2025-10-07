@@ -18,7 +18,7 @@ from models.blocker import Blocker, BlockerImpact, BlockerStatus
 from models.project import Project
 
 
-router = APIRouter(prefix="/api/v1", tags=["risks-tasks"])
+router = APIRouter(prefix="/api", tags=["risks-tasks"])
 
 
 # Pydantic models for request/response

@@ -78,7 +78,7 @@ class TestCreateRisk:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/risks",
+            f"/api/v1/projects/{test_project.id}/risks",
             json=risk_data
         )
 
@@ -117,7 +117,7 @@ class TestCreateRisk:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/risks",
+            f"/api/v1/projects/{test_project.id}/risks",
             json=risk_data
         )
 
@@ -148,7 +148,7 @@ class TestCreateRisk:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{fake_project_id}/risks",
+            f"/api/v1/projects/{fake_project_id}/risks",
             json=risk_data
         )
 
@@ -170,7 +170,7 @@ class TestCreateRisk:
 
         # Act
         response = await client.post(
-            f"/api/projects/{test_project.id}/risks",
+            f"/api/v1/projects/{test_project.id}/risks",
             json=risk_data
         )
 
@@ -205,7 +205,7 @@ class TestListRisks:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/risks"
+            f"/api/v1/projects/{test_project.id}/risks"
         )
 
         # Assert
@@ -246,7 +246,7 @@ class TestListRisks:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/risks?status=identified"
+            f"/api/v1/projects/{test_project.id}/risks?status=identified"
         )
 
         # Assert
@@ -285,7 +285,7 @@ class TestListRisks:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/risks?severity=critical"
+            f"/api/v1/projects/{test_project.id}/risks?severity=critical"
         )
 
         # Assert
@@ -303,7 +303,7 @@ class TestListRisks:
         """Test listing risks for project with no risks returns empty array."""
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/risks"
+            f"/api/v1/projects/{test_project.id}/risks"
         )
 
         # Assert
@@ -322,7 +322,7 @@ class TestListRisks:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{fake_project_id}/risks"
+            f"/api/v1/projects/{fake_project_id}/risks"
         )
 
         # Assert
@@ -347,7 +347,7 @@ class TestUpdateRisk:
 
         # Act
         response = await authenticated_org_client.patch(
-            f"/api/risks/{test_risk.id}",
+            f"/api/v1/risks/{test_risk.id}",
             json=update_data
         )
 
@@ -369,7 +369,7 @@ class TestUpdateRisk:
 
         # Act
         response = await authenticated_org_client.patch(
-            f"/api/risks/{test_risk.id}",
+            f"/api/v1/risks/{test_risk.id}",
             json=update_data
         )
 
@@ -390,7 +390,7 @@ class TestUpdateRisk:
 
         # Act
         response = await authenticated_org_client.patch(
-            f"/api/risks/{test_risk.id}",
+            f"/api/v1/risks/{test_risk.id}",
             json=update_data
         )
 
@@ -416,7 +416,7 @@ class TestUpdateRisk:
 
         # Act
         response = await authenticated_org_client.patch(
-            f"/api/risks/{test_risk.id}",
+            f"/api/v1/risks/{test_risk.id}",
             json=update_data
         )
 
@@ -442,7 +442,7 @@ class TestUpdateRisk:
 
         # Act
         response = await authenticated_org_client.patch(
-            f"/api/risks/{test_risk.id}",
+            f"/api/v1/risks/{test_risk.id}",
             json=update_data
         )
 
@@ -464,7 +464,7 @@ class TestUpdateRisk:
 
         # Act
         response = await authenticated_org_client.patch(
-            f"/api/risks/{fake_risk_id}",
+            f"/api/v1/risks/{fake_risk_id}",
             json=update_data
         )
 
@@ -483,7 +483,7 @@ class TestUpdateRisk:
 
         # Act
         response = await client.patch(
-            f"/api/risks/{test_risk.id}",
+            f"/api/v1/risks/{test_risk.id}",
             json=update_data
         )
 
@@ -504,7 +504,7 @@ class TestDeleteRisk:
         """Test successful risk deletion."""
         # Act
         response = await authenticated_org_client.delete(
-            f"/api/risks/{test_risk.id}"
+            f"/api/v1/risks/{test_risk.id}"
         )
 
         # Assert
@@ -526,7 +526,7 @@ class TestDeleteRisk:
 
         # Act
         response = await authenticated_org_client.delete(
-            f"/api/risks/{fake_risk_id}"
+            f"/api/v1/risks/{fake_risk_id}"
         )
 
         # Assert
@@ -541,7 +541,7 @@ class TestDeleteRisk:
         """Test that deleting risk without authentication fails."""
         # Act
         response = await client.delete(
-            f"/api/risks/{test_risk.id}"
+            f"/api/v1/risks/{test_risk.id}"
         )
 
         # Assert - EXPOSES BUG: Should return 401/403 but will succeed
@@ -578,7 +578,7 @@ class TestBulkUpdateRisks:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/risks/bulk-update",
+            f"/api/v1/projects/{test_project.id}/risks/bulk-update",
             json=risks_data
         )
 
@@ -622,7 +622,7 @@ class TestBulkUpdateRisks:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/risks/bulk-update",
+            f"/api/v1/projects/{test_project.id}/risks/bulk-update",
             json=risks_data
         )
 
@@ -670,7 +670,7 @@ class TestBulkUpdateRisks:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/risks/bulk-update",
+            f"/api/v1/projects/{test_project.id}/risks/bulk-update",
             json=risks_data
         )
 
@@ -696,7 +696,7 @@ class TestBulkUpdateRisks:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{fake_project_id}/risks/bulk-update",
+            f"/api/v1/projects/{fake_project_id}/risks/bulk-update",
             json=risks_data
         )
 
@@ -715,7 +715,7 @@ class TestBulkUpdateRisks:
 
         # Act
         response = await client.post(
-            f"/api/projects/{test_project.id}/risks/bulk-update",
+            f"/api/v1/projects/{test_project.id}/risks/bulk-update",
             json=risks_data
         )
 
@@ -779,7 +779,7 @@ class TestMultiTenantIsolation:
             "description": "Should not be created"
         }
         response = await org1_client.post(
-            f"/api/projects/{project_org2.id}/risks",
+            f"/api/v1/projects/{project_org2.id}/risks",
             json=risk_data
         )
 
@@ -847,7 +847,7 @@ class TestMultiTenantIsolation:
 
         # Act - Try to list risks from org2's project
         response = await org1_client.get(
-            f"/api/projects/{project_org2.id}/risks"
+            f"/api/v1/projects/{project_org2.id}/risks"
         )
 
         # Assert - Should return 404 (project not found in user's org)

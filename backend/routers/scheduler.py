@@ -76,6 +76,12 @@ async def trigger_project_reports(
             # Trigger for specific project
             logger.info(f"Manual trigger for project report - Project: {request.project_id}")
 
+            # Validate UUID format
+            try:
+                project_uuid = UUID(request.project_id)
+            except (ValueError, AttributeError):
+                raise HTTPException(status_code=422, detail="Invalid project ID format")
+
             # Validate project belongs to user's organization
             from db.database import get_db
             from models.project import Project
@@ -84,7 +90,7 @@ async def trigger_project_reports(
             async for session in get_db():
                 try:
                     result = await session.execute(
-                        select(Project).where(Project.id == UUID(request.project_id))
+                        select(Project).where(Project.id == project_uuid)
                     )
                     project = result.scalar_one_or_none()
 
@@ -97,7 +103,7 @@ async def trigger_project_reports(
 
                     # Use correct method name
                     summary_data = await scheduler_service.trigger_weekly_report(
-                        project_id=request.project_id,
+                        project_id=str(project_uuid),
                         date_range_start=request.date_range_start,
                         date_range_end=request.date_range_end
                     )
@@ -125,9 +131,6 @@ async def trigger_project_reports(
 
     except HTTPException:
         raise
-    except ValueError as e:
-        logger.error(f"Validation error in manual trigger: {e}")
-        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"Failed to trigger project reports: {e}")
         raise HTTPException(status_code=500, detail="Failed to trigger project report generation")
