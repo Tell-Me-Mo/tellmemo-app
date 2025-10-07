@@ -20,6 +20,7 @@ os.environ["AUTH_PROVIDER"] = "backend"  # Use backend auth for tests
 
 import pytest
 import asyncio
+import socket
 from typing import AsyncGenerator, Generator
 from contextlib import asynccontextmanager
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
@@ -57,6 +58,34 @@ TestSessionLocal = async_sessionmaker(
 )
 
 
+def is_server_running(host: str = "localhost", port: int = 8000) -> bool:
+    """Check if a server is running on the specified host and port."""
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(1)
+        result = sock.connect_ex((host, port))
+        sock.close()
+        return result == 0
+    except Exception:
+        return False
+
+
+def pytest_collection_modifyitems(config, items):
+    """
+    Automatically skip WebSocket tests if server is not running.
+
+    WebSocket tests in test_websocket_*.py files require a running server
+    on localhost:8000. If the server is not available, these tests are skipped.
+    """
+    skip_websocket = pytest.mark.skip(reason="WebSocket server not running on localhost:8000")
+
+    if not is_server_running():
+        for item in items:
+            # Skip all tests in websocket test files
+            if "test_websocket" in str(item.fspath):
+                item.add_marker(skip_websocket)
+
+
 @pytest.fixture(scope="session")
 def event_loop() -> Generator:
     """Create an event loop for the test session."""
@@ -75,18 +104,26 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
     - Yields a database session
     - Drops all tables after the test to ensure clean state
     """
+    # Drop tables first to ensure clean slate (in case previous test failed)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+
     # Create tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
     # Create session
-    async with TestSessionLocal() as session:
-        yield session
-        await session.rollback()
-
-    # Drop tables to ensure clean state for next test
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+    try:
+        async with TestSessionLocal() as session:
+            try:
+                yield session
+            finally:
+                # Always rollback, even if test/fixtures fail
+                await session.rollback()
+    finally:
+        # Always drop tables to ensure clean state for next test
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
 
 
 @pytest.fixture(scope="function")

@@ -247,8 +247,15 @@ async def global_exception_handler(request, exc):
     )
 
 
-app.include_router(auth.router, tags=["auth"])
-app.include_router(native_auth.router, tags=["native-auth"])  # Native auth endpoints at /api/v1/auth/*
+# Conditionally include auth router based on AUTH_PROVIDER setting
+# Both routers use /api/v1/auth prefix, so only one should be active
+if settings.auth_provider == "supabase":
+    app.include_router(auth.router, tags=["auth"])
+    logger.info("Using Supabase authentication")
+else:  # backend/native auth
+    app.include_router(native_auth.router, tags=["native-auth"])
+    logger.info("Using native backend authentication")
+
 app.include_router(organizations.router, tags=["organizations"])
 app.include_router(invitations.router, tags=["invitations"])
 app.include_router(health.router, prefix="/api/v1", tags=["health"])

@@ -3,9 +3,13 @@ Integration tests for OAuth Authentication API.
 
 Tests cover all endpoints in routers/auth.py following the
 integration-first testing strategy from TESTING_BACKEND.md.
+
+NOTE: These tests are for Supabase OAuth endpoints (routers/auth.py).
+They are skipped when AUTH_PROVIDER=backend (native auth is used instead).
 """
 
 import pytest
+import os
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from unittest.mock import Mock, patch, MagicMock
@@ -14,6 +18,12 @@ from uuid import uuid4
 
 from models.user import User
 from services.auth.auth_service import auth_service
+
+# Skip all tests in this module if using native auth instead of Supabase
+pytestmark = pytest.mark.skipif(
+    os.getenv("AUTH_PROVIDER", "backend") != "supabase",
+    reason="OAuth/Supabase tests only run when AUTH_PROVIDER=supabase"
+)
 
 
 # Mock Supabase Response Classes

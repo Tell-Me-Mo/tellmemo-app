@@ -11,6 +11,8 @@ Covers TESTING_BACKEND.md section 6.2 - RAG Pipeline:
 - [x] Multi-tenant vector isolation
 
 Status: All tests passing
+
+NOTE: These tests require Qdrant container to be running and healthy.
 """
 
 import pytest
@@ -280,6 +282,21 @@ async def test_content_items(
         await db_session.refresh(content)
 
     return contents
+
+
+@pytest.fixture(autouse=True)
+async def cleanup_qdrant_collections():
+    """Clean up Qdrant collections after each test to prevent accumulation."""
+    # Yield first to let the test run
+    yield
+
+    # Cleanup after test
+    try:
+        # Clear the collection cache so next test recreates fresh collections
+        multi_tenant_vector_store._collection_cache.clear()
+    except Exception as e:
+        # Don't fail tests if cleanup fails
+        logger.warning(f"Failed to cleanup Qdrant collections: {e}")
 
 
 # ============================================================================

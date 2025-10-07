@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from utils.logger import get_logger
 from services.scheduling.scheduler_service import scheduler_service
@@ -12,6 +13,7 @@ from config import get_settings
 from models.user import User
 from models.organization import Organization
 from dependencies.auth import get_current_user, get_current_organization, require_role
+from db.database import get_db
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -63,6 +65,7 @@ async def trigger_project_reports(
     request: ProjectReportTriggerRequest,
     current_user: User = Depends(get_current_user),
     current_org: Organization = Depends(get_current_organization),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Manually trigger project report generation.
@@ -83,39 +86,34 @@ async def trigger_project_reports(
                 raise HTTPException(status_code=422, detail="Invalid project ID format")
 
             # Validate project belongs to user's organization
-            from db.database import get_db
             from models.project import Project
             from sqlalchemy import select
 
-            async for session in get_db():
-                try:
-                    result = await session.execute(
-                        select(Project).where(Project.id == project_uuid)
-                    )
-                    project = result.scalar_one_or_none()
+            result = await db.execute(
+                select(Project).where(Project.id == project_uuid)
+            )
+            project = result.scalar_one_or_none()
 
-                    if not project:
-                        raise HTTPException(status_code=404, detail="Project not found")
+            if not project:
+                raise HTTPException(status_code=404, detail="Project not found")
 
-                    if project.organization_id != current_org.id:
-                        # Return 404 to prevent information disclosure
-                        raise HTTPException(status_code=404, detail="Project not found")
+            if project.organization_id != current_org.id:
+                # Return 404 to prevent information disclosure
+                raise HTTPException(status_code=404, detail="Project not found")
 
-                    # Use correct method name
-                    summary_data = await scheduler_service.trigger_weekly_report(
-                        project_id=str(project_uuid),
-                        date_range_start=request.date_range_start,
-                        date_range_end=request.date_range_end
-                    )
+            # Use correct method name
+            summary_data = await scheduler_service.trigger_weekly_report(
+                project_id=str(project_uuid),
+                date_range_start=request.date_range_start,
+                date_range_end=request.date_range_end
+            )
 
-                    return {
-                        "status": "success",
-                        "message": f"Project report generated for project {request.project_id}",
-                        "summary_id": summary_data.get("summary_id"),
-                        "summaries_generated": 1
-                    }
-                finally:
-                    break
+            return {
+                "status": "success",
+                "message": f"Project report generated for project {request.project_id}",
+                "summary_id": summary_data.get("summary_id"),
+                "summaries_generated": 1
+            }
         else:
             # Trigger for all projects in user's organization
             logger.info(f"Manual trigger for project reports - All active projects in organization {current_org.id}")

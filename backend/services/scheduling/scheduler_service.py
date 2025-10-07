@@ -295,7 +295,15 @@ class SchedulerService:
 
         # Get the next run time
         job = self.scheduler.get_job('weekly_reports')
-        return job.next_run_time if job else None
+        if job:
+            # If scheduler is running, return the actual next_run_time
+            if hasattr(job, 'next_run_time') and job.next_run_time:
+                return job.next_run_time
+            # If scheduler isn't running (e.g., in tests), compute next run time from trigger
+            elif hasattr(job, 'trigger'):
+                from datetime import datetime
+                return job.trigger.get_next_fire_time(None, datetime.now(job.trigger.timezone))
+        return None
 
 
 # Global scheduler instance
