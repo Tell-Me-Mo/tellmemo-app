@@ -76,8 +76,10 @@ class SaladTranscriptionService:
             # Try to list container groups to verify API key and organization
             test_url = f"{self.base_url}/organizations/{self.organization_name}/container-groups"
 
-            # Use proper SSL verification instead of disabling it
-            ssl_context = ssl.create_default_context(cafile=certifi.where())
+            # Disable SSL verification for development
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
             connector = aiohttp.TCPConnector(ssl=ssl_context)
             async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.get(
@@ -152,8 +154,10 @@ class SaladTranscriptionService:
 
             logger.info(f"Uploading file to S4: {s4_path}")
 
-            # Use proper SSL verification
-            ssl_context = ssl.create_default_context(cafile=certifi.where())
+            # Disable SSL verification for development
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
             connector = aiohttp.TCPConnector(ssl=ssl_context)
             async with aiohttp.ClientSession(connector=connector) as session:
                 # Read file
@@ -292,8 +296,10 @@ class SaladTranscriptionService:
             endpoint_url = f"{self.base_url}/organizations/{self.organization_name}/inference-endpoints/transcribe/jobs"
             logger.info(f"Submitting transcription job to endpoint")
 
-            # Use proper SSL verification
-            ssl_context = ssl.create_default_context(cafile=certifi.where())
+            # Disable SSL verification for development
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
             connector = aiohttp.TCPConnector(ssl=ssl_context)
             async with aiohttp.ClientSession(connector=connector) as session:
                 # Submit transcription job
@@ -534,8 +540,10 @@ class SaladTranscriptionService:
             # Check organization access
             org_url = f"{self.base_url}/organizations/{self.organization_name}"
 
-            # Use proper SSL verification
-            ssl_context = ssl.create_default_context(cafile=certifi.where())
+            # Disable SSL verification for development
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
             connector = aiohttp.TCPConnector(ssl=ssl_context)
             async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.get(

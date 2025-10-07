@@ -128,7 +128,6 @@ class UploadProgressIndicator extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
                               _getJobTitle(job),
