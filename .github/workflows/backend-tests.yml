@@ -37,12 +37,6 @@ jobs:
         ports:
           - 6333:6333
           - 6334:6334
-        options: >-
-          --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:6333/healthz || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-          --health-start-period 20s
 
     steps:
       - uses: actions/checkout@v4
@@ -58,6 +52,20 @@ jobs:
           cd backend
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
+
+      - name: Wait for Qdrant to be ready
+        run: |
+          echo "Waiting for Qdrant to be ready..."
+          for i in {1..30}; do
+            if curl -s http://localhost:6333/healthz > /dev/null 2>&1; then
+              echo "Qdrant is ready!"
+              exit 0
+            fi
+            echo "Waiting for Qdrant... attempt $i/30"
+            sleep 2
+          done
+          echo "Qdrant failed to become ready"
+          exit 1
 
       - name: Run tests with coverage
         env:
