@@ -19,7 +19,7 @@ from pydantic import BaseModel
 from datetime import datetime
 
 logger = get_logger(__name__)
-router = APIRouter(prefix="/api", tags=["lessons-learned"])
+router = APIRouter(prefix="/api/v1", tags=["lessons-learned"])
 
 
 class LessonLearnedCreate(BaseModel):

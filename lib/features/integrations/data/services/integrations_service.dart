@@ -8,7 +8,7 @@ class IntegrationsService {
 
   Future<List<Integration>> getIntegrations() async {
     try {
-      final response = await _dio.get('/api/integrations');
+      final response = await _dio.get('/api/v1/integrations');
       
       if (response.statusCode == 200) {
         final List<dynamic> data = response.data;
@@ -27,7 +27,7 @@ class IntegrationsService {
   ) async {
     try {
       final response = await _dio.post(
-        '/api/integrations/$integrationId/connect',
+        '/api/v1/integrations/$integrationId/connect',
         data: {
           'api_key': config['apiKey'],
           'webhook_secret': config['webhookSecret'],
@@ -48,7 +48,7 @@ class IntegrationsService {
   Future<void> disconnectIntegration(String integrationId) async {
     try {
       final response = await _dio.post(
-        '/api/integrations/$integrationId/disconnect',
+        '/api/v1/integrations/$integrationId/disconnect',
       );
 
       if (response.statusCode != 200) {
@@ -62,7 +62,7 @@ class IntegrationsService {
   Future<void> syncIntegration(String integrationId) async {
     try {
       final response = await _dio.post(
-        '/api/integrations/$integrationId/sync',
+        '/api/v1/integrations/$integrationId/sync',
       );
 
       if (response.statusCode != 200) {
@@ -79,7 +79,7 @@ class IntegrationsService {
   }) async {
     try {
       final response = await _dio.get(
-        '/api/integrations/$integrationId/activity',
+        '/api/v1/integrations/$integrationId/activity',
         queryParameters: {'limit': limit},
       );
 

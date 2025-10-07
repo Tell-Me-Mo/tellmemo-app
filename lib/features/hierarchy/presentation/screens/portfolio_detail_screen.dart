@@ -78,7 +78,7 @@ class _PortfolioDetailScreenState extends ConsumerState<PortfolioDetailScreen> {
               try {
                 final projectId = projectData['id'];
                 final response = await DioClient.instance.get(
-                  '/api/projects/$projectId/activities',
+                  '/api/v1/projects/$projectId/activities',
                 );
 
                 if (response.data != null && response.data is List) {
@@ -108,7 +108,7 @@ class _PortfolioDetailScreenState extends ConsumerState<PortfolioDetailScreen> {
       for (final project in portfolio.directProjects) {
         try {
           final response = await DioClient.instance.get(
-            '/api/projects/${project.id}/activities',
+            '/api/v1/projects/${project.id}/activities',
           );
 
           if (response.data != null && response.data is List) {
@@ -1915,7 +1915,7 @@ class _PortfolioDetailScreenState extends ConsumerState<PortfolioDetailScreen> {
         }) async {
           try {
             final response = await DioClient.instance.post(
-              '/api/summaries/generate',
+              '/api/v1/summaries/generate',
               data: {
                 'entity_type': 'portfolio',
                 'entity_id': portfolio.id,

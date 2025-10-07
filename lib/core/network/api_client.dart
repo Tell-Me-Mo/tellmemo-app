@@ -11,7 +11,7 @@ class ApiClient {
 
   // Health check
   Future<dynamic> healthCheck() async {
-    final response = await _dio.get('/api/health');
+    final response = await _dio.get('/api/v1/health');
     return response.data;
   }
 
@@ -81,7 +81,7 @@ class ApiClient {
       'date': date.isNotEmpty ? date : null,
       'use_ai_matching': useAiMatching,
     };
-    final response = await _dio.post('/api/projects/$projectId/upload/text', data: requestData);
+    final response = await _dio.post('/api/v1/projects/$projectId/upload/text', data: requestData);
     return response.data;
   }
   
@@ -99,7 +99,7 @@ class ApiClient {
       'date': date.isNotEmpty ? date : null,
       'use_ai_matching': true,
     };
-    final response = await _dio.post('/api/upload/with-ai-matching', data: requestData);
+    final response = await _dio.post('/api/v1/upload/with-ai-matching', data: requestData);
     return response.data;
   }
 
@@ -119,7 +119,7 @@ class ApiClient {
       'content_date': date.isNotEmpty ? date : null,
       'use_ai_matching': useAiMatching,
     });
-    final response = await _dio.post('/api/projects/$projectId/upload', data: formData);
+    final response = await _dio.post('/api/v1/projects/$projectId/upload', data: formData);
     return response.data;
   }
 
@@ -138,34 +138,34 @@ class ApiClient {
       'language': language,
       'use_ai_matching': useAiMatching,
     });
-    final response = await _dio.post('/api/transcribe', data: formData);
+    final response = await _dio.post('/api/v1/transcribe', data: formData);
     return response.data;
   }
 
   // Query
   Future<dynamic> queryProject(String projectId, Map<String, dynamic> query) async {
-    final response = await _dio.post('/api/projects/$projectId/query', data: query);
+    final response = await _dio.post('/api/v1/projects/$projectId/query', data: query);
     return response.data;
   }
 
   Future<dynamic> queryProgram(String programId, Map<String, dynamic> query) async {
-    final response = await _dio.post('/api/projects/program/$programId/query', data: query);
+    final response = await _dio.post('/api/v1/projects/program/$programId/query', data: query);
     return response.data;
   }
 
   Future<dynamic> queryPortfolio(String portfolioId, Map<String, dynamic> query) async {
-    final response = await _dio.post('/api/projects/portfolio/$portfolioId/query', data: query);
+    final response = await _dio.post('/api/v1/projects/portfolio/$portfolioId/query', data: query);
     return response.data;
   }
 
   Future<dynamic> queryOrganization(Map<String, dynamic> query) async {
-    final response = await _dio.post('/api/projects/organization/query', data: query);
+    final response = await _dio.post('/api/v1/projects/organization/query', data: query);
     return response.data;
   }
 
   // Conversations
   Future<List<dynamic>> getConversations(String projectId) async {
-    final response = await _dio.get('/api/projects/$projectId/conversations');
+    final response = await _dio.get('/api/v1/projects/$projectId/conversations');
     return response.data;
   }
 
@@ -174,7 +174,7 @@ class ApiClient {
     Map<String, dynamic> conversation,
   ) async {
     final response = await _dio.post(
-      '/api/projects/$projectId/conversations',
+      '/api/v1/projects/$projectId/conversations',
       data: conversation,
     );
     return response.data;
@@ -186,7 +186,7 @@ class ApiClient {
     Map<String, dynamic> conversation,
   ) async {
     final response = await _dio.put(
-      '/api/projects/$projectId/conversations/$conversationId',
+      '/api/v1/projects/$projectId/conversations/$conversationId',
       data: conversation,
     );
     return response.data;
@@ -197,7 +197,7 @@ class ApiClient {
     String conversationId,
   ) async {
     final response = await _dio.get(
-      '/api/projects/$projectId/conversations/$conversationId',
+      '/api/v1/projects/$projectId/conversations/$conversationId',
     );
     return response.data;
   }
@@ -206,20 +206,20 @@ class ApiClient {
     String projectId,
     String conversationId,
   ) async {
-    await _dio.delete('/api/projects/$projectId/conversations/$conversationId');
+    await _dio.delete('/api/v1/projects/$projectId/conversations/$conversationId');
   }
 
 
   // Unified Summary Generation
   Future<dynamic> generateUnifiedSummary(Map<String, dynamic> request) async {
-    final response = await _dio.post('/api/summaries/generate', data: request);
+    final response = await _dio.post('/api/v1/summaries/generate', data: request);
     return response.data;
   }
 
 
   // Get summary by ID (unified endpoint)
   Future<dynamic> getSummaryById(String summaryId) async {
-    final response = await _dio.get('/api/summaries/$summaryId');
+    final response = await _dio.get('/api/v1/summaries/$summaryId');
     return response.data;
   }
 
@@ -246,19 +246,19 @@ class ApiClient {
     if (createdAfter != null) filters['created_after'] = createdAfter.toIso8601String();
     if (createdBefore != null) filters['created_before'] = createdBefore.toIso8601String();
 
-    final response = await _dio.post('/api/summaries/list', data: filters);
+    final response = await _dio.post('/api/v1/summaries/list', data: filters);
     return response.data;
   }
 
   // Update summary (unified endpoint)
   Future<dynamic> updateSummary(String summaryId, Map<String, dynamic> data) async {
-    final response = await _dio.put('/api/summaries/$summaryId', data: data);
+    final response = await _dio.put('/api/v1/summaries/$summaryId', data: data);
     return response.data;
   }
 
   // Delete summary (unified endpoint)
   Future<dynamic> deleteSummary(String summaryId) async {
-    final response = await _dio.delete('/api/summaries/$summaryId');
+    final response = await _dio.delete('/api/v1/summaries/$summaryId');
     return response.data;
   }
 
@@ -269,7 +269,7 @@ class ApiClient {
     if (limit != null) queryParams['limit'] = limit;
 
     final response = await _dio.get(
-      '/api/hierarchy/program/$programId/summaries',
+      '/api/v1/hierarchy/program/$programId/summaries',
       queryParameters: queryParams,
     );
     return response.data;
@@ -280,7 +280,7 @@ class ApiClient {
     if (limit != null) queryParams['limit'] = limit;
 
     final response = await _dio.get(
-      '/api/hierarchy/portfolio/$portfolioId/summaries',
+      '/api/v1/hierarchy/portfolio/$portfolioId/summaries',
       queryParameters: queryParams,
     );
     return response.data;
@@ -298,21 +298,21 @@ class ApiClient {
     if (limit != null) queryParams['limit'] = limit;
 
     final response = await _dio.get(
-      '/api/projects/$projectId/content',
+      '/api/v1/projects/$projectId/content',
       queryParameters: queryParams,
     );
     return response.data;
   }
 
   Future<dynamic> getContent(String projectId, String contentId) async {
-    final response = await _dio.get('/api/projects/$projectId/content/$contentId');
+    final response = await _dio.get('/api/v1/projects/$projectId/content/$contentId');
     return response.data;
   }
 
   // Admin reset (development only)
   Future<dynamic> resetDatabase(String apiKey, Map<String, dynamic> confirmation) async {
     final response = await _dio.delete(
-      '/api/admin/reset',
+      '/api/v1/admin/reset',
       data: confirmation,
       options: Options(headers: {'X-API-Key': apiKey}),
     );

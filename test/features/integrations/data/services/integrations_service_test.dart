@@ -36,10 +36,10 @@ void main() {
         },
       ];
 
-      when(mockDio.get('/api/integrations')).thenAnswer((_) async => Response(
+      when(mockDio.get('/api/v1/integrations')).thenAnswer((_) async => Response(
             data: responseData,
             statusCode: 200,
-            requestOptions: RequestOptions(path: '/api/integrations'),
+            requestOptions: RequestOptions(path: '/api/v1/integrations'),
           ));
 
       // Act
@@ -53,7 +53,7 @@ void main() {
       expect(result[1].id, 'ai_brain');
       expect(result[1].type, IntegrationType.aiBrain);
       expect(result[1].status, IntegrationStatus.notConnected);
-      verify(mockDio.get('/api/integrations')).called(1);
+      verify(mockDio.get('/api/v1/integrations')).called(1);
     });
 
     test('connectIntegration sends correct request data', () async {
@@ -67,12 +67,12 @@ void main() {
       };
 
       when(mockDio.post(
-        '/api/integrations/fireflies/connect',
+        '/api/v1/integrations/fireflies/connect',
         data: anyNamed('data'),
       )).thenAnswer((_) async => Response(
             data: {},
             statusCode: 200,
-            requestOptions: RequestOptions(path: '/api/integrations/fireflies/connect'),
+            requestOptions: RequestOptions(path: '/api/v1/integrations/fireflies/connect'),
           ));
 
       // Act
@@ -80,7 +80,7 @@ void main() {
 
       // Assert
       final captured = verify(mockDio.post(
-        '/api/integrations/fireflies/connect',
+        '/api/v1/integrations/fireflies/connect',
         data: captureAnyNamed('data'),
       )).captured.single as Map<String, dynamic>;
 
@@ -93,33 +93,33 @@ void main() {
 
     test('disconnectIntegration calls correct endpoint', () async {
       // Arrange
-      when(mockDio.post('/api/integrations/slack/disconnect'))
+      when(mockDio.post('/api/v1/integrations/slack/disconnect'))
           .thenAnswer((_) async => Response(
                 data: {},
                 statusCode: 200,
-                requestOptions: RequestOptions(path: '/api/integrations/slack/disconnect'),
+                requestOptions: RequestOptions(path: '/api/v1/integrations/slack/disconnect'),
               ));
 
       // Act
       await service.disconnectIntegration('slack');
 
       // Assert
-      verify(mockDio.post('/api/integrations/slack/disconnect')).called(1);
+      verify(mockDio.post('/api/v1/integrations/slack/disconnect')).called(1);
     });
 
     test('syncIntegration calls correct endpoint', () async {
       // Arrange
-      when(mockDio.post('/api/integrations/teams/sync')).thenAnswer((_) async => Response(
+      when(mockDio.post('/api/v1/integrations/teams/sync')).thenAnswer((_) async => Response(
             data: {},
             statusCode: 200,
-            requestOptions: RequestOptions(path: '/api/integrations/teams/sync'),
+            requestOptions: RequestOptions(path: '/api/v1/integrations/teams/sync'),
           ));
 
       // Act
       await service.syncIntegration('teams');
 
       // Assert
-      verify(mockDio.post('/api/integrations/teams/sync')).called(1);
+      verify(mockDio.post('/api/v1/integrations/teams/sync')).called(1);
     });
 
     test('getIntegrationActivity includes limit parameter', () async {
@@ -130,12 +130,12 @@ void main() {
       ];
 
       when(mockDio.get(
-        '/api/integrations/zoom/activity',
+        '/api/v1/integrations/zoom/activity',
         queryParameters: anyNamed('queryParameters'),
       )).thenAnswer((_) async => Response(
             data: activityData,
             statusCode: 200,
-            requestOptions: RequestOptions(path: '/api/integrations/zoom/activity'),
+            requestOptions: RequestOptions(path: '/api/v1/integrations/zoom/activity'),
           ));
 
       // Act
@@ -144,7 +144,7 @@ void main() {
       // Assert
       expect(result, hasLength(2));
       final captured = verify(mockDio.get(
-        '/api/integrations/zoom/activity',
+        '/api/v1/integrations/zoom/activity',
         queryParameters: captureAnyNamed('queryParameters'),
       )).captured.single as Map<String, dynamic>;
 
@@ -153,12 +153,12 @@ void main() {
 
     test('handles DioException and extracts error message', () async {
       // Arrange
-      when(mockDio.get('/api/integrations')).thenThrow(DioException(
-        requestOptions: RequestOptions(path: '/api/integrations'),
+      when(mockDio.get('/api/v1/integrations')).thenThrow(DioException(
+        requestOptions: RequestOptions(path: '/api/v1/integrations'),
         response: Response(
           statusCode: 500,
           data: {'detail': 'Server error occurred'},
-          requestOptions: RequestOptions(path: '/api/integrations'),
+          requestOptions: RequestOptions(path: '/api/v1/integrations'),
         ),
       ));
 
@@ -175,8 +175,8 @@ void main() {
 
     test('handles DioException without response', () async {
       // Arrange
-      when(mockDio.get('/api/integrations')).thenThrow(DioException(
-        requestOptions: RequestOptions(path: '/api/integrations'),
+      when(mockDio.get('/api/v1/integrations')).thenThrow(DioException(
+        requestOptions: RequestOptions(path: '/api/v1/integrations'),
         message: 'Connection timeout',
       ));
 

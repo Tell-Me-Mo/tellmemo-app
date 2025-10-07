@@ -22,7 +22,7 @@ from utils.rate_limit import limiter, AUTH_RATE_LIMIT, RESET_PASSWORD_RATE_LIMIT
 logger = logging.getLogger(__name__)
 
 router = APIRouter(
-    prefix="/api/auth",
+    prefix="/api/v1/auth",
     tags=["Native Authentication"]
 )
 

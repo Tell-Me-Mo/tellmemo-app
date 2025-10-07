@@ -12,25 +12,25 @@ abstract class HierarchyApiService {
   factory HierarchyApiService(Dio dio, {String baseUrl}) = _HierarchyApiService;
 
   // Hierarchy endpoints
-  @GET('/api/hierarchy/full')
+  @GET('/api/v1/hierarchy/full')
   Future<HierarchyResponse> getFullHierarchy(
     @Query('include_archived') bool includeArchived,
   );
 
-  @POST('/api/hierarchy/move')
+  @POST('/api/v1/hierarchy/move')
   Future<MoveItemResponse> moveItem(@Body() MoveItemRequest request);
 
-  @POST('/api/hierarchy/bulk-move')
+  @POST('/api/v1/hierarchy/bulk-move')
   Future<BulkMoveResponse> bulkMoveItems(@Body() BulkMoveRequest request);
 
-  @POST('/api/hierarchy/bulk-delete')
+  @POST('/api/v1/hierarchy/bulk-delete')
   Future<BulkDeleteResponse> bulkDeleteItems(@Body() BulkDeleteRequest request);
 
-  @POST('/api/hierarchy/path')
+  @POST('/api/v1/hierarchy/path')
   @DioResponseType(ResponseType.json)
   Future<HttpResponse<dynamic>> getHierarchyPath(@Body() Map<String, String> request);
 
-  @GET('/api/hierarchy/statistics/summary')
+  @GET('/api/v1/hierarchy/statistics/summary')
   @DioResponseType(ResponseType.json)
   Future<HttpResponse<dynamic>> getHierarchyStatistics();
 

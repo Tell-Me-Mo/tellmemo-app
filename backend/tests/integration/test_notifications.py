@@ -125,7 +125,7 @@ class TestCreateNotification:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/notifications/",
+            "/api/v1/notifications/",
             json=notification_data
         )
 
@@ -164,7 +164,7 @@ class TestCreateNotification:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/notifications/",
+            "/api/v1/notifications/",
             json=notification_data
         )
 
@@ -196,7 +196,7 @@ class TestCreateNotification:
 
         # Act
         response = await client.post(
-            "/api/notifications/",
+            "/api/v1/notifications/",
             json=notification_data
         )
 
@@ -216,7 +216,7 @@ class TestCreateNotification:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/notifications/",
+            "/api/v1/notifications/",
             json=notification_data
         )
 
@@ -236,7 +236,7 @@ class TestListNotifications:
     ):
         """Test listing notifications with default parameters (excludes archived)."""
         # Act
-        response = await authenticated_org_client.get("/api/notifications/")
+        response = await authenticated_org_client.get("/api/v1/notifications/")
 
         # Assert
         assert response.status_code == 200
@@ -262,7 +262,7 @@ class TestListNotifications:
         """Test filtering notifications by unread status."""
         # Act
         response = await authenticated_org_client.get(
-            "/api/notifications/?is_read=false"
+            "/api/v1/notifications/?is_read=false"
         )
 
         # Assert
@@ -285,7 +285,7 @@ class TestListNotifications:
         """Test filtering notifications by read status."""
         # Act
         response = await authenticated_org_client.get(
-            "/api/notifications/?is_read=true"
+            "/api/v1/notifications/?is_read=true"
         )
 
         # Assert
@@ -307,7 +307,7 @@ class TestListNotifications:
         """Test including archived notifications."""
         # Act
         response = await authenticated_org_client.get(
-            "/api/notifications/?is_archived=true"
+            "/api/v1/notifications/?is_archived=true"
         )
 
         # Assert
@@ -341,7 +341,7 @@ class TestListNotifications:
 
         # Act - Get first 2 notifications
         response = await authenticated_org_client.get(
-            "/api/notifications/?limit=2&offset=0"
+            "/api/v1/notifications/?limit=2&offset=0"
         )
 
         # Assert
@@ -351,7 +351,7 @@ class TestListNotifications:
 
         # Act - Get next 2 notifications
         response2 = await authenticated_org_client.get(
-            "/api/notifications/?limit=2&offset=2"
+            "/api/v1/notifications/?limit=2&offset=2"
         )
 
         # Assert
@@ -370,7 +370,7 @@ class TestListNotifications:
     ):
         """Test that listing notifications requires authentication."""
         # Act
-        response = await client.get("/api/notifications/")
+        response = await client.get("/api/v1/notifications/")
 
         # Assert
         assert response.status_code in [401, 403]
@@ -454,7 +454,7 @@ class TestListNotifications:
         )
 
         # Act - List notifications as test_user
-        response = await client1.get("/api/notifications/")
+        response = await client1.get("/api/v1/notifications/")
 
         # Assert - Should only see own notifications
         assert response.status_code == 200
@@ -477,7 +477,7 @@ class TestGetUnreadCount:
         """Test getting unread notification count."""
         # Act
         response = await authenticated_org_client.get(
-            "/api/notifications/unread-count"
+            "/api/v1/notifications/unread-count"
         )
 
         # Assert
@@ -512,7 +512,7 @@ class TestGetUnreadCount:
 
         # Act
         response = await authenticated_org_client.get(
-            "/api/notifications/unread-count"
+            "/api/v1/notifications/unread-count"
         )
 
         # Assert
@@ -529,7 +529,7 @@ class TestGetUnreadCount:
     ):
         """Test that getting unread count requires authentication."""
         # Act
-        response = await client.get("/api/notifications/unread-count")
+        response = await client.get("/api/v1/notifications/unread-count")
 
         # Assert
         assert response.status_code in [401, 403]
@@ -547,7 +547,7 @@ class TestMarkAsRead:
         """Test successfully marking a notification as read."""
         # Act
         response = await authenticated_org_client.put(
-            f"/api/notifications/{test_notification.id}/read"
+            f"/api/v1/notifications/{test_notification.id}/read"
         )
 
         # Assert
@@ -558,7 +558,7 @@ class TestMarkAsRead:
 
         # Verify notification is marked as read
         list_response = await authenticated_org_client.get(
-            f"/api/notifications/?is_read=true"
+            f"/api/v1/notifications/?is_read=true"
         )
         assert list_response.status_code == 200
         notification_ids = [n["id"] for n in list_response.json()["notifications"]]
@@ -575,7 +575,7 @@ class TestMarkAsRead:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/notifications/{fake_id}/read"
+            f"/api/v1/notifications/{fake_id}/read"
         )
 
         # Assert
@@ -612,7 +612,7 @@ class TestMarkAsRead:
 
         # Act - Try to mark test_notification (owned by test_user) as read
         response = await other_client.put(
-            f"/api/notifications/{test_notification.id}/read"
+            f"/api/v1/notifications/{test_notification.id}/read"
         )
 
         # Assert - Should get 404 (not found) to prevent information disclosure
@@ -627,7 +627,7 @@ class TestMarkAsRead:
         """Test that marking notification as read requires authentication."""
         # Act
         response = await client.put(
-            f"/api/notifications/{test_notification.id}/read"
+            f"/api/v1/notifications/{test_notification.id}/read"
         )
 
         # Assert
@@ -670,7 +670,7 @@ class TestBulkMarkAsRead:
             "mark_all": False
         }
         response = await authenticated_org_client.put(
-            "/api/notifications/mark-read",
+            "/api/v1/notifications/mark-read",
             json=request_data
         )
 
@@ -708,7 +708,7 @@ class TestBulkMarkAsRead:
             "mark_all": True
         }
         response = await authenticated_org_client.put(
-            "/api/notifications/mark-read",
+            "/api/v1/notifications/mark-read",
             json=request_data
         )
 
@@ -720,7 +720,7 @@ class TestBulkMarkAsRead:
 
         # Verify unread count is 0
         count_response = await authenticated_org_client.get(
-            "/api/notifications/unread-count"
+            "/api/v1/notifications/unread-count"
         )
         assert count_response.json()["unread_count"] == 0
 
@@ -737,7 +737,7 @@ class TestBulkMarkAsRead:
 
         # Act
         response = await authenticated_org_client.put(
-            "/api/notifications/mark-read",
+            "/api/v1/notifications/mark-read",
             json=request_data
         )
 
@@ -758,7 +758,7 @@ class TestBulkMarkAsRead:
 
         # Act
         response = await client.put(
-            "/api/notifications/mark-read",
+            "/api/v1/notifications/mark-read",
             json=request_data
         )
 
@@ -778,7 +778,7 @@ class TestArchiveNotification:
         """Test successfully archiving a notification."""
         # Act
         response = await authenticated_org_client.put(
-            f"/api/notifications/{test_notification.id}/archive"
+            f"/api/v1/notifications/{test_notification.id}/archive"
         )
 
         # Assert
@@ -788,7 +788,7 @@ class TestArchiveNotification:
         assert "archived" in data["message"].lower()
 
         # Verify notification is archived (excluded from default list)
-        list_response = await authenticated_org_client.get("/api/notifications/")
+        list_response = await authenticated_org_client.get("/api/v1/notifications/")
         assert list_response.status_code == 200
         notification_ids = [n["id"] for n in list_response.json()["notifications"]]
         assert str(test_notification.id) not in notification_ids
@@ -804,7 +804,7 @@ class TestArchiveNotification:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/notifications/{fake_id}/archive"
+            f"/api/v1/notifications/{fake_id}/archive"
         )
 
         # Assert
@@ -841,7 +841,7 @@ class TestArchiveNotification:
 
         # Act - Try to archive test_notification (owned by test_user)
         response = await other_client.put(
-            f"/api/notifications/{test_notification.id}/archive"
+            f"/api/v1/notifications/{test_notification.id}/archive"
         )
 
         # Assert - Should get 404 to prevent information disclosure
@@ -856,7 +856,7 @@ class TestArchiveNotification:
         """Test that archiving notification requires authentication."""
         # Act
         response = await client.put(
-            f"/api/notifications/{test_notification.id}/archive"
+            f"/api/v1/notifications/{test_notification.id}/archive"
         )
 
         # Assert
@@ -875,7 +875,7 @@ class TestDeleteNotification:
         """Test successfully deleting a notification."""
         # Act
         response = await authenticated_org_client.delete(
-            f"/api/notifications/{test_notification.id}"
+            f"/api/v1/notifications/{test_notification.id}"
         )
 
         # Assert
@@ -886,7 +886,7 @@ class TestDeleteNotification:
 
         # Verify notification is deleted
         list_response = await authenticated_org_client.get(
-            "/api/notifications/?is_archived=true"
+            "/api/v1/notifications/?is_archived=true"
         )
         assert list_response.status_code == 200
         notification_ids = [n["id"] for n in list_response.json()["notifications"]]
@@ -903,7 +903,7 @@ class TestDeleteNotification:
 
         # Act
         response = await authenticated_org_client.delete(
-            f"/api/notifications/{fake_id}"
+            f"/api/v1/notifications/{fake_id}"
         )
 
         # Assert
@@ -940,7 +940,7 @@ class TestDeleteNotification:
 
         # Act - Try to delete test_notification (owned by test_user)
         response = await other_client.delete(
-            f"/api/notifications/{test_notification.id}"
+            f"/api/v1/notifications/{test_notification.id}"
         )
 
         # Assert - Should get 404 to prevent information disclosure
@@ -955,7 +955,7 @@ class TestDeleteNotification:
         """Test that deleting notification requires authentication."""
         # Act
         response = await client.delete(
-            f"/api/notifications/{test_notification.id}"
+            f"/api/v1/notifications/{test_notification.id}"
         )
 
         # Assert
@@ -1024,7 +1024,7 @@ class TestBulkCreateNotifications:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/notifications/bulk",
+            "/api/v1/notifications/bulk",
             json=bulk_data
         )
 
@@ -1053,7 +1053,7 @@ class TestBulkCreateNotifications:
 
         # Act
         response = await client.post(
-            "/api/notifications/bulk",
+            "/api/v1/notifications/bulk",
             json=bulk_data
         )
 
@@ -1074,7 +1074,7 @@ class TestBulkCreateNotifications:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/notifications/bulk",
+            "/api/v1/notifications/bulk",
             json=bulk_data
         )
 
@@ -1122,7 +1122,7 @@ class TestExpiredNotifications:
         await db_session.commit()
 
         # Act
-        response = await authenticated_org_client.get("/api/notifications/")
+        response = await authenticated_org_client.get("/api/v1/notifications/")
 
         # Assert
         assert response.status_code == 200
@@ -1158,7 +1158,7 @@ class TestExpiredNotifications:
 
         # Act
         response = await authenticated_org_client.get(
-            "/api/notifications/unread-count"
+            "/api/v1/notifications/unread-count"
         )
 
         # Assert - Expired notification should not be counted

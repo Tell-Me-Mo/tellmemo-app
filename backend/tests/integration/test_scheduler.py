@@ -32,7 +32,7 @@ class TestSchedulerStatus:
     ):
         """Test getting scheduler status successfully."""
         # Act
-        response = await authenticated_org_client.get("/api/scheduler/status")
+        response = await authenticated_org_client.get("/api/v1/scheduler/status")
 
         # Assert
         assert response.status_code == 200
@@ -47,7 +47,7 @@ class TestSchedulerStatus:
     ):
         """Test that scheduler status includes information about scheduled jobs."""
         # Act
-        response = await authenticated_org_client.get("/api/scheduler/status")
+        response = await authenticated_org_client.get("/api/v1/scheduler/status")
 
         # Assert
         assert response.status_code == 200
@@ -69,7 +69,7 @@ class TestSchedulerStatus:
         client = await client_factory()
 
         # Act
-        response = await client.get("/api/scheduler/status")
+        response = await client.get("/api/v1/scheduler/status")
 
         # Assert
         # FIXED: Now requires authentication
@@ -101,7 +101,7 @@ class TestTriggerProjectReports:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/scheduler/trigger-project-reports",
+            "/api/v1/scheduler/trigger-project-reports",
             json={
                 "project_id": str(project.id),
                 "date_range_start": (datetime.utcnow() - timedelta(days=7)).isoformat(),
@@ -143,7 +143,7 @@ class TestTriggerProjectReports:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/scheduler/trigger-project-reports",
+            "/api/v1/scheduler/trigger-project-reports",
             json={},  # No project_id triggers all projects
         )
 
@@ -163,7 +163,7 @@ class TestTriggerProjectReports:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/scheduler/trigger-project-reports",
+            "/api/v1/scheduler/trigger-project-reports",
             json={"project_id": nonexistent_id},
         )
 
@@ -178,7 +178,7 @@ class TestTriggerProjectReports:
         """Test triggering report with invalid UUID format."""
         # Act
         response = await authenticated_org_client.post(
-            "/api/scheduler/trigger-project-reports",
+            "/api/v1/scheduler/trigger-project-reports",
             json={"project_id": "not-a-valid-uuid"},
         )
 
@@ -193,7 +193,7 @@ class TestTriggerProjectReports:
 
         # Act
         response = await client.post(
-            "/api/scheduler/trigger-project-reports",
+            "/api/v1/scheduler/trigger-project-reports",
             json={},
         )
 
@@ -212,7 +212,7 @@ class TestRescheduleProjectReports:
         """Test rescheduling using a cron expression."""
         # Act
         response = await authenticated_org_client.post(
-            "/api/scheduler/reschedule",
+            "/api/v1/scheduler/reschedule",
             json={"cron_expression": "0 18 * * fri"},
         )
 
@@ -229,7 +229,7 @@ class TestRescheduleProjectReports:
         """Test rescheduling using individual time components."""
         # Act
         response = await authenticated_org_client.post(
-            "/api/scheduler/reschedule",
+            "/api/v1/scheduler/reschedule",
             json={
                 "day_of_week": "mon",
                 "hour": 10,
@@ -248,7 +248,7 @@ class TestRescheduleProjectReports:
         """Test rescheduling with default values (Friday 5 PM)."""
         # Act
         response = await authenticated_org_client.post(
-            "/api/scheduler/reschedule",
+            "/api/v1/scheduler/reschedule",
             json={},  # Use defaults
         )
 
@@ -263,7 +263,7 @@ class TestRescheduleProjectReports:
         """Test rescheduling with invalid hour value."""
         # Act
         response = await authenticated_org_client.post(
-            "/api/scheduler/reschedule",
+            "/api/v1/scheduler/reschedule",
             json={"hour": 25},  # Invalid hour (> 23)
         )
 
@@ -277,7 +277,7 @@ class TestRescheduleProjectReports:
         """Test rescheduling with invalid minute value."""
         # Act
         response = await authenticated_org_client.post(
-            "/api/scheduler/reschedule",
+            "/api/v1/scheduler/reschedule",
             json={"minute": 60},  # Invalid minute (> 59)
         )
 
@@ -292,7 +292,7 @@ class TestRescheduleProjectReports:
 
         # Act
         response = await client.post(
-            "/api/scheduler/reschedule",
+            "/api/v1/scheduler/reschedule",
             json={"cron_expression": "0 18 * * fri"},
         )
 
@@ -371,7 +371,7 @@ class TestMultiTenantIsolation:
 
         # Act - Try to trigger report using org1 client
         response = await client_org1.post(
-            "/api/scheduler/trigger-project-reports",
+            "/api/v1/scheduler/trigger-project-reports",
             json={"project_id": str(project_org2.id)},
         )
 

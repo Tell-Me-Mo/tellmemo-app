@@ -63,7 +63,7 @@ class TestCreateConversation:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/conversations",
+            f"/api/v1/projects/{test_project.id}/conversations",
             json=conversation_data
         )
 
@@ -109,7 +109,7 @@ class TestCreateConversation:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/conversations",
+            f"/api/v1/projects/{test_project.id}/conversations",
             json=conversation_data
         )
 
@@ -146,7 +146,7 @@ class TestCreateConversation:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/projects/organization/conversations",
+            "/api/v1/projects/organization/conversations",
             json=conversation_data
         )
 
@@ -173,7 +173,7 @@ class TestCreateConversation:
 
         # Act
         response = await unauthenticated_client.post(
-            f"/api/projects/{test_project.id}/conversations",
+            f"/api/v1/projects/{test_project.id}/conversations",
             json=conversation_data
         )
 
@@ -231,7 +231,7 @@ class TestListConversations:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/conversations"
+            f"/api/v1/projects/{test_project.id}/conversations"
         )
 
         # Assert
@@ -275,7 +275,7 @@ class TestListConversations:
 
         # Act
         response = await authenticated_org_client.get(
-            "/api/projects/organization/conversations"
+            "/api/v1/projects/organization/conversations"
         )
 
         # Assert
@@ -298,7 +298,7 @@ class TestListConversations:
         """Test listing conversations when none exist."""
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/conversations"
+            f"/api/v1/projects/{test_project.id}/conversations"
         )
 
         # Assert
@@ -350,7 +350,7 @@ class TestListConversations:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/conversations"
+            f"/api/v1/projects/{test_project.id}/conversations"
         )
 
         # Assert
@@ -371,7 +371,7 @@ class TestListConversations:
         """Test that listing conversations requires authentication."""
         # Act
         response = await unauthenticated_client.get(
-            f"/api/projects/{test_project.id}/conversations"
+            f"/api/v1/projects/{test_project.id}/conversations"
         )
 
         # Assert
@@ -416,7 +416,7 @@ class TestGetConversation:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/conversations/{conversation.id}"
+            f"/api/v1/projects/{test_project.id}/conversations/{conversation.id}"
         )
 
         # Assert
@@ -454,7 +454,7 @@ class TestGetConversation:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/conversations/{conversation.id}"
+            f"/api/v1/projects/{test_project.id}/conversations/{conversation.id}"
         )
 
         # Assert
@@ -489,7 +489,7 @@ class TestGetConversation:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/organization/conversations/{conversation.id}"
+            f"/api/v1/projects/organization/conversations/{conversation.id}"
         )
 
         # Assert
@@ -511,7 +511,7 @@ class TestGetConversation:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/conversations/{fake_id}"
+            f"/api/v1/projects/{test_project.id}/conversations/{fake_id}"
         )
 
         # Assert
@@ -544,7 +544,7 @@ class TestGetConversation:
 
         # Act
         response = await unauthenticated_client.get(
-            f"/api/projects/{test_project.id}/conversations/{conversation.id}"
+            f"/api/v1/projects/{test_project.id}/conversations/{conversation.id}"
         )
 
         # Assert
@@ -584,7 +584,7 @@ class TestUpdateConversation:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/projects/{test_project.id}/conversations/{conversation.id}",
+            f"/api/v1/projects/{test_project.id}/conversations/{conversation.id}",
             json=update_data
         )
 
@@ -651,7 +651,7 @@ class TestUpdateConversation:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/projects/{test_project.id}/conversations/{conversation.id}",
+            f"/api/v1/projects/{test_project.id}/conversations/{conversation.id}",
             json=update_data
         )
 
@@ -702,7 +702,7 @@ class TestUpdateConversation:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/projects/{test_project.id}/conversations/{conversation.id}",
+            f"/api/v1/projects/{test_project.id}/conversations/{conversation.id}",
             json=update_data
         )
 
@@ -742,7 +742,7 @@ class TestUpdateConversation:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/projects/{test_project.id}/conversations/{conversation.id}",
+            f"/api/v1/projects/{test_project.id}/conversations/{conversation.id}",
             json=update_data
         )
 
@@ -764,7 +764,7 @@ class TestUpdateConversation:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/projects/{test_project.id}/conversations/{fake_id}",
+            f"/api/v1/projects/{test_project.id}/conversations/{fake_id}",
             json=update_data
         )
 
@@ -799,7 +799,7 @@ class TestUpdateConversation:
 
         # Act
         response = await unauthenticated_client.put(
-            f"/api/projects/{test_project.id}/conversations/{conversation.id}",
+            f"/api/v1/projects/{test_project.id}/conversations/{conversation.id}",
             json=update_data
         )
 
@@ -833,7 +833,7 @@ class TestUpdateConversation:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/projects/organization/conversations/{conversation.id}",
+            f"/api/v1/projects/organization/conversations/{conversation.id}",
             json=update_data
         )
 
@@ -874,7 +874,7 @@ class TestDeleteConversation:
 
         # Act
         response = await authenticated_org_client.delete(
-            f"/api/projects/{test_project.id}/conversations/{conversation_id}"
+            f"/api/v1/projects/{test_project.id}/conversations/{conversation_id}"
         )
 
         # Assert
@@ -915,7 +915,7 @@ class TestDeleteConversation:
 
         # Act
         response = await authenticated_org_client.delete(
-            f"/api/projects/organization/conversations/{conversation_id}"
+            f"/api/v1/projects/organization/conversations/{conversation_id}"
         )
 
         # Assert
@@ -934,7 +934,7 @@ class TestDeleteConversation:
 
         # Act
         response = await authenticated_org_client.delete(
-            f"/api/projects/{test_project.id}/conversations/{fake_id}"
+            f"/api/v1/projects/{test_project.id}/conversations/{fake_id}"
         )
 
         # Assert
@@ -966,7 +966,7 @@ class TestDeleteConversation:
 
         # Act
         response = await unauthenticated_client.delete(
-            f"/api/projects/{test_project.id}/conversations/{conversation.id}"
+            f"/api/v1/projects/{test_project.id}/conversations/{conversation.id}"
         )
 
         # Assert
@@ -1046,7 +1046,7 @@ class TestMultiTenantIsolation:
 
         # Act - Try to access conversation from other org
         response = await other_client.get(
-            f"/api/projects/{test_project.id}/conversations/{conversation.id}"
+            f"/api/v1/projects/{test_project.id}/conversations/{conversation.id}"
         )
 
         # Assert - Should not be able to access
@@ -1121,7 +1121,7 @@ class TestMultiTenantIsolation:
 
         # Act - List conversations for test_project (which belongs to test_organization)
         response = await other_client.get(
-            f"/api/projects/{test_project.id}/conversations"
+            f"/api/v1/projects/{test_project.id}/conversations"
         )
 
         # Assert - Should return empty list (no cross-org access)
@@ -1155,7 +1155,7 @@ class TestMultiTurnChatHistory:
             ]
         }
         response1 = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/conversations",
+            f"/api/v1/projects/{test_project.id}/conversations",
             json=create_data
         )
         assert response1.status_code == 200
@@ -1183,7 +1183,7 @@ class TestMultiTurnChatHistory:
             ]
         }
         response2 = await authenticated_org_client.put(
-            f"/api/projects/{test_project.id}/conversations/{conversation_id}",
+            f"/api/v1/projects/{test_project.id}/conversations/{conversation_id}",
             json=update_data_2
         )
         assert response2.status_code == 200
@@ -1219,7 +1219,7 @@ class TestMultiTurnChatHistory:
             ]
         }
         response3 = await authenticated_org_client.put(
-            f"/api/projects/{test_project.id}/conversations/{conversation_id}",
+            f"/api/v1/projects/{test_project.id}/conversations/{conversation_id}",
             json=update_data_3
         )
 
@@ -1255,7 +1255,7 @@ class TestMultiTurnChatHistory:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/conversations",
+            f"/api/v1/projects/{test_project.id}/conversations",
             json=conversation_data
         )
 

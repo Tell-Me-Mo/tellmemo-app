@@ -32,7 +32,7 @@ from config import get_settings
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api", tags=["transcription"])
+router = APIRouter(prefix="/api/v1", tags=["transcription"])
 
 
 async def process_audio_transcription(

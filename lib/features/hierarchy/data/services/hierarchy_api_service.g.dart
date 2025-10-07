@@ -29,7 +29,7 @@ class _HierarchyApiService implements HierarchyApiService {
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
-            '/api/hierarchy/full',
+            '/api/v1/hierarchy/full',
             queryParameters: queryParameters,
             data: _data,
           )
@@ -56,7 +56,7 @@ class _HierarchyApiService implements HierarchyApiService {
       Options(method: 'POST', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
-            '/api/hierarchy/move',
+            '/api/v1/hierarchy/move',
             queryParameters: queryParameters,
             data: _data,
           )
@@ -83,7 +83,7 @@ class _HierarchyApiService implements HierarchyApiService {
       Options(method: 'POST', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
-            '/api/hierarchy/bulk-move',
+            '/api/v1/hierarchy/bulk-move',
             queryParameters: queryParameters,
             data: _data,
           )
@@ -110,7 +110,7 @@ class _HierarchyApiService implements HierarchyApiService {
       Options(method: 'POST', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
-            '/api/hierarchy/bulk-delete',
+            '/api/v1/hierarchy/bulk-delete',
             queryParameters: queryParameters,
             data: _data,
           )
@@ -145,7 +145,7 @@ class _HierarchyApiService implements HierarchyApiService {
           )
           .compose(
             _dio.options,
-            '/api/hierarchy/path',
+            '/api/v1/hierarchy/path',
             queryParameters: queryParameters,
             data: _data,
           )
@@ -172,7 +172,7 @@ class _HierarchyApiService implements HierarchyApiService {
           )
           .compose(
             _dio.options,
-            '/api/hierarchy/statistics/summary',
+            '/api/v1/hierarchy/statistics/summary',
             queryParameters: queryParameters,
             data: _data,
           )

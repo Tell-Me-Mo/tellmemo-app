@@ -87,7 +87,7 @@ class BulkNotificationCreate(BaseModel):
 
 
 # Create router
-router = APIRouter(prefix="/api/notifications", tags=["notifications"])
+router = APIRouter(prefix="/api/v1/notifications", tags=["notifications"])
 
 
 @router.get("/", response_model=NotificationListResponse)

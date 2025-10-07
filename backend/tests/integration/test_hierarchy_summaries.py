@@ -238,7 +238,7 @@ class TestGetProgramSummaries:
         """Test fetching all summaries for a program with authentication."""
         # Act
         response = await authenticated_org_client.get(
-            f"/api/hierarchy/program/{test_program.id}/summaries"
+            f"/api/v1/hierarchy/program/{test_program.id}/summaries"
         )
 
         # Assert
@@ -260,7 +260,7 @@ class TestGetProgramSummaries:
         """Test fetching program summaries with limit parameter."""
         # Act
         response = await authenticated_org_client.get(
-            f"/api/hierarchy/program/{test_program.id}/summaries",
+            f"/api/v1/hierarchy/program/{test_program.id}/summaries",
             params={"limit": 10}
         )
 
@@ -279,7 +279,7 @@ class TestGetProgramSummaries:
         """Test fetching summaries for program with no summaries."""
         # Act
         response = await authenticated_org_client.get(
-            f"/api/hierarchy/program/{test_program.id}/summaries"
+            f"/api/v1/hierarchy/program/{test_program.id}/summaries"
         )
 
         # Assert
@@ -296,7 +296,7 @@ class TestGetProgramSummaries:
         """Test fetching summaries with invalid program ID."""
         # Act
         response = await authenticated_org_client.get(
-            "/api/hierarchy/program/invalid-uuid/summaries"
+            "/api/v1/hierarchy/program/invalid-uuid/summaries"
         )
 
         # Assert
@@ -313,7 +313,7 @@ class TestGetProgramSummaries:
         """Test that authentication is required."""
         # Act
         response = await client.get(
-            f"/api/hierarchy/program/{test_program.id}/summaries"
+            f"/api/v1/hierarchy/program/{test_program.id}/summaries"
         )
 
         # Assert
@@ -355,7 +355,7 @@ class TestGetProgramSummaries:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/hierarchy/program/{test_program.id}/summaries"
+            f"/api/v1/hierarchy/program/{test_program.id}/summaries"
         )
 
         # Assert
@@ -384,7 +384,7 @@ class TestGetPortfolioSummaries:
         """Test fetching all summaries for a portfolio with authentication."""
         # Act
         response = await authenticated_org_client.get(
-            f"/api/hierarchy/portfolio/{test_portfolio.id}/summaries"
+            f"/api/v1/hierarchy/portfolio/{test_portfolio.id}/summaries"
         )
 
         # Assert
@@ -406,7 +406,7 @@ class TestGetPortfolioSummaries:
         """Test fetching portfolio summaries with limit parameter."""
         # Act
         response = await authenticated_org_client.get(
-            f"/api/hierarchy/portfolio/{test_portfolio.id}/summaries",
+            f"/api/v1/hierarchy/portfolio/{test_portfolio.id}/summaries",
             params={"limit": 5}
         )
 
@@ -425,7 +425,7 @@ class TestGetPortfolioSummaries:
         """Test fetching summaries for portfolio with no summaries."""
         # Act
         response = await authenticated_org_client.get(
-            f"/api/hierarchy/portfolio/{test_portfolio.id}/summaries"
+            f"/api/v1/hierarchy/portfolio/{test_portfolio.id}/summaries"
         )
 
         # Assert
@@ -442,7 +442,7 @@ class TestGetPortfolioSummaries:
         """Test fetching summaries with invalid portfolio ID."""
         # Act
         response = await authenticated_org_client.get(
-            "/api/hierarchy/portfolio/invalid-uuid/summaries"
+            "/api/v1/hierarchy/portfolio/invalid-uuid/summaries"
         )
 
         # Assert
@@ -459,7 +459,7 @@ class TestGetPortfolioSummaries:
         """Test that authentication is required."""
         # Act
         response = await client.get(
-            f"/api/hierarchy/portfolio/{test_portfolio.id}/summaries"
+            f"/api/v1/hierarchy/portfolio/{test_portfolio.id}/summaries"
         )
 
         # Assert
@@ -501,7 +501,7 @@ class TestGetPortfolioSummaries:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/hierarchy/portfolio/{test_portfolio.id}/summaries"
+            f"/api/v1/hierarchy/portfolio/{test_portfolio.id}/summaries"
         )
 
         # Assert
@@ -562,7 +562,7 @@ class TestMultiTenantIsolation:
 
         # Act - Try to access other org's program summaries with auth from different org
         response = await authenticated_org_client.get(
-            f"/api/hierarchy/program/{other_program.id}/summaries"
+            f"/api/v1/hierarchy/program/{other_program.id}/summaries"
         )
 
         # Assert

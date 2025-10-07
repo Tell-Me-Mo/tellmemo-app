@@ -287,7 +287,7 @@ class TestRateLimiting:
         responses = []
         for _ in range(15):  # Attempt 15 rapid requests
             response = await async_client.post(
-                "/api/auth/native/signin",
+                "/api/v1/auth/native/signin",
                 json=login_data
             )
             responses.append(response)

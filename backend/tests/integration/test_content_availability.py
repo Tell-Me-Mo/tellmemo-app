@@ -240,7 +240,7 @@ async def test_check_project_content_availability_with_content(
 ):
     """Test checking content availability for a project with content."""
     response = await authenticated_org_client.get(
-        f"/api/content-availability/check/project/{test_project_with_content.id}"
+        f"/api/v1/content-availability/check/project/{test_project_with_content.id}"
     )
 
     assert response.status_code == 200
@@ -276,7 +276,7 @@ async def test_check_project_content_availability_empty_project(
     await db_session.refresh(project)
 
     response = await authenticated_org_client.get(
-        f"/api/content-availability/check/project/{project.id}"
+        f"/api/v1/content-availability/check/project/{project.id}"
     )
 
     assert response.status_code == 200
@@ -300,7 +300,7 @@ async def test_check_project_content_availability_with_date_filter(
     date_end = datetime.utcnow().isoformat()
 
     response = await authenticated_org_client.get(
-        f"/api/content-availability/check/project/{test_project_with_content.id}",
+        f"/api/v1/content-availability/check/project/{test_project_with_content.id}",
         params={
             "date_start": date_start,
             "date_end": date_end
@@ -327,7 +327,7 @@ async def test_check_program_content_availability_with_content(
 ):
     """Test checking content availability for a program with content."""
     response = await authenticated_org_client.get(
-        f"/api/content-availability/check/program/{test_program_with_content.id}"
+        f"/api/v1/content-availability/check/program/{test_program_with_content.id}"
     )
 
     assert response.status_code == 200
@@ -361,7 +361,7 @@ async def test_check_program_content_availability_empty_program(
     await db_session.refresh(program)
 
     response = await authenticated_org_client.get(
-        f"/api/content-availability/check/program/{program.id}"
+        f"/api/v1/content-availability/check/program/{program.id}"
     )
 
     assert response.status_code == 200
@@ -386,7 +386,7 @@ async def test_check_portfolio_content_availability_with_content(
 ):
     """Test checking content availability for a portfolio with content."""
     response = await authenticated_org_client.get(
-        f"/api/content-availability/check/portfolio/{test_portfolio_with_content.id}"
+        f"/api/v1/content-availability/check/portfolio/{test_portfolio_with_content.id}"
     )
 
     assert response.status_code == 200
@@ -421,7 +421,7 @@ async def test_check_portfolio_content_availability_empty_portfolio(
     await db_session.refresh(portfolio)
 
     response = await authenticated_org_client.get(
-        f"/api/content-availability/check/portfolio/{portfolio.id}"
+        f"/api/v1/content-availability/check/portfolio/{portfolio.id}"
     )
 
     assert response.status_code == 200
@@ -447,7 +447,7 @@ async def test_check_content_availability_invalid_entity_type(
 ):
     """Test checking content availability with invalid entity type."""
     response = await authenticated_org_client.get(
-        f"/api/content-availability/check/invalid_type/{test_project_with_content.id}"
+        f"/api/v1/content-availability/check/invalid_type/{test_project_with_content.id}"
     )
 
     assert response.status_code == 400
@@ -460,7 +460,7 @@ async def test_check_content_availability_invalid_uuid(
 ):
     """Test checking content availability with invalid UUID format."""
     response = await authenticated_org_client.get(
-        "/api/content-availability/check/project/invalid-uuid"
+        "/api/v1/content-availability/check/project/invalid-uuid"
     )
 
     assert response.status_code == 400
@@ -478,7 +478,7 @@ async def test_get_summary_statistics_with_summaries(
 ):
     """Test getting summary statistics for a project with summaries."""
     response = await authenticated_org_client.get(
-        f"/api/content-availability/stats/project/{test_project_with_summaries.id}"
+        f"/api/v1/content-availability/stats/project/{test_project_with_summaries.id}"
     )
 
     assert response.status_code == 200
@@ -500,7 +500,7 @@ async def test_get_summary_statistics_no_summaries(
 ):
     """Test getting summary statistics for a project without summaries."""
     response = await authenticated_org_client.get(
-        f"/api/content-availability/stats/project/{test_project_with_content.id}"
+        f"/api/v1/content-availability/stats/project/{test_project_with_content.id}"
     )
 
     assert response.status_code == 200
@@ -519,7 +519,7 @@ async def test_get_summary_statistics_invalid_entity_type(
 ):
     """Test getting summary statistics with invalid entity type."""
     response = await authenticated_org_client.get(
-        f"/api/content-availability/stats/invalid_type/{test_project_with_content.id}"
+        f"/api/v1/content-availability/stats/invalid_type/{test_project_with_content.id}"
     )
 
     assert response.status_code == 400
@@ -532,7 +532,7 @@ async def test_get_summary_statistics_invalid_uuid(
 ):
     """Test getting summary statistics with invalid UUID format."""
     response = await authenticated_org_client.get(
-        "/api/content-availability/stats/project/invalid-uuid"
+        "/api/v1/content-availability/stats/project/invalid-uuid"
     )
 
     assert response.status_code == 400
@@ -558,7 +558,7 @@ async def test_batch_check_availability_multiple_entities(
     ]
 
     response = await authenticated_org_client.post(
-        "/api/content-availability/batch-check",
+        "/api/v1/content-availability/batch-check",
         json=entities
     )
 
@@ -600,7 +600,7 @@ async def test_batch_check_availability_with_date_filter(
     date_end = datetime.utcnow().isoformat()
 
     response = await authenticated_org_client.post(
-        f"/api/content-availability/batch-check?date_start={date_start}&date_end={date_end}",
+        f"/api/v1/content-availability/batch-check?date_start={date_start}&date_end={date_end}",
         json=entities
     )
 
@@ -625,7 +625,7 @@ async def test_batch_check_availability_invalid_entity_skipped(
     ]
 
     response = await authenticated_org_client.post(
-        "/api/content-availability/batch-check",
+        "/api/v1/content-availability/batch-check",
         json=entities
     )
 
@@ -652,7 +652,7 @@ async def test_batch_check_availability_empty_list(
 ):
     """Test batch checking with empty entity list."""
     response = await authenticated_org_client.post(
-        "/api/content-availability/batch-check",
+        "/api/v1/content-availability/batch-check",
         json=[]
     )
 
@@ -711,7 +711,7 @@ async def test_check_content_availability_different_organization(
 
     # Try to check content availability for project in different org
     response = await other_org_client.get(
-        f"/api/content-availability/check/project/{test_project_with_content.id}"
+        f"/api/v1/content-availability/check/project/{test_project_with_content.id}"
     )
 
     # Should return 404 to prevent information disclosure
@@ -730,7 +730,7 @@ async def test_check_project_content_recent_summaries(
 ):
     """Test that recent summaries count is included in availability check."""
     response = await authenticated_org_client.get(
-        f"/api/content-availability/check/project/{test_project_with_summaries.id}"
+        f"/api/v1/content-availability/check/project/{test_project_with_summaries.id}"
     )
 
     assert response.status_code == 200

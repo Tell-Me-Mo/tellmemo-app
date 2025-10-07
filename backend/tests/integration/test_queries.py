@@ -235,7 +235,7 @@ async def test_query_project_success(
         mock_query.return_value = mock_rag_response
 
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project_with_content.id}/query",
+            f"/api/v1/projects/{test_project_with_content.id}/query",
             json={
                 "question": "What are the main goals for Q4?"
             }
@@ -268,7 +268,7 @@ async def test_query_project_creates_conversation(
         mock_query.return_value = mock_rag_response
 
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project_with_content.id}/query",
+            f"/api/v1/projects/{test_project_with_content.id}/query",
             json={
                 "question": "What are the risks?"
             }
@@ -307,7 +307,7 @@ async def test_query_project_with_conversation_context(
 
         # First query - creates conversation
         response1 = await authenticated_org_client.post(
-            f"/api/projects/{test_project_with_content.id}/query",
+            f"/api/v1/projects/{test_project_with_content.id}/query",
             json={
                 "question": "What are the Q4 plans?"
             }
@@ -317,7 +317,7 @@ async def test_query_project_with_conversation_context(
 
         # Follow-up query using same conversation
         response2 = await authenticated_org_client.post(
-            f"/api/projects/{test_project_with_content.id}/query",
+            f"/api/v1/projects/{test_project_with_content.id}/query",
             json={
                 "question": "What about the risks?",
                 "conversation_id": conversation_id
@@ -347,7 +347,7 @@ async def test_query_project_multi_tenant_isolation(
 ):
     """Test that users cannot query projects from other organizations."""
     response = await authenticated_org_client.post(
-        f"/api/projects/{second_org_project.id}/query",
+        f"/api/v1/projects/{second_org_project.id}/query",
         json={
             "question": "What are the goals?"
         }
@@ -367,7 +367,7 @@ async def test_query_project_not_found(
     fake_project_id = str(uuid.uuid4())
 
     response = await authenticated_org_client.post(
-        f"/api/projects/{fake_project_id}/query",
+        f"/api/v1/projects/{fake_project_id}/query",
         json={
             "question": "What are the goals?"
         }
@@ -383,7 +383,7 @@ async def test_query_project_requires_authentication(
 ):
     """Test that project query requires authentication."""
     response = await client.post(
-        f"/api/projects/{test_project_with_content.id}/query",
+        f"/api/v1/projects/{test_project_with_content.id}/query",
         json={
             "question": "What are the goals?"
         }
@@ -405,7 +405,7 @@ async def test_query_project_conversation_updates(
 
         # First query
         response1 = await authenticated_org_client.post(
-            f"/api/projects/{test_project_with_content.id}/query",
+            f"/api/v1/projects/{test_project_with_content.id}/query",
             json={"question": "Question 1?"}
         )
         conversation_id = response1.json()['conversation_id']
@@ -414,7 +414,7 @@ async def test_query_project_conversation_updates(
         mock_rag_response2 = {**mock_rag_response, 'answer': 'Answer 2'}
         mock_query.return_value = mock_rag_response2
         response2 = await authenticated_org_client.post(
-            f"/api/projects/{test_project_with_content.id}/query",
+            f"/api/v1/projects/{test_project_with_content.id}/query",
             json={"question": "Question 2?", "conversation_id": conversation_id}
         )
 
@@ -444,7 +444,7 @@ async def test_query_organization_success(
         mock_query.return_value = mock_rag_response
 
         response = await authenticated_org_client.post(
-            "/api/projects/organization/query",
+            "/api/v1/projects/organization/query",
             json={
                 "question": "What are the organization-wide priorities?"
             }
@@ -482,7 +482,7 @@ async def test_query_organization_no_projects(
     await db_session.commit()
 
     response = await authenticated_org_client.post(
-        "/api/projects/organization/query",
+        "/api/v1/projects/organization/query",
         json={
             "question": "What are the priorities?"
         }
@@ -505,7 +505,7 @@ async def test_query_organization_creates_conversation(
         mock_query.return_value = mock_rag_response
 
         response = await authenticated_org_client.post(
-            "/api/projects/organization/query",
+            "/api/v1/projects/organization/query",
             json={
                 "question": "What are the priorities?"
             }
@@ -541,14 +541,14 @@ async def test_query_organization_with_followup(
 
         # First query
         response1 = await authenticated_org_client.post(
-            "/api/projects/organization/query",
+            "/api/v1/projects/organization/query",
             json={"question": "What are the priorities?"}
         )
         conversation_id = response1.json()['conversation_id']
 
         # Follow-up
         response2 = await authenticated_org_client.post(
-            "/api/projects/organization/query",
+            "/api/v1/projects/organization/query",
             json={
                 "question": "Tell me more",
                 "conversation_id": conversation_id
@@ -587,7 +587,7 @@ async def test_query_organization_requires_member_role(
         mock_query.return_value = {'answer': 'test', 'sources': [], 'confidence': 0.8}
 
         response = await client.post(
-            "/api/projects/organization/query",
+            "/api/v1/projects/organization/query",
             json={"question": "Test question?"}
         )
 
@@ -612,7 +612,7 @@ async def test_query_program_success(
         mock_query.return_value = mock_rag_response
 
         response = await authenticated_org_client.post(
-            f"/api/projects/program/{program.id}/query",
+            f"/api/v1/projects/program/{program.id}/query",
             json={
                 "question": "What are the program goals?"
             }
@@ -640,7 +640,7 @@ async def test_query_program_not_found(
     fake_program_id = str(uuid.uuid4())
 
     response = await authenticated_org_client.post(
-        f"/api/projects/program/{fake_program_id}/query",
+        f"/api/v1/projects/program/{fake_program_id}/query",
         json={"question": "Test?"}
     )
 
@@ -667,7 +667,7 @@ async def test_query_program_no_projects(
     await db_session.refresh(program)
 
     response = await authenticated_org_client.post(
-        f"/api/projects/program/{program.id}/query",
+        f"/api/v1/projects/program/{program.id}/query",
         json={"question": "Test?"}
     )
 
@@ -695,7 +695,7 @@ async def test_query_program_multi_tenant_isolation(
     await db_session.refresh(program)
 
     response = await authenticated_org_client.post(
-        f"/api/projects/program/{program.id}/query",
+        f"/api/v1/projects/program/{program.id}/query",
         json={"question": "Test?"}
     )
 
@@ -716,7 +716,7 @@ async def test_query_program_creates_conversation(
         mock_query.return_value = mock_rag_response
 
         response = await authenticated_org_client.post(
-            f"/api/projects/program/{program.id}/query",
+            f"/api/v1/projects/program/{program.id}/query",
             json={"question": "What are the goals?"}
         )
 
@@ -751,14 +751,14 @@ async def test_query_program_with_followup(
 
         # First query
         response1 = await authenticated_org_client.post(
-            f"/api/projects/program/{program.id}/query",
+            f"/api/v1/projects/program/{program.id}/query",
             json={"question": "What are the goals?"}
         )
         conversation_id = response1.json()['conversation_id']
 
         # Follow-up
         response2 = await authenticated_org_client.post(
-            f"/api/projects/program/{program.id}/query",
+            f"/api/v1/projects/program/{program.id}/query",
             json={"question": "More details?", "conversation_id": conversation_id}
         )
 
@@ -783,7 +783,7 @@ async def test_query_portfolio_success(
         mock_query.return_value = mock_rag_response
 
         response = await authenticated_org_client.post(
-            f"/api/projects/portfolio/{portfolio.id}/query",
+            f"/api/v1/projects/portfolio/{portfolio.id}/query",
             json={
                 "question": "What are the portfolio objectives?"
             }
@@ -814,7 +814,7 @@ async def test_query_portfolio_includes_program_and_direct_projects(
         mock_query.return_value = mock_rag_response
 
         response = await authenticated_org_client.post(
-            f"/api/projects/portfolio/{portfolio.id}/query",
+            f"/api/v1/projects/portfolio/{portfolio.id}/query",
             json={"question": "Test?"}
         )
 
@@ -836,7 +836,7 @@ async def test_query_portfolio_not_found(
     fake_portfolio_id = str(uuid.uuid4())
 
     response = await authenticated_org_client.post(
-        f"/api/projects/portfolio/{fake_portfolio_id}/query",
+        f"/api/v1/projects/portfolio/{fake_portfolio_id}/query",
         json={"question": "Test?"}
     )
 
@@ -863,7 +863,7 @@ async def test_query_portfolio_no_projects(
     await db_session.refresh(portfolio)
 
     response = await authenticated_org_client.post(
-        f"/api/projects/portfolio/{portfolio.id}/query",
+        f"/api/v1/projects/portfolio/{portfolio.id}/query",
         json={"question": "Test?"}
     )
 
@@ -891,7 +891,7 @@ async def test_query_portfolio_multi_tenant_isolation(
     await db_session.refresh(portfolio)
 
     response = await authenticated_org_client.post(
-        f"/api/projects/portfolio/{portfolio.id}/query",
+        f"/api/v1/projects/portfolio/{portfolio.id}/query",
         json={"question": "Test?"}
     )
 
@@ -912,7 +912,7 @@ async def test_query_portfolio_creates_conversation(
         mock_query.return_value = mock_rag_response
 
         response = await authenticated_org_client.post(
-            f"/api/projects/portfolio/{portfolio.id}/query",
+            f"/api/v1/projects/portfolio/{portfolio.id}/query",
             json={"question": "What are the objectives?"}
         )
 
@@ -947,14 +947,14 @@ async def test_query_portfolio_with_followup(
 
         # First query
         response1 = await authenticated_org_client.post(
-            f"/api/projects/portfolio/{portfolio.id}/query",
+            f"/api/v1/projects/portfolio/{portfolio.id}/query",
             json={"question": "What are the objectives?"}
         )
         conversation_id = response1.json()['conversation_id']
 
         # Follow-up
         response2 = await authenticated_org_client.post(
-            f"/api/projects/portfolio/{portfolio.id}/query",
+            f"/api/v1/projects/portfolio/{portfolio.id}/query",
             json={"question": "More info?", "conversation_id": conversation_id}
         )
 
@@ -981,7 +981,7 @@ async def test_query_with_invalid_conversation_id(
 
         # Should still work, just creates new conversation
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project_with_content.id}/query",
+            f"/api/v1/projects/{test_project_with_content.id}/query",
             json={
                 "question": "Test?",
                 "conversation_id": fake_conversation_id
@@ -1011,7 +1011,7 @@ async def test_query_limits_sources_to_10(
         mock_query.return_value = mock_response
 
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project_with_content.id}/query",
+            f"/api/v1/projects/{test_project_with_content.id}/query",
             json={"question": "Test?"}
         )
 
@@ -1036,7 +1036,7 @@ async def test_query_conversation_title_generation(
         mock_title.return_value = "Q4 Planning Discussion"
 
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project_with_content.id}/query",
+            f"/api/v1/projects/{test_project_with_content.id}/query",
             json={"question": "What are the Q4 plans?"}
         )
 
@@ -1068,7 +1068,7 @@ async def test_query_updates_conversation_last_accessed(
 
         # First query
         response1 = await authenticated_org_client.post(
-            f"/api/projects/{test_project_with_content.id}/query",
+            f"/api/v1/projects/{test_project_with_content.id}/query",
             json={"question": "Question 1?"}
         )
         conversation_id = response1.json()['conversation_id']
@@ -1085,7 +1085,7 @@ async def test_query_updates_conversation_last_accessed(
 
         # Second query
         response2 = await authenticated_org_client.post(
-            f"/api/projects/{test_project_with_content.id}/query",
+            f"/api/v1/projects/{test_project_with_content.id}/query",
             json={"question": "Question 2?", "conversation_id": conversation_id}
         )
 

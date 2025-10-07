@@ -21,11 +21,11 @@ void main() {
     test('healthCheck returns response data', () async {
       // Arrange
       final responseData = {'status': 'healthy'};
-      when(mockDio.get('/api/health')).thenAnswer(
+      when(mockDio.get('/api/v1/health')).thenAnswer(
         (_) async => Response(
           data: responseData,
           statusCode: 200,
-          requestOptions: RequestOptions(path: '/api/health'),
+          requestOptions: RequestOptions(path: '/api/v1/health'),
         ),
       );
 
@@ -34,7 +34,7 @@ void main() {
 
       // Assert
       expect(result, responseData);
-      verify(mockDio.get('/api/health')).called(1);
+      verify(mockDio.get('/api/v1/health')).called(1);
     });
   });
 
@@ -313,13 +313,13 @@ void main() {
       final responseData = {'content_id': 'content-123', 'status': 'processing'};
 
       when(mockDio.post(
-        '/api/projects/proj-1/upload/text',
+        '/api/v1/projects/proj-1/upload/text',
         data: anyNamed('data'),
       )).thenAnswer(
         (_) async => Response(
           data: responseData,
           statusCode: 201,
-          requestOptions: RequestOptions(path: '/api/projects/proj-1/upload/text'),
+          requestOptions: RequestOptions(path: '/api/v1/projects/proj-1/upload/text'),
         ),
       );
 
@@ -336,7 +336,7 @@ void main() {
       // Assert
       expect(result, responseData);
       final captured = verify(mockDio.post(
-        '/api/projects/proj-1/upload/text',
+        '/api/v1/projects/proj-1/upload/text',
         data: captureAnyNamed('data'),
       )).captured.single as Map<String, dynamic>;
 
@@ -350,13 +350,13 @@ void main() {
     test('uploadTextContent handles empty date', () async {
       // Arrange
       when(mockDio.post(
-        '/api/projects/proj-1/upload/text',
+        '/api/v1/projects/proj-1/upload/text',
         data: anyNamed('data'),
       )).thenAnswer(
         (_) async => Response(
           data: {},
           statusCode: 201,
-          requestOptions: RequestOptions(path: '/api/projects/proj-1/upload/text'),
+          requestOptions: RequestOptions(path: '/api/v1/projects/proj-1/upload/text'),
         ),
       );
 
@@ -371,7 +371,7 @@ void main() {
 
       // Assert
       final captured = verify(mockDio.post(
-        '/api/projects/proj-1/upload/text',
+        '/api/v1/projects/proj-1/upload/text',
         data: captureAnyNamed('data'),
       )).captured.single as Map<String, dynamic>;
 
@@ -383,13 +383,13 @@ void main() {
       final responseData = {'matched_project_id': 'proj-123', 'confidence': 0.95};
 
       when(mockDio.post(
-        '/api/upload/with-ai-matching',
+        '/api/v1/upload/with-ai-matching',
         data: anyNamed('data'),
       )).thenAnswer(
         (_) async => Response(
           data: responseData,
           statusCode: 201,
-          requestOptions: RequestOptions(path: '/api/upload/with-ai-matching'),
+          requestOptions: RequestOptions(path: '/api/v1/upload/with-ai-matching'),
         ),
       );
 
@@ -404,7 +404,7 @@ void main() {
       // Assert
       expect(result, responseData);
       final captured = verify(mockDio.post(
-        '/api/upload/with-ai-matching',
+        '/api/v1/upload/with-ai-matching',
         data: captureAnyNamed('data'),
       )).captured.single as Map<String, dynamic>;
 
@@ -422,12 +422,12 @@ void main() {
         'confidence': 0.89,
       };
 
-      when(mockDio.post('/api/projects/proj-1/query', data: queryRequest))
+      when(mockDio.post('/api/v1/projects/proj-1/query', data: queryRequest))
           .thenAnswer(
         (_) async => Response(
           data: queryResponse,
           statusCode: 200,
-          requestOptions: RequestOptions(path: '/api/projects/proj-1/query'),
+          requestOptions: RequestOptions(path: '/api/v1/projects/proj-1/query'),
         ),
       );
 
@@ -436,7 +436,7 @@ void main() {
 
       // Assert
       expect(result, queryResponse);
-      verify(mockDio.post('/api/projects/proj-1/query', data: queryRequest))
+      verify(mockDio.post('/api/v1/projects/proj-1/query', data: queryRequest))
           .called(1);
     });
 
@@ -445,12 +445,12 @@ void main() {
       final queryRequest = {'question': 'Show me risks'};
       final queryResponse = {'answer': 'Here are the risks...', 'sources': []};
 
-      when(mockDio.post('/api/projects/program/prog-1/query', data: queryRequest))
+      when(mockDio.post('/api/v1/projects/program/prog-1/query', data: queryRequest))
           .thenAnswer(
         (_) async => Response(
           data: queryResponse,
           statusCode: 200,
-          requestOptions: RequestOptions(path: '/api/projects/program/prog-1/query'),
+          requestOptions: RequestOptions(path: '/api/v1/projects/program/prog-1/query'),
         ),
       );
 
@@ -467,13 +467,13 @@ void main() {
       final queryResponse = {'answer': 'Status is...', 'sources': []};
 
       when(mockDio.post(
-        '/api/projects/portfolio/port-1/query',
+        '/api/v1/projects/portfolio/port-1/query',
         data: queryRequest,
       )).thenAnswer(
         (_) async => Response(
           data: queryResponse,
           statusCode: 200,
-          requestOptions: RequestOptions(path: '/api/projects/portfolio/port-1/query'),
+          requestOptions: RequestOptions(path: '/api/v1/projects/portfolio/port-1/query'),
         ),
       );
 
@@ -490,13 +490,13 @@ void main() {
       final queryResponse = {'answer': 'Progress is...', 'sources': []};
 
       when(mockDio.post(
-        '/api/projects/organization/query',
+        '/api/v1/projects/organization/query',
         data: queryRequest,
       )).thenAnswer(
         (_) async => Response(
           data: queryResponse,
           statusCode: 200,
-          requestOptions: RequestOptions(path: '/api/projects/organization/query'),
+          requestOptions: RequestOptions(path: '/api/v1/projects/organization/query'),
         ),
       );
 
@@ -516,11 +516,11 @@ void main() {
         {'id': 'conv-2', 'title': 'Conversation 2'},
       ];
 
-      when(mockDio.get('/api/projects/proj-1/conversations')).thenAnswer(
+      when(mockDio.get('/api/v1/projects/proj-1/conversations')).thenAnswer(
         (_) async => Response(
           data: conversationsData,
           statusCode: 200,
-          requestOptions: RequestOptions(path: '/api/projects/proj-1/conversations'),
+          requestOptions: RequestOptions(path: '/api/v1/projects/proj-1/conversations'),
         ),
       );
 
@@ -538,13 +538,13 @@ void main() {
       final conversationResponse = {'id': 'conv-new', 'title': 'New Chat'};
 
       when(mockDio.post(
-        '/api/projects/proj-1/conversations',
+        '/api/v1/projects/proj-1/conversations',
         data: conversationRequest,
       )).thenAnswer(
         (_) async => Response(
           data: conversationResponse,
           statusCode: 201,
-          requestOptions: RequestOptions(path: '/api/projects/proj-1/conversations'),
+          requestOptions: RequestOptions(path: '/api/v1/projects/proj-1/conversations'),
         ),
       );
 
@@ -561,14 +561,14 @@ void main() {
       final updateResponse = {'id': 'conv-1', 'title': 'Updated Title'};
 
       when(mockDio.put(
-        '/api/projects/proj-1/conversations/conv-1',
+        '/api/v1/projects/proj-1/conversations/conv-1',
         data: updateRequest,
       )).thenAnswer(
         (_) async => Response(
           data: updateResponse,
           statusCode: 200,
           requestOptions:
-              RequestOptions(path: '/api/projects/proj-1/conversations/conv-1'),
+              RequestOptions(path: '/api/v1/projects/proj-1/conversations/conv-1'),
         ),
       );
 
@@ -584,12 +584,12 @@ void main() {
       // Arrange
       final conversationData = {'id': 'conv-1', 'title': 'Test Conversation'};
 
-      when(mockDio.get('/api/projects/proj-1/conversations/conv-1')).thenAnswer(
+      when(mockDio.get('/api/v1/projects/proj-1/conversations/conv-1')).thenAnswer(
         (_) async => Response(
           data: conversationData,
           statusCode: 200,
           requestOptions:
-              RequestOptions(path: '/api/projects/proj-1/conversations/conv-1'),
+              RequestOptions(path: '/api/v1/projects/proj-1/conversations/conv-1'),
         ),
       );
 
@@ -602,12 +602,12 @@ void main() {
 
     test('deleteConversation completes successfully', () async {
       // Arrange
-      when(mockDio.delete('/api/projects/proj-1/conversations/conv-1')).thenAnswer(
+      when(mockDio.delete('/api/v1/projects/proj-1/conversations/conv-1')).thenAnswer(
         (_) async => Response(
           data: null,
           statusCode: 204,
           requestOptions:
-              RequestOptions(path: '/api/projects/proj-1/conversations/conv-1'),
+              RequestOptions(path: '/api/v1/projects/proj-1/conversations/conv-1'),
         ),
       );
 
@@ -615,7 +615,7 @@ void main() {
       await apiClient.deleteConversation('proj-1', 'conv-1');
 
       // Assert
-      verify(mockDio.delete('/api/projects/proj-1/conversations/conv-1')).called(1);
+      verify(mockDio.delete('/api/v1/projects/proj-1/conversations/conv-1')).called(1);
     });
   });
 
@@ -629,11 +629,11 @@ void main() {
       };
       final summaryResponse = {'summary_id': 'sum-123', 'status': 'processing'};
 
-      when(mockDio.post('/api/summaries/generate', data: summaryRequest)).thenAnswer(
+      when(mockDio.post('/api/v1/summaries/generate', data: summaryRequest)).thenAnswer(
         (_) async => Response(
           data: summaryResponse,
           statusCode: 201,
-          requestOptions: RequestOptions(path: '/api/summaries/generate'),
+          requestOptions: RequestOptions(path: '/api/v1/summaries/generate'),
         ),
       );
 
@@ -648,11 +648,11 @@ void main() {
       // Arrange
       final summaryData = {'id': 'sum-123', 'content': 'Summary content'};
 
-      when(mockDio.get('/api/summaries/sum-123')).thenAnswer(
+      when(mockDio.get('/api/v1/summaries/sum-123')).thenAnswer(
         (_) async => Response(
           data: summaryData,
           statusCode: 200,
-          requestOptions: RequestOptions(path: '/api/summaries/sum-123'),
+          requestOptions: RequestOptions(path: '/api/v1/summaries/sum-123'),
         ),
       );
 
@@ -670,11 +670,11 @@ void main() {
         {'id': 'sum-2', 'title': 'Summary 2'},
       ];
 
-      when(mockDio.post('/api/summaries/list', data: anyNamed('data'))).thenAnswer(
+      when(mockDio.post('/api/v1/summaries/list', data: anyNamed('data'))).thenAnswer(
         (_) async => Response(
           data: summariesData,
           statusCode: 200,
-          requestOptions: RequestOptions(path: '/api/summaries/list'),
+          requestOptions: RequestOptions(path: '/api/v1/summaries/list'),
         ),
       );
 
@@ -693,7 +693,7 @@ void main() {
       // Assert
       expect(result, summariesData);
       final captured = verify(mockDio.post(
-        '/api/summaries/list',
+        '/api/v1/summaries/list',
         data: captureAnyNamed('data'),
       )).captured.single as Map<String, dynamic>;
 
@@ -709,11 +709,11 @@ void main() {
 
     test('listSummaries with minimal filters', () async {
       // Arrange
-      when(mockDio.post('/api/summaries/list', data: anyNamed('data'))).thenAnswer(
+      when(mockDio.post('/api/v1/summaries/list', data: anyNamed('data'))).thenAnswer(
         (_) async => Response(
           data: [],
           statusCode: 200,
-          requestOptions: RequestOptions(path: '/api/summaries/list'),
+          requestOptions: RequestOptions(path: '/api/v1/summaries/list'),
         ),
       );
 
@@ -722,7 +722,7 @@ void main() {
 
       // Assert
       final captured = verify(mockDio.post(
-        '/api/summaries/list',
+        '/api/v1/summaries/list',
         data: captureAnyNamed('data'),
       )).captured.single as Map<String, dynamic>;
 
@@ -736,11 +736,11 @@ void main() {
       final updateData = {'content': 'Updated content'};
       final updateResponse = {'id': 'sum-123', 'content': 'Updated content'};
 
-      when(mockDio.put('/api/summaries/sum-123', data: updateData)).thenAnswer(
+      when(mockDio.put('/api/v1/summaries/sum-123', data: updateData)).thenAnswer(
         (_) async => Response(
           data: updateResponse,
           statusCode: 200,
-          requestOptions: RequestOptions(path: '/api/summaries/sum-123'),
+          requestOptions: RequestOptions(path: '/api/v1/summaries/sum-123'),
         ),
       );
 
@@ -755,11 +755,11 @@ void main() {
       // Arrange
       final deleteResponse = {'message': 'Deleted successfully'};
 
-      when(mockDio.delete('/api/summaries/sum-123')).thenAnswer(
+      when(mockDio.delete('/api/v1/summaries/sum-123')).thenAnswer(
         (_) async => Response(
           data: deleteResponse,
           statusCode: 200,
-          requestOptions: RequestOptions(path: '/api/summaries/sum-123'),
+          requestOptions: RequestOptions(path: '/api/v1/summaries/sum-123'),
         ),
       );
 
@@ -780,13 +780,13 @@ void main() {
       ];
 
       when(mockDio.get(
-        '/api/projects/proj-1/content',
+        '/api/v1/projects/proj-1/content',
         queryParameters: anyNamed('queryParameters'),
       )).thenAnswer(
         (_) async => Response(
           data: contentData,
           statusCode: 200,
-          requestOptions: RequestOptions(path: '/api/projects/proj-1/content'),
+          requestOptions: RequestOptions(path: '/api/v1/projects/proj-1/content'),
         ),
       );
 
@@ -800,7 +800,7 @@ void main() {
       // Assert
       expect(result, contentData);
       final captured = verify(mockDio.get(
-        '/api/projects/proj-1/content',
+        '/api/v1/projects/proj-1/content',
         queryParameters: captureAnyNamed('queryParameters'),
       )).captured.single as Map<String, dynamic>;
 
@@ -812,12 +812,12 @@ void main() {
       // Arrange
       final contentData = {'id': 'content-123', 'title': 'Meeting Notes'};
 
-      when(mockDio.get('/api/projects/proj-1/content/content-123')).thenAnswer(
+      when(mockDio.get('/api/v1/projects/proj-1/content/content-123')).thenAnswer(
         (_) async => Response(
           data: contentData,
           statusCode: 200,
           requestOptions:
-              RequestOptions(path: '/api/projects/proj-1/content/content-123'),
+              RequestOptions(path: '/api/v1/projects/proj-1/content/content-123'),
         ),
       );
 
@@ -836,14 +836,14 @@ void main() {
       final responseData = {'message': 'Database reset successfully'};
 
       when(mockDio.delete(
-        '/api/admin/reset',
+        '/api/v1/admin/reset',
         data: confirmation,
         options: anyNamed('options'),
       )).thenAnswer(
         (_) async => Response(
           data: responseData,
           statusCode: 200,
-          requestOptions: RequestOptions(path: '/api/admin/reset'),
+          requestOptions: RequestOptions(path: '/api/v1/admin/reset'),
         ),
       );
 
@@ -853,7 +853,7 @@ void main() {
       // Assert
       expect(result, responseData);
       final captured = verify(mockDio.delete(
-        '/api/admin/reset',
+        '/api/v1/admin/reset',
         data: confirmation,
         options: captureAnyNamed('options'),
       )).captured.single as Options;

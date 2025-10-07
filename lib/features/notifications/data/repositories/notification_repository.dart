@@ -24,7 +24,7 @@ class NotificationRepository {
       };
 
       final response = await _dio.get(
-        '/api/notifications',
+        '/api/v1/notifications',
         queryParameters: queryParams,
       );
 
@@ -36,7 +36,7 @@ class NotificationRepository {
 
   Future<int> getUnreadCount() async {
     try {
-      final response = await _dio.get('/api/notifications/unread-count');
+      final response = await _dio.get('/api/v1/notifications/unread-count');
       return response.data['unread_count'] ?? 0;
     } on DioException catch (e) {
       throw _handleError(e);
@@ -45,7 +45,7 @@ class NotificationRepository {
 
   Future<bool> markAsRead(String notificationId) async {
     try {
-      await _dio.put('/api/notifications/$notificationId/read');
+      await _dio.put('/api/v1/notifications/$notificationId/read');
       return true;
     } on DioException catch (e) {
       throw _handleError(e);
@@ -58,7 +58,7 @@ class NotificationRepository {
   }) async {
     try {
       final response = await _dio.put(
-        '/api/notifications/mark-read',
+        '/api/v1/notifications/mark-read',
         data: {
           'notification_ids': notificationIds,
           'mark_all': markAll,
@@ -72,7 +72,7 @@ class NotificationRepository {
 
   Future<bool> archiveNotification(String notificationId) async {
     try {
-      await _dio.put('/api/notifications/$notificationId/archive');
+      await _dio.put('/api/v1/notifications/$notificationId/archive');
       return true;
     } on DioException catch (e) {
       throw _handleError(e);
@@ -81,7 +81,7 @@ class NotificationRepository {
 
   Future<bool> deleteNotification(String notificationId) async {
     try {
-      await _dio.delete('/api/notifications/$notificationId');
+      await _dio.delete('/api/v1/notifications/$notificationId');
       return true;
     } on DioException catch (e) {
       throw _handleError(e);
@@ -103,7 +103,7 @@ class NotificationRepository {
   }) async {
     try {
       final response = await _dio.post(
-        '/api/notifications',
+        '/api/v1/notifications',
         data: {
           'title': title,
           'message': message,

@@ -40,7 +40,7 @@ class TestListIntegrations:
     ):
         """Test that all available integration types are listed."""
         # Act
-        response = await authenticated_org_client.get("/api/integrations/")
+        response = await authenticated_org_client.get("/api/v1/integrations/")
 
         # Assert
         assert response.status_code == 200
@@ -59,7 +59,7 @@ class TestListIntegrations:
     ):
         """Test that integrations show as not_connected when no connection exists."""
         # Act
-        response = await authenticated_org_client.get("/api/integrations/")
+        response = await authenticated_org_client.get("/api/v1/integrations/")
 
         # Assert
         assert response.status_code == 200
@@ -93,7 +93,7 @@ class TestListIntegrations:
         await db_session.commit()
 
         # Act
-        response = await authenticated_org_client.get("/api/integrations/")
+        response = await authenticated_org_client.get("/api/v1/integrations/")
 
         # Assert
         assert response.status_code == 200
@@ -114,7 +114,7 @@ class TestListIntegrations:
         client = await client_factory()
 
         # Act
-        response = await client.get("/api/integrations/")
+        response = await client.get("/api/v1/integrations/")
 
         # Assert
         assert response.status_code in [401, 403]
@@ -176,7 +176,7 @@ class TestListIntegrations:
         )
 
         # Act - user from org2 lists integrations
-        response = await client2.get("/api/integrations/")
+        response = await client2.get("/api/v1/integrations/")
 
         # Assert - should not see org1's connected integration
         assert response.status_code == 200
@@ -209,7 +209,7 @@ class TestConnectIntegration:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/integrations/fireflies/connect", json=config
+            "/api/v1/integrations/fireflies/connect", json=config
         )
 
         # Assert
@@ -232,7 +232,7 @@ class TestConnectIntegration:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/integrations/transcription/connect", json=config
+            "/api/v1/integrations/transcription/connect", json=config
         )
 
         # Assert
@@ -256,7 +256,7 @@ class TestConnectIntegration:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/integrations/ai_brain/connect", json=config
+            "/api/v1/integrations/ai_brain/connect", json=config
         )
 
         # Assert
@@ -291,7 +291,7 @@ class TestConnectIntegration:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/integrations/fireflies/connect", json=config
+            "/api/v1/integrations/fireflies/connect", json=config
         )
 
         # Assert
@@ -315,7 +315,7 @@ class TestConnectIntegration:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/integrations/fireflies/connect", json=config
+            "/api/v1/integrations/fireflies/connect", json=config
         )
 
         # Assert
@@ -331,7 +331,7 @@ class TestConnectIntegration:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/integrations/unknown_integration/connect", json=config
+            "/api/v1/integrations/unknown_integration/connect", json=config
         )
 
         # Assert
@@ -377,7 +377,7 @@ class TestConnectIntegration:
 
         # Act
         response = await client.post(
-            "/api/integrations/fireflies/connect", json=config
+            "/api/v1/integrations/fireflies/connect", json=config
         )
 
         # Assert
@@ -406,7 +406,7 @@ class TestConnectIntegration:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/integrations/fireflies/connect", json=config
+            "/api/v1/integrations/fireflies/connect", json=config
         )
 
         # Assert
@@ -445,7 +445,7 @@ class TestDisconnectIntegration:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/integrations/fireflies/disconnect"
+            "/api/v1/integrations/fireflies/disconnect"
         )
 
         # Assert
@@ -465,7 +465,7 @@ class TestDisconnectIntegration:
         """Test disconnecting integration that isn't connected returns 404."""
         # Act
         response = await authenticated_org_client.post(
-            "/api/integrations/fireflies/disconnect"
+            "/api/v1/integrations/fireflies/disconnect"
         )
 
         # Assert
@@ -478,7 +478,7 @@ class TestDisconnectIntegration:
         """Test disconnecting unknown integration type returns 404."""
         # Act
         response = await authenticated_org_client.post(
-            "/api/integrations/unknown/disconnect"
+            "/api/v1/integrations/unknown/disconnect"
         )
 
         # Assert
@@ -522,7 +522,7 @@ class TestDisconnectIntegration:
         )
 
         # Act
-        response = await client.post("/api/integrations/fireflies/disconnect")
+        response = await client.post("/api/v1/integrations/fireflies/disconnect")
 
         # Assert
         assert response.status_code == 403
@@ -541,7 +541,7 @@ class TestTestIntegrationConnection:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/integrations/fireflies/test", json=config
+            "/api/v1/integrations/fireflies/test", json=config
         )
 
         # Assert
@@ -563,7 +563,7 @@ class TestTestIntegrationConnection:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/integrations/transcription/test", json=config
+            "/api/v1/integrations/transcription/test", json=config
         )
 
         # Assert
@@ -584,7 +584,7 @@ class TestTestIntegrationConnection:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/integrations/transcription/test", json=config
+            "/api/v1/integrations/transcription/test", json=config
         )
 
         # Assert
@@ -605,7 +605,7 @@ class TestTestIntegrationConnection:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/integrations/transcription/test", json=config
+            "/api/v1/integrations/transcription/test", json=config
         )
 
         # Assert
@@ -626,7 +626,7 @@ class TestTestIntegrationConnection:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/integrations/ai_brain/test", json=config
+            "/api/v1/integrations/ai_brain/test", json=config
         )
 
         # Assert
@@ -644,7 +644,7 @@ class TestTestIntegrationConnection:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/integrations/unknown/test", json=config
+            "/api/v1/integrations/unknown/test", json=config
         )
 
         # Assert
@@ -658,7 +658,7 @@ class TestTestIntegrationConnection:
         config = {"api_key": "test_key"}
 
         # Act
-        response = await client.post("/api/integrations/fireflies/test", json=config)
+        response = await client.post("/api/v1/integrations/fireflies/test", json=config)
 
         # Assert
         assert response.status_code in [401, 403]
@@ -690,7 +690,7 @@ class TestSyncIntegration:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/integrations/fireflies/sync"
+            "/api/v1/integrations/fireflies/sync"
         )
 
         # Assert
@@ -709,7 +709,7 @@ class TestSyncIntegration:
         """Test syncing integration that isn't connected returns 400."""
         # Act
         response = await authenticated_org_client.post(
-            "/api/integrations/fireflies/sync"
+            "/api/v1/integrations/fireflies/sync"
         )
 
         # Assert
@@ -721,7 +721,7 @@ class TestSyncIntegration:
     ):
         """Test syncing unknown integration type returns 404."""
         # Act
-        response = await authenticated_org_client.post("/api/integrations/unknown/sync")
+        response = await authenticated_org_client.post("/api/v1/integrations/unknown/sync")
 
         # Assert
         assert response.status_code == 404
@@ -732,7 +732,7 @@ class TestSyncIntegration:
         client = await client_factory()
 
         # Act
-        response = await client.post("/api/integrations/fireflies/sync")
+        response = await client.post("/api/v1/integrations/fireflies/sync")
 
         # Assert
         assert response.status_code in [401, 403]
@@ -765,7 +765,7 @@ class TestFirefliesWebhook:
 
         # Act
         response = await client.post(
-            f"/api/integrations/webhooks/fireflies/{str(test_organization.id)}",
+            f"/api/v1/integrations/webhooks/fireflies/{str(test_organization.id)}",
             json=payload,
         )
 
@@ -787,7 +787,7 @@ class TestFirefliesWebhook:
 
         # Act
         response = await client.post(
-            "/api/integrations/webhooks/fireflies/not-a-uuid", json=payload
+            "/api/v1/integrations/webhooks/fireflies/not-a-uuid", json=payload
         )
 
         # Assert
@@ -807,7 +807,7 @@ class TestFirefliesWebhook:
 
         # Act
         response = await client.post(
-            f"/api/integrations/webhooks/fireflies/{random_org_id}", json=payload
+            f"/api/v1/integrations/webhooks/fireflies/{random_org_id}", json=payload
         )
 
         # Assert
@@ -846,7 +846,7 @@ class TestFirefliesWebhook:
 
         # Act
         response = await client.post(
-            f"/api/integrations/webhooks/fireflies/{str(test_organization.id)}",
+            f"/api/v1/integrations/webhooks/fireflies/{str(test_organization.id)}",
             json=payload,
             headers={"X-Fireflies-Signature": invalid_signature},
         )
@@ -882,7 +882,7 @@ class TestGetIntegrationActivity:
 
         # Act
         response = await authenticated_org_client.get(
-            "/api/integrations/fireflies/activity"
+            "/api/v1/integrations/fireflies/activity"
         )
 
         # Assert
@@ -901,7 +901,7 @@ class TestGetIntegrationActivity:
         """Test getting activity for integration that isn't connected returns empty list."""
         # Act
         response = await authenticated_org_client.get(
-            "/api/integrations/fireflies/activity"
+            "/api/v1/integrations/fireflies/activity"
         )
 
         # Assert
@@ -916,7 +916,7 @@ class TestGetIntegrationActivity:
         """Test getting activity for unknown integration type returns empty list."""
         # Act
         response = await authenticated_org_client.get(
-            "/api/integrations/unknown/activity"
+            "/api/v1/integrations/unknown/activity"
         )
 
         # Assert
@@ -945,7 +945,7 @@ class TestGetIntegrationActivity:
 
         # Act
         response = await authenticated_org_client.get(
-            "/api/integrations/fireflies/activity?limit=10"
+            "/api/v1/integrations/fireflies/activity?limit=10"
         )
 
         # Assert
@@ -959,7 +959,7 @@ class TestGetIntegrationActivity:
         client = await client_factory()
 
         # Act
-        response = await client.get("/api/integrations/fireflies/activity")
+        response = await client.get("/api/v1/integrations/fireflies/activity")
 
         # Assert
         assert response.status_code in [401, 403]
@@ -1021,7 +1021,7 @@ class TestGetIntegrationActivity:
         )
 
         # Act - user from org2 gets activity
-        response = await client2.get("/api/integrations/fireflies/activity")
+        response = await client2.get("/api/v1/integrations/fireflies/activity")
 
         # Assert - should not see org1's activity
         assert response.status_code == 200

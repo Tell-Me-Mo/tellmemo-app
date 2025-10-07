@@ -27,7 +27,7 @@ class TestGetFullHierarchy:
     ):
         """Test getting hierarchy when organization has no items."""
         # Act
-        response = await authenticated_org_client.get("/api/hierarchy/full")
+        response = await authenticated_org_client.get("/api/v1/hierarchy/full")
 
         # Assert
         assert response.status_code == 200
@@ -59,7 +59,7 @@ class TestGetFullHierarchy:
         await db_session.commit()
 
         # Act
-        response = await authenticated_org_client.get("/api/hierarchy/full")
+        response = await authenticated_org_client.get("/api/v1/hierarchy/full")
 
         # Assert
         assert response.status_code == 200
@@ -90,7 +90,7 @@ class TestGetFullHierarchy:
         await db_session.commit()
 
         # Act
-        response = await authenticated_org_client.get("/api/hierarchy/full")
+        response = await authenticated_org_client.get("/api/v1/hierarchy/full")
 
         # Assert
         assert response.status_code == 200
@@ -121,7 +121,7 @@ class TestGetFullHierarchy:
         await db_session.commit()
 
         # Act
-        response = await authenticated_org_client.get("/api/hierarchy/full")
+        response = await authenticated_org_client.get("/api/v1/hierarchy/full")
 
         # Assert
         assert response.status_code == 200
@@ -173,7 +173,7 @@ class TestGetFullHierarchy:
         await db_session.commit()
 
         # Act
-        response = await authenticated_org_client.get("/api/hierarchy/full")
+        response = await authenticated_org_client.get("/api/v1/hierarchy/full")
 
         # Assert
         assert response.status_code == 200
@@ -225,7 +225,7 @@ class TestGetFullHierarchy:
         await db_session.commit()
 
         # Act
-        response = await authenticated_org_client.get("/api/hierarchy/full")
+        response = await authenticated_org_client.get("/api/v1/hierarchy/full")
 
         # Assert
         assert response.status_code == 200
@@ -260,7 +260,7 @@ class TestGetFullHierarchy:
 
         # Act
         response = await authenticated_org_client.get(
-            "/api/hierarchy/full?include_archived=true"
+            "/api/v1/hierarchy/full?include_archived=true"
         )
 
         # Assert
@@ -311,7 +311,7 @@ class TestGetFullHierarchy:
         await db_session.commit()
 
         # Act
-        response = await authenticated_org_client.get("/api/hierarchy/full")
+        response = await authenticated_org_client.get("/api/v1/hierarchy/full")
 
         # Assert
         assert response.status_code == 200
@@ -352,7 +352,7 @@ class TestMoveItem:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/hierarchy/move",
+            "/api/v1/hierarchy/move",
             json={
                 "item_id": str(project.id),
                 "item_type": "project",
@@ -406,7 +406,7 @@ class TestMoveItem:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/hierarchy/move",
+            "/api/v1/hierarchy/move",
             json={
                 "item_id": str(project.id),
                 "item_type": "project",
@@ -468,7 +468,7 @@ class TestMoveItem:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/hierarchy/move",
+            "/api/v1/hierarchy/move",
             json={
                 "item_id": str(project.id),
                 "item_type": "project",
@@ -515,7 +515,7 @@ class TestMoveItem:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/hierarchy/move",
+            "/api/v1/hierarchy/move",
             json={
                 "item_id": str(program.id),
                 "item_type": "program",
@@ -538,7 +538,7 @@ class TestMoveItem:
         """Test moving with invalid UUID format returns 400."""
         # Act
         response = await authenticated_org_client.post(
-            "/api/hierarchy/move",
+            "/api/v1/hierarchy/move",
             json={
                 "item_id": "not-a-uuid",
                 "item_type": "project",
@@ -570,7 +570,7 @@ class TestMoveItem:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/hierarchy/move",
+            "/api/v1/hierarchy/move",
             json={
                 "item_id": str(portfolio.id),
                 "item_type": "invalid_type",
@@ -603,7 +603,7 @@ class TestMoveItem:
         # Act - use a valid UUID that doesn't exist
         fake_uuid = "00000000-0000-0000-0000-000000000001"
         response = await authenticated_org_client.post(
-            "/api/hierarchy/move",
+            "/api/v1/hierarchy/move",
             json={
                 "item_id": fake_uuid,
                 "item_type": "project",
@@ -637,7 +637,7 @@ class TestMoveItem:
         # Act
         fake_uuid = "00000000-0000-0000-0000-000000000001"
         response = await authenticated_org_client.post(
-            "/api/hierarchy/move",
+            "/api/v1/hierarchy/move",
             json={
                 "item_id": str(project.id),
                 "item_type": "project",
@@ -682,7 +682,7 @@ class TestBulkMoveItems:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/hierarchy/bulk-move",
+            "/api/v1/hierarchy/bulk-move",
             json={
                 "items": [
                     {"id": str(project1.id), "type": "project"},
@@ -710,7 +710,7 @@ class TestBulkMoveItems:
         """Test bulk move with empty items list returns 400."""
         # Act
         response = await authenticated_org_client.post(
-            "/api/hierarchy/bulk-move",
+            "/api/v1/hierarchy/bulk-move",
             json={
                 "items": [],
                 "target_parent_id": None,
@@ -751,7 +751,7 @@ class TestBulkMoveItems:
         # Act - mix valid and invalid items
         fake_uuid = "00000000-0000-0000-0000-000000000001"
         response = await authenticated_org_client.post(
-            "/api/hierarchy/bulk-move",
+            "/api/v1/hierarchy/bulk-move",
             json={
                 "items": [
                     {"id": str(project.id), "type": "project"},
@@ -777,7 +777,7 @@ class TestBulkMoveItems:
         """Test bulk move with invalid item format returns 400."""
         # Act
         response = await authenticated_org_client.post(
-            "/api/hierarchy/bulk-move",
+            "/api/v1/hierarchy/bulk-move",
             json={
                 "items": [
                     {"id": "valid-looking-id"}  # Missing 'type' field
@@ -813,7 +813,7 @@ class TestBulkDeleteItems:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/hierarchy/bulk-delete",
+            "/api/v1/hierarchy/bulk-delete",
             json={
                 "items": [
                     {"id": str(project1.id), "type": "project"},
@@ -875,7 +875,7 @@ class TestBulkDeleteItems:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/hierarchy/bulk-delete",
+            "/api/v1/hierarchy/bulk-delete",
             json={
                 "items": [
                     {"id": str(program1.id), "type": "program"}
@@ -900,7 +900,7 @@ class TestBulkDeleteItems:
         """Test bulk delete with no items returns 400."""
         # Act
         response = await authenticated_org_client.post(
-            "/api/hierarchy/bulk-delete",
+            "/api/v1/hierarchy/bulk-delete",
             json={
                 "items": [],
                 "delete_children": True
@@ -950,7 +950,7 @@ class TestBulkDeleteItems:
 
         # Act
         response = await member_client.post(
-            "/api/hierarchy/bulk-delete",
+            "/api/v1/hierarchy/bulk-delete",
             json={
                 "items": [{"id": str(project.id), "type": "project"}],
                 "delete_children": True
@@ -984,7 +984,7 @@ class TestGetHierarchyPath:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/hierarchy/path",
+            "/api/v1/hierarchy/path",
             json={
                 "item_id": str(project.id),
                 "item_type": "project"
@@ -1035,7 +1035,7 @@ class TestGetHierarchyPath:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/hierarchy/path",
+            "/api/v1/hierarchy/path",
             json={
                 "item_id": str(project.id),
                 "item_type": "project"
@@ -1078,7 +1078,7 @@ class TestGetHierarchyPath:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/hierarchy/path",
+            "/api/v1/hierarchy/path",
             json={
                 "item_id": str(program.id),
                 "item_type": "program"
@@ -1108,7 +1108,7 @@ class TestGetHierarchyPath:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/hierarchy/path",
+            "/api/v1/hierarchy/path",
             json={
                 "item_id": str(portfolio.id),
                 "item_type": "portfolio"
@@ -1130,7 +1130,7 @@ class TestGetHierarchyPath:
         """Test path with invalid item type returns 400."""
         # Act
         response = await authenticated_org_client.post(
-            "/api/hierarchy/path",
+            "/api/v1/hierarchy/path",
             json={
                 "item_id": "00000000-0000-0000-0000-000000000001",
                 "item_type": "invalid"
@@ -1153,7 +1153,7 @@ class TestSearchHierarchy:
         """Test search with empty query returns 400."""
         # Act
         response = await authenticated_org_client.get(
-            "/api/hierarchy/search?query="
+            "/api/v1/hierarchy/search?query="
         )
 
         # Assert
@@ -1184,7 +1184,7 @@ class TestSearchHierarchy:
 
         # Act - search by partial name
         response = await authenticated_org_client.get(
-            "/api/hierarchy/search?query=digital"
+            "/api/v1/hierarchy/search?query=digital"
         )
 
         # Assert
@@ -1232,7 +1232,7 @@ class TestSearchHierarchy:
 
         # Act
         response = await authenticated_org_client.get(
-            "/api/hierarchy/search?query=migration"
+            "/api/v1/hierarchy/search?query=migration"
         )
 
         # Assert
@@ -1269,7 +1269,7 @@ class TestSearchHierarchy:
 
         # Act - search by description keyword
         response = await authenticated_org_client.get(
-            "/api/hierarchy/search?query=modern"
+            "/api/v1/hierarchy/search?query=modern"
         )
 
         # Assert
@@ -1317,7 +1317,7 @@ class TestSearchHierarchy:
 
         # Act - search only projects
         response = await authenticated_org_client.get(
-            "/api/hierarchy/search?query=innovation&item_types=project"
+            "/api/v1/hierarchy/search?query=innovation&item_types=project"
         )
 
         # Assert
@@ -1362,7 +1362,7 @@ class TestSearchHierarchy:
 
         # Act - search portfolios and programs only
         response = await authenticated_org_client.get(
-            "/api/hierarchy/search?query=tech&item_types=portfolio&item_types=program"
+            "/api/v1/hierarchy/search?query=tech&item_types=portfolio&item_types=program"
         )
 
         # Assert
@@ -1411,7 +1411,7 @@ class TestSearchHierarchy:
 
         # Act - search within portfolio1 only
         response = await authenticated_org_client.get(
-            f"/api/hierarchy/search?query=api&portfolio_id={str(portfolio1.id)}"
+            f"/api/v1/hierarchy/search?query=api&portfolio_id={str(portfolio1.id)}"
         )
 
         # Assert
@@ -1446,7 +1446,7 @@ class TestSearchHierarchy:
 
         # Act
         response = await authenticated_org_client.get(
-            "/api/hierarchy/search?query=migration"
+            "/api/v1/hierarchy/search?query=migration"
         )
 
         # Assert
@@ -1489,7 +1489,7 @@ class TestSearchHierarchy:
 
         # Act
         response = await authenticated_org_client.get(
-            "/api/hierarchy/search?query=security"
+            "/api/v1/hierarchy/search?query=security"
         )
 
         # Assert
@@ -1521,7 +1521,7 @@ class TestSearchHierarchy:
 
         # Act - limit to 3 results
         response = await authenticated_org_client.get(
-            "/api/hierarchy/search?query=test&limit=3"
+            "/api/v1/hierarchy/search?query=test&limit=3"
         )
 
         # Assert
@@ -1562,7 +1562,7 @@ class TestSearchHierarchy:
 
         # Act
         response = await authenticated_org_client.get(
-            "/api/hierarchy/search?query=api"
+            "/api/v1/hierarchy/search?query=api"
         )
 
         # Assert
@@ -1612,7 +1612,7 @@ class TestSearchHierarchy:
 
         # Act
         response = await authenticated_org_client.get(
-            "/api/hierarchy/search?query=migration"
+            "/api/v1/hierarchy/search?query=migration"
         )
 
         # Assert
@@ -1637,7 +1637,7 @@ class TestSearchHierarchy:
         """Test search with invalid item type returns 400."""
         # Act
         response = await authenticated_org_client.get(
-            "/api/hierarchy/search?query=test&item_types=invalid"
+            "/api/v1/hierarchy/search?query=test&item_types=invalid"
         )
 
         # Assert
@@ -1652,7 +1652,7 @@ class TestSearchHierarchy:
         """Test search with invalid portfolio ID returns 400."""
         # Act
         response = await authenticated_org_client.get(
-            "/api/hierarchy/search?query=test&portfolio_id=not-a-uuid"
+            "/api/v1/hierarchy/search?query=test&portfolio_id=not-a-uuid"
         )
 
         # Assert
@@ -1679,7 +1679,7 @@ class TestSearchHierarchy:
 
         # Act - search with lowercase
         response = await authenticated_org_client.get(
-            "/api/hierarchy/search?query=uppercase"
+            "/api/v1/hierarchy/search?query=uppercase"
         )
 
         # Assert
@@ -1700,7 +1700,7 @@ class TestHierarchyStatistics:
         """Test statistics for organization with no items."""
         # Act
         response = await authenticated_org_client.get(
-            "/api/hierarchy/statistics/summary"
+            "/api/v1/hierarchy/statistics/summary"
         )
 
         # Assert
@@ -1755,7 +1755,7 @@ class TestHierarchyStatistics:
 
         # Act
         response = await authenticated_org_client.get(
-            "/api/hierarchy/statistics/summary"
+            "/api/v1/hierarchy/statistics/summary"
         )
 
         # Assert
@@ -1794,7 +1794,7 @@ class TestHierarchyStatistics:
 
         # Act
         response = await authenticated_org_client.get(
-            "/api/hierarchy/statistics/summary"
+            "/api/v1/hierarchy/statistics/summary"
         )
 
         # Assert
@@ -1828,7 +1828,7 @@ class TestHierarchyStatistics:
 
         # Act
         response = await authenticated_org_client.get(
-            "/api/hierarchy/statistics/summary"
+            "/api/v1/hierarchy/statistics/summary"
         )
 
         # Assert

@@ -90,7 +90,7 @@ class TestCreateLessonLearned:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/lessons-learned",
+            f"/api/v1/projects/{test_project.id}/lessons-learned",
             json=lesson_data
         )
 
@@ -127,7 +127,7 @@ class TestCreateLessonLearned:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/lessons-learned",
+            f"/api/v1/projects/{test_project.id}/lessons-learned",
             json=lesson_data
         )
 
@@ -162,7 +162,7 @@ class TestCreateLessonLearned:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{fake_project_id}/lessons-learned",
+            f"/api/v1/projects/{fake_project_id}/lessons-learned",
             json=lesson_data
         )
 
@@ -188,7 +188,7 @@ class TestCreateLessonLearned:
 
         # Act
         response = await client.post(
-            f"/api/projects/{test_project.id}/lessons-learned",
+            f"/api/v1/projects/{test_project.id}/lessons-learned",
             json=lesson_data
         )
 
@@ -209,7 +209,7 @@ class TestListLessonsLearned:
         """Test listing all lessons learned for a project."""
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/lessons-learned"
+            f"/api/v1/projects/{test_project.id}/lessons-learned"
         )
 
         # Assert
@@ -254,7 +254,7 @@ class TestListLessonsLearned:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/lessons-learned?category=technical"
+            f"/api/v1/projects/{test_project.id}/lessons-learned?category=technical"
         )
 
         # Assert
@@ -297,7 +297,7 @@ class TestListLessonsLearned:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/lessons-learned?lesson_type=success"
+            f"/api/v1/projects/{test_project.id}/lessons-learned?lesson_type=success"
         )
 
         # Assert
@@ -340,7 +340,7 @@ class TestListLessonsLearned:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/lessons-learned?impact=high"
+            f"/api/v1/projects/{test_project.id}/lessons-learned?impact=high"
         )
 
         # Assert
@@ -375,7 +375,7 @@ class TestListLessonsLearned:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/lessons-learned"
+            f"/api/v1/projects/{test_project.id}/lessons-learned"
         )
 
         # Assert
@@ -396,7 +396,7 @@ class TestListLessonsLearned:
         """Test listing lessons for project with no lessons."""
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/lessons-learned"
+            f"/api/v1/projects/{test_project.id}/lessons-learned"
         )
 
         # Assert
@@ -414,7 +414,7 @@ class TestListLessonsLearned:
         """Test that listing lessons requires authentication."""
         # Act
         response = await client.get(
-            f"/api/projects/{test_project.id}/lessons-learned"
+            f"/api/v1/projects/{test_project.id}/lessons-learned"
         )
 
         # Assert
@@ -439,7 +439,7 @@ class TestUpdateLessonLearned:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/lessons-learned/{test_lesson.id}",
+            f"/api/v1/lessons-learned/{test_lesson.id}",
             json=update_data
         )
 
@@ -466,7 +466,7 @@ class TestUpdateLessonLearned:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/lessons-learned/{test_lesson.id}",
+            f"/api/v1/lessons-learned/{test_lesson.id}",
             json=update_data
         )
 
@@ -490,7 +490,7 @@ class TestUpdateLessonLearned:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/lessons-learned/{test_lesson.id}",
+            f"/api/v1/lessons-learned/{test_lesson.id}",
             json=update_data
         )
 
@@ -514,7 +514,7 @@ class TestUpdateLessonLearned:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/lessons-learned/{test_lesson.id}",
+            f"/api/v1/lessons-learned/{test_lesson.id}",
             json=update_data
         )
 
@@ -538,7 +538,7 @@ class TestUpdateLessonLearned:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/lessons-learned/{test_lesson.id}",
+            f"/api/v1/lessons-learned/{test_lesson.id}",
             json=update_data
         )
 
@@ -570,7 +570,7 @@ class TestUpdateLessonLearned:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/lessons-learned/{test_lesson.id}",
+            f"/api/v1/lessons-learned/{test_lesson.id}",
             json=update_data
         )
 
@@ -597,7 +597,7 @@ class TestUpdateLessonLearned:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/lessons-learned/{fake_lesson_id}",
+            f"/api/v1/lessons-learned/{fake_lesson_id}",
             json=update_data
         )
 
@@ -619,7 +619,7 @@ class TestUpdateLessonLearned:
 
         # Act
         response = await client.put(
-            f"/api/lessons-learned/{test_lesson.id}",
+            f"/api/v1/lessons-learned/{test_lesson.id}",
             json=update_data
         )
 
@@ -639,7 +639,7 @@ class TestDeleteLessonLearned:
         """Test successful lesson deletion."""
         # Act
         response = await authenticated_org_client.delete(
-            f"/api/lessons-learned/{test_lesson.id}"
+            f"/api/v1/lessons-learned/{test_lesson.id}"
         )
 
         # Assert
@@ -656,12 +656,12 @@ class TestDeleteLessonLearned:
         """Test that deleted lesson no longer appears in list."""
         # Arrange - Delete the lesson
         await authenticated_org_client.delete(
-            f"/api/lessons-learned/{test_lesson.id}"
+            f"/api/v1/lessons-learned/{test_lesson.id}"
         )
 
         # Act - Try to list lessons
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/lessons-learned"
+            f"/api/v1/projects/{test_project.id}/lessons-learned"
         )
 
         # Assert - Lesson should not be in list
@@ -681,7 +681,7 @@ class TestDeleteLessonLearned:
 
         # Act
         response = await authenticated_org_client.delete(
-            f"/api/lessons-learned/{fake_lesson_id}"
+            f"/api/v1/lessons-learned/{fake_lesson_id}"
         )
 
         # Assert
@@ -697,7 +697,7 @@ class TestDeleteLessonLearned:
         """Test that lesson deletion requires authentication."""
         # Act
         response = await client.delete(
-            f"/api/lessons-learned/{test_lesson.id}"
+            f"/api/v1/lessons-learned/{test_lesson.id}"
         )
 
         # Assert
@@ -746,7 +746,7 @@ class TestBatchCreateLessonsLearned:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/lessons-learned/batch",
+            f"/api/v1/projects/{test_project.id}/lessons-learned/batch",
             json=lessons_data
         )
 
@@ -779,7 +779,7 @@ class TestBatchCreateLessonsLearned:
 
         # Act - Test without source_content_id parameter
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/lessons-learned/batch",
+            f"/api/v1/projects/{test_project.id}/lessons-learned/batch",
             json=lessons_data
         )
 
@@ -806,7 +806,7 @@ class TestBatchCreateLessonsLearned:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{fake_project_id}/lessons-learned/batch",
+            f"/api/v1/projects/{fake_project_id}/lessons-learned/batch",
             json=lessons_data
         )
 
@@ -831,7 +831,7 @@ class TestBatchCreateLessonsLearned:
 
         # Act
         response = await client.post(
-            f"/api/projects/{test_project.id}/lessons-learned/batch",
+            f"/api/v1/projects/{test_project.id}/lessons-learned/batch",
             json=lessons_data
         )
 
@@ -877,7 +877,7 @@ class TestMultiTenantIsolation:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{other_project.id}/lessons-learned",
+            f"/api/v1/projects/{other_project.id}/lessons-learned",
             json=lesson_data
         )
 
@@ -924,7 +924,7 @@ class TestMultiTenantIsolation:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{other_project.id}/lessons-learned"
+            f"/api/v1/projects/{other_project.id}/lessons-learned"
         )
 
         # Assert - Should fail or return empty (depending on implementation)

@@ -12,7 +12,7 @@ from models.user import User
 from services.hierarchy.hierarchy_service import HierarchyService
 from utils.logger import get_logger
 
-router = APIRouter(prefix="/api/hierarchy", tags=["hierarchy"])
+router = APIRouter(prefix="/api/v1/hierarchy", tags=["hierarchy"])
 logger = get_logger(__name__)
 
 

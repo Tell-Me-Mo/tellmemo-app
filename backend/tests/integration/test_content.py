@@ -165,7 +165,7 @@ class TestFileUpload:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/upload",
+            f"/api/v1/projects/{test_project.id}/upload",
             files=files,
             data=data
         )
@@ -202,7 +202,7 @@ class TestFileUpload:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/upload",
+            f"/api/v1/projects/{test_project.id}/upload",
             files=files,
             data=data
         )
@@ -232,7 +232,7 @@ class TestFileUpload:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/upload",
+            f"/api/v1/projects/{test_project.id}/upload",
             files=files,
             data=data
         )
@@ -263,7 +263,7 @@ class TestFileUpload:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/upload",
+            f"/api/v1/projects/{test_project.id}/upload",
             files=files,
             data=data
         )
@@ -291,7 +291,7 @@ class TestFileUpload:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/upload",
+            f"/api/v1/projects/{test_project.id}/upload",
             files=files,
             data=data
         )
@@ -319,7 +319,7 @@ class TestFileUpload:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/projects/invalid-uuid/upload",
+            "/api/v1/projects/invalid-uuid/upload",
             files=files,
             data=data
         )
@@ -348,7 +348,7 @@ class TestFileUpload:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{fake_project_id}/upload",
+            f"/api/v1/projects/{fake_project_id}/upload",
             files=files,
             data=data
         )
@@ -377,7 +377,7 @@ class TestFileUpload:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{archived_project.id}/upload",
+            f"/api/v1/projects/{archived_project.id}/upload",
             files=files,
             data=data
         )
@@ -406,7 +406,7 @@ class TestFileUpload:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/upload",
+            f"/api/v1/projects/{test_project.id}/upload",
             files=files,
             data=data
         )
@@ -433,7 +433,7 @@ class TestFileUpload:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/upload",
+            f"/api/v1/projects/{test_project.id}/upload",
             files=files,
             data=data
         )
@@ -462,7 +462,7 @@ class TestFileUpload:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/upload",
+            f"/api/v1/projects/{test_project.id}/upload",
             files=files,
             data=data
         )
@@ -491,7 +491,7 @@ class TestFileUpload:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/upload",
+            f"/api/v1/projects/{test_project.id}/upload",
             files=files,
             data=data
         )
@@ -521,7 +521,7 @@ class TestFileUpload:
 
         # Act
         response = await client.post(
-            f"/api/projects/{test_project.id}/upload",
+            f"/api/v1/projects/{test_project.id}/upload",
             files=files,
             data=data
         )
@@ -555,7 +555,7 @@ class TestTextUpload:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/upload/text",
+            f"/api/v1/projects/{test_project.id}/upload/text",
             json=request_data
         )
 
@@ -586,7 +586,7 @@ class TestTextUpload:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/upload/text",
+            f"/api/v1/projects/{test_project.id}/upload/text",
             json=request_data
         )
 
@@ -612,7 +612,7 @@ class TestTextUpload:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/upload/text",
+            f"/api/v1/projects/{test_project.id}/upload/text",
             json=request_data
         )
 
@@ -636,7 +636,7 @@ class TestTextUpload:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/upload/text",
+            f"/api/v1/projects/{test_project.id}/upload/text",
             json=request_data
         )
 
@@ -660,7 +660,7 @@ class TestTextUpload:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/upload/text",
+            f"/api/v1/projects/{test_project.id}/upload/text",
             json=request_data
         )
 
@@ -685,7 +685,7 @@ class TestTextUpload:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/upload/text",
+            f"/api/v1/projects/{test_project.id}/upload/text",
             json=request_data
         )
 
@@ -709,7 +709,7 @@ class TestTextUpload:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/upload/text",
+            f"/api/v1/projects/{test_project.id}/upload/text",
             json=request_data
         )
 
@@ -742,7 +742,7 @@ class TestAIProjectMatching:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/upload/with-ai-matching",
+            "/api/v1/upload/with-ai-matching",
             json=request_data
         )
 
@@ -775,7 +775,7 @@ class TestAIProjectMatching:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/upload/with-ai-matching",
+            "/api/v1/upload/with-ai-matching",
             json=request_data
         )
 
@@ -798,7 +798,7 @@ class TestAIProjectMatching:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/upload/with-ai-matching",
+            "/api/v1/upload/with-ai-matching",
             json=request_data
         )
 
@@ -830,7 +830,7 @@ class TestContentRetrieval:
             'content': sample_meeting_transcript
         }
         meeting_response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/upload/text",
+            f"/api/v1/projects/{test_project.id}/upload/text",
             json=meeting_data
         )
         meeting_id = meeting_response.json()['id']
@@ -842,7 +842,7 @@ class TestContentRetrieval:
             'content': sample_email_content
         }
         email_response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/upload/text",
+            f"/api/v1/projects/{test_project.id}/upload/text",
             json=email_data
         )
         email_id = email_response.json()['id']
@@ -859,7 +859,7 @@ class TestContentRetrieval:
         """Test listing all content for a project."""
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/content"
+            f"/api/v1/projects/{test_project.id}/content"
         )
 
         # Assert
@@ -878,7 +878,7 @@ class TestContentRetrieval:
         """Test filtering content by type (meeting)."""
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/content?content_type=meeting"
+            f"/api/v1/projects/{test_project.id}/content?content_type=meeting"
         )
 
         # Assert
@@ -896,7 +896,7 @@ class TestContentRetrieval:
         """Test filtering content by type (email)."""
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/content?content_type=email"
+            f"/api/v1/projects/{test_project.id}/content?content_type=email"
         )
 
         # Assert
@@ -914,7 +914,7 @@ class TestContentRetrieval:
         """Test limiting number of results."""
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/content?limit=1"
+            f"/api/v1/projects/{test_project.id}/content?limit=1"
         )
 
         # Assert
@@ -931,7 +931,7 @@ class TestContentRetrieval:
         """Test that invalid content type filter is rejected."""
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/content?content_type=invalid"
+            f"/api/v1/projects/{test_project.id}/content?content_type=invalid"
         )
 
         # Assert
@@ -947,7 +947,7 @@ class TestContentRetrieval:
         """Test retrieving specific content by ID."""
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/content/{uploaded_content_ids['meeting_id']}"
+            f"/api/v1/projects/{test_project.id}/content/{uploaded_content_ids['meeting_id']}"
         )
 
         # Assert
@@ -970,7 +970,7 @@ class TestContentRetrieval:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/content/{fake_content_id}"
+            f"/api/v1/projects/{test_project.id}/content/{fake_content_id}"
         )
 
         # Assert
@@ -1000,7 +1000,7 @@ class TestContentRetrieval:
 
         # Act - Try to access content from test_project via other_project
         response = await authenticated_org_client.get(
-            f"/api/projects/{other_project.id}/content/{uploaded_content_ids['meeting_id']}"
+            f"/api/v1/projects/{other_project.id}/content/{uploaded_content_ids['meeting_id']}"
         )
 
         # Assert
@@ -1015,7 +1015,7 @@ class TestContentRetrieval:
         """Test that invalid UUID format is rejected."""
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/content/invalid-uuid"
+            f"/api/v1/projects/{test_project.id}/content/invalid-uuid"
         )
 
         # Assert

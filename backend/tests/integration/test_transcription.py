@@ -141,7 +141,7 @@ class TestTranscribeAudio:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/transcribe",
+            "/api/v1/transcribe",
             files=files,
             data=data
         )
@@ -168,7 +168,7 @@ class TestTranscribeAudio:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/transcribe",
+            "/api/v1/transcribe",
             files=files,
             data=data
         )
@@ -213,7 +213,7 @@ class TestTranscribeAudio:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/transcribe",
+            "/api/v1/transcribe",
             files=files,
             data=data
         )
@@ -243,7 +243,7 @@ class TestTranscribeAudio:
         with patch('os.path.getsize', return_value=101 * 1024 * 1024):
             # Act
             response = await authenticated_org_client.post(
-                "/api/transcribe",
+                "/api/v1/transcribe",
                 files=files,
                 data=data
             )
@@ -270,7 +270,7 @@ class TestTranscribeAudio:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/transcribe",
+            "/api/v1/transcribe",
             files=files,
             data=data
         )
@@ -296,7 +296,7 @@ class TestTranscribeAudio:
 
         # Act
         response = await client.post(
-            "/api/transcribe",
+            "/api/v1/transcribe",
             files=files,
             data=data
         )
@@ -389,7 +389,7 @@ class TestTranscribeAudio:
 
             # Act - user2 tries to transcribe to org1's project
             response = await client2.post(
-                "/api/transcribe",
+                "/api/v1/transcribe",
                 files=files,
                 data=data
             )
@@ -425,7 +425,7 @@ class TestTranscribeAudio:
 
             # Act
             response = await authenticated_org_client.post(
-                "/api/transcribe",
+                "/api/v1/transcribe",
                 files=files,
                 data=data
             )
@@ -453,7 +453,7 @@ class TestTranscribeAudio:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/transcribe",
+            "/api/v1/transcribe",
             files=files,
             data=data
         )
@@ -485,7 +485,7 @@ class TestTranscribeAudio:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/transcribe",
+            "/api/v1/transcribe",
             files=files,
             data=data
         )
@@ -507,7 +507,7 @@ class TestTranscribeAudio:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/transcribe",
+            "/api/v1/transcribe",
             data=data
         )
 
@@ -530,7 +530,7 @@ class TestTranscribeAudio:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/transcribe",
+            "/api/v1/transcribe",
             files=files,
             data=data
         )
@@ -556,7 +556,7 @@ class TestTranscribeAudio:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/transcribe",
+            "/api/v1/transcribe",
             files=files,
             data=data
         )
@@ -576,7 +576,7 @@ class TestGetSupportedLanguages:
     ):
         """Test that supported languages endpoint returns a list."""
         # Act
-        response = await client.get("/api/languages")
+        response = await client.get("/api/v1/languages")
 
         # Assert
         assert response.status_code == 200
@@ -593,7 +593,7 @@ class TestGetSupportedLanguages:
     ):
         """Test that common languages are included."""
         # Act
-        response = await client.get("/api/languages")
+        response = await client.get("/api/v1/languages")
 
         # Assert
         assert response.status_code == 200
@@ -615,7 +615,7 @@ class TestGetSupportedLanguages:
         """Test that languages endpoint doesn't require authentication."""
         # This is intentional - language list is public information
         # Act
-        response = await client.get("/api/languages")
+        response = await client.get("/api/v1/languages")
 
         # Assert
         assert response.status_code == 200
@@ -635,7 +635,7 @@ class TestTranscriptionHealth:
         mock_whisper_service.is_model_loaded.return_value = True
 
         # Act
-        response = await client.get("/api/health")
+        response = await client.get("/api/v1/health")
 
         # Assert
         assert response.status_code == 200
@@ -656,7 +656,7 @@ class TestTranscriptionHealth:
             mock.return_value = service
 
             # Act
-            response = await client.get("/api/health")
+            response = await client.get("/api/v1/health")
 
         # Assert
         assert response.status_code == 200
@@ -674,7 +674,7 @@ class TestTranscriptionHealth:
             mock.side_effect = Exception("Service initialization failed")
 
             # Act
-            response = await client.get("/api/health")
+            response = await client.get("/api/v1/health")
 
         # Assert
         assert response.status_code == 503
@@ -690,7 +690,7 @@ class TestTranscriptionHealth:
         """Test that health endpoint doesn't require authentication."""
         # This is intentional - health check should be public
         # Act
-        response = await client.get("/api/health")
+        response = await client.get("/api/v1/health")
 
         # Assert
         assert response.status_code in [200, 503]  # Either healthy or unhealthy, but not auth error
@@ -718,7 +718,7 @@ class TestTranscriptionBackgroundProcessing:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/transcribe",
+            "/api/v1/transcribe",
             files=files,
             data=data
         )

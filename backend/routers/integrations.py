@@ -29,7 +29,7 @@ from models.content import ContentType
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/integrations", tags=["integrations"])
+router = APIRouter(prefix="/api/v1/integrations", tags=["integrations"])
 
 # Pydantic models for request/response
 class IntegrationConfig(BaseModel):

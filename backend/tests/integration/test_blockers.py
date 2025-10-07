@@ -154,7 +154,7 @@ class TestCreateBlocker:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{fake_project_id}/blockers",
+            f"/api/v1/projects/{fake_project_id}/blockers",
             json=blocker_data
         )
 

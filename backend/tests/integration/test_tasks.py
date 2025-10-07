@@ -98,7 +98,7 @@ class TestCreateTask:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/tasks",
+            f"/api/v1/projects/{test_project.id}/tasks",
             json=task_data
         )
 
@@ -141,7 +141,7 @@ class TestCreateTask:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/tasks",
+            f"/api/v1/projects/{test_project.id}/tasks",
             json=task_data
         )
 
@@ -175,7 +175,7 @@ class TestCreateTask:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/tasks",
+            f"/api/v1/projects/{test_project.id}/tasks",
             json=task_data
         )
 
@@ -197,7 +197,7 @@ class TestCreateTask:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{fake_project_id}/tasks",
+            f"/api/v1/projects/{fake_project_id}/tasks",
             json=task_data
         )
 
@@ -219,7 +219,7 @@ class TestCreateTask:
 
         # Act
         response = await client.post(
-            f"/api/projects/{test_project.id}/tasks",
+            f"/api/v1/projects/{test_project.id}/tasks",
             json=task_data
         )
 
@@ -253,7 +253,7 @@ class TestListTasks:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/tasks"
+            f"/api/v1/projects/{test_project.id}/tasks"
         )
 
         # Assert
@@ -294,7 +294,7 @@ class TestListTasks:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/tasks?status=todo"
+            f"/api/v1/projects/{test_project.id}/tasks?status=todo"
         )
 
         # Assert
@@ -333,7 +333,7 @@ class TestListTasks:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/tasks?priority=urgent"
+            f"/api/v1/projects/{test_project.id}/tasks?priority=urgent"
         )
 
         # Assert
@@ -374,7 +374,7 @@ class TestListTasks:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/tasks?assignee=Alice"
+            f"/api/v1/projects/{test_project.id}/tasks?assignee=Alice"
         )
 
         # Assert
@@ -392,7 +392,7 @@ class TestListTasks:
         """Test listing tasks for project with no tasks returns empty array."""
         # Act
         response = await authenticated_org_client.get(
-            f"/api/projects/{test_project.id}/tasks"
+            f"/api/v1/projects/{test_project.id}/tasks"
         )
 
         # Assert
@@ -409,7 +409,7 @@ class TestListTasks:
         """Test that listing tasks without authentication fails."""
         # Act
         response = await client.get(
-            f"/api/projects/{test_project.id}/tasks"
+            f"/api/v1/projects/{test_project.id}/tasks"
         )
 
         # Assert - EXPOSES BUG: Should return 401/403
@@ -434,7 +434,7 @@ class TestUpdateTask:
 
         # Act
         response = await authenticated_org_client.patch(
-            f"/api/tasks/{test_task.id}",
+            f"/api/v1/tasks/{test_task.id}",
             json=update_data
         )
 
@@ -456,7 +456,7 @@ class TestUpdateTask:
 
         # Act
         response = await authenticated_org_client.patch(
-            f"/api/tasks/{test_task.id}",
+            f"/api/v1/tasks/{test_task.id}",
             json=update_data
         )
 
@@ -479,7 +479,7 @@ class TestUpdateTask:
 
         # Act
         response = await authenticated_org_client.patch(
-            f"/api/tasks/{test_task.id}",
+            f"/api/v1/tasks/{test_task.id}",
             json=update_data
         )
 
@@ -504,7 +504,7 @@ class TestUpdateTask:
 
         # Act
         response = await authenticated_org_client.patch(
-            f"/api/tasks/{test_task.id}",
+            f"/api/v1/tasks/{test_task.id}",
             json=update_data
         )
 
@@ -525,7 +525,7 @@ class TestUpdateTask:
 
         # Act
         response = await authenticated_org_client.patch(
-            f"/api/tasks/{test_task.id}",
+            f"/api/v1/tasks/{test_task.id}",
             json=update_data
         )
 
@@ -546,7 +546,7 @@ class TestUpdateTask:
 
         # Act
         response = await authenticated_org_client.patch(
-            f"/api/tasks/{test_task.id}",
+            f"/api/v1/tasks/{test_task.id}",
             json=update_data
         )
 
@@ -568,7 +568,7 @@ class TestUpdateTask:
 
         # Act
         response = await authenticated_org_client.patch(
-            f"/api/tasks/{test_task.id}",
+            f"/api/v1/tasks/{test_task.id}",
             json=update_data
         )
 
@@ -592,7 +592,7 @@ class TestUpdateTask:
 
         # Act
         response = await authenticated_org_client.patch(
-            f"/api/tasks/{test_task.id}",
+            f"/api/v1/tasks/{test_task.id}",
             json=update_data
         )
 
@@ -614,7 +614,7 @@ class TestUpdateTask:
 
         # Act
         response = await authenticated_org_client.patch(
-            f"/api/tasks/{fake_task_id}",
+            f"/api/v1/tasks/{fake_task_id}",
             json=update_data
         )
 
@@ -633,7 +633,7 @@ class TestUpdateTask:
 
         # Act
         response = await client.patch(
-            f"/api/tasks/{test_task.id}",
+            f"/api/v1/tasks/{test_task.id}",
             json=update_data
         )
 
@@ -654,7 +654,7 @@ class TestDeleteTask:
         """Test successful task deletion."""
         # Act
         response = await authenticated_org_client.delete(
-            f"/api/tasks/{test_task.id}"
+            f"/api/v1/tasks/{test_task.id}"
         )
 
         # Assert
@@ -676,7 +676,7 @@ class TestDeleteTask:
 
         # Act
         response = await authenticated_org_client.delete(
-            f"/api/tasks/{fake_task_id}"
+            f"/api/v1/tasks/{fake_task_id}"
         )
 
         # Assert
@@ -691,7 +691,7 @@ class TestDeleteTask:
         """Test that deleting task without authentication fails."""
         # Act
         response = await client.delete(
-            f"/api/tasks/{test_task.id}"
+            f"/api/v1/tasks/{test_task.id}"
         )
 
         # Assert - EXPOSES BUG: Should return 401/403
@@ -728,7 +728,7 @@ class TestBulkUpdateTasks:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/tasks/bulk-update",
+            f"/api/v1/projects/{test_project.id}/tasks/bulk-update",
             json=tasks_data
         )
 
@@ -773,7 +773,7 @@ class TestBulkUpdateTasks:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/tasks/bulk-update",
+            f"/api/v1/projects/{test_project.id}/tasks/bulk-update",
             json=tasks_data
         )
 
@@ -822,7 +822,7 @@ class TestBulkUpdateTasks:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{test_project.id}/tasks/bulk-update",
+            f"/api/v1/projects/{test_project.id}/tasks/bulk-update",
             json=tasks_data
         )
 
@@ -848,7 +848,7 @@ class TestBulkUpdateTasks:
 
         # Act
         response = await authenticated_org_client.post(
-            f"/api/projects/{fake_project_id}/tasks/bulk-update",
+            f"/api/v1/projects/{fake_project_id}/tasks/bulk-update",
             json=tasks_data
         )
 
@@ -867,7 +867,7 @@ class TestBulkUpdateTasks:
 
         # Act
         response = await client.post(
-            f"/api/projects/{test_project.id}/tasks/bulk-update",
+            f"/api/v1/projects/{test_project.id}/tasks/bulk-update",
             json=tasks_data
         )
 
@@ -931,7 +931,7 @@ class TestMultiTenantIsolation:
             "description": "Should not be created"
         }
         response = await org1_client.post(
-            f"/api/projects/{project_org2.id}/tasks",
+            f"/api/v1/projects/{project_org2.id}/tasks",
             json=task_data
         )
 
@@ -998,7 +998,7 @@ class TestMultiTenantIsolation:
 
         # Act - Try to list tasks from org2's project
         response = await org1_client.get(
-            f"/api/projects/{project_org2.id}/tasks"
+            f"/api/v1/projects/{project_org2.id}/tasks"
         )
 
         # Assert - EXPOSES BUG: Should return 404 or empty array

@@ -248,27 +248,27 @@ async def global_exception_handler(request, exc):
 
 
 app.include_router(auth.router, tags=["auth"])
-app.include_router(native_auth.router, tags=["native-auth"])  # Native auth endpoints at /api/auth/*
+app.include_router(native_auth.router, tags=["native-auth"])  # Native auth endpoints at /api/v1/auth/*
 app.include_router(organizations.router, tags=["organizations"])
 app.include_router(invitations.router, tags=["invitations"])
-app.include_router(health.router, prefix="/api", tags=["health"])
+app.include_router(health.router, prefix="/api/v1", tags=["health"])
 app.include_router(portfolios.router)
 app.include_router(programs.router)
 app.include_router(hierarchy.router)
 app.include_router(projects.router)
-app.include_router(content.router, prefix="/api/projects", tags=["content"])
-app.include_router(upload.router, prefix="/api/upload", tags=["upload"])
-app.include_router(queries.router, prefix="/api/projects", tags=["queries"])
-app.include_router(conversations.router, prefix="/api/projects", tags=["conversations"])
-app.include_router(scheduler.router, prefix="/api/scheduler", tags=["scheduler"])
+app.include_router(content.router, prefix="/api/v1/projects", tags=["content"])
+app.include_router(upload.router, prefix="/api/v1/upload", tags=["upload"])
+app.include_router(queries.router, prefix="/api/v1/projects", tags=["queries"])
+app.include_router(conversations.router, prefix="/api/v1/projects", tags=["conversations"])
+app.include_router(scheduler.router, prefix="/api/v1/scheduler", tags=["scheduler"])
 app.include_router(activities.router, tags=["activities"])
 app.include_router(websocket_jobs.router, tags=["websocket"])
 app.include_router(transcription.router, tags=["transcription"])
-app.include_router(jobs.router, prefix="/api", tags=["jobs"])
+app.include_router(jobs.router, prefix="/api/v1", tags=["jobs"])
 app.include_router(integrations.router, tags=["integrations"])
-app.include_router(hierarchy_summaries.router, prefix="/api/hierarchy", tags=["hierarchy-summaries"])
-app.include_router(unified_summaries.router, prefix="/api/summaries", tags=["unified-summaries"])
-app.include_router(content_availability.router, prefix="/api/content-availability", tags=["content-availability"])
+app.include_router(hierarchy_summaries.router, prefix="/api/v1/hierarchy", tags=["hierarchy-summaries"])
+app.include_router(unified_summaries.router, prefix="/api/v1/summaries", tags=["unified-summaries"])
+app.include_router(content_availability.router, prefix="/api/v1/content-availability", tags=["content-availability"])
 app.include_router(risks_tasks.router)
 app.include_router(lessons_learned.router)
 app.include_router(notifications.router)
@@ -277,7 +277,7 @@ app.include_router(support_tickets.router)
 app.include_router(websocket_tickets.router, tags=["websocket"])
 
 if settings.enable_reset_endpoint and settings.is_development:
-    app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
+    app.include_router(admin.router, prefix="/api/v1/admin", tags=["admin"])
     logger.warning("Database reset endpoint is enabled (DEVELOPMENT MODE)")
 
 

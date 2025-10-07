@@ -17,7 +17,7 @@ from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-router = APIRouter(prefix="/api", tags=["activities"])
+router = APIRouter(prefix="/api/v1", tags=["activities"])
 
 
 @router.get("/projects/{project_id}/activities")

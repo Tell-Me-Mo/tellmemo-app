@@ -177,7 +177,7 @@ class TestGenerateSummary:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/summaries/generate",
+            "/api/v1/summaries/generate",
             json=request_data
         )
 
@@ -214,7 +214,7 @@ class TestGenerateSummary:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/summaries/generate",
+            "/api/v1/summaries/generate",
             json=request_data
         )
 
@@ -241,7 +241,7 @@ class TestGenerateSummary:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/summaries/generate",
+            "/api/v1/summaries/generate",
             json=request_data
         )
 
@@ -268,7 +268,7 @@ class TestGenerateSummary:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/summaries/generate",
+            "/api/v1/summaries/generate",
             json=request_data
         )
 
@@ -293,7 +293,7 @@ class TestGenerateSummary:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/summaries/generate",
+            "/api/v1/summaries/generate",
             json=request_data
         )
 
@@ -317,7 +317,7 @@ class TestGenerateSummary:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/summaries/generate",
+            "/api/v1/summaries/generate",
             json=request_data
         )
 
@@ -342,7 +342,7 @@ class TestGenerateSummary:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/summaries/generate",
+            "/api/v1/summaries/generate",
             json=request_data
         )
 
@@ -367,7 +367,7 @@ class TestGenerateSummary:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/summaries/generate",
+            "/api/v1/summaries/generate",
             json=request_data
         )
 
@@ -391,7 +391,7 @@ class TestGenerateSummary:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/summaries/generate",
+            "/api/v1/summaries/generate",
             json=request_data
         )
 
@@ -415,7 +415,7 @@ class TestGenerateSummary:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/summaries/generate",
+            "/api/v1/summaries/generate",
             json=request_data
         )
 
@@ -439,7 +439,7 @@ class TestGenerateSummary:
 
         # Act
         response = await client.post(
-            "/api/summaries/generate",
+            "/api/v1/summaries/generate",
             json=request_data
         )
 
@@ -463,7 +463,7 @@ class TestGetSummary:
         """Test retrieving a summary by ID successfully."""
         # Act
         response = await authenticated_org_client.get(
-            f"/api/summaries/{test_summary.id}"
+            f"/api/v1/summaries/{test_summary.id}"
         )
 
         # Assert
@@ -486,7 +486,7 @@ class TestGetSummary:
         """Test getting summary with invalid ID format returns 500."""
         # Act
         response = await authenticated_org_client.get(
-            "/api/summaries/not-a-uuid"
+            "/api/v1/summaries/not-a-uuid"
         )
 
         # Assert
@@ -504,7 +504,7 @@ class TestGetSummary:
 
         # Act
         response = await authenticated_org_client.get(
-            f"/api/summaries/{fake_id}"
+            f"/api/v1/summaries/{fake_id}"
         )
 
         # Assert
@@ -534,7 +534,7 @@ class TestListSummaries:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/summaries/list",
+            "/api/v1/summaries/list",
             json=filters
         )
 
@@ -565,7 +565,7 @@ class TestListSummaries:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/summaries/list",
+            "/api/v1/summaries/list",
             json=filters
         )
 
@@ -595,7 +595,7 @@ class TestListSummaries:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/summaries/list",
+            "/api/v1/summaries/list",
             json=filters
         )
 
@@ -623,7 +623,7 @@ class TestListSummaries:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/summaries/list",
+            "/api/v1/summaries/list",
             json=filters
         )
 
@@ -653,7 +653,7 @@ class TestListSummaries:
 
         # Act
         response = await authenticated_org_client.post(
-            "/api/summaries/list",
+            "/api/v1/summaries/list",
             json=filters
         )
 
@@ -694,7 +694,7 @@ class TestListSummaries:
             "offset": 0
         }
         response = await authenticated_org_client.post(
-            "/api/summaries/list",
+            "/api/v1/summaries/list",
             json=filters
         )
 
@@ -709,7 +709,7 @@ class TestListSummaries:
             "offset": 3
         }
         response = await authenticated_org_client.post(
-            "/api/summaries/list",
+            "/api/v1/summaries/list",
             json=filters
         )
 
@@ -735,7 +735,7 @@ class TestListSummaries:
 
         # Act
         response = await client.post(
-            "/api/summaries/list",
+            "/api/v1/summaries/list",
             json=filters
         )
 
@@ -764,7 +764,7 @@ class TestUpdateSummary:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/summaries/{test_summary.id}",
+            f"/api/v1/summaries/{test_summary.id}",
             json=update_data
         )
 
@@ -788,7 +788,7 @@ class TestUpdateSummary:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/summaries/{test_summary.id}",
+            f"/api/v1/summaries/{test_summary.id}",
             json=update_data
         )
 
@@ -812,7 +812,7 @@ class TestUpdateSummary:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/summaries/{test_summary.id}",
+            f"/api/v1/summaries/{test_summary.id}",
             json=update_data
         )
 
@@ -840,7 +840,7 @@ class TestUpdateSummary:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/summaries/{test_summary.id}",
+            f"/api/v1/summaries/{test_summary.id}",
             json=update_data
         )
 
@@ -866,7 +866,7 @@ class TestUpdateSummary:
 
         # Act
         response = await authenticated_org_client.put(
-            "/api/summaries/not-a-uuid",
+            "/api/v1/summaries/not-a-uuid",
             json=update_data
         )
 
@@ -888,7 +888,7 @@ class TestUpdateSummary:
 
         # Act
         response = await authenticated_org_client.put(
-            f"/api/summaries/{fake_id}",
+            f"/api/v1/summaries/{fake_id}",
             json=update_data
         )
 
@@ -913,7 +913,7 @@ class TestDeleteSummary:
         """Test deleting a summary successfully."""
         # Act
         response = await authenticated_org_client.delete(
-            f"/api/summaries/{test_summary.id}"
+            f"/api/v1/summaries/{test_summary.id}"
         )
 
         # Assert
@@ -923,7 +923,7 @@ class TestDeleteSummary:
 
         # Verify summary is actually deleted
         get_response = await authenticated_org_client.get(
-            f"/api/summaries/{test_summary.id}"
+            f"/api/v1/summaries/{test_summary.id}"
         )
         assert get_response.status_code == 404
 
@@ -938,7 +938,7 @@ class TestDeleteSummary:
 
         # Act
         response = await authenticated_org_client.delete(
-            f"/api/summaries/{fake_id}"
+            f"/api/v1/summaries/{fake_id}"
         )
 
         # Assert
@@ -953,7 +953,7 @@ class TestDeleteSummary:
         """Test deleting summary with invalid ID format returns 500."""
         # Act
         response = await authenticated_org_client.delete(
-            "/api/summaries/not-a-uuid"
+            "/api/v1/summaries/not-a-uuid"
         )
 
         # Assert
@@ -1028,7 +1028,7 @@ class TestMultiTenantIsolation:
 
         # Act - Try to access summary from org1
         response = await client2.get(
-            f"/api/summaries/{test_summary.id}"
+            f"/api/v1/summaries/{test_summary.id}"
         )
 
         # Assert

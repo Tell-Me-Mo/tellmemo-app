@@ -234,7 +234,7 @@ class TestLLMAPIErrorHandling:
 
         # Upload content
         upload_response = await authenticated_org_client.post(
-            f"/api/projects/{project_id}/upload/text",
+            f"/api/v1/projects/{project_id}/upload/text",
             json={
                 "title": "Test Meeting",
                 "content_type": "meeting",
@@ -246,7 +246,7 @@ class TestLLMAPIErrorHandling:
         # Try to generate summary (should handle LLM error gracefully)
         content_id = upload_response.json()["id"]
         summary_response = await authenticated_org_client.post(
-            "/api/summaries/generate",
+            "/api/v1/summaries/generate",
             json={
                 "entity_type": "project",
                 "entity_id": project_id,
@@ -279,7 +279,7 @@ class TestLLMAPIErrorHandling:
 
         # Upload content
         upload_response = await authenticated_org_client.post(
-            f"/api/projects/{project_id}/upload/text",
+            f"/api/v1/projects/{project_id}/upload/text",
             json={
                 "title": "Test Meeting",
                 "content_type": "meeting",
@@ -291,7 +291,7 @@ class TestLLMAPIErrorHandling:
         # Try to generate summary
         content_id = upload_response.json()["id"]
         summary_response = await authenticated_org_client.post(
-            "/api/summaries/generate",
+            "/api/v1/summaries/generate",
             json={
                 "entity_type": "project",
                 "entity_id": project_id,
@@ -322,7 +322,7 @@ class TestLLMAPIErrorHandling:
 
         # Upload content
         upload_response = await authenticated_org_client.post(
-            f"/api/projects/{project_id}/upload/text",
+            f"/api/v1/projects/{project_id}/upload/text",
             json={
                 "title": "Test Meeting",
                 "content_type": "meeting",
@@ -334,7 +334,7 @@ class TestLLMAPIErrorHandling:
         # Try to generate summary
         content_id = upload_response.json()["id"]
         summary_response = await authenticated_org_client.post(
-            "/api/summaries/generate",
+            "/api/v1/summaries/generate",
             json={
                 "entity_type": "project",
                 "entity_id": project_id,

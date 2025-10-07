@@ -68,7 +68,7 @@ class TestRoleBasedAccessControl:
 
         # Act: Try to access admin-only endpoint (delete organization)
         response = await client.delete(
-            f"/api/organizations/{test_organization.id}",
+            f"/api/v1/organizations/{test_organization.id}",
             headers={
                 "Authorization": f"Bearer {member_token}",
                 "X-Organization-Id": str(test_organization.id)
@@ -97,7 +97,7 @@ class TestRoleBasedAccessControl:
 
         # Act: Access admin endpoint (should succeed)
         response = await client.get(
-            f"/api/organizations/{test_organization.id}/members",
+            f"/api/v1/organizations/{test_organization.id}/members",
             headers={
                 "Authorization": f"Bearer {admin_token}",
                 "X-Organization-Id": str(test_organization.id)
@@ -142,7 +142,7 @@ class TestOrganizationLevelPermissions:
 
         # Act: Try to access other organization's resources
         response = await client.get(
-            f"/api/organizations/{other_org.id}",
+            f"/api/v1/organizations/{other_org.id}",
             headers={
                 "Authorization": f"Bearer {user_token}",
                 "X-Organization-Id": str(other_org.id)
@@ -169,7 +169,7 @@ class TestOrganizationLevelPermissions:
 
         # Act: Request with organization header
         response = await client.get(
-            f"/api/organizations/{test_organization.id}",
+            f"/api/v1/organizations/{test_organization.id}",
             headers={
                 "Authorization": f"Bearer {user_token}",
                 "X-Organization-Id": str(test_organization.id)
@@ -195,7 +195,7 @@ class TestOrganizationLevelPermissions:
 
         # Act: Request with invalid organization header
         response = await client.get(
-            "/api/organizations/me",
+            "/api/v1/organizations/me",
             headers={
                 "Authorization": f"Bearer {user_token}",
                 "X-Organization-Id": "invalid-uuid"
@@ -242,7 +242,7 @@ class TestOrganizationLevelPermissions:
 
         # Act: Access second org by changing header
         response = await client.get(
-            f"/api/organizations/{org2.id}",
+            f"/api/v1/organizations/{org2.id}",
             headers={
                 "Authorization": f"Bearer {token}",
                 "X-Organization-Id": str(org2.id)
@@ -593,7 +593,7 @@ class TestAuthorizationEdgeCases:
 
         # Verify access works
         response1 = await client.get(
-            f"/api/organizations/{test_organization.id}",
+            f"/api/v1/organizations/{test_organization.id}",
             headers={
                 "Authorization": f"Bearer {temp_token}",
                 "X-Organization-Id": str(test_organization.id)
@@ -607,7 +607,7 @@ class TestAuthorizationEdgeCases:
 
         # Act: Try to access again with same token
         response2 = await client.get(
-            f"/api/organizations/{test_organization.id}",
+            f"/api/v1/organizations/{test_organization.id}",
             headers={
                 "Authorization": f"Bearer {temp_token}",
                 "X-Organization-Id": str(test_organization.id)

@@ -291,7 +291,7 @@ async def test_get_project_activities_success(
 ):
     """Test getting activities for a project."""
     response = await authenticated_org_client.get(
-        f"/api/projects/{test_project.id}/activities"
+        f"/api/v1/projects/{test_project.id}/activities"
     )
 
     assert response.status_code == 200
@@ -324,7 +324,7 @@ async def test_get_project_activities_with_type_filter(
 ):
     """Test filtering activities by type."""
     response = await authenticated_org_client.get(
-        f"/api/projects/{test_project.id}/activities",
+        f"/api/v1/projects/{test_project.id}/activities",
         params={"activity_type": ActivityType.CONTENT_UPLOADED.value}
     )
 
@@ -350,7 +350,7 @@ async def test_get_project_activities_with_since_filter(
     since_time = (datetime.utcnow() - timedelta(minutes=90)).isoformat()
 
     response = await authenticated_org_client.get(
-        f"/api/projects/{test_project.id}/activities",
+        f"/api/v1/projects/{test_project.id}/activities",
         params={"since": since_time}
     )
 
@@ -374,7 +374,7 @@ async def test_get_project_activities_with_pagination(
     """Test pagination of activities."""
     # Get first page (limit 2)
     response = await authenticated_org_client.get(
-        f"/api/projects/{test_project.id}/activities",
+        f"/api/v1/projects/{test_project.id}/activities",
         params={"limit": 2, "offset": 0}
     )
 
@@ -384,7 +384,7 @@ async def test_get_project_activities_with_pagination(
 
     # Get second page
     response = await authenticated_org_client.get(
-        f"/api/projects/{test_project.id}/activities",
+        f"/api/v1/projects/{test_project.id}/activities",
         params={"limit": 2, "offset": 2}
     )
 
@@ -400,7 +400,7 @@ async def test_get_project_activities_invalid_type(
 ):
     """Test filtering with invalid activity type."""
     response = await authenticated_org_client.get(
-        f"/api/projects/{test_project.id}/activities",
+        f"/api/v1/projects/{test_project.id}/activities",
         params={"activity_type": "invalid_type"}
     )
 
@@ -415,7 +415,7 @@ async def test_get_project_activities_empty_result(
 ):
     """Test getting activities for project with no activities."""
     response = await authenticated_org_client.get(
-        f"/api/projects/{test_project.id}/activities"
+        f"/api/v1/projects/{test_project.id}/activities"
     )
 
     assert response.status_code == 200
@@ -429,7 +429,7 @@ async def test_get_project_activities_invalid_project_id(
 ):
     """Test getting activities with invalid project UUID."""
     response = await authenticated_org_client.get(
-        "/api/projects/not-a-uuid/activities"
+        "/api/v1/projects/not-a-uuid/activities"
     )
 
     assert response.status_code == 422  # Validation error
@@ -443,7 +443,7 @@ async def test_get_project_activities_requires_authentication(
 ):
     """Test that authentication is required."""
     response = await client.get(
-        f"/api/projects/{test_project.id}/activities"
+        f"/api/v1/projects/{test_project.id}/activities"
     )
 
     assert response.status_code in [401, 403]
@@ -464,7 +464,7 @@ async def test_get_recent_activities_single_project(
 ):
     """Test getting recent activities for a single project."""
     response = await authenticated_org_client.get(
-        "/api/activities/recent",
+        "/api/v1/activities/recent",
         params={
             "project_ids": str(test_project.id),
             "hours": 24,
@@ -495,7 +495,7 @@ async def test_get_recent_activities_multiple_projects(
 ):
     """Test getting recent activities across multiple projects."""
     response = await authenticated_org_client.get(
-        "/api/activities/recent",
+        "/api/v1/activities/recent",
         params={
             "project_ids": f"{test_project.id},{second_project.id}",
             "hours": 24,
@@ -524,7 +524,7 @@ async def test_get_recent_activities_custom_time_range(
 ):
     """Test getting recent activities with custom time range."""
     response = await authenticated_org_client.get(
-        "/api/activities/recent",
+        "/api/v1/activities/recent",
         params={
             "project_ids": str(test_project.id),
             "hours": 1,  # Only last hour (should get activity_3 at 30min ago)
@@ -551,7 +551,7 @@ async def test_get_recent_activities_with_limit(
 ):
     """Test limiting number of recent activities returned."""
     response = await authenticated_org_client.get(
-        "/api/activities/recent",
+        "/api/v1/activities/recent",
         params={
             "project_ids": str(test_project.id),
             "hours": 24,
@@ -574,7 +574,7 @@ async def test_get_recent_activities_invalid_project_id_format(
 ):
     """Test getting recent activities with invalid project ID format."""
     response = await authenticated_org_client.get(
-        "/api/activities/recent",
+        "/api/v1/activities/recent",
         params={
             "project_ids": "not-a-uuid,also-invalid",
             "hours": 24
@@ -593,7 +593,7 @@ async def test_get_recent_activities_empty_result(
 ):
     """Test getting recent activities when no recent activities exist."""
     response = await authenticated_org_client.get(
-        "/api/activities/recent",
+        "/api/v1/activities/recent",
         params={
             "project_ids": str(test_project.id),
             "hours": 1,  # Old activity is 30 hours old
@@ -613,7 +613,7 @@ async def test_get_recent_activities_requires_authentication(
 ):
     """Test that authentication is required."""
     response = await client.get(
-        "/api/activities/recent",
+        "/api/v1/activities/recent",
         params={
             "project_ids": str(test_project.id),
             "hours": 24
@@ -638,7 +638,7 @@ async def test_delete_project_activities_as_admin(
 ):
     """Test deleting all activities for a project as admin."""
     response = await admin_client.delete(
-        f"/api/projects/{test_project.id}/activities"
+        f"/api/v1/projects/{test_project.id}/activities"
     )
 
     assert response.status_code == 200
@@ -701,7 +701,7 @@ async def test_delete_project_activities_as_non_admin(
 
     # Try to delete activities as member (should fail)
     response = await member_client.delete(
-        f"/api/projects/{test_project.id}/activities"
+        f"/api/v1/projects/{test_project.id}/activities"
     )
 
     assert response.status_code == 403
@@ -715,7 +715,7 @@ async def test_delete_project_activities_empty_project(
 ):
     """Test deleting activities when project has no activities."""
     response = await admin_client.delete(
-        f"/api/projects/{test_project.id}/activities"
+        f"/api/v1/projects/{test_project.id}/activities"
     )
 
     assert response.status_code == 200
@@ -730,7 +730,7 @@ async def test_delete_project_activities_invalid_project_id(
 ):
     """Test deleting activities with invalid project UUID."""
     response = await admin_client.delete(
-        "/api/projects/not-a-uuid/activities"
+        "/api/v1/projects/not-a-uuid/activities"
     )
 
     assert response.status_code == 422  # Validation error
@@ -743,7 +743,7 @@ async def test_delete_project_activities_requires_authentication(
 ):
     """Test that authentication is required."""
     response = await client.delete(
-        f"/api/projects/{test_project.id}/activities"
+        f"/api/v1/projects/{test_project.id}/activities"
     )
 
     assert response.status_code in [401, 403]
@@ -777,7 +777,7 @@ async def test_get_project_activities_cross_org_isolation(
 
     # Try to access first org's project activities
     response = await second_org_client.get(
-        f"/api/projects/{test_project.id}/activities"
+        f"/api/v1/projects/{test_project.id}/activities"
     )
 
     # Should return empty list (no access to other org's project activities)
@@ -809,7 +809,7 @@ async def test_get_recent_activities_cross_org_isolation(
 
     # Try to access first org's project activities
     response = await second_org_client.get(
-        "/api/activities/recent",
+        "/api/v1/activities/recent",
         params={
             "project_ids": str(test_project.id),
             "hours": 24
@@ -846,7 +846,7 @@ async def test_delete_project_activities_cross_org_isolation(
 
     # Try to delete first org's project activities
     response = await second_org_admin_client.delete(
-        f"/api/projects/{test_project.id}/activities"
+        f"/api/v1/projects/{test_project.id}/activities"
     )
 
     # Should return 200 with 0 deleted (multi-tenant isolation prevents deletion)
