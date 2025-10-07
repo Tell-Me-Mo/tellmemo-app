@@ -46,7 +46,7 @@ void main() {
         ];
 
         when(mockDio.get(
-          '/api/projects/$projectId/lessons-learned',
+          '/api/v1/projects/$projectId/lessons-learned',
           data: anyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
@@ -55,7 +55,7 @@ void main() {
         )).thenAnswer((_) async => Response(
                   data: responseData,
                   statusCode: 200,
-                  requestOptions: RequestOptions(path: '/api/projects/$projectId/lessons-learned'),
+                  requestOptions: RequestOptions(path: '/api/v1/projects/$projectId/lessons-learned'),
                 ));
 
         // Act
@@ -75,7 +75,7 @@ void main() {
         expect(result[1].lessonType, LessonType.improvement);
         expect(result[1].impact, LessonImpact.medium);
         verify(mockDio.get(
-          '/api/projects/$projectId/lessons-learned',
+          '/api/v1/projects/$projectId/lessons-learned',
           data: anyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
@@ -87,7 +87,7 @@ void main() {
       test('returns empty list when response data is not a list', () async {
         // Arrange
         when(mockDio.get(
-          '/api/projects/$projectId/lessons-learned',
+          '/api/v1/projects/$projectId/lessons-learned',
           data: anyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
@@ -96,7 +96,7 @@ void main() {
         )).thenAnswer((_) async => Response(
                   data: {'message': 'Not a list'},
                   statusCode: 200,
-                  requestOptions: RequestOptions(path: '/api/projects/$projectId/lessons-learned'),
+                  requestOptions: RequestOptions(path: '/api/v1/projects/$projectId/lessons-learned'),
                 ));
 
         // Act
@@ -105,7 +105,7 @@ void main() {
         // Assert
         expect(result, isEmpty);
         verify(mockDio.get(
-          '/api/projects/$projectId/lessons-learned',
+          '/api/v1/projects/$projectId/lessons-learned',
           data: anyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
@@ -117,7 +117,7 @@ void main() {
       test('returns empty list when response data is empty list', () async {
         // Arrange
         when(mockDio.get(
-          '/api/projects/$projectId/lessons-learned',
+          '/api/v1/projects/$projectId/lessons-learned',
           data: anyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
@@ -126,7 +126,7 @@ void main() {
         )).thenAnswer((_) async => Response(
                   data: [],
                   statusCode: 200,
-                  requestOptions: RequestOptions(path: '/api/projects/$projectId/lessons-learned'),
+                  requestOptions: RequestOptions(path: '/api/v1/projects/$projectId/lessons-learned'),
                 ));
 
         // Act
@@ -135,7 +135,7 @@ void main() {
         // Assert
         expect(result, isEmpty);
         verify(mockDio.get(
-          '/api/projects/$projectId/lessons-learned',
+          '/api/v1/projects/$projectId/lessons-learned',
           data: anyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
@@ -147,17 +147,17 @@ void main() {
       test('throws exception on DioException', () async {
         // Arrange
         when(mockDio.get(
-          '/api/projects/$projectId/lessons-learned',
+          '/api/v1/projects/$projectId/lessons-learned',
           data: anyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
           cancelToken: anyNamed('cancelToken'),
           onReceiveProgress: anyNamed('onReceiveProgress'),
         )).thenThrow(DioException(
-          requestOptions: RequestOptions(path: '/api/projects/$projectId/lessons-learned'),
+          requestOptions: RequestOptions(path: '/api/v1/projects/$projectId/lessons-learned'),
           response: Response(
             statusCode: 404,
-            requestOptions: RequestOptions(path: '/api/projects/$projectId/lessons-learned'),
+            requestOptions: RequestOptions(path: '/api/v1/projects/$projectId/lessons-learned'),
           ),
         ));
 
@@ -167,7 +167,7 @@ void main() {
           throwsA(isA<Exception>()),
         );
         verify(mockDio.get(
-          '/api/projects/$projectId/lessons-learned',
+          '/api/v1/projects/$projectId/lessons-learned',
           data: anyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
@@ -179,7 +179,7 @@ void main() {
       test('throws exception on generic error', () async {
         // Arrange
         when(mockDio.get(
-          '/api/projects/$projectId/lessons-learned',
+          '/api/v1/projects/$projectId/lessons-learned',
           data: anyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
@@ -193,7 +193,7 @@ void main() {
           throwsA(isA<Exception>()),
         );
         verify(mockDio.get(
-          '/api/projects/$projectId/lessons-learned',
+          '/api/v1/projects/$projectId/lessons-learned',
           data: anyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
@@ -235,7 +235,7 @@ void main() {
         };
 
         when(mockDio.post(
-          '/api/projects/$projectId/lessons-learned',
+          '/api/v1/projects/$projectId/lessons-learned',
           data: anyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
@@ -245,7 +245,7 @@ void main() {
         )).thenAnswer((_) async => Response(
               data: responseData,
               statusCode: 201,
-              requestOptions: RequestOptions(path: '/api/projects/$projectId/lessons-learned'),
+              requestOptions: RequestOptions(path: '/api/v1/projects/$projectId/lessons-learned'),
             ));
 
         // Act
@@ -259,7 +259,7 @@ void main() {
         expect(result.lessonType, LessonType.success);
         expect(result.impact, LessonImpact.high);
         verify(mockDio.post(
-          '/api/projects/$projectId/lessons-learned',
+          '/api/v1/projects/$projectId/lessons-learned',
           data: anyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
@@ -283,7 +283,7 @@ void main() {
         );
 
         when(mockDio.post(
-          '/api/projects/$projectId/lessons-learned',
+          '/api/v1/projects/$projectId/lessons-learned',
           data: anyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
@@ -302,7 +302,7 @@ void main() {
                 'ai_generated': false,
               },
               statusCode: 201,
-              requestOptions: RequestOptions(path: '/api/projects/$projectId/lessons-learned'),
+              requestOptions: RequestOptions(path: '/api/v1/projects/$projectId/lessons-learned'),
             ));
 
         // Act
@@ -310,7 +310,7 @@ void main() {
 
         // Assert
         final captured = verify(mockDio.post(
-          '/api/projects/$projectId/lessons-learned',
+          '/api/v1/projects/$projectId/lessons-learned',
           data: captureAnyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
@@ -344,7 +344,7 @@ void main() {
         );
 
         when(mockDio.post(
-          '/api/projects/$projectId/lessons-learned',
+          '/api/v1/projects/$projectId/lessons-learned',
           data: anyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
@@ -352,10 +352,10 @@ void main() {
           onSendProgress: anyNamed('onSendProgress'),
           onReceiveProgress: anyNamed('onReceiveProgress'),
         )).thenThrow(DioException(
-          requestOptions: RequestOptions(path: '/api/projects/$projectId/lessons-learned'),
+          requestOptions: RequestOptions(path: '/api/v1/projects/$projectId/lessons-learned'),
           response: Response(
             statusCode: 400,
-            requestOptions: RequestOptions(path: '/api/projects/$projectId/lessons-learned'),
+            requestOptions: RequestOptions(path: '/api/v1/projects/$projectId/lessons-learned'),
           ),
         ));
 
@@ -399,7 +399,7 @@ void main() {
         };
 
         when(mockDio.put(
-          '/api/lessons-learned/$lessonId',
+          '/api/v1/lessons-learned/$lessonId',
           data: anyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
@@ -409,7 +409,7 @@ void main() {
         )).thenAnswer((_) async => Response(
               data: responseData,
               statusCode: 200,
-              requestOptions: RequestOptions(path: '/api/lessons-learned/$lessonId'),
+              requestOptions: RequestOptions(path: '/api/v1/lessons-learned/$lessonId'),
             ));
 
         // Act
@@ -423,7 +423,7 @@ void main() {
         expect(result.lessonType, LessonType.improvement);
         expect(result.impact, LessonImpact.medium);
         verify(mockDio.put(
-          '/api/lessons-learned/$lessonId',
+          '/api/v1/lessons-learned/$lessonId',
           data: anyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
@@ -450,7 +450,7 @@ void main() {
         );
 
         when(mockDio.put(
-          '/api/lessons-learned/$lessonId',
+          '/api/v1/lessons-learned/$lessonId',
           data: anyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
@@ -468,7 +468,7 @@ void main() {
                 'impact': 'high',
               },
               statusCode: 200,
-              requestOptions: RequestOptions(path: '/api/lessons-learned/$lessonId'),
+              requestOptions: RequestOptions(path: '/api/v1/lessons-learned/$lessonId'),
             ));
 
         // Act
@@ -476,7 +476,7 @@ void main() {
 
         // Assert
         final captured = verify(mockDio.put(
-          '/api/lessons-learned/$lessonId',
+          '/api/v1/lessons-learned/$lessonId',
           data: captureAnyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
@@ -510,7 +510,7 @@ void main() {
         );
 
         when(mockDio.put(
-          '/api/lessons-learned/$lessonId',
+          '/api/v1/lessons-learned/$lessonId',
           data: anyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
@@ -528,7 +528,7 @@ void main() {
                 'impact': 'high',
               },
               statusCode: 200,
-              requestOptions: RequestOptions(path: '/api/lessons-learned/$lessonId'),
+              requestOptions: RequestOptions(path: '/api/v1/lessons-learned/$lessonId'),
             ));
 
         // Act
@@ -536,7 +536,7 @@ void main() {
 
         // Assert
         final captured = verify(mockDio.put(
-          '/api/lessons-learned/$lessonId',
+          '/api/v1/lessons-learned/$lessonId',
           data: captureAnyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
@@ -562,7 +562,7 @@ void main() {
         );
 
         when(mockDio.put(
-          '/api/lessons-learned/$lessonId',
+          '/api/v1/lessons-learned/$lessonId',
           data: anyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
@@ -570,10 +570,10 @@ void main() {
           onSendProgress: anyNamed('onSendProgress'),
           onReceiveProgress: anyNamed('onReceiveProgress'),
         )).thenThrow(DioException(
-          requestOptions: RequestOptions(path: '/api/lessons-learned/$lessonId'),
+          requestOptions: RequestOptions(path: '/api/v1/lessons-learned/$lessonId'),
           response: Response(
             statusCode: 404,
-            requestOptions: RequestOptions(path: '/api/lessons-learned/$lessonId'),
+            requestOptions: RequestOptions(path: '/api/v1/lessons-learned/$lessonId'),
           ),
         ));
 
@@ -589,7 +589,7 @@ void main() {
       test('deletes lesson learned successfully', () async {
         // Arrange
         when(mockDio.delete(
-          '/api/lessons-learned/$lessonId',
+          '/api/v1/lessons-learned/$lessonId',
           data: anyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
@@ -597,7 +597,7 @@ void main() {
         )).thenAnswer((_) async => Response(
                   data: {'message': 'Deleted'},
                   statusCode: 204,
-                  requestOptions: RequestOptions(path: '/api/lessons-learned/$lessonId'),
+                  requestOptions: RequestOptions(path: '/api/v1/lessons-learned/$lessonId'),
                 ));
 
         // Act
@@ -605,7 +605,7 @@ void main() {
 
         // Assert
         verify(mockDio.delete(
-          '/api/lessons-learned/$lessonId',
+          '/api/v1/lessons-learned/$lessonId',
           data: anyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
@@ -616,16 +616,16 @@ void main() {
       test('throws exception on DioException', () async {
         // Arrange
         when(mockDio.delete(
-          '/api/lessons-learned/$lessonId',
+          '/api/v1/lessons-learned/$lessonId',
           data: anyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
           cancelToken: anyNamed('cancelToken'),
         )).thenThrow(DioException(
-          requestOptions: RequestOptions(path: '/api/lessons-learned/$lessonId'),
+          requestOptions: RequestOptions(path: '/api/v1/lessons-learned/$lessonId'),
           response: Response(
             statusCode: 404,
-            requestOptions: RequestOptions(path: '/api/lessons-learned/$lessonId'),
+            requestOptions: RequestOptions(path: '/api/v1/lessons-learned/$lessonId'),
           ),
         ));
 
@@ -635,7 +635,7 @@ void main() {
           throwsA(isA<Exception>()),
         );
         verify(mockDio.delete(
-          '/api/lessons-learned/$lessonId',
+          '/api/v1/lessons-learned/$lessonId',
           data: anyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
@@ -646,7 +646,7 @@ void main() {
       test('throws exception on generic error', () async {
         // Arrange
         when(mockDio.delete(
-          '/api/lessons-learned/$lessonId',
+          '/api/v1/lessons-learned/$lessonId',
           data: anyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
@@ -659,7 +659,7 @@ void main() {
           throwsA(isA<Exception>()),
         );
         verify(mockDio.delete(
-          '/api/lessons-learned/$lessonId',
+          '/api/v1/lessons-learned/$lessonId',
           data: anyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
@@ -684,7 +684,7 @@ void main() {
         ];
 
         when(mockDio.get(
-          '/api/projects/$projectId/lessons-learned',
+          '/api/v1/projects/$projectId/lessons-learned',
           data: anyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
@@ -693,7 +693,7 @@ void main() {
         )).thenAnswer((_) async => Response(
                   data: responseData,
                   statusCode: 200,
-                  requestOptions: RequestOptions(path: '/api/projects/$projectId/lessons-learned'),
+                  requestOptions: RequestOptions(path: '/api/v1/projects/$projectId/lessons-learned'),
                 ));
 
         // Act
@@ -719,7 +719,7 @@ void main() {
         );
 
         when(mockDio.post(
-          '/api/projects/$projectId/lessons-learned',
+          '/api/v1/projects/$projectId/lessons-learned',
           data: anyNamed('data'),
           queryParameters: anyNamed('queryParameters'),
           options: anyNamed('options'),
@@ -738,7 +738,7 @@ void main() {
                 'ai_generated': false,
               },
               statusCode: 201,
-              requestOptions: RequestOptions(path: '/api/projects/$projectId/lessons-learned'),
+              requestOptions: RequestOptions(path: '/api/v1/projects/$projectId/lessons-learned'),
             ));
 
         // Act

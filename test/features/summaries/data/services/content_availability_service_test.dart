@@ -314,12 +314,12 @@ void main() {
       };
 
       when(mockDio.get(
-        '/api/content-availability/check/project/proj-123',
+        '/api/v1/content-availability/check/project/proj-123',
         queryParameters: anyNamed('queryParameters'),
       )).thenAnswer((_) async => Response(
             data: responseData,
             statusCode: 200,
-            requestOptions: RequestOptions(path: '/api/content-availability/check/project/proj-123'),
+            requestOptions: RequestOptions(path: '/api/v1/content-availability/check/project/proj-123'),
           ));
 
       // Act
@@ -333,7 +333,7 @@ void main() {
       expect(result.contentCount, 5);
       expect(result.canGenerateSummary, true);
       verify(mockDio.get(
-        '/api/content-availability/check/project/proj-123',
+        '/api/v1/content-availability/check/project/proj-123',
         queryParameters: anyNamed('queryParameters'),
       )).called(1);
     });
@@ -362,7 +362,7 @@ void main() {
 
       // Assert
       final captured = verify(mockDio.get(
-        '/api/content-availability/check/project/proj-123',
+        '/api/v1/content-availability/check/project/proj-123',
         queryParameters: captureAnyNamed('queryParameters'),
       )).captured.single as Map<String, dynamic>;
 
@@ -379,11 +379,11 @@ void main() {
         'formats_generated': ['markdown', 'pdf'],
       };
 
-      when(mockDio.get('/api/content-availability/stats/portfolio/port-456'))
+      when(mockDio.get('/api/v1/content-availability/stats/portfolio/port-456'))
           .thenAnswer((_) async => Response(
                 data: responseData,
                 statusCode: 200,
-                requestOptions: RequestOptions(path: '/api/content-availability/stats/portfolio/port-456'),
+                requestOptions: RequestOptions(path: '/api/v1/content-availability/stats/portfolio/port-456'),
               ));
 
       // Act
@@ -395,7 +395,7 @@ void main() {
       // Assert
       expect(result.totalSummaries, 10);
       expect(result.averageGenerationTime, 45.0);
-      verify(mockDio.get('/api/content-availability/stats/portfolio/port-456')).called(1);
+      verify(mockDio.get('/api/v1/content-availability/stats/portfolio/port-456')).called(1);
     });
 
     test('batchCheckAvailability makes POST request with entities list', () async {
@@ -406,7 +406,7 @@ void main() {
       ];
 
       when(mockDio.post(
-        '/api/content-availability/batch-check',
+        '/api/v1/content-availability/batch-check',
         data: anyNamed('data'),
       )).thenAnswer((_) async => Response(
             data: {
@@ -414,7 +414,7 @@ void main() {
               'proj-2': {'has_content': false, 'content_count': 0, 'can_generate_summary': false, 'message': 'No content'},
             },
             statusCode: 200,
-            requestOptions: RequestOptions(path: '/api/content-availability/batch-check'),
+            requestOptions: RequestOptions(path: '/api/v1/content-availability/batch-check'),
           ));
 
       // Act
@@ -426,7 +426,7 @@ void main() {
       expect(result['proj-2']?.hasContent, false);
 
       final captured = verify(mockDio.post(
-        '/api/content-availability/batch-check',
+        '/api/v1/content-availability/batch-check',
         data: captureAnyNamed('data'),
       )).captured.single as Map<String, dynamic>;
 
