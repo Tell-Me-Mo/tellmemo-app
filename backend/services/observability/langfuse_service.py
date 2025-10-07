@@ -84,21 +84,31 @@ class LangfuseService:
         """Initialize Langfuse service."""
         if not hasattr(self, 'initialized'):
             self.initialized = False
+            self._is_enabled = False
             self._initialize_client()
     
     def _initialize_client(self):
         """Initialize Langfuse client with configuration."""
         try:
+            # Check if we're in testing mode
+            if os.getenv("TESTING") == "1":
+                logger.info("Langfuse is disabled in testing mode - using no-op client")
+                self._client = NoOpClient()
+                self._is_enabled = False
+                return
+
             # Check if Langfuse is enabled
             if not settings.LANGFUSE_ENABLED:
                 logger.info("Langfuse is disabled via LANGFUSE_ENABLED=false - using no-op client")
                 self._client = NoOpClient()
+                self._is_enabled = False
                 return
 
             # Check if Langfuse is configured
             if not settings.LANGFUSE_PUBLIC_KEY or not settings.LANGFUSE_SECRET_KEY:
                 logger.warning("Langfuse keys not configured - using no-op client")
                 self._client = NoOpClient()
+                self._is_enabled = False
                 return
 
             # Set OpenTelemetry timeout environment variables before initializing client
@@ -118,11 +128,13 @@ class LangfuseService:
             )
 
             self.initialized = True
+            self._is_enabled = True
             logger.info(f"Langfuse client initialized - host: {settings.LANGFUSE_HOST}")
 
         except Exception as e:
             logger.error(f"Failed to initialize Langfuse client: {e} - using no-op client")
             self._client = NoOpClient()
+            self._is_enabled = False
     
     @property
     def client(self) -> Optional[Langfuse]:
@@ -132,7 +144,7 @@ class LangfuseService:
     @property
     def is_enabled(self) -> bool:
         """Check if Langfuse is enabled and configured."""
-        return self._client is not None
+        return self._is_enabled
     
     def create_trace(
         self,

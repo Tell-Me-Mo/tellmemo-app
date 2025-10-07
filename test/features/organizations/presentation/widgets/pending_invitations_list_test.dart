@@ -304,12 +304,6 @@ void main() {
       expect(find.byIcon(Icons.access_time), findsOneWidget);
     });
 
-    // Skip: Clipboard functionality requires TestDefaultBinaryMessengerBinding setup
-    // Production code works correctly - this is a test infrastructure limitation
-    testWidgets('copies email when copy menu item is tapped', (WidgetTester tester) async {
-      // This test is skipped due to clipboard test infrastructure limitations
-    }, skip: true);
-
     testWidgets('shows inviter name when available', (WidgetTester tester) async {
       // Arrange
       final pendingInvitation = OrganizationTestFixtures.samplePendingInvitation;

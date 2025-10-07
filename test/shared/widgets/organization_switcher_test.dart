@@ -7,13 +7,6 @@ import '../../mocks/mock_providers.dart';
 
 void main() {
   group('OrganizationSwitcher Widget Tests', () {
-    // Skip: Nested AsyncValue loading states in widget tree make this test unreliable
-    // Production code works correctly - this is a test infrastructure limitation
-    testWidgets('shows loading indicator when organization is loading',
-        (WidgetTester tester) async {
-      // This test is skipped due to nested AsyncValue test infrastructure limitations
-    }, skip: true);
-
     testWidgets('shows error indicator when organization fails to load',
         (WidgetTester tester) async {
       // Arrange

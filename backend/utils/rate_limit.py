@@ -4,17 +4,33 @@ Rate limiting utilities for API endpoints
 Provides rate limiting decorators and utilities using slowapi.
 """
 
+import os
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-# Create limiter instance
-# This will be attached to the FastAPI app in main.py
-limiter = Limiter(
-    key_func=get_remote_address,
-    default_limits=["100/minute"],  # General API endpoints
-    storage_uri="memory://",
-    strategy="fixed-window"
-)
+
+class NoOpLimiter:
+    """No-op limiter for testing environments."""
+
+    def limit(self, *args, **kwargs):
+        """Return a no-op decorator."""
+        def decorator(func):
+            return func
+        return decorator
+
+
+# Create limiter instance based on environment
+# In testing mode, use a no-op limiter to avoid issues with httpx.AsyncClient
+if os.getenv("TESTING") == "1":
+    limiter = NoOpLimiter()
+else:
+    # This will be attached to the FastAPI app in main.py
+    limiter = Limiter(
+        key_func=get_remote_address,
+        default_limits=["100/minute"],  # General API endpoints
+        storage_uri="memory://",
+        strategy="fixed-window"
+    )
 
 # Rate limit decorators for different endpoint types
 # These can be imported and used with @limiter.limit()
