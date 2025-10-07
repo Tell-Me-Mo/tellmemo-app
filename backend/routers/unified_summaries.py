@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_
 import uuid
 
-from utils.logger import get_logger
+from utils.logger import get_logger, sanitize_for_log
 from db.database import get_db
 from services.summaries.summary_service_refactored import summary_service
 from models.summary import Summary, SummaryType
@@ -119,7 +119,7 @@ async def generate_summary(
     **Response:**
     Returns either the generated summary or job information if `use_job=true`.
     """
-    logger.info(f"Generating {request.summary_type} summary for {request.entity_type} {request.entity_id}")
+    logger.info(f"Generating {sanitize_for_log(request.summary_type)} summary for {sanitize_for_log(request.entity_type)} {request.entity_id}")
 
     try:
         # Validate and convert entity_id to UUID
@@ -327,7 +327,7 @@ async def get_summary(
     current_org: Organization = Depends(get_current_organization)
 ):
     """Get any summary by ID, regardless of entity type."""
-    logger.info(f"Fetching summary {summary_id}")
+    logger.info(f"Fetching summary {sanitize_for_log(summary_id)}")
 
     try:
         summary_uuid = uuid.UUID(summary_id)
@@ -425,7 +425,7 @@ async def list_summaries(
     List summaries with flexible filtering.
     Can filter by entity type, entity ID, summary type, format, and date range.
     """
-    logger.info(f"Listing summaries with filters: {filters}")
+    logger.info(f"Listing summaries with filters: {sanitize_for_log(filters)}")
 
     try:
         # Build query
@@ -451,7 +451,7 @@ async def list_summaries(
                 type_enum = SummaryType(filters.summary_type.lower())
                 conditions.append(Summary.summary_type == type_enum)
             except ValueError:
-                logger.warning(f"Invalid summary type filter: {filters.summary_type}")
+                logger.warning(f"Invalid summary type filter: {sanitize_for_log(filters.summary_type)}")
 
         if filters.format:
             conditions.append(Summary.format == filters.format)
@@ -537,7 +537,7 @@ async def delete_summary(
     current_org: Organization = Depends(get_current_organization)
 ):
     """Delete a summary by ID."""
-    logger.info(f"Deleting summary {summary_id}")
+    logger.info(f"Deleting summary {sanitize_for_log(summary_id)}")
 
     try:
         summary_uuid = uuid.UUID(summary_id)
@@ -704,7 +704,7 @@ async def update_summary(
 
     Only the provided fields will be updated, others remain unchanged.
     """
-    logger.info(f"Updating summary {summary_id}")
+    logger.info(f"Updating summary {sanitize_for_log(summary_id)}")
 
     try:
         # Validate and convert summary_id to UUID
@@ -824,6 +824,6 @@ async def update_summary(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to update summary {summary_id}: {e}")
+        logger.error(f"Failed to update summary {sanitize_for_log(summary_id)}: {e}")
         await session.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to update summary: {str(e)}")

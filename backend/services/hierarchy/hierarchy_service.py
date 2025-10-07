@@ -12,7 +12,7 @@ from models.project import Project, ProjectStatus
 from services.hierarchy.portfolio_service import PortfolioService
 from services.hierarchy.program_service import ProgramService
 from services.hierarchy.project_service import ProjectService
-from utils.logger import get_logger
+from utils.logger import get_logger, sanitize_for_log
 from utils.monitoring import monitor_operation, monitor_sync_operation, MonitoringContext
 
 logger = get_logger(__name__)
@@ -454,7 +454,7 @@ class HierarchyService:
                     'item_type': item['type'],
                     'error': str(e)
                 })
-                logger.error(f"Failed to move item {item['id']} ({item['type']}): {e}")
+                logger.error(f"Failed to move item {sanitize_for_log(item['id'])} ({sanitize_for_log(item['type'])}): {e}")
         
         return results
     

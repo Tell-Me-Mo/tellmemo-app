@@ -14,7 +14,7 @@ from utils.logger import (
     get_correlation_id,
     log_execution_time,
     LogComponent
-)
+, sanitize_for_log)
 from utils.exceptions import (
     LLMOverloadedException,
     LLMRateLimitException,
@@ -469,7 +469,7 @@ class SummaryService:
                         )
                 
                 if not summaries:
-                    logger.warning(f"No meeting summaries found for project {project_id} for period starting {week_start}")
+                    logger.warning(f"No meeting summaries found for project {sanitize_for_log(project_id)} for period starting {sanitize_for_log(week_start)}")
                     raise ValueError(
                         f"No meeting summaries available for project '{project.name}' in the specified date range. "
                         f"Please upload meeting content and generate meeting summaries first."
@@ -614,7 +614,7 @@ class SummaryService:
             # Flush Langfuse events
             langfuse_service.flush()
             
-            logger.info(f"Project summary generated for period {week_start} in {total_time:.2f}s")
+            logger.info(f"Project summary generated for period {sanitize_for_log(week_start)} in {total_time:.2f}s")
             
             return {
                 "id": str(summary.id),
@@ -773,7 +773,7 @@ class SummaryService:
             # Check if we have any summaries to work with
             if not all_summaries:
                 logger.warning(f"No summaries found for program {program_id} in the specified date range")
-                logger.warning(f"Searched in {len(projects)} projects with date range {week_start} to {week_end}")
+                logger.warning(f"Searched in {sanitize_for_log(len(projects))} projects with date range {sanitize_for_log(week_start)} to {sanitize_for_log(week_end)}")
                 raise ValueError(
                     f"No project summaries (MEETING or PROJECT) available for program '{program.name}' "
                     f"in the specified date range ({week_start.strftime('%Y-%m-%d')} to "
@@ -1032,7 +1032,7 @@ class SummaryService:
             # Check if we have any summaries to work with
             if not all_summaries:
                 logger.warning(f"No summaries found for portfolio {portfolio_id} in the specified date range")
-                logger.warning(f"Searched in {len(all_projects)} projects with date range {week_start} to {week_end}")
+                logger.warning(f"Searched in {sanitize_for_log(len(all_projects))} projects with date range {sanitize_for_log(week_start)} to {sanitize_for_log(week_end)}")
                 raise ValueError(
                     f"No project summaries (MEETING or PROJECT) available for portfolio '{portfolio.name}' "
                     f"in the specified date range ({week_start.strftime('%Y-%m-%d')} to "

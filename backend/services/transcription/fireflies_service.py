@@ -6,12 +6,8 @@ import httpx
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 import re
-import warnings
 
 from utils.monitoring import monitor_operation, monitor_sync_operation
-
-# Suppress SSL warnings for development
-warnings.filterwarnings('ignore')
 
 logger = logging.getLogger(__name__)
 
@@ -77,17 +73,17 @@ class FirefliesService:
         variables = {
             "transcriptId": meeting_id
         }
-        
+
         try:
-            # Disable SSL verification for development (bypass certificate issues)
-            async with httpx.AsyncClient(verify=False) as client:
+            # Use proper SSL verification
+            async with httpx.AsyncClient(verify=True) as client:
                 # Log the request for debugging
                 request_body = {
                     "query": query,
                     "variables": variables
                 }
                 logger.info(f"Sending Fireflies API request for meeting {meeting_id}")
-                logger.debug(f"Request headers: {self.headers}")
+                # Don't log sensitive headers containing API keys
                 logger.debug(f"Request body: {request_body}")
                 
                 response = await client.post(
@@ -157,7 +153,8 @@ class FirefliesService:
             return ""
         
         try:
-            async with httpx.AsyncClient(verify=False) as client:
+            # Use proper SSL verification
+            async with httpx.AsyncClient(verify=True) as client:
                 response = await client.get(
                     transcript_url,
                     headers={"Authorization": f"Bearer {self.api_key}"},
@@ -365,8 +362,8 @@ class FirefliesService:
         """
         
         try:
-            # Disable SSL verification for development (bypass certificate issues)
-            async with httpx.AsyncClient(verify=False) as client:
+            # Use proper SSL verification
+            async with httpx.AsyncClient(verify=True) as client:
                 response = await client.post(
                     self.BASE_URL,
                     json={"query": query},

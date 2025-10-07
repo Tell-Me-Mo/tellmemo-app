@@ -43,7 +43,7 @@ class ProjectService:
             existing_project = existing_result.scalar_one_or_none()
             
             if existing_project:
-                logger.warning(f"Project with name '{name}' already exists")
+                logger.warning(f"Project with name '{sanitize_for_log(name)}' already exists")
                 raise ValueError(f"A project with the name '{name}' already exists")
             
             # Create the project
@@ -177,7 +177,7 @@ class ProjectService:
                 existing_project = existing_result.scalar_one_or_none()
 
                 if existing_project:
-                    logger.warning(f"Cannot rename project to '{name}' - name already exists")
+                    logger.warning(f"Cannot rename project to '{sanitize_for_log(name)}' - name already exists")
                     raise ValueError(f"A project with the name '{name}' already exists")
 
             # Update project fields
@@ -426,7 +426,7 @@ class ProjectService:
             )
             existing = await session.execute(stmt)
             if existing.scalar_one_or_none():
-                logger.warning(f"Member {email} already exists in project {project_id}")
+                logger.warning(f"Member {sanitize_for_log(email)} already exists in project {sanitize_for_log(project_id)}")
                 return None
             
             # Add new member
@@ -439,7 +439,7 @@ class ProjectService:
             session.add(member)
             await session.flush()
             
-            logger.info(f"Added member {email} to project {project_id}")
+            logger.info(f"Added member {sanitize_for_log(email)} to project {sanitize_for_log(project_id)}")
             return member
             
         except Exception as e:

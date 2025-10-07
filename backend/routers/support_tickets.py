@@ -652,13 +652,28 @@ async def upload_attachment(
                 raise HTTPException(status_code=404, detail="Comment not found")
 
         # Create upload directory if it doesn't exist
-        upload_dir = Path("uploads") / "support_tickets" / str(organization.id) / str(ticket_id)
+        # Validate base directory exists and is safe
+        base_upload_dir = Path("uploads").resolve()
+        upload_dir = (base_upload_dir / "support_tickets" / str(organization.id) / str(ticket_id)).resolve()
+
+        # Ensure the resolved path is within the base upload directory (prevent path traversal)
+        if not str(upload_dir).startswith(str(base_upload_dir)):
+            raise HTTPException(status_code=400, detail="Invalid upload path")
+
         upload_dir.mkdir(parents=True, exist_ok=True)
 
-        # Generate unique filename
+        # Generate unique filename - sanitize the extension to prevent directory traversal
         file_extension = Path(file.filename).suffix
+        # Only allow alphanumeric and common file extensions
+        if not file_extension or not file_extension.replace('.', '').isalnum():
+            file_extension = '.bin'  # Default extension for unknown types
+
         unique_filename = f"{uuid.uuid4()}{file_extension}"
-        file_path = upload_dir / unique_filename
+        file_path = (upload_dir / unique_filename).resolve()
+
+        # Final validation: ensure file_path is within upload_dir
+        if not str(file_path).startswith(str(upload_dir)):
+            raise HTTPException(status_code=400, detail="Invalid file path")
 
         # Save file
         async with aiofiles.open(file_path, 'wb') as f:
@@ -739,8 +754,15 @@ async def download_attachment(
         if attachment.ticket.organization_id != organization.id:
             raise HTTPException(status_code=403, detail="Access denied")
 
-        # Return file
-        file_path = Path(attachment.file_url)
+        # Return file with path validation
+        base_upload_dir = Path("uploads").resolve()
+        file_path = Path(attachment.file_url).resolve()
+
+        # Ensure the file path is within the base upload directory (prevent path traversal)
+        if not str(file_path).startswith(str(base_upload_dir)):
+            logger.error(f"Path traversal attempt detected: {attachment.file_url}")
+            raise HTTPException(status_code=403, detail="Access denied")
+
         if not file_path.exists():
             raise HTTPException(status_code=404, detail="File not found on disk")
 

@@ -10,7 +10,7 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from services.core.upload_job_service import upload_job_service, JobStatus, JobType, UploadJob
-from utils.logger import get_logger
+from utils.logger import get_logger, sanitize_for_log
 from dependencies.auth import get_current_user, get_current_organization
 from models.user import User
 from models.organization import Organization
@@ -229,7 +229,7 @@ async def stream_job_progress(
             while True:
                 # Check if client disconnected
                 if await request.is_disconnected():
-                    logger.info(f"Client disconnected from job stream {job_id}")
+                    logger.info(f"Client disconnected from job stream {sanitize_for_log(job_id)}")
                     break
                 
                 # Check timeout
@@ -268,13 +268,13 @@ async def stream_job_progress(
                 
                 # Wait a bit before next check
                 await asyncio.sleep(0.5)
-                
+
         except asyncio.CancelledError:
-            logger.info(f"Job stream cancelled for {job_id}")
+            logger.info(f"Job stream cancelled for {sanitize_for_log(job_id)}")
             yield f"event: cancelled\ndata: {json.dumps({'message': 'Stream cancelled'})}\n\n"
         except Exception as e:
-            logger.error(f"Error in job stream for {job_id}: {e}")
-            yield f"event: error\ndata: {json.dumps({'message': str(e)})}\n\n"
+            logger.error(f"Error in job stream for {sanitize_for_log(job_id)}: {e}", exc_info=True)
+            yield f"event: error\ndata: {json.dumps({'message': 'Internal error occurred'})}\n\n"
     
     return StreamingResponse(
         event_generator(),
@@ -390,7 +390,7 @@ async def stream_project_jobs(
             while True:
                 # Check if client disconnected
                 if await request.is_disconnected():
-                    logger.info(f"Client disconnected from project job stream {project_id}")
+                    logger.info(f"Client disconnected from project job stream {sanitize_for_log(project_id)}")
                     break
                 
                 # Check timeout
@@ -425,11 +425,11 @@ async def stream_project_jobs(
                 await asyncio.sleep(1)
                 
         except asyncio.CancelledError:
-            logger.info(f"Project job stream cancelled for {project_id}")
+            logger.info(f"Project job stream cancelled for {sanitize_for_log(project_id)}")
             yield f"event: cancelled\ndata: {json.dumps({'message': 'Stream cancelled'})}\n\n"
         except Exception as e:
-            logger.error(f"Error in project job stream for {project_id}: {e}")
-            yield f"event: error\ndata: {json.dumps({'message': str(e)})}\n\n"
+            logger.error(f"Error in project job stream for {sanitize_for_log(project_id)}: {e}", exc_info=True)
+            yield f"event: error\ndata: {json.dumps({'message': 'Internal error occurred'})}\n\n"
     
     return StreamingResponse(
         event_generator(),

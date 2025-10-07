@@ -28,7 +28,7 @@ from qdrant_client.models import (
 from qdrant_client.http.exceptions import ResponseHandlingException, UnexpectedResponse
 
 from config import get_settings
-from utils.logger import get_logger
+from utils.logger import get_logger, sanitize_for_log
 from utils.monitoring import monitor_operation, MonitoringContext
 
 settings = get_settings()
@@ -267,7 +267,7 @@ class MultiTenantVectorStore:
             try:
                 # Check if collection exists
                 if await self._collection_exists(collection_name):
-                    logger.info(f"Deleting collection: {collection_name}")
+                    logger.info(f"Deleting collection: {sanitize_for_log(collection_name)}")
 
                     # Delete collection
                     await asyncio.get_event_loop().run_in_executor(
@@ -279,12 +279,12 @@ class MultiTenantVectorStore:
                     # Remove from cache
                     self._collection_cache.pop(collection_name, None)
 
-                    logger.info(f"Collection '{collection_name}' deleted successfully")
+                    logger.info(f"Collection '{sanitize_for_log(collection_name)}' deleted successfully")
                 else:
-                    logger.debug(f"Collection '{collection_name}' does not exist, skipping deletion")
+                    logger.debug(f"Collection '{sanitize_for_log(collection_name)}' does not exist, skipping deletion")
 
             except Exception as e:
-                logger.error(f"Failed to delete collection '{collection_name}': {e}")
+                logger.error(f"Failed to delete collection '{sanitize_for_log(collection_name)}': {e}")
                 # Continue with other collections even if one fails
 
     async def list_organization_collections(self, organization_id: Optional[str] = None) -> List[Dict[str, Any]]:

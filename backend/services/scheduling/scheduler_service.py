@@ -277,8 +277,12 @@ class SchedulerService:
                 job_id='weekly_reports',
                 trigger=trigger
             )
+            # Sanitize all user inputs before logging
+            safe_day = sanitize_for_log(day_of_week).upper()
+            safe_hour = sanitize_for_log(hour)
+            safe_minute = sanitize_for_log(minute)
             logger.info(
-                f"Rescheduled weekly reports to {sanitize_for_log(day_of_week.upper())} at {hour:02d}:{minute:02d} UTC"
+                f"Rescheduled weekly reports to {safe_day} at {safe_hour}:{safe_minute} UTC"
             )
         else:
             # Add new job
@@ -289,8 +293,12 @@ class SchedulerService:
                 name='Generate Weekly Reports',
                 replace_existing=True
             )
+            # Sanitize all user inputs before logging
+            safe_day = sanitize_for_log(day_of_week).upper()
+            safe_hour = sanitize_for_log(hour)
+            safe_minute = sanitize_for_log(minute)
             logger.info(
-                f"Created weekly reports job scheduled for {sanitize_for_log(day_of_week.upper())} at {hour:02d}:{minute:02d} UTC"
+                f"Created weekly reports job scheduled for {safe_day} at {safe_hour}:{safe_minute} UTC"
             )
 
         # Get the next run time

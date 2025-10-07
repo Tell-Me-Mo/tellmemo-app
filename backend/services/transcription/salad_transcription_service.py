@@ -6,6 +6,7 @@ Uses Salad's transcription endpoint for fast, scalable transcription.
 import os
 import asyncio
 import logging
+from utils.logger import sanitize_for_log
 import aiohttp
 import json
 import base64
@@ -44,7 +45,7 @@ class SaladTranscriptionService:
             "Accept": "application/json"
         }
 
-        logger.info(f"Initialized Salad transcription service for organization: {organization_name}")
+        logger.info(f"Initialized Salad transcription service for organization: {sanitize_for_log(organization_name)}")
 
     async def test_connection(self) -> Dict[str, Any]:
         """
@@ -54,13 +55,30 @@ class SaladTranscriptionService:
             Dict with success status and message
         """
         try:
+            # Validate base_url to prevent SSRF attacks
+            from urllib.parse import urlparse
+            parsed_url = urlparse(self.base_url)
+
+            # Only allow HTTPS connections to salad.com domain
+            if parsed_url.scheme != 'https':
+                return {
+                    "success": False,
+                    "error": "Only HTTPS connections are allowed"
+                }
+
+            # Validate hostname to prevent SSRF
+            if not parsed_url.hostname or not parsed_url.hostname.endswith('.salad.com'):
+                if parsed_url.hostname != 'api.salad.com':
+                    return {
+                        "success": False,
+                        "error": "Invalid API endpoint. Must be a salad.com domain."
+                    }
+
             # Try to list container groups to verify API key and organization
             test_url = f"{self.base_url}/organizations/{self.organization_name}/container-groups"
 
-            ssl_context = ssl.create_default_context()
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
-
+            # Use proper SSL verification instead of disabling it
+            ssl_context = ssl.create_default_context(cafile=certifi.where())
             connector = aiohttp.TCPConnector(ssl=ssl_context)
             async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.get(
@@ -135,11 +153,8 @@ class SaladTranscriptionService:
 
             logger.info(f"Uploading file to S4: {s4_path}")
 
-            # Create SSL context without verification (for development)
-            ssl_context = ssl.create_default_context()
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
-
+            # Use proper SSL verification
+            ssl_context = ssl.create_default_context(cafile=certifi.where())
             connector = aiohttp.TCPConnector(ssl=ssl_context)
             async with aiohttp.ClientSession(connector=connector) as session:
                 # Read file
@@ -276,16 +291,10 @@ class SaladTranscriptionService:
             # Note: The endpoint name might need to be different based on your Salad configuration
             # Common endpoint names: "transcribe", "whisper", "speech-to-text"
             endpoint_url = f"{self.base_url}/organizations/{self.organization_name}/inference-endpoints/transcribe/jobs"
-            logger.info(f"Submitting transcription job to: {endpoint_url}")
+            logger.info(f"Submitting transcription job to endpoint")
 
-            # Create SSL context that doesn't verify certificates (for development)
-            ssl_context = ssl.create_default_context()
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
-
-            # Alternative: Use certifi for proper verification (commented out)
-            # ssl_context = ssl.create_default_context(cafile=certifi.where())
-
+            # Use proper SSL verification
+            ssl_context = ssl.create_default_context(cafile=certifi.where())
             connector = aiohttp.TCPConnector(ssl=ssl_context)
             async with aiohttp.ClientSession(connector=connector) as session:
                 # Submit transcription job
@@ -303,8 +312,8 @@ class SaladTranscriptionService:
                         logger.error(f"Salad API access denied: {response.status}")
                         raise Exception("Access denied: Your API key doesn't have permission to access this endpoint.")
                     elif response.status == 404:
-                        logger.error(f"Salad API endpoint not found: {endpoint_url}")
-                        raise Exception(f"Salad API endpoint not found. Please check your organization name: {self.organization_name}")
+                        logger.error(f"Salad API endpoint not found")
+                        raise Exception(f"Salad API endpoint not found. Please check your organization configuration.")
                     elif response.status != 201 and response.status != 200:
                         error_text = await response.text()
                         logger.error(f"Salad API error: {response.status} - {error_text}")
@@ -528,11 +537,8 @@ class SaladTranscriptionService:
             # Check organization access
             org_url = f"{self.base_url}/organizations/{self.organization_name}"
 
-            # Create SSL context without verification (for development)
-            ssl_context = ssl.create_default_context()
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
-
+            # Use proper SSL verification
+            ssl_context = ssl.create_default_context(cafile=certifi.where())
             connector = aiohttp.TCPConnector(ssl=ssl_context)
             async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.get(

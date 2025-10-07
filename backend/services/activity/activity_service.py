@@ -51,7 +51,7 @@ class ActivityService:
             await db.commit()
             await db.refresh(activity)
             
-            logger.info(f"Created activity: {activity_type.value} for project {project_id}")
+            logger.info(f"Created activity: {sanitize_for_log(activity_type.value)} for project {sanitize_for_log(project_id)}")
             return activity
             
         except Exception as e:
@@ -325,7 +325,7 @@ class ActivityService:
                 await db.delete(activity)
 
             await db.commit()
-            logger.info(f"Deleted {count} activities for project {project_id}")
+            logger.info(f"Deleted {sanitize_for_log(count)} activities for project {sanitize_for_log(project_id)}")
 
             return count
 

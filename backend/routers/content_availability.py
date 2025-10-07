@@ -11,7 +11,7 @@ from db.database import get_db
 from dependencies.auth import get_current_organization
 from models.organization import Organization
 from services.core.content_availability_service import content_availability_service
-from utils.logger import get_logger
+from utils.logger import get_logger, sanitize_for_log
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -53,7 +53,7 @@ async def check_content_availability(
     current_org: Organization = Depends(get_current_organization)
 ):
     """Check content availability for a given entity (project, program, or portfolio)."""
-    logger.info(f"Checking content availability for {entity_type} {entity_id}")
+    logger.info(f"Checking content availability for {sanitize_for_log(entity_type)} {sanitize_for_log(entity_id)}")
 
     try:
         # Validate entity type
@@ -70,6 +70,7 @@ async def check_content_availability(
             raise HTTPException(status_code=400, detail="Invalid entity ID format")
 
         # Check availability based on entity type
+        result = None
         if entity_type == "project":
             result = await content_availability_service.check_project_content(
                 session, entity_uuid, current_org.id, date_start, date_end
@@ -82,6 +83,9 @@ async def check_content_availability(
             result = await content_availability_service.check_portfolio_content(
                 session, entity_uuid, current_org.id, date_start, date_end
             )
+
+        if result is None:
+            raise HTTPException(status_code=500, detail="Failed to check content availability")
 
         return ContentAvailabilityResponse(**result)
 
@@ -100,7 +104,7 @@ async def get_summary_statistics(
     current_org: Organization = Depends(get_current_organization)
 ):
     """Get summary generation statistics for a given entity."""
-    logger.info(f"Getting summary statistics for {entity_type} {entity_id}")
+    logger.info(f"Getting summary statistics for {sanitize_for_log(entity_type)} {sanitize_for_log(entity_id)}")
 
     try:
         # Validate entity type
@@ -171,7 +175,7 @@ async def batch_check_availability(
             results[entity_id] = result
 
         except Exception as e:
-            logger.error(f"Error checking availability for {entity_type} {entity_id}: {e}")
+            logger.error(f"Error checking availability for {sanitize_for_log(entity_type)} {sanitize_for_log(entity_id)}: {e}")
             results[entity_id] = {
                 "has_content": False,
                 "error": str(e)

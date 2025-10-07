@@ -516,11 +516,11 @@ async def check_transcription_health():
             "service": "transcription"
         })
     except Exception as e:
-        logger.error(f"Health check failed: {e}")
+        logger.error(f"Health check failed: {e}", exc_info=True)
         return JSONResponse(
             status_code=503,
             content={
                 "status": "unhealthy",
-                "error": str(e)
+                "error": "Service health check failed"
             }
         )

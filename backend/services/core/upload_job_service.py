@@ -152,7 +152,7 @@ class UploadJobService:
         )
         
         self.jobs[job_id] = job
-        logger.info(f"Created upload job {job_id} for project {project_id} (type: {job_type.value})")
+        logger.info(f"Created upload job {sanitize_for_log(job_id)} for project {sanitize_for_log(project_id)} (type: {sanitize_for_log(job_type.value)})")
         
         # Clean up old jobs after 1 hour
         self.scheduler.add_job(

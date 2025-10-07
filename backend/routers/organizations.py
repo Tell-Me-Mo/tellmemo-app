@@ -23,7 +23,7 @@ from models.organization import Organization
 from models.organization_member import OrganizationMember, OrganizationRole
 from models.user import User
 from services.integrations.email_service import email_service
-from utils.logger import get_logger
+from utils.logger import get_logger, sanitize_for_log
 
 logger = get_logger(__name__)
 
@@ -589,12 +589,12 @@ async def delete_organization(
         from db.multi_tenant_vector_store import multi_tenant_vector_store
         try:
             await multi_tenant_vector_store.delete_organization_collections(str(organization_id))
-            logger.info(f"Deleted Qdrant collections for organization {organization_id}")
+            logger.info(f"Deleted Qdrant collections for organization {sanitize_for_log(organization_id)}")
         except Exception as qdrant_error:
-            logger.error(f"Failed to delete Qdrant collections for organization {organization_id}: {qdrant_error}")
+            logger.error(f"Failed to delete Qdrant collections for organization {sanitize_for_log(organization_id)}: {qdrant_error}")
             # Continue even if Qdrant cleanup fails
 
-        logger.info(f"Organization {organization_id} deleted by user {current_user.id}")
+        logger.info(f"Organization {sanitize_for_log(organization_id)} deleted by user {sanitize_for_log(current_user.id)}")
 
     except HTTPException:
         raise
@@ -853,7 +853,7 @@ async def invite_member(
         )
 
         if not email_sent:
-            logger.warning(f"Failed to send invitation email to {invitation.email}")
+            logger.warning(f"Failed to send invitation email to {sanitize_for_log(invitation.email)}")
             # Don't fail the request, invitation is still created
 
         # Return invitation details

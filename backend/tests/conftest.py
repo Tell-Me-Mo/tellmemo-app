@@ -36,6 +36,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 from sqlalchemy.pool import NullPool
 from httpx import AsyncClient, ASGITransport
 from datetime import datetime
+from unittest.mock import Mock, AsyncMock, patch
 
 from db.database import Base, get_db
 from main import app
@@ -544,3 +545,26 @@ async def test_org_2(db_session: AsyncSession, test_user_2: User) -> Organizatio
     await db_session.refresh(test_user_2)
 
     return org
+
+
+@pytest.fixture(scope="function", autouse=True)
+def mock_llm_client():
+    """
+    Mock the LLM client to prevent real API calls during tests.
+
+    This fixture automatically mocks the MultiProviderLLMClient for all tests,
+    preventing accidental calls to Anthropic or OpenAI APIs.
+    """
+    # Create mock response that mimics Claude API response structure
+    mock_response = Mock()
+    mock_response.content = [Mock(text='{"subject": "Test Meeting Summary", "body": "This is a test summary generated for testing purposes.", "key_points": ["Point 1", "Point 2", "Point 3"], "action_items": [{"title": "Action 1", "assignee": "Test User", "due_date": "2025-10-14"}], "decisions": [{"title": "Decision 1", "description": "Test decision"}], "risks": [], "blockers": [], "lessons_learned": []}')]
+    mock_response.usage = Mock(input_tokens=100, output_tokens=200)
+
+    # Create mock LLM client
+    mock_client = Mock()
+    mock_client.is_available.return_value = True
+    mock_client.create_message = AsyncMock(return_value=mock_response)
+
+    # Patch the get_multi_llm_client function to return our mock
+    with patch('services.summaries.summary_service_refactored.get_multi_llm_client', return_value=mock_client):
+        yield mock_client
