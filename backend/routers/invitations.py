@@ -7,6 +7,7 @@ This module handles invitation acceptance flow which doesn't require organizatio
 import logging
 from datetime import datetime
 from typing import Optional
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -37,7 +38,7 @@ class AcceptInvitationRequest(BaseModel):
 
 class AcceptInvitationResponse(BaseModel):
     """Response model for successful invitation acceptance."""
-    organization_id: int
+    organization_id: UUID
     organization_name: str
     role: str
     message: str

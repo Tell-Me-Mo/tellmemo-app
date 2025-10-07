@@ -206,11 +206,22 @@ void main() {
       // Add both read and unread notifications (persistent to avoid timer issues)
       final id1 = service.show(title: 'Unread Notification', showInCenter: true, showAsToast: false, persistent: true);
       final id2 = service.show(title: 'Read Notification', showInCenter: true, showAsToast: false, persistent: true);
-      await tester.pumpAndSettle();
+      await tester.pump(); // Initial pump to start processing queue
+      await tester.pump(); // Second pump to complete queue processing
+      await tester.pump(); // Final pump to update UI
+
+      // Debug: Verify both notifications are in the active list
+      expect(service.state.active.length, 2, reason: 'Should have 2 active notifications');
+      expect(service.state.persistentNotifications.length, 2, reason: 'Should have 2 persistent notifications');
 
       // Mark one as read
       service.markAsRead(id2);
-      await tester.pumpAndSettle();
+      await tester.pump(); // Pump to update UI after marking as read
+
+      // Debug: Verify both notifications are still in the active list after marking as read
+      expect(service.state.active.length, 2, reason: 'Should still have 2 active notifications after marking as read');
+      expect(service.state.persistentNotifications.length, 2, reason: 'Should still have 2 persistent notifications after marking as read');
+      expect(service.state.unreadCount, 1, reason: 'Should have 1 unread notification');
 
       // Should show both initially (using findsWidgets since text may appear multiple times in widget tree)
       expect(find.text('Unread Notification'), findsWidgets);
@@ -218,7 +229,7 @@ void main() {
 
       // Tap "Unread" filter - find by icon since text appears multiple times
       await tester.tap(find.byIcon(Icons.markunread));
-      await tester.pumpAndSettle();
+      await tester.pump();
 
       // Should only show unread (using findsWidgets since text may appear multiple times in widget tree)
       expect(find.text('Unread Notification'), findsWidgets);
