@@ -567,4 +567,7 @@ def mock_llm_client():
 
     # Patch the get_multi_llm_client function to return our mock
     with patch('services.summaries.summary_service_refactored.get_multi_llm_client', return_value=mock_client):
+        # Also patch the already-instantiated summary_service's llm_client
+        from services.summaries.summary_service_refactored import summary_service
+        summary_service.llm_client = mock_client
         yield mock_client

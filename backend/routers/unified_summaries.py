@@ -317,7 +317,7 @@ async def generate_summary(
         raise
     except Exception as e:
         logger.error(f"Failed to generate summary: {sanitize_for_log(str(e))}")
-        raise HTTPException(status_code=500, detail="Failed to generate summary")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/{summary_id}", response_model=UnifiedSummaryResponse)

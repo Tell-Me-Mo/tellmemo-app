@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:dio_retry_plus/dio_retry_plus.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
@@ -209,6 +210,88 @@ void main() {
 
       // Assert
       verify(mockErrorHandler.next(dioError)).called(1);
+    });
+  });
+
+  group('RetryInterceptor', () {
+    test('retries on connection timeout', () async {
+      // Arrange
+      final dio = Dio(BaseOptions(baseUrl: 'http://localhost:9999'));
+      int attemptCount = 0;
+
+      dio.interceptors.add(
+        RetryInterceptor(
+          dio: dio,
+          retries: 2,
+          retryDelays: const [Duration(milliseconds: 100), Duration(milliseconds: 100)],
+          toNoInternetPageNavigator: () async {},
+          logPrint: (message) {},
+        ),
+      );
+
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            attemptCount++;
+            handler.next(options);
+          },
+        ),
+      );
+
+      // Act & Assert
+      try {
+        await dio.get('/test', options: Options(
+          receiveTimeout: const Duration(milliseconds: 500),
+        ));
+        fail('Should have thrown DioException');
+      } catch (e) {
+        // Expect original request + 2 retries = 3 attempts
+        expect(attemptCount, greaterThanOrEqualTo(3));
+      }
+    });
+
+    test('does not retry on HTTP 401 error', () async {
+      // Arrange
+      final dio = Dio();
+      int attemptCount = 0;
+
+      dio.interceptors.add(
+        RetryInterceptor(
+          dio: dio,
+          retries: 2,
+          retryDelays: const [Duration(milliseconds: 100), Duration(milliseconds: 100)],
+          toNoInternetPageNavigator: () async {},
+          logPrint: (message) {},
+        ),
+      );
+
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            attemptCount++;
+            // Simulate 401 HTTP error response
+            handler.reject(
+              DioException(
+                requestOptions: options,
+                response: Response(
+                  statusCode: 401,
+                  requestOptions: options,
+                  data: {'detail': 'Unauthorized'},
+                ),
+              ),
+            );
+          },
+        ),
+      );
+
+      // Act & Assert
+      try {
+        await dio.get('/test');
+        fail('Should have thrown DioException');
+      } catch (e) {
+        // Should only attempt once (no retries for HTTP errors)
+        expect(attemptCount, equals(1));
+      }
     });
   });
 }
