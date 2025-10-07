@@ -10,11 +10,20 @@ import os
 # IMPORTANT: Set environment variables BEFORE any other imports
 # This ensures that services initialize with correct configuration
 os.environ["TESTING"] = "1"
+
+# SECURITY: Verify we're in test mode before setting test secrets
+if os.getenv("TESTING") != "1":
+    raise RuntimeError(
+        "SECURITY VIOLATION: Attempting to use hardcoded test secrets outside test environment. "
+        "TESTING environment variable must be set to '1'."
+    )
+
 os.environ["DATABASE_URL"] = os.getenv(
     "TEST_DATABASE_URL",
     "postgresql+asyncpg://pm_master:pm_master_pass@localhost:5432/pm_master_test"
 )
-# Set consistent JWT secret for tests
+
+# Set consistent JWT secret for tests (ONLY allowed when TESTING=1)
 os.environ["JWT_SECRET"] = "test_jwt_secret_key_for_testing_only_do_not_use_in_production"
 os.environ["AUTH_PROVIDER"] = "backend"  # Use backend auth for tests
 

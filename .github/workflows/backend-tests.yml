@@ -1,5 +1,8 @@
 name: Backend Tests
 
+permissions:
+  contents: read
+
 on:
   pull_request:
     branches: [main]
@@ -18,9 +21,9 @@ jobs:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: testpass
-          POSTGRES_DB: testdb
+          POSTGRES_USER: pm_master
+          POSTGRES_PASSWORD: pm_master_pass
+          POSTGRES_DB: pm_master_test
         ports:
           - 5432:5432
         options: >-
@@ -42,11 +45,10 @@ jobs:
         run: |
           cd backend
           pip install -r requirements.txt
-          pip install -r requirements-dev.txt
 
       - name: Run tests with coverage
         env:
-          DATABASE_URL: postgresql://postgres:testpass@localhost:5432/testdb
+          TEST_DATABASE_URL: postgresql+asyncpg://pm_master:pm_master_pass@localhost:5432/pm_master_test
           DISABLE_SCHEDULER: '1'
         run: |
           cd backend
@@ -63,9 +65,33 @@ jobs:
       - name: Check coverage threshold
         run: |
           cd backend
-          COVERAGE=$(python -c "import xml.etree.ElementTree as ET; tree = ET.parse('coverage.xml'); root = tree.getroot(); print(root.attrib['line-rate'])")
-          COVERAGE_PERCENT=$(python -c "print(float('$COVERAGE') * 100)")
-          echo "Coverage: ${COVERAGE_PERCENT}%"
-          if (( $(echo "$COVERAGE_PERCENT < 60" | bc -l) )); then
-            echo "::warning::Coverage ${COVERAGE_PERCENT}% is below target threshold of 60%"
+
+          # Check if coverage.xml exists
+          if [ ! -f coverage.xml ]; then
+            echo "::error::coverage.xml not found. Tests may have failed."
+            exit 1
           fi
+
+          # Parse coverage and check threshold using Python
+          python << 'EOF'
+          import xml.etree.ElementTree as ET
+          import sys
+
+          try:
+              tree = ET.parse('coverage.xml')
+              root = tree.getroot()
+              line_rate = float(root.attrib['line-rate'])
+              coverage_percent = line_rate * 100
+
+              print(f"Coverage: {coverage_percent:.2f}%")
+
+              # Target threshold is 60-70%
+              if coverage_percent < 60:
+                  print(f"::warning::Coverage {coverage_percent:.2f}% is below target threshold of 60%")
+              else:
+                  print(f"::notice::Backend test coverage: {coverage_percent:.2f}% (target: 60-70%)")
+
+          except Exception as e:
+              print(f"::error::Failed to parse coverage.xml: {e}")
+              sys.exit(1)
+          EOF

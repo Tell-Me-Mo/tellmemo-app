@@ -1,5 +1,8 @@
 name: Frontend Tests
 
+permissions:
+  contents: read
+
 on:
   pull_request:
     branches: [main]
@@ -16,7 +19,7 @@ on:
 
 jobs:
   test:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -47,17 +50,33 @@ jobs:
 
       - name: Check coverage threshold
         run: |
-          # Install lcov for coverage parsing
-          brew install lcov
-
-          # Calculate coverage percentage
-          COVERAGE=$(lcov --summary coverage/lcov.info 2>&1 | grep "lines" | awk '{print $2}' | sed 's/%//')
-          echo "Coverage: ${COVERAGE}%"
-
-          # Check if coverage meets minimum threshold (50%)
-          if (( $(echo "$COVERAGE < 50" | bc -l) )); then
-            echo "::warning::Coverage ${COVERAGE}% is below target threshold of 50%"
+          # Check if coverage file exists
+          if [ ! -f coverage/lcov.info ]; then
+            echo "::error::coverage/lcov.info not found. Tests may have failed."
+            exit 1
           fi
 
-          # Target is 50-60%, so we show a warning but don't fail
-          echo "::notice::Frontend test coverage: ${COVERAGE}% (target: 50-60%)"
+          # Install lcov for coverage parsing
+          sudo apt-get update -qq
+          sudo apt-get install -y lcov
+
+          # Parse coverage with error handling
+          if ! COVERAGE=$(lcov --summary coverage/lcov.info 2>&1 | grep "lines" | awk '{print $2}' | sed 's/%//'); then
+            echo "::error::Failed to parse coverage data"
+            exit 1
+          fi
+
+          # Validate coverage is a number
+          if ! [[ "$COVERAGE" =~ ^[0-9]+\.?[0-9]*$ ]]; then
+            echo "::error::Invalid coverage value: $COVERAGE"
+            exit 1
+          fi
+
+          echo "Coverage: ${COVERAGE}%"
+
+          # Check if coverage meets minimum threshold (50%) using awk
+          if awk "BEGIN {exit !($COVERAGE < 50)}"; then
+            echo "::warning::Coverage ${COVERAGE}% is below target threshold of 50%"
+          else
+            echo "::notice::Frontend test coverage: ${COVERAGE}% (target: 50-60%)"
+          fi
