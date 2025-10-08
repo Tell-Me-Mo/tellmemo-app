@@ -185,12 +185,12 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
                                     _buildAIInsights(context, projects),
                                     const SizedBox(height: 24),
 
-                                    // Projects Section
-                                    _buildProjectsSection(context, recentProjects, activeProjects),
-                                    const SizedBox(height: 24),
-
                                     // Recent Summaries Section
                                     _buildRecentSummaries(context, projects),
+                                    const SizedBox(height: 24),
+
+                                    // Projects Section
+                                    _buildProjectsSection(context, recentProjects, activeProjects),
                                   ],
                                 );
                               }
