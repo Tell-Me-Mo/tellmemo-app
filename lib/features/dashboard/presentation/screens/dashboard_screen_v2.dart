@@ -149,33 +149,33 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
                                               ),
                                             ),
 
-                                      // Visual Separator
-                                      Container(
-                                        width: 1,
-                                        margin: const EdgeInsets.symmetric(horizontal: 24),
-                                        color: colorScheme.outline.withValues(alpha: 0.2),
-                                      ),
+                                            // Visual Separator
+                                            Container(
+                                              width: 1,
+                                              margin: const EdgeInsets.symmetric(horizontal: 24),
+                                              color: colorScheme.outline.withValues(alpha: 0.2),
+                                            ),
 
-                                      // Right Panel
-                                      SizedBox(
-                                        width: 320,
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            // Quick Actions
-                                            _buildCompactQuickActions(context),
-                                            const SizedBox(height: 24),
+                                            // Right Panel
+                                            SizedBox(
+                                              width: 320,
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  // Quick Actions
+                                                  _buildCompactQuickActions(context),
+                                                  const SizedBox(height: 24),
 
-                                            // Timeline Activity
-                                            Expanded(
-                                              child: _buildTimelineActivity(context, projects),
+                                                  // Timeline Activity
+                                                  Expanded(
+                                                    child: _buildTimelineActivity(context, projects),
+                                                  ),
+                                                ],
+                                              ),
                                             ),
                                           ],
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                );
+                                      );
                               } else {
                                 // Mobile layout
                                 return Column(
@@ -547,7 +547,7 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
         final summaries = summariesAsync.value ?? [];
         totalSummaries += summaries.length;
         recentSummaries += summaries.where((s) =>
-          s.createdAt != null && s.createdAt!.isAfter(lastWeek)
+          s.createdAt.isAfter(lastWeek)
         ).length;
       }
     }
@@ -856,105 +856,6 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
   }
 
 
-
-  Widget _buildQuickActions(BuildContext context) {
-    final theme = Theme.of(context);
-    final textTheme = theme.textTheme;
-
-    final actions = [
-      {
-        'icon': Icons.add_circle_outline,
-        'label': 'New Project',
-        'color': theme.colorScheme.primary,
-        'onTap': () {
-          // Navigate to hierarchy screen with a flag to open the create project dialog
-          context.go('/hierarchy?action=create_project');
-        },
-      },
-      {
-        'icon': Icons.mic_outlined,
-        'label': 'Record',
-        'color': Colors.red,
-        'onTap': () => _showRecordingDialog(context),
-      },
-      {
-        'icon': Icons.upload_file_outlined,
-        'label': 'Upload',
-        'color': Colors.blue,
-        'onTap': () => _showUploadDialog(context),
-      },
-      {
-        'icon': Icons.auto_awesome_outlined,
-        'label': 'Summary',
-        'color': Colors.orange,
-        'onTap': () => _showGenerateSummaryDialog(context),
-      },
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Quick Actions',
-          style: textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 12),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          childAspectRatio: 3,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          children: actions.map((action) => _buildActionCard(action)).toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionCard(Map<String, dynamic> action) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final textTheme = theme.textTheme;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: action['onTap'] as VoidCallback,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: colorScheme.outline.withValues(alpha: 0.1),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                action['icon'] as IconData,
-                color: action['color'] as Color,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  action['label'] as String,
-                  style: textTheme.bodyMedium,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildProjectsSection(BuildContext context, List<Project> recentProjects, List<Project> activeProjects) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
@@ -1125,10 +1026,13 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
                           color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          '$documentsCount docs',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                        Flexible(
+                          child: Text(
+                            '$documentsCount docs',
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -1138,10 +1042,13 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
                           color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          '$summariesCount summaries',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                        Flexible(
+                          child: Text(
+                            '$summariesCount summaries',
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -1151,10 +1058,13 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
                           color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          DateTimeUtils.formatTimeAgo(project.createdAt),
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                        Flexible(
+                          child: Text(
+                            DateTimeUtils.formatTimeAgo(project.createdAt),
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
@@ -1364,6 +1274,26 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
                         // Mobile: Title + GENERAL badge on same line
                         Row(
                           children: [
+                            // NEW badge at the beginning
+                            if (isNew) ...[
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.green,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  'NEW',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                            ],
                             Expanded(
                               child: Text(
                                 summary.subject ?? typeLabel,
@@ -1422,14 +1352,40 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Desktop: Keep original layout
-                        Text(
-                          summary.subject ?? typeLabel,
-                          style: textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w500,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        // Desktop: Title with NEW badge at beginning
+                        Row(
+                          children: [
+                            // NEW badge at the beginning
+                            if (isNew) ...[
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.green,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  'NEW',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                            ],
+                            Expanded(
+                              child: Text(
+                                summary.subject ?? typeLabel,
+                                style: textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 2),
                         Row(
@@ -1463,46 +1419,23 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
                       ],
                     ),
               ),
-              // Badges row (NEW and Format) - Desktop only
-              if (!isMobile)
-                Row(
-                  children: [
-                    if (isNew)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.green,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          'NEW',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                    if (isNew && summary.format != null) const SizedBox(width: 4),
-                    if (summary.format != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: colorScheme.primaryContainer.withValues(alpha: 0.3),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          summary.format.toString().split('.').last.toUpperCase(),
-                          style: TextStyle(
-                            color: colorScheme.primary,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                  ],
+              // Format badge - Desktop only (NEW badge moved to title)
+              if (!isMobile && summary.format != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    summary.format.toString().split('.').last.toUpperCase(),
+                    style: TextStyle(
+                      color: colorScheme.primary,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
                 ),
             ],
           ),
@@ -1754,132 +1687,6 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
     );
   }
 
-  // Keep this for mobile layout
-  Widget _buildRecentActivity(BuildContext context, List<Project> projects) {
-    final theme = Theme.of(context);
-    final textTheme = theme.textTheme;
-
-    // Get recent meetings
-    final meetingsAsync = ref.watch(meetingsListProvider);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Recent Activity',
-          style: textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 12),
-        meetingsAsync.when(
-          data: (meetings) {
-            if (meetings.isEmpty) {
-              return _buildEmptyActivityState();
-            }
-
-            final recentMeetings = meetings.take(5).toList();
-            return Column(
-              children: recentMeetings.map((meeting) =>
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: _buildActivityItem(context, meeting, projects),
-                ),
-              ).toList(),
-            );
-          },
-          loading: () => const Center(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: CircularProgressIndicator(),
-            ),
-          ),
-          error: (_, __) => _buildEmptyActivityState(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActivityItem(BuildContext context, dynamic meeting, List<Project> projects) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final textTheme = theme.textTheme;
-
-    // Find the project for this meeting
-    final project = projects.firstWhere(
-      (p) => p.id == meeting.projectId,
-      orElse: () => projects.first,
-    );
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: colorScheme.outline.withValues(alpha: 0.08),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: Colors.blue.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: const Icon(
-              Icons.description_outlined,
-              color: Colors.blue,
-              size: 16,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  meeting.title ?? 'Untitled Document',
-                  style: textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    Text(
-                      project.name,
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '•',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      DateTimeUtils.formatTimeAgo(meeting.uploadedAt),
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildEmptyState() {
     final theme = Theme.of(context);
@@ -1939,59 +1746,6 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
       ),
     );
   }
-
-  Widget _buildEmptyActivityState() {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final textTheme = theme.textTheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: colorScheme.outline.withValues(alpha: 0.08),
-        ),
-      ),
-      child: Center(
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: colorScheme.primary.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                Icons.history,
-                size: 28,
-                color: colorScheme.primary.withValues(alpha: 0.5),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'No activity yet',
-              style: textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              'Your timeline will appear here',
-              style: textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                fontSize: 11,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-
-
 
   void _showGenerateSummaryDialog(BuildContext context) {
     // Get list of active projects

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../jobs/domain/models/job_model.dart';
@@ -9,7 +8,6 @@ import '../../../meetings/presentation/providers/meetings_provider.dart';
 import '../../../summaries/presentation/providers/summary_provider.dart';
 import '../../../projects/presentation/providers/projects_provider.dart';
 import '../../../projects/presentation/providers/risks_tasks_provider.dart';
-import 'content_status_provider.dart';
 import 'new_items_provider.dart';
 
 part 'processing_jobs_provider.g.dart';
@@ -114,11 +112,15 @@ class ProcessingJobs extends _$ProcessingJobs {
   }
 
   void _updateJob(String jobId, JobModel jobModel) {
+    print('[ProcessingJobs] Job update: $jobId - ${jobModel.status} (${jobModel.progress}%)');
+
     state = state.map((job) {
       if (job.jobId == jobId) {
         // Check if summary was generated
         String? summaryId;
         if (jobModel.status == JobStatus.completed) {
+          print('[ProcessingJobs] Job completed: $jobId for project: ${job.projectId}');
+
           // For transcription jobs, extract content_id from result if not already set
           String? contentId = job.contentId;
           if (contentId == null && jobModel.result != null) {
@@ -127,6 +129,7 @@ class ProcessingJobs extends _$ProcessingJobs {
 
           // Mark the content document as new if we have a contentId
           if (contentId != null) {
+            print('[ProcessingJobs] Marking content as new: $contentId');
             ref.read(newItemsProvider.notifier).addNewItem(contentId);
           }
 
@@ -138,28 +141,16 @@ class ProcessingJobs extends _$ProcessingJobs {
 
             // Mark the summary as new
             if (summaryId != null) {
+              print('[ProcessingJobs] Marking summary as new: $summaryId');
               ref.read(newItemsProvider.notifier).addNewItem(summaryId);
             }
 
             // Don't call the navigation callback anymore - user will click button to navigate
           }
 
-          // Refresh meetings and summaries lists for the project
-          // This ensures new items appear immediately
-          ref.invalidate(meetingsListProvider);
-          ref.invalidate(projectSummariesProvider(job.projectId));
-
-          // Only refresh projects list if a new project was created via AI matching
-          // Check if the result indicates a new project was created
-          final isNewProject = jobModel.result?['project_created'] == true ||
-                               jobModel.result?['new_project'] == true;
-          if (isNewProject) {
-            ref.invalidate(projectsListProvider);
-          }
-
-          // Refresh project items (risks, tasks, lessons, blockers)
-          // Import is at the top of the file, so we can use these providers
-          ref.invalidate(blockersNotifierProvider(job.projectId));
+          print('[ProcessingJobs] Starting provider refresh for project: ${job.projectId}');
+          // Refresh providers immediately - backend only sends 'completed' when data is ready
+          _refreshProvidersAfterJobCompletion(job.projectId, jobModel.result);
         }
 
         final updatedJob = job.copyWith(
@@ -179,6 +170,36 @@ class ProcessingJobs extends _$ProcessingJobs {
       }
       return job;
     }).toList();
+  }
+
+  // Refresh all dashboard data after job completion
+  // Backend sends 'completed' status only when data is persisted, so no delay needed
+  // This causes one page rebuild, but it's fast since data is already ready
+  void _refreshProvidersAfterJobCompletion(String projectId, Map<String, dynamic>? result) {
+    print('[ProcessingJobs] Refreshing dashboard after job completion for project: $projectId');
+
+    try {
+      // Refresh projects list - this triggers one dashboard rebuild
+      // Since backend already persisted data when it sent 'completed', rebuild is fast
+      ref.invalidate(projectsListProvider);
+      print('[ProcessingJobs] ✓ Invalidated projectsListProvider');
+
+      // Refresh meetings list - ensures Activity Timeline has latest data
+      ref.invalidate(meetingsListProvider);
+      print('[ProcessingJobs] ✓ Invalidated meetingsListProvider');
+
+      // Refresh summaries for the affected project - ensures Recent Summaries has latest data
+      ref.invalidate(projectSummariesProvider(projectId));
+      print('[ProcessingJobs] ✓ Invalidated projectSummariesProvider($projectId)');
+
+      // Refresh blockers for the affected project
+      ref.invalidate(blockersNotifierProvider(projectId));
+      print('[ProcessingJobs] ✓ Invalidated blockersNotifierProvider($projectId)');
+
+      print('[ProcessingJobs] ✓ Dashboard will update with latest data');
+    } catch (e) {
+      print('[ProcessingJobs] ✗ Error during refresh: $e');
+    }
   }
 
   // Remove a job from tracking

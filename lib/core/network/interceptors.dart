@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import '../config/app_config.dart';
 import '../config/supabase_config.dart';
@@ -81,10 +82,35 @@ class AuthInterceptor extends Interceptor {
         options.headers['Authorization'] = 'Bearer ${session!.accessToken}';
       }
     } else {
-      // For backend auth, get token from auth service
+      // For backend auth, proactively check and refresh token if expired
       final token = await _authService.getToken();
+
       if (token != null && token.isNotEmpty) {
-        options.headers['Authorization'] = 'Bearer $token';
+        // Check if token is expired or about to expire (within 60 seconds)
+        if (_isTokenExpiredOrExpiring(token)) {
+          if (AppConfig.enableLogging) {
+            print('[AuthInterceptor] Token expired or expiring soon, refreshing proactively...');
+          }
+
+          // Proactively refresh the token before making the request
+          final newToken = await _refreshNativeToken();
+
+          if (newToken != null) {
+            options.headers['Authorization'] = 'Bearer $newToken';
+            if (AppConfig.enableLogging) {
+              print('[AuthInterceptor] Token refreshed successfully');
+            }
+          } else {
+            // Refresh failed, use old token (will likely fail with 401)
+            options.headers['Authorization'] = 'Bearer $token';
+            if (AppConfig.enableLogging) {
+              print('[AuthInterceptor] Token refresh failed, using expired token');
+            }
+          }
+        } else {
+          // Token is still valid, use it
+          options.headers['Authorization'] = 'Bearer $token';
+        }
       }
     }
 
@@ -179,6 +205,57 @@ class AuthInterceptor extends Interceptor {
       return null;
     } finally {
       _isRefreshing = false;
+    }
+  }
+
+  /// Checks if a JWT token is expired or about to expire
+  /// Returns true if token is expired or will expire within 60 seconds
+  bool _isTokenExpiredOrExpiring(String token) {
+    try {
+      // JWT tokens are in format: header.payload.signature
+      final parts = token.split('.');
+      if (parts.length != 3) {
+        return true; // Invalid token format, treat as expired
+      }
+
+      // Decode the payload (second part)
+      final payload = parts[1];
+
+      // Add padding if needed for base64 decoding
+      String normalizedPayload = base64Url.normalize(payload);
+
+      // Decode the payload
+      final decodedPayload = utf8.decode(base64Url.decode(normalizedPayload));
+      final Map<String, dynamic> payloadMap = json.decode(decodedPayload);
+
+      // Get expiration time (exp is in seconds since epoch)
+      final exp = payloadMap['exp'] as int?;
+      if (exp == null) {
+        return true; // No expiration time, treat as expired
+      }
+
+      // Check if token is expired or will expire within 60 seconds
+      final expirationTime = DateTime.fromMillisecondsSinceEpoch(exp * 1000);
+      final now = DateTime.now();
+      final bufferTime = const Duration(seconds: 60);
+
+      final isExpiring = expirationTime.isBefore(now.add(bufferTime));
+
+      if (isExpiring && AppConfig.enableLogging) {
+        final timeUntilExpiry = expirationTime.difference(now);
+        if (timeUntilExpiry.isNegative) {
+          print('[AuthInterceptor] Token expired ${timeUntilExpiry.abs().inSeconds}s ago');
+        } else {
+          print('[AuthInterceptor] Token expires in ${timeUntilExpiry.inSeconds}s');
+        }
+      }
+
+      return isExpiring;
+    } catch (e) {
+      if (AppConfig.enableLogging) {
+        print('[AuthInterceptor] Error checking token expiration: $e');
+      }
+      return true; // If we can't parse it, treat as expired
     }
   }
 }
