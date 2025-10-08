@@ -220,9 +220,11 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
           Expanded(
             child: SingleChildScrollView(
               controller: _scrollController,
-              padding: EdgeInsets.symmetric(
-                horizontal: isDesktop ? 24 : 16,
-                vertical: 16,
+              padding: EdgeInsets.only(
+                left: isDesktop ? 24 : 16,
+                right: isDesktop ? 24 : 16,
+                top: isMobile ? 0 : 16,
+                bottom: isMobile ? 8 : 16,
               ),
               child: Center(
                 child: ConstrainedBox(
@@ -232,7 +234,7 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
                     children: [
                       // Search and Filters
                       _buildSearchAndFilters(theme, isDesktop),
-                      const SizedBox(height: 24),
+                      SizedBox(height: isMobile ? 8 : 24),
 
                       // Integrations Grid
                       _buildIntegrationsList(theme, isDesktop, isTablet),
@@ -323,9 +325,14 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
 
   Widget _buildSearchAndFilters(ThemeData theme, bool isDesktop) {
     final colorScheme = theme.colorScheme;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth <= 768;
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      padding: EdgeInsets.only(
+        top: isMobile ? 8 : 16,
+        bottom: isMobile ? 8 : 16,
+      ),
       decoration: BoxDecoration(
         color: colorScheme.surface,
         border: Border(
@@ -419,7 +426,7 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isMobile ? 12 : 16),
 
           // Category Filters
           SingleChildScrollView(
