@@ -3,6 +3,7 @@ HTTP endpoints for audio file transcription.
 Handles file uploads and batch transcription processing.
 """
 
+import asyncio
 import os
 import shutil
 import logging
@@ -69,6 +70,11 @@ async def process_audio_transcription(
                 step_description="Loading AI model..."
             )
 
+            # Check if job was cancelled before starting
+            if upload_job_service.is_job_cancelled(job_id):
+                logger.info(f"Job {job_id} was cancelled before transcription started")
+                return
+
             # Get settings for environment variable defaults
             settings = get_settings()
 
@@ -102,6 +108,9 @@ async def process_audio_transcription(
 
             # Create progress callback for transcription
             async def transcription_progress(progress: float, description: str):
+                # Check if job was cancelled
+                if upload_job_service.is_job_cancelled(job_id):
+                    raise asyncio.CancelledError("Job was cancelled by user")
                 # Map transcription progress (0-100%) to overall job progress (10-65%)
                 job_progress = 10.0 + (progress * 0.55)  # 10% to 65% range
                 upload_job_service.update_job_progress(
@@ -171,6 +180,11 @@ async def process_audio_transcription(
                 raise Exception("Transcription failed - no text generated")
 
             logger.info(f"Transcription completed: {len(transcription_text)} characters")
+
+            # Check if job was cancelled after transcription
+            if upload_job_service.is_job_cancelled(job_id):
+                logger.info(f"Job {job_id} was cancelled after transcription completed")
+                return
 
             # Update job: transcription complete, saving to database
             upload_job_service.update_job_progress(
@@ -277,6 +291,15 @@ async def process_audio_transcription(
                     logger.error(f"Failed to save to database: {sanitize_for_log(str(e))}")
                     raise
 
+    except asyncio.CancelledError:
+        # Job was cancelled by user
+        logger.info(f"Transcription job {job_id} was cancelled by user")
+        # Status already updated by cancel_job, but ensure it's marked as cancelled
+        upload_job_service.update_job_progress(
+            job_id,
+            status=JobStatus.CANCELLED,
+            error_message="Job was cancelled by user"
+        )
     except Exception as e:
         logger.error(f"Transcription background task error: {sanitize_for_log(str(e))}", exc_info=True)
         await upload_job_service.fail_job(job_id, "Transcription failed")
@@ -323,127 +346,135 @@ async def transcribe_audio(
         JSON response with job ID for tracking transcription progress
     """
     try:
-        # Validate file size (max 100MB)
+        # Validate file size
+        settings = get_settings()
+        max_size_bytes = settings.max_audio_file_size_mb * 1024 * 1024
         file_size = 0
         temp_file_path = None
+        task_queued = False  # Track if background task was successfully queued
 
         # Create temp directory if it doesn't exist
         temp_dir = Path("backend/temp_audio")
         temp_dir.mkdir(parents=True, exist_ok=True)
 
-        # Save uploaded file to temporary location
-        with tempfile.NamedTemporaryFile(
-            delete=False,
-            dir=temp_dir,
-            suffix=Path(audio_file.filename).suffix
-        ) as temp_file:
-            shutil.copyfileobj(audio_file.file, temp_file)
-            temp_file_path = temp_file.name
-            file_size = os.path.getsize(temp_file_path)
+        try:
+            # Save uploaded file to temporary location
+            with tempfile.NamedTemporaryFile(
+                delete=False,
+                dir=temp_dir,
+                suffix=Path(audio_file.filename).suffix
+            ) as temp_file:
+                shutil.copyfileobj(audio_file.file, temp_file)
+                temp_file_path = temp_file.name
+                file_size = os.path.getsize(temp_file_path)
 
-        # Check file size
-        if file_size > 100 * 1024 * 1024:  # 100MB
-            os.unlink(temp_file_path)
-            raise HTTPException(
-                status_code=413,
-                detail="File too large. Maximum size is 100MB"
-            )
-
-        if file_size == 0:
-            os.unlink(temp_file_path)
-            raise HTTPException(
-                status_code=400,
-                detail="Audio file is empty"
-            )
-
-        logger.info(f"Received audio file: {audio_file.filename}, size: {file_size} bytes")
-
-        # Validate project ownership (multi-tenant isolation)
-        # Skip validation only if using AI matching with "auto" project_id
-        if project_id != "auto" or not use_ai_matching:
-            try:
-                # Convert project_id to UUID and validate it belongs to current organization
-                project_uuid = uuid.UUID(project_id)
-
-                # Query project with organization check
-                from models.project import Project
-                result = await db.execute(
-                    select(Project).where(
-                        Project.id == project_uuid,
-                        Project.organization_id == current_org.id
-                    )
+            # Check file size
+            if file_size > max_size_bytes:
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"File too large. Maximum size is {settings.max_audio_file_size_mb}MB"
                 )
-                project = result.scalar_one_or_none()
 
-                if not project:
-                    # Clean up temp file before returning error
-                    if temp_file_path and os.path.exists(temp_file_path):
-                        os.unlink(temp_file_path)
-                    raise HTTPException(
-                        status_code=404,
-                        detail="Project not found"
-                    )
-
-                logger.info(f"Project validation passed: {project_uuid} belongs to org {current_org.id}")
-
-            except ValueError:
-                # Invalid UUID format
-                if temp_file_path and os.path.exists(temp_file_path):
-                    os.unlink(temp_file_path)
+            if file_size == 0:
                 raise HTTPException(
                     status_code=400,
-                    detail="Invalid project_id format"
+                    detail="Audio file is empty"
                 )
 
-        # Create job for tracking transcription and processing progress
-        job_id = upload_job_service.create_job(
-            project_id=project_id,
-            job_type=JobType.TRANSCRIPTION,
-            filename=audio_file.filename,
-            file_size=file_size,
-            total_steps=8,  # Upload, Transcribe, Save, Preprocess, Chunk, Embed, Store, Summary
-            metadata={"language": language, "meeting_title": meeting_title}
-        )
+            logger.info(f"Received audio file: {audio_file.filename}, size: {file_size} bytes")
 
-        # Update job: file uploaded, queuing for transcription
-        upload_job_service.update_job_progress(
-            job_id,
-            current_step=0,
-            status=JobStatus.PROCESSING,
-            progress=2.0,
-            step_description="Audio file uploaded, queuing for transcription..."
-        )
+            # Validate project ownership (multi-tenant isolation)
+            # Skip validation only if using AI matching with "auto" project_id
+            if project_id != "auto" or not use_ai_matching:
+                try:
+                    # Convert project_id to UUID and validate it belongs to current organization
+                    project_uuid = uuid.UUID(project_id)
 
-        # Add background task to process transcription
-        background_tasks.add_task(
-            process_audio_transcription,
-            temp_file_path=temp_file_path,
-            project_id=project_id,
-            meeting_title=meeting_title,
-            language=language,
-            job_id=job_id,
-            file_size=file_size,
-            filename=audio_file.filename,
-            organization_id=current_org.id,
-            use_ai_matching=use_ai_matching
-        )
+                    # Query project with organization check
+                    from models.project import Project
+                    result = await db.execute(
+                        select(Project).where(
+                            Project.id == project_uuid,
+                            Project.organization_id == current_org.id
+                        )
+                    )
+                    project = result.scalar_one_or_none()
 
-        logger.info(f"Queued transcription job {job_id} for processing")
+                    if not project:
+                        raise HTTPException(
+                            status_code=404,
+                            detail="Project not found"
+                        )
 
-        # Return immediately with job ID
-        return JSONResponse(content={
-            "job_id": job_id,
-            "status": "processing",
-            "message": "Audio file uploaded successfully. Transcription in progress.",
-            "metadata": {
-                "project_id": project_id,
-                "meeting_title": meeting_title,
-                "language": language,
-                "filename": audio_file.filename,
-                "file_size": file_size
-            }
-        })
-        
+                    logger.info(f"Project validation passed: {project_uuid} belongs to org {current_org.id}")
+
+                except ValueError:
+                    # Invalid UUID format
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Invalid project_id format"
+                    )
+
+            # Create job for tracking transcription and processing progress
+            job_id = upload_job_service.create_job(
+                project_id=project_id,
+                job_type=JobType.TRANSCRIPTION,
+                filename=audio_file.filename,
+                file_size=file_size,
+                total_steps=8,  # Upload, Transcribe, Save, Preprocess, Chunk, Embed, Store, Summary
+                metadata={"language": language, "meeting_title": meeting_title}
+            )
+
+            # Update job: file uploaded, queuing for transcription
+            upload_job_service.update_job_progress(
+                job_id,
+                current_step=0,
+                status=JobStatus.PROCESSING,
+                progress=2.0,
+                step_description="Audio file uploaded, queuing for transcription..."
+            )
+
+            # Add background task to process transcription
+            background_tasks.add_task(
+                process_audio_transcription,
+                temp_file_path=temp_file_path,
+                project_id=project_id,
+                meeting_title=meeting_title,
+                language=language,
+                job_id=job_id,
+                file_size=file_size,
+                filename=audio_file.filename,
+                organization_id=current_org.id,
+                use_ai_matching=use_ai_matching
+            )
+
+            task_queued = True  # Mark as successfully queued
+            logger.info(f"Queued transcription job {job_id} for processing")
+
+            # Return immediately with job ID
+            return JSONResponse(content={
+                "job_id": job_id,
+                "status": "processing",
+                "message": "Audio file uploaded successfully. Transcription in progress.",
+                "metadata": {
+                    "project_id": project_id,
+                    "meeting_title": meeting_title,
+                    "language": language,
+                    "filename": audio_file.filename,
+                    "file_size": file_size
+                }
+            })
+
+        finally:
+            # Clean up temp file if task was not successfully queued
+            # If queued, the background task is responsible for cleanup
+            if not task_queued and temp_file_path and os.path.exists(temp_file_path):
+                try:
+                    os.unlink(temp_file_path)
+                    logger.debug(f"Cleaned up temp file: {temp_file_path}")
+                except Exception as cleanup_error:
+                    logger.error(f"Failed to clean up temp file {temp_file_path}: {cleanup_error}")
+
     except HTTPException:
         # Update job as failed if exists
         if 'job_id' in locals():
@@ -454,12 +485,6 @@ async def transcribe_audio(
         # Update job as failed if exists
         if 'job_id' in locals():
             await upload_job_service.fail_job(job_id, "Transcription failed")
-        # Clean up temp file if it exists
-        if temp_file_path and os.path.exists(temp_file_path):
-            try:
-                os.unlink(temp_file_path)
-            except:
-                pass
         raise HTTPException(
             status_code=500,
             detail=f"Transcription error: {str(e)}"

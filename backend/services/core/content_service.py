@@ -554,6 +554,13 @@ class ContentService:
                 if 'summary_data' in locals() and summary_data and summary_data.get('id'):
                     result_data["summary_id"] = summary_data['id']
 
+                # Include project_was_created flag if this was an AI-matched project
+                # Check job metadata for is_new_project (set during AI matching)
+                job = upload_job_service.get_job(job_id)
+                if job and job.metadata.get('is_new_project'):
+                    result_data["project_was_created"] = True
+                    logger.info(f"✓ Added project_was_created flag to job result (job_id: {job_id})")
+
                 # Check for partial failures
                 if partial_failures:
                     result_data["partial_success"] = True

@@ -28,6 +28,7 @@ class ExecutiveSummaryViewer extends ConsumerStatefulWidget {
 
 class _ExecutiveSummaryViewerState extends ConsumerState<ExecutiveSummaryViewer> {
   final Map<String, bool> _editModes = {};
+  final Map<String, ValueNotifier<bool>> _expansionNotifiers = {};
   late TextEditingController _subjectController;
   late TextEditingController _bodyController;
   List<TextEditingController> _keyPointsControllers = [];
@@ -42,6 +43,16 @@ class _ExecutiveSummaryViewerState extends ConsumerState<ExecutiveSummaryViewer>
     super.initState();
     _localSummary = widget.summary;
     _initializeControllers();
+    _initializeExpansionStates();
+  }
+
+  void _initializeExpansionStates() {
+    // Executive overview always expanded
+    _expansionNotifiers['overview'] = ValueNotifier(true);
+    // Strategic decisions collapsed by default on mobile
+    _expansionNotifiers['decisions'] = ValueNotifier(false);
+    // Risks collapsed by default on mobile
+    _expansionNotifiers['risks'] = ValueNotifier(false);
   }
 
   @override
@@ -75,6 +86,9 @@ class _ExecutiveSummaryViewerState extends ConsumerState<ExecutiveSummaryViewer>
     }
     for (final controller in _decisionsControllers) {
       controller.dispose();
+    }
+    for (final notifier in _expansionNotifiers.values) {
+      notifier.dispose();
     }
     super.dispose();
   }
@@ -261,6 +275,8 @@ class _ExecutiveSummaryViewerState extends ConsumerState<ExecutiveSummaryViewer>
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 900;
     final isMobile = screenWidth <= 768;
+    final sectionSpacing = isMobile ? 12.0 : 16.0;
+    final headerSpacing = isMobile ? 16.0 : 24.0;
 
     final content = ConstrainedBox(
       constraints: BoxConstraints(maxWidth: 1400),
@@ -269,16 +285,17 @@ class _ExecutiveSummaryViewerState extends ConsumerState<ExecutiveSummaryViewer>
         children: [
               // Common Header (like general format)
               _buildCommonHeader(context, isMobile),
-              const SizedBox(height: 24),
+              SizedBox(height: headerSpacing),
 
               // Executive Summary Text
               _buildCleanSection(
                 context,
+                sectionId: 'overview',
                 title: 'Executive Overview',
                 child: _buildExecutiveSummaryContent(context),
                 editSection: 'summary',
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: sectionSpacing),
 
               // Critical Decisions & Risks Grid
               if (isDesktop)
@@ -288,6 +305,7 @@ class _ExecutiveSummaryViewerState extends ConsumerState<ExecutiveSummaryViewer>
                     Expanded(
                       child: _buildCleanSection(
                         context,
+                        sectionId: 'decisions',
                         title: 'Strategic Decisions',
                         child: _buildCriticalDecisionsContent(context),
                         editSection: 'decisions',
@@ -300,6 +318,7 @@ class _ExecutiveSummaryViewerState extends ConsumerState<ExecutiveSummaryViewer>
                     Expanded(
                       child: _buildCleanSection(
                         context,
+                        sectionId: 'risks',
                         title: 'Critical Risks & Blockers',
                         child: _buildCriticalRisksContent(context),
                         count: ((_localSummary.risks as List?)
@@ -316,6 +335,7 @@ class _ExecutiveSummaryViewerState extends ConsumerState<ExecutiveSummaryViewer>
               else ...[
                 _buildCleanSection(
                   context,
+                  sectionId: 'decisions',
                   title: 'Strategic Decisions',
                   child: _buildCriticalDecisionsContent(context),
                   editSection: 'decisions',
@@ -323,9 +343,10 @@ class _ExecutiveSummaryViewerState extends ConsumerState<ExecutiveSummaryViewer>
                       ?.where((d) => d.importanceScore == 'high' || d.importanceScore == 'medium')
                       .length ?? 0),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: sectionSpacing),
                 _buildCleanSection(
                   context,
+                  sectionId: 'risks',
                   title: 'Critical Risks & Blockers',
                   child: _buildCriticalRisksContent(context),
                   count: ((_localSummary.risks as List?)
@@ -337,6 +358,7 @@ class _ExecutiveSummaryViewerState extends ConsumerState<ExecutiveSummaryViewer>
                   isHighPriority: true,
                 ),
               ],
+              SizedBox(height: isMobile ? 80 : 32),
             ],
           ),
     );
@@ -346,7 +368,7 @@ class _ExecutiveSummaryViewerState extends ConsumerState<ExecutiveSummaryViewer>
       body: SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.symmetric(
-            horizontal: isDesktop ? 120 : 24,
+            horizontal: isMobile ? 16 : (isDesktop ? 120 : 24),
             vertical: isDesktop ? 32 : 16,
           ),
           child: isDesktop ? Center(child: content) : content,
@@ -374,9 +396,10 @@ class _ExecutiveSummaryViewerState extends ConsumerState<ExecutiveSummaryViewer>
               icon: Icon(Icons.arrow_back, size: 20),
               style: IconButton.styleFrom(
                 foregroundColor: colorScheme.onSurfaceVariant,
+                padding: isMobile ? const EdgeInsets.all(8) : null,
               ),
             ),
-            const SizedBox(width: 16),
+            SizedBox(width: isMobile ? 8 : 16),
 
             // Title (expanded to take available space)
             Expanded(
@@ -385,15 +408,17 @@ class _ExecutiveSummaryViewerState extends ConsumerState<ExecutiveSummaryViewer>
                 style: textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                   letterSpacing: -0.5,
+                  fontSize: isMobile ? 18 : null,
                 ),
-                maxLines: 1,
+                maxLines: isMobile ? 2 : 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
 
+            if (!isMobile) const SizedBox(width: 16),
+
             // Action buttons - Hidden on mobile, shown on tablet/desktop
             if (!isMobile) ...[
-              const SizedBox(width: 16),
               TextButton.icon(
                 onPressed: widget.onExport,
                 icon: Icon(Icons.download_outlined, size: 18),
@@ -414,10 +439,12 @@ class _ExecutiveSummaryViewerState extends ConsumerState<ExecutiveSummaryViewer>
             ],
           ],
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: isMobile ? 6 : 8),
         Padding(
-          padding: const EdgeInsets.only(left: 56), // Align with title (icon button width + spacing)
-          child: Row(
+          padding: EdgeInsets.only(left: isMobile ? 48 : 56),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 6,
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -434,7 +461,7 @@ class _ExecutiveSummaryViewerState extends ConsumerState<ExecutiveSummaryViewer>
                   children: [
                     Icon(
                       _getSummaryIcon(),
-                      size: 14,
+                      size: isMobile ? 12 : 14,
                       color: _getTypeColor(),
                     ),
                     const SizedBox(width: 4),
@@ -443,54 +470,58 @@ class _ExecutiveSummaryViewerState extends ConsumerState<ExecutiveSummaryViewer>
                       style: textTheme.labelSmall?.copyWith(
                         color: _getTypeColor(),
                         fontWeight: FontWeight.w500,
+                        fontSize: isMobile ? 11 : null,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
-              Icon(
-                Icons.access_time,
-                size: 14,
-                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                createdAt,
-                style: textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                ),
-              ),
-              // Format label - Hidden on mobile, shown on tablet/desktop
-              if (!isMobile) ...[
-                const SizedBox(width: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.deepOrange.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(
-                      color: Colors.deepOrange.withValues(alpha: 0.3),
-                      width: 0.5,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.access_time,
+                    size: isMobile ? 12 : 14,
+                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    createdAt,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                      fontSize: isMobile ? 11 : null,
                     ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.business, size: 14, color: Colors.deepOrange),
-                      const SizedBox(width: 4),
-                      Text(
-                        'EXECUTIVE',
-                        style: textTheme.labelSmall?.copyWith(
-                          color: Colors.deepOrange,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
+                ],
+              ),
+              // Format label - Show on all screens
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.deepOrange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
+                    color: Colors.deepOrange.withValues(alpha: 0.3),
+                    width: 0.5,
                   ),
                 ),
-              ],
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.business, size: isMobile ? 12 : 14, color: Colors.deepOrange),
+                    const SizedBox(width: 4),
+                    Text(
+                      'EXECUTIVE',
+                      style: textTheme.labelSmall?.copyWith(
+                        color: Colors.deepOrange,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                        fontSize: isMobile ? 10 : null,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -538,6 +569,7 @@ class _ExecutiveSummaryViewerState extends ConsumerState<ExecutiveSummaryViewer>
   }
 
   Widget _buildCleanSection(BuildContext context, {
+    required String sectionId,
     required String title,
     required Widget child,
     String? editSection,
@@ -547,7 +579,104 @@ class _ExecutiveSummaryViewerState extends ConsumerState<ExecutiveSummaryViewer>
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth <= 768;
+    final expansionNotifier = _expansionNotifiers[sectionId];
 
+    // On mobile, make sections collapsible
+    if (isMobile && expansionNotifier != null) {
+      return ValueListenableBuilder<bool>(
+        valueListenable: expansionNotifier,
+        builder: (context, isExpanded, _) {
+          return Container(
+            decoration: BoxDecoration(
+              color: colorScheme.surface,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isHighPriority
+                    ? Colors.orange.withValues(alpha: 0.4)
+                    : colorScheme.outlineVariant.withValues(alpha: 0.4),
+                width: 1,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Section header - tappable on mobile
+                InkWell(
+                  onTap: () {
+                    expansionNotifier.value = !expansionNotifier.value;
+                  },
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerLowest.withValues(alpha: 0.3),
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                    ),
+                    child: Row(
+                      children: [
+                        // Expand/collapse icon
+                        Icon(
+                          isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                          size: 20,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: -0.2,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        if (count != null) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isHighPriority
+                                  ? Colors.orange.withValues(alpha: 0.1)
+                                  : colorScheme.primaryContainer.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              count.toString(),
+                              style: textTheme.labelSmall?.copyWith(
+                                color: isHighPriority
+                                    ? Colors.orange
+                                    : colorScheme.primary,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        ],
+                        if (editSection != null && isExpanded) ...[
+                          const SizedBox(width: 8),
+                          _buildEditButton(editSection),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                // Section content - collapsible
+                if (isExpanded)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                    child: child,
+                  ),
+              ],
+            ),
+          );
+        },
+      );
+    }
+
+    // Desktop/tablet: non-collapsible sections
     return Container(
       decoration: BoxDecoration(
         color: colorScheme.surface,
@@ -619,6 +748,8 @@ class _ExecutiveSummaryViewerState extends ConsumerState<ExecutiveSummaryViewer>
     final colorScheme = theme.colorScheme;
     final isEditingSummary = _editModes['summary'] ?? false;
     final isEditingKeyPoints = _editModes['keyPoints'] ?? false;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth <= 768;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -632,6 +763,14 @@ class _ExecutiveSummaryViewerState extends ConsumerState<ExecutiveSummaryViewer>
                 alignLabelWithHint: true,
               ),
               maxLines: 8,
+            )
+          else if (isMobile && _localSummary.body.length > 300)
+            _ReadMoreText(
+              text: _localSummary.body,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                height: 1.5,
+              ),
+              trimLength: 250,
             )
           else
             Text(
@@ -962,5 +1101,88 @@ class _ExecutiveSummaryViewerState extends ConsumerState<ExecutiveSummaryViewer>
       ],
     );
   }
+}
 
+// Read More Text Widget for Mobile
+class _ReadMoreText extends StatefulWidget {
+  final String text;
+  final TextStyle? style;
+  final int trimLength;
+
+  const _ReadMoreText({
+    required this.text,
+    this.style,
+    this.trimLength = 200,
+  });
+
+  @override
+  State<_ReadMoreText> createState() => _ReadMoreTextState();
+}
+
+class _ReadMoreTextState extends State<_ReadMoreText> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final shouldTrim = widget.text.length > widget.trimLength;
+
+    String displayText = widget.text;
+    if (shouldTrim && !_isExpanded) {
+      // Find a good breaking point (end of sentence or word)
+      int breakPoint = widget.trimLength;
+      final sentenceEnd = widget.text.lastIndexOf('.', breakPoint);
+      if (sentenceEnd > widget.trimLength * 0.7) {
+        breakPoint = sentenceEnd + 1;
+      } else {
+        final spaceIndex = widget.text.lastIndexOf(' ', breakPoint);
+        if (spaceIndex > widget.trimLength * 0.8) {
+          breakPoint = spaceIndex;
+        }
+      }
+      displayText = '${widget.text.substring(0, breakPoint).trim()}...';
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          displayText,
+          style: widget.style,
+        ),
+        if (shouldTrim) ...[
+          const SizedBox(height: 8),
+          InkWell(
+            onTap: () {
+              setState(() {
+                _isExpanded = !_isExpanded;
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _isExpanded ? 'Read less' : 'Read more',
+                    style: widget.style?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    size: 16,
+                    color: colorScheme.primary,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
 }

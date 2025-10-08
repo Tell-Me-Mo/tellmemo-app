@@ -17,6 +17,7 @@ void main() {
       expect(state.amplitude, 0.0);
       expect(state.contentId, null);
       expect(state.isUploading, false);
+      expect(state.showDurationWarning, false);
     });
 
     test('creates instance with custom values', () {
@@ -124,6 +125,14 @@ void main() {
 
       expect(updated.isUploading, true);
       expect(original.isUploading, false);
+    });
+
+    test('copyWith returns new instance with updated showDurationWarning', () {
+      final original = RecordingStateModel();
+      final updated = original.copyWith(showDurationWarning: true);
+
+      expect(updated.showDurationWarning, true);
+      expect(original.showDurationWarning, false);
     });
 
     test('copyWith with multiple fields preserves other fields', () {

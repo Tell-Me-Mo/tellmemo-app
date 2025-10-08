@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:dio_retry_plus/dio_retry_plus.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +9,28 @@ import 'package:pm_master_v2/core/services/auth_service.dart';
 
 @GenerateMocks([AuthService, RequestInterceptorHandler, ErrorInterceptorHandler, ResponseInterceptorHandler])
 import 'interceptors_test.mocks.dart';
+
+/// Helper function to generate a JWT token for testing
+String generateTestJwtToken({required int expiresInSeconds}) {
+  final now = DateTime.now();
+  final expiration = now.add(Duration(seconds: expiresInSeconds));
+
+  final header = base64Url.encode(utf8.encode(json.encode({
+    'alg': 'HS256',
+    'typ': 'JWT',
+  })));
+
+  final payload = base64Url.encode(utf8.encode(json.encode({
+    'sub': 'test-user-id',
+    'email': 'test@example.com',
+    'exp': expiration.millisecondsSinceEpoch ~/ 1000,
+    'iat': now.millisecondsSinceEpoch ~/ 1000,
+  })));
+
+  final signature = base64Url.encode(utf8.encode('test-signature'));
+
+  return '$header.$payload.$signature';
+}
 
 void main() {
   group('HeaderInterceptor', () {
@@ -133,6 +156,165 @@ void main() {
 
       // Assert
       verify(mockErrorHandler.next(dioError)).called(1);
+    });
+  });
+
+  group('AuthInterceptor - Proactive Token Refresh', () {
+    late AuthInterceptor interceptor;
+    late MockAuthService mockAuthService;
+    late MockRequestInterceptorHandler mockHandler;
+    late RequestOptions requestOptions;
+
+    setUp(() {
+      mockAuthService = MockAuthService();
+      interceptor = AuthInterceptor(mockAuthService);
+      mockHandler = MockRequestInterceptorHandler();
+      requestOptions = RequestOptions(path: '/test');
+    });
+
+    test('does not refresh token when token is valid and not expiring', () async {
+      // Arrange - token expires in 5 minutes (300 seconds)
+      final validToken = generateTestJwtToken(expiresInSeconds: 300);
+      when(mockAuthService.getToken()).thenAnswer((_) async => validToken);
+
+      // Act
+      interceptor.onRequest(requestOptions, mockHandler);
+      await Future.delayed(Duration(milliseconds: 50)); // Wait for async token check
+
+      // Assert - token should be used as-is without refresh attempt
+      expect(requestOptions.headers['Authorization'], 'Bearer $validToken');
+      verify(mockAuthService.getToken()).called(1);
+      verifyNever(mockAuthService.getRefreshToken());
+      verify(mockHandler.next(requestOptions)).called(1);
+    });
+
+    test('proactively refreshes token when token expires within 60 seconds', () async {
+      // Arrange - token expires in 30 seconds (within buffer)
+      final expiringToken = generateTestJwtToken(expiresInSeconds: 30);
+      final newToken = generateTestJwtToken(expiresInSeconds: 3600);
+      final refreshToken = 'refresh-token-123';
+
+      when(mockAuthService.getToken()).thenAnswer((_) async => expiringToken);
+      when(mockAuthService.getRefreshToken()).thenAnswer((_) async => refreshToken);
+      when(mockAuthService.setToken(any)).thenAnswer((_) async => {});
+
+      // Mock the refresh endpoint response using interceptor
+      final testDio = Dio();
+      testDio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            if (options.path.contains('/auth/refresh')) {
+              handler.resolve(
+                Response(
+                  requestOptions: options,
+                  statusCode: 200,
+                  data: {
+                    'access_token': newToken,
+                    'refresh_token': 'new-refresh-token',
+                  },
+                ),
+              );
+            } else {
+              handler.next(options);
+            }
+          },
+        ),
+      );
+
+      // Act
+      interceptor.onRequest(requestOptions, mockHandler);
+      await Future.delayed(Duration(milliseconds: 100)); // Wait for async refresh
+
+      // Assert - should attempt token refresh
+      verify(mockAuthService.getToken()).called(greaterThanOrEqualTo(1));
+      verify(mockAuthService.getRefreshToken()).called(1);
+    });
+
+    test('proactively refreshes token when token is already expired', () async {
+      // Arrange - token expired 10 seconds ago
+      final expiredToken = generateTestJwtToken(expiresInSeconds: -10);
+      final refreshToken = 'refresh-token-123';
+
+      when(mockAuthService.getToken()).thenAnswer((_) async => expiredToken);
+      when(mockAuthService.getRefreshToken()).thenAnswer((_) async => refreshToken);
+      when(mockAuthService.setToken(any)).thenAnswer((_) async => {});
+
+      // Act
+      interceptor.onRequest(requestOptions, mockHandler);
+      await Future.delayed(Duration(milliseconds: 100)); // Wait for async refresh
+
+      // Assert - should attempt token refresh
+      verify(mockAuthService.getToken()).called(greaterThanOrEqualTo(1));
+      verify(mockAuthService.getRefreshToken()).called(1);
+    });
+
+    test('uses expired token when refresh fails', () async {
+      // Arrange - token expired, but refresh fails
+      final expiredToken = generateTestJwtToken(expiresInSeconds: -10);
+
+      when(mockAuthService.getToken()).thenAnswer((_) async => expiredToken);
+      when(mockAuthService.getRefreshToken()).thenAnswer((_) async => null);
+      when(mockAuthService.clearAuth()).thenAnswer((_) async => {});
+
+      // Act
+      interceptor.onRequest(requestOptions, mockHandler);
+      await Future.delayed(Duration(milliseconds: 100)); // Wait for async refresh
+
+      // Assert - should use expired token (request will likely fail with 401)
+      verify(mockAuthService.getToken()).called(greaterThanOrEqualTo(1));
+      verify(mockAuthService.getRefreshToken()).called(1);
+      verify(mockHandler.next(requestOptions)).called(1);
+    });
+
+    test('handles invalid token format gracefully', () async {
+      // Arrange - invalid JWT format (missing parts)
+      final invalidToken = 'invalid.token';
+
+      when(mockAuthService.getToken()).thenAnswer((_) async => invalidToken);
+      when(mockAuthService.getRefreshToken()).thenAnswer((_) async => null);
+      when(mockAuthService.clearAuth()).thenAnswer((_) async => {});
+
+      // Act
+      interceptor.onRequest(requestOptions, mockHandler);
+      await Future.delayed(Duration(milliseconds: 100)); // Wait for async refresh
+
+      // Assert - should attempt refresh even for invalid token
+      verify(mockAuthService.getToken()).called(greaterThanOrEqualTo(1));
+      verify(mockAuthService.getRefreshToken()).called(1);
+    });
+
+    test('handles token without expiration field', () async {
+      // Arrange - create JWT without 'exp' field
+      final header = base64Url.encode(utf8.encode(json.encode({'alg': 'HS256', 'typ': 'JWT'})));
+      final payload = base64Url.encode(utf8.encode(json.encode({'sub': 'test-user'})));
+      final signature = base64Url.encode(utf8.encode('signature'));
+      final tokenWithoutExp = '$header.$payload.$signature';
+
+      when(mockAuthService.getToken()).thenAnswer((_) async => tokenWithoutExp);
+      when(mockAuthService.getRefreshToken()).thenAnswer((_) async => null);
+      when(mockAuthService.clearAuth()).thenAnswer((_) async => {});
+
+      // Act
+      interceptor.onRequest(requestOptions, mockHandler);
+      await Future.delayed(Duration(milliseconds: 100)); // Wait for async refresh
+
+      // Assert - should treat as expired and attempt refresh
+      verify(mockAuthService.getToken()).called(greaterThanOrEqualTo(1));
+      verify(mockAuthService.getRefreshToken()).called(1);
+    });
+
+    test('does not add Authorization header when no token available', () async {
+      // Arrange
+      when(mockAuthService.getToken()).thenAnswer((_) async => null);
+
+      // Act
+      interceptor.onRequest(requestOptions, mockHandler);
+      await Future.delayed(Duration(milliseconds: 50)); // Wait for async check
+
+      // Assert
+      expect(requestOptions.headers.containsKey('Authorization'), false);
+      verify(mockHandler.next(requestOptions)).called(1);
+      verifyNever(mockAuthService.getRefreshToken());
     });
   });
 
