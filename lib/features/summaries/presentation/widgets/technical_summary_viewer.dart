@@ -255,6 +255,7 @@ class _TechnicalSummaryViewerState
     final colorScheme = theme.colorScheme;
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 900;
+    final isMobile = screenWidth <= 768;
     final risks = (_localSummary.risks as List?) ?? [];
 
     final content = ConstrainedBox(
@@ -263,7 +264,7 @@ class _TechnicalSummaryViewerState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
                 // Common Header
-                _buildCommonHeader(context),
+                _buildCommonHeader(context, isMobile),
                 const SizedBox(height: 24),
 
                 // Technical Overview
@@ -353,7 +354,7 @@ class _TechnicalSummaryViewerState
     );
   }
 
-  Widget _buildCommonHeader(BuildContext context) {
+  Widget _buildCommonHeader(BuildContext context, bool isMobile) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
@@ -389,26 +390,27 @@ class _TechnicalSummaryViewerState
               ),
             ),
 
-            const SizedBox(width: 16),
-
-            // Action buttons
-            TextButton.icon(
-              onPressed: widget.onExport,
-              icon: Icon(Icons.download_outlined, size: 18),
-              label: const Text('Export'),
-              style: TextButton.styleFrom(
-                foregroundColor: colorScheme.onSurfaceVariant,
+            // Action buttons - Hidden on mobile, shown on tablet/desktop
+            if (!isMobile) ...[
+              const SizedBox(width: 16),
+              TextButton.icon(
+                onPressed: widget.onExport,
+                icon: Icon(Icons.download_outlined, size: 18),
+                label: const Text('Export'),
+                style: TextButton.styleFrom(
+                  foregroundColor: colorScheme.onSurfaceVariant,
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            TextButton.icon(
-              onPressed: widget.onCopy,
-              icon: Icon(Icons.copy_outlined, size: 18),
-              label: const Text('Copy'),
-              style: TextButton.styleFrom(
-                foregroundColor: colorScheme.onSurfaceVariant,
+              const SizedBox(width: 8),
+              TextButton.icon(
+                onPressed: widget.onCopy,
+                icon: Icon(Icons.copy_outlined, size: 18),
+                label: const Text('Copy'),
+                style: TextButton.styleFrom(
+                  foregroundColor: colorScheme.onSurfaceVariant,
+                ),
               ),
-            ),
+            ],
           ],
         ),
         const SizedBox(height: 8),
@@ -454,33 +456,36 @@ class _TechnicalSummaryViewerState
                   color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                 ),
               ),
-              const SizedBox(width: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.purple.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(
-                    color: Colors.purple.withValues(alpha: 0.3),
-                    width: 0.5,
+              // Format label - Hidden on mobile, shown on tablet/desktop
+              if (!isMobile) ...[
+                const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.purple.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: Colors.purple.withValues(alpha: 0.3),
+                      width: 0.5,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.code, size: 14, color: Colors.purple),
+                      const SizedBox(width: 4),
+                      Text(
+                        'TECHNICAL',
+                        style: textTheme.labelSmall?.copyWith(
+                          color: Colors.purple,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.code, size: 14, color: Colors.purple),
-                    const SizedBox(width: 4),
-                    Text(
-                      'TECHNICAL',
-                      style: textTheme.labelSmall?.copyWith(
-                        color: Colors.purple,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              ],
             ],
           ),
         ),
