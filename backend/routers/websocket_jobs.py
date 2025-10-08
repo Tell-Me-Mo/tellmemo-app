@@ -38,14 +38,18 @@ class JobConnectionManager:
         self.client_subscriptions[client_id] = set()
         self.project_subscriptions[client_id] = None
         logger.info(f"Job WebSocket connected: {sanitize_for_log(client_id)}")
-        
-        # Send initial connection confirmation
-        await self.send_json(client_id, {
-            "type": "connection",
-            "status": "connected",
-            "client_id": client_id,
-            "timestamp": datetime.utcnow().isoformat()
-        })
+
+        # Send initial connection confirmation (client might have disconnected already)
+        try:
+            await self.send_json(client_id, {
+                "type": "connection",
+                "status": "connected",
+                "client_id": client_id,
+                "timestamp": datetime.utcnow().isoformat()
+            })
+        except Exception:
+            # Client already disconnected, cleanup will happen via WebSocketDisconnect
+            pass
         
     def disconnect(self, client_id: str):
         """Remove connection and clean up subscriptions."""

@@ -131,6 +131,140 @@ class SaladTranscriptionService:
                 "error": "Unexpected error occurred"
             }
 
+    async def upload_to_s4_multipart(
+        self,
+        audio_path: str,
+        mime_type: str = "audio/mpeg",
+        chunk_size_mb: int = 95  # Just under 100MB limit
+    ) -> str:
+        """
+        Upload large audio file (>100MB) to S4 using multipart upload.
+
+        Args:
+            audio_path: Path to the local audio file
+            mime_type: MIME type of the audio file
+            chunk_size_mb: Size of each chunk in MB (max 100MB per S4 limit)
+
+        Returns:
+            Signed URL for the uploaded file
+        """
+        try:
+            file_name = Path(audio_path).name
+            s4_path = f"audio/{file_name}"
+            file_size = Path(audio_path).stat().st_size
+            chunk_size_bytes = chunk_size_mb * 1024 * 1024
+
+            logger.info(f"Starting multipart upload to S4: {s4_path} ({file_size / 1024 / 1024:.2f} MB)")
+
+            # Disable SSL verification for development
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            connector = aiohttp.TCPConnector(ssl=ssl_context)
+
+            async with aiohttp.ClientSession(connector=connector) as session:
+                # Step 1: Initiate multipart upload
+                initiate_url = f"https://storage-api.salad.com/organizations/{self.organization_name}/file_parts/{s4_path}?uploads"
+                logger.info(f"Initiating multipart upload")
+
+                async with session.post(
+                    initiate_url,
+                    headers={"Salad-Api-Key": self.api_key}
+                ) as response:
+                    if response.status not in [200, 201]:
+                        error_text = await response.text()
+                        logger.error(f"Failed to initiate multipart upload: {response.status} - {error_text}")
+                        raise Exception(f"Failed to initiate multipart upload: {response.status} - {error_text}")
+
+                    result = await response.json()
+                    upload_id = result.get('uploadId')
+
+                    if not upload_id:
+                        raise Exception(f"No uploadId returned from S4: {result}")
+
+                    logger.info(f"Multipart upload initiated with uploadId: {upload_id}")
+
+                # Step 2: Upload parts
+                parts = []
+                part_number = 1
+
+                with open(audio_path, 'rb') as f:
+                    while True:
+                        chunk = f.read(chunk_size_bytes)
+                        if not chunk:
+                            break
+
+                        logger.info(f"Uploading part {part_number} ({len(chunk) / 1024 / 1024:.2f} MB)")
+
+                        part_url = f"https://storage-api.salad.com/organizations/{self.organization_name}/file_parts/{s4_path}?partNumber={part_number}&uploadId={upload_id}"
+
+                        async with session.put(
+                            part_url,
+                            headers={
+                                "Salad-Api-Key": self.api_key,
+                                "Content-Type": "application/octet-stream"
+                            },
+                            data=chunk
+                        ) as part_response:
+                            if part_response.status not in [200, 201]:
+                                error_text = await part_response.text()
+                                logger.error(f"Failed to upload part {part_number}: {part_response.status} - {error_text}")
+                                raise Exception(f"Failed to upload part {part_number}: {part_response.status} - {error_text}")
+
+                            # Get ETag from response headers
+                            etag = part_response.headers.get('ETag')
+                            if etag:
+                                # Remove quotes from ETag if present
+                                etag = etag.strip('"')
+
+                            parts.append({
+                                "partNumber": part_number,
+                                "etag": etag
+                            })
+
+                            logger.info(f"Part {part_number} uploaded successfully (ETag: {etag})")
+
+                        part_number += 1
+
+                logger.info(f"All {len(parts)} parts uploaded successfully")
+
+                # Step 3: Complete multipart upload
+                complete_url = f"https://storage-api.salad.com/organizations/{self.organization_name}/file_parts/{s4_path}?uploadId={upload_id}"
+                complete_payload = {
+                    "parts": parts,
+                    "mimeType": mime_type,
+                    "sign": True,
+                    "signatureExp": 3 * 24 * 60 * 60  # 3 days
+                }
+
+                logger.info(f"Completing multipart upload with {len(parts)} parts")
+
+                async with session.post(
+                    complete_url,
+                    headers={
+                        "Salad-Api-Key": self.api_key,
+                        "Content-Type": "application/json"
+                    },
+                    json=complete_payload
+                ) as response:
+                    if response.status not in [200, 201]:
+                        error_text = await response.text()
+                        logger.error(f"Failed to complete multipart upload: {response.status} - {error_text}")
+                        raise Exception(f"Failed to complete multipart upload: {response.status} - {error_text}")
+
+                    result = await response.json()
+                    signed_url = result.get('url')
+
+                    if not signed_url:
+                        raise Exception(f"No signed URL returned from S4: {result}")
+
+                    logger.info(f"Multipart upload completed successfully, got signed URL")
+                    return signed_url
+
+        except Exception as e:
+            logger.error(f"S4 multipart upload error: {sanitize_for_log(str(e))}", exc_info=True)
+            raise
+
     async def upload_to_s4(
         self,
         audio_path: str,
@@ -138,6 +272,7 @@ class SaladTranscriptionService:
     ) -> str:
         """
         Upload audio file to Salad S4 storage and get signed URL.
+        Automatically uses multipart upload for files >100MB.
 
         Args:
             audio_path: Path to the local audio file
@@ -147,12 +282,22 @@ class SaladTranscriptionService:
             Signed URL for the uploaded file
         """
         try:
-            # Get file name from path
+            # Check file size to determine upload method
+            file_size = Path(audio_path).stat().st_size
+            file_size_mb = file_size / (1024 * 1024)
+
+            # S4 has a 100MB single upload limit (Cloudflare Workers constraint)
+            # Use multipart upload for files >= 100MB
+            if file_size_mb >= 100:
+                logger.info(f"File size ({file_size_mb:.2f} MB) >= 100MB, using multipart upload")
+                return await self.upload_to_s4_multipart(audio_path, mime_type)
+
+            # For files < 100MB, use simple single upload
             file_name = Path(audio_path).name
             s4_path = f"audio/{file_name}"
             upload_url = f"https://storage-api.salad.com/organizations/{self.organization_name}/files/{s4_path}"
 
-            logger.info(f"Uploading file to S4: {s4_path}")
+            logger.info(f"Uploading file to S4: {s4_path} ({file_size_mb:.2f} MB)")
 
             # Disable SSL verification for development
             ssl_context = ssl.create_default_context()

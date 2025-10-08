@@ -201,101 +201,114 @@ class _OrganizationSettingsDialogState extends ConsumerState<OrganizationSetting
 
             // Mobile layout - no sidebar
             if (isMobile) {
-              return Column(
-                children: [
-                  // Header Bar
-                  Container(
-                    height: 56,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(
-                          color: colorScheme.outline.withValues(alpha: 0.1),
-                        ),
-                      ),
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  return ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                      maxHeight: constraints.maxHeight,
                     ),
-                    child: Row(
+                    child: Column(
                       children: [
-                        Text(
-                          _getViewTitle(),
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
+                        // Header Bar
+                        Container(
+                          height: 56,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                color: colorScheme.outline.withValues(alpha: 0.1),
+                              ),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  _getViewTitle(),
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                icon: const Icon(Icons.close),
+                                tooltip: 'Close',
+                                iconSize: 20,
+                              ),
+                            ],
                           ),
                         ),
-                        const Spacer(),
-                        IconButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(Icons.close),
-                          tooltip: 'Close',
-                          iconSize: 20,
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Mobile Tabs
-                  Container(
-                    height: 48,
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(
-                          color: colorScheme.outline.withValues(alpha: 0.1),
-                        ),
-                      ),
-                    ),
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      children: [
-                        _buildMobileTab('general', 'General', isAdmin),
-                        _buildMobileTab('notifications', 'Notifications', isAdmin),
-                        _buildMobileTab('data', 'Data', isAdmin),
-                        _buildMobileTab('members', 'Members', true),
-                        if (isAdmin) _buildMobileTab('danger', 'Danger', true),
-                      ],
-                    ),
-                  ),
-                  // Content
-                  Expanded(
-                    child: Form(
-                      key: _formKey,
-                      onChanged: _markChanged,
-                      child: _buildContent(organization, isAdmin),
-                    ),
-                  ),
-                  // Footer
-                  if (isAdmin && _selectedView != 'members')
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          top: BorderSide(
-                            color: colorScheme.outline.withValues(alpha: 0.1),
+                        // Mobile Tabs
+                        Container(
+                          height: 48,
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                color: colorScheme.outline.withValues(alpha: 0.1),
+                              ),
+                            ),
+                          ),
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            cacheExtent: 1000, // Ensure all tabs are built
+                            children: [
+                              _buildMobileTab('general', 'General', isAdmin),
+                              _buildMobileTab('notifications', 'Notifications', isAdmin),
+                              _buildMobileTab('data', 'Data', isAdmin),
+                              _buildMobileTab('members', 'Members', true),
+                              if (isAdmin) _buildMobileTab('danger', 'Danger', isAdmin),
+                            ],
                           ),
                         ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          if (_hasChanges) ...[
-                            TextButton(
-                              onPressed: () {
-                                _initializeFromOrganization(organization);
-                                setState(() {
-                                  _hasChanges = false;
-                                });
-                              },
-                              child: const Text('Reset'),
+                        // Content
+                        Expanded(
+                          child: Form(
+                            key: _formKey,
+                            onChanged: _markChanged,
+                            child: _buildContent(organization, isAdmin),
+                          ),
+                        ),
+                        // Footer
+                        if (isAdmin && _selectedView != 'members')
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                top: BorderSide(
+                                  color: colorScheme.outline.withValues(alpha: 0.1),
+                                ),
+                              ),
                             ),
-                            const SizedBox(width: 8),
-                            FilledButton(
-                              onPressed: _isSaving ? null : _saveChanges,
-                              child: Text(_isSaving ? 'Saving...' : 'Save'),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                if (_hasChanges) ...[
+                                  TextButton(
+                                    onPressed: () {
+                                      _initializeFromOrganization(organization);
+                                      setState(() {
+                                        _hasChanges = false;
+                                      });
+                                    },
+                                    child: const Text('Reset'),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  FilledButton(
+                                    onPressed: _isSaving ? null : _saveChanges,
+                                    child: Text(_isSaving ? 'Saving...' : 'Save'),
+                                  ),
+                                ],
+                              ],
                             ),
-                          ],
-                        ],
-                      ),
+                          ),
+                      ],
                     ),
-                ],
+                  );
+                },
               );
             }
 
@@ -749,11 +762,17 @@ class _OrganizationSettingsDialogState extends ConsumerState<OrganizationSetting
                         )
                       : Row(
                           children: [
-                            _buildStatItem('Members', memberCount.toString(), Icons.people_outline),
+                            Expanded(
+                              child: _buildStatItem('Members', memberCount.toString(), Icons.people_outline),
+                            ),
                             const SizedBox(width: 24),
-                            _buildStatItem('Projects', projectCount.toString(), Icons.folder_outlined),
+                            Expanded(
+                              child: _buildStatItem('Projects', projectCount.toString(), Icons.folder_outlined),
+                            ),
                             const SizedBox(width: 24),
-                            _buildStatItem('Documents', documentCount.toString(), Icons.description_outlined),
+                            Expanded(
+                              child: _buildStatItem('Documents', documentCount.toString(), Icons.description_outlined),
+                            ),
                           ],
                         ),
                 ],
@@ -975,6 +994,7 @@ class _OrganizationSettingsDialogState extends ConsumerState<OrganizationSetting
     final colorScheme = theme.colorScheme;
 
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Icon(
           icon,
@@ -982,22 +1002,25 @@ class _OrganizationSettingsDialogState extends ConsumerState<OrganizationSetting
           color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
         ),
         const SizedBox(width: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              value,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
+        Flexible(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-            Text(
-              label,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+              Text(
+                label,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );

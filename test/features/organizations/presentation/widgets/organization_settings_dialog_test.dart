@@ -121,7 +121,19 @@ void main() {
           screenHeight: 812,
         );
 
+        // Verify mobile tabs are rendered
+        expect(find.text('General'), findsOneWidget);
+        expect(find.text('Notifications'), findsOneWidget);
+        expect(find.text('Data'), findsOneWidget);
+        expect(find.text('Members'), findsOneWidget);
+
         // Admin should see Danger tab
+        // Note: Scrollable ListView with conditionally rendered last item
+        await tester.dragUntilVisible(
+          find.text('Danger'),
+          find.byType(ListView).first,
+          const Offset(-100, 0),
+        );
         expect(find.text('Danger'), findsOneWidget);
       });
 

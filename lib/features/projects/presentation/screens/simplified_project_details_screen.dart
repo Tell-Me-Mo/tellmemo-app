@@ -2117,12 +2117,38 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title
-                  Text(
-                    document.title,
-                    style: textTheme.bodyMedium,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  // Title with NEW badge at the beginning
+                  Row(
+                    children: [
+                      // NEW badge at the beginning
+                      if (isNew) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'NEW',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                      Expanded(
+                        child: Text(
+                          document.title,
+                          style: textTheme.bodyMedium,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 2),
                   // Time and type info
@@ -2162,30 +2188,6 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                 ],
               ),
             ),
-            // New badge
-            if (isNew)
-              Padding(
-                padding: const EdgeInsets.only(left: 8),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(
-                      color: Colors.orange.withValues(alpha: 0.3),
-                      width: 1,
-                    ),
-                  ),
-                  child: Text(
-                    'NEW',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.orange[700],
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
             // Summary indicator
             if (document.summaryGenerated)
               Padding(
@@ -2205,6 +2207,10 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
   Widget _buildCompactSummaryCardForSidebar(BuildContext context, SummaryModel summary) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+
+    // Check if this is a new item
+    final newItems = ref.watch(newItemsProvider);
+    final isNew = newItems.containsKey(summary.id) && !newItems[summary.id]!.isExpired;
 
     // Format time
     final timeString = DateTimeUtils.formatRelativeTime(summary.createdAt);
@@ -2258,14 +2264,40 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title with format type
-                  Text(
-                    displaySubject,
-                    style: textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w500,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  // Title with NEW badge at the beginning
+                  Row(
+                    children: [
+                      // NEW badge at the beginning
+                      if (isNew) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'NEW',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                      Expanded(
+                        child: Text(
+                          displaySubject,
+                          style: textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 2),
                   // Time
@@ -2322,6 +2354,13 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
     final formatType = summary.format;
     final formattedFormat = formatType[0].toUpperCase() + formatType.substring(1);
 
+    // Format the subject with format type
+    final displaySubject = summary.subject.contains('Project Summary')
+        ? summary.subject.replaceFirst('Project Summary', '${formattedFormat} Summary')
+        : summary.subject.contains('Meeting Summary')
+            ? summary.subject.replaceFirst('Meeting Summary', '${formattedFormat} Meeting')
+            : '${formattedFormat} - ${summary.subject}';
+
     return InkWell(
       onTap: () => context.push('/summaries/${summary.id}'),
       borderRadius: BorderRadius.circular(8),
@@ -2343,15 +2382,38 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    summary.subject.contains('Project Summary')
-                        ? summary.subject.replaceFirst('Project Summary', '${formattedFormat} Summary')
-                        : summary.subject.contains('Meeting Summary')
-                            ? summary.subject.replaceFirst('Meeting Summary', '${formattedFormat} Meeting')
-                            : '${formattedFormat} - ${summary.subject}',
-                    style: textTheme.bodyMedium,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  // Title with NEW badge at the beginning
+                  Row(
+                    children: [
+                      // NEW badge at the beginning
+                      if (isNew) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'NEW',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                      Expanded(
+                        child: Text(
+                          displaySubject,
+                          style: textTheme.bodyMedium,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                   Row(
                     children: [
@@ -2373,29 +2435,6 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                 ],
               ),
             ),
-            // New badge first
-            if (isNew) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(
-                    color: Colors.orange.withValues(alpha: 0.3),
-                    width: 1,
-                  ),
-                ),
-                child: Text(
-                  'NEW',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Colors.orange[700],
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-            ],
           ],
         ),
       ),

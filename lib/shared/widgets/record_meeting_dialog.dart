@@ -171,74 +171,78 @@ class _RecordMeetingDialogState extends ConsumerState<RecordMeetingDialog> {
             Navigator.of(context).pop();
           },
         ),
-        // Content section with padding
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: _DialogConstants.padding,
-            vertical: _DialogConstants.padding,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-
-                // Project Selection (if not specific project)
-                if (widget.project == null) ...[
-                  _ProjectSelectionSection(
-                    projectMode: _projectMode,
-                    selectedProjectId: _selectedProjectId,
-                    onModeChanged: (mode) => setState(() {
-                      _projectMode = mode;
-                      if (mode == ProjectSelectionMode.automatic) {
-                        _selectedProjectId = null;
-                      }
-                    }),
-                    onProjectSelected: (projectId) => setState(() {
-                      _selectedProjectId = projectId;
-                    }),
-                    colorScheme: colorScheme,
-                    textTheme: textTheme,
-                  ),
-                  const SizedBox(height: _DialogConstants.padding),
-                ],
-
-                // Title Field with consistent styling
-                _TitleField(
-                  controller: _titleController,
-                  colorScheme: colorScheme,
-                ),
-                const SizedBox(height: _DialogConstants.spacing * 2),
-
-              // Recording Button Container with dynamic sizing
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                padding: EdgeInsets.all(
-                  recordingState.state == RecordingState.idle
-                    ? _DialogConstants.padding * 2
-                    : _DialogConstants.padding,
-                ),
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: recordingState.state == RecordingState.recording
-                        ? Colors.red.withValues(alpha: _DialogConstants.highOpacity)
-                        : colorScheme.outline.withValues(alpha: _DialogConstants.mediumOpacity),
-                    width: recordingState.state == RecordingState.recording ? 2 : 1.5,
-                  ),
-                  borderRadius: BorderRadius.circular(_DialogConstants.borderRadius),
-                  color: recordingState.state == RecordingState.recording
-                      ? Colors.red.withValues(alpha: _DialogConstants.minimalOpacity)
-                      : colorScheme.surfaceContainerHighest.withValues(alpha: 0.05),
-                ),
-                child: Center(
-                  child: RecordingButton(
-                    onRecordingComplete: _handleRecordingComplete,
-                    projectId: _projectMode == ProjectSelectionMode.automatic ? 'auto' :
-                              (_selectedProjectId ?? widget.project?.id ?? 'auto'),
-                    meetingTitle: _titleController.text,
-                  ),
-                ),
+        // Content section with padding - wrapped in Flexible to prevent overflow
+        Flexible(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: _DialogConstants.padding,
+                vertical: _DialogConstants.padding,
               ),
-            ],
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+
+                    // Project Selection (if not specific project)
+                    if (widget.project == null) ...[
+                      _ProjectSelectionSection(
+                        projectMode: _projectMode,
+                        selectedProjectId: _selectedProjectId,
+                        onModeChanged: (mode) => setState(() {
+                          _projectMode = mode;
+                          if (mode == ProjectSelectionMode.automatic) {
+                            _selectedProjectId = null;
+                          }
+                        }),
+                        onProjectSelected: (projectId) => setState(() {
+                          _selectedProjectId = projectId;
+                        }),
+                        colorScheme: colorScheme,
+                        textTheme: textTheme,
+                      ),
+                      const SizedBox(height: _DialogConstants.padding),
+                    ],
+
+                    // Title Field with consistent styling
+                    _TitleField(
+                      controller: _titleController,
+                      colorScheme: colorScheme,
+                    ),
+                    const SizedBox(height: _DialogConstants.spacing * 2),
+
+                  // Recording Button Container with dynamic sizing
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    padding: EdgeInsets.all(
+                      recordingState.state == RecordingState.idle
+                        ? _DialogConstants.padding * 2
+                        : _DialogConstants.padding,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: recordingState.state == RecordingState.recording
+                            ? Colors.red.withValues(alpha: _DialogConstants.highOpacity)
+                            : colorScheme.outline.withValues(alpha: _DialogConstants.mediumOpacity),
+                        width: recordingState.state == RecordingState.recording ? 2 : 1.5,
+                      ),
+                      borderRadius: BorderRadius.circular(_DialogConstants.borderRadius),
+                      color: recordingState.state == RecordingState.recording
+                          ? Colors.red.withValues(alpha: _DialogConstants.minimalOpacity)
+                          : colorScheme.surfaceContainerHighest.withValues(alpha: 0.05),
+                    ),
+                    child: Center(
+                      child: RecordingButton(
+                        onRecordingComplete: _handleRecordingComplete,
+                        projectId: _projectMode == ProjectSelectionMode.automatic ? 'auto' :
+                                  (_selectedProjectId ?? widget.project?.id ?? 'auto'),
+                        meetingTitle: _titleController.text,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
         // Bottom actions bar

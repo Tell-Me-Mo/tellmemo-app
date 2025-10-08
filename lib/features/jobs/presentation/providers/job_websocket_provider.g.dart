@@ -70,7 +70,7 @@ final jobWebSocketConnectionStateProvider =
 // ignore: unused_element
 typedef JobWebSocketConnectionStateRef = AutoDisposeStreamProviderRef<bool>;
 String _$webSocketActiveJobsTrackerHash() =>
-    r'04e0a81d74892be8a7a5162955a14affa274b6f4';
+    r'9d2bf98dd5668fc98a695cf7ea30d5a8e34141ab';
 
 /// Active jobs tracker using WebSocket
 ///

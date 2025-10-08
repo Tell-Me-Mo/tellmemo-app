@@ -98,6 +98,12 @@ class RecordingButton extends ConsumerWidget {
             ],
           ),
         ),
+
+        // 90-minute warning notification
+        if ((isRecording || isPaused) && recordingState.showDurationWarning) ...[
+          const SizedBox(height: 12),
+          _DurationWarningBanner(colorScheme: colorScheme),
+        ],
         
         // Audio level indicator when recording
         if (isRecording) ...[
@@ -477,8 +483,14 @@ class RecordingButton extends ConsumerWidget {
   }
   
   String _formatDuration(Duration duration) {
+    final hours = duration.inHours;
     final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
     final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+
+    // Show hours if duration is >= 1 hour
+    if (hours > 0) {
+      return '$hours:$minutes:$seconds';
+    }
     return '$minutes:$seconds';
   }
 }
@@ -610,5 +622,50 @@ class _AudioLevelIndicatorState extends State<_AudioLevelIndicator>
       // Very high - red
       return Colors.red;
     }
+  }
+}
+
+// Duration warning banner widget - compact and elegant
+class _DurationWarningBanner extends StatelessWidget {
+  final ColorScheme colorScheme;
+
+  const _DurationWarningBanner({required this.colorScheme});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 280),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: 0.1),
+        border: Border.all(
+          color: Colors.orange.withValues(alpha: 0.3),
+          width: 1,
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.access_time_rounded,
+            size: 14,
+            color: Colors.orange.shade700,
+          ),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              '90 min · Auto-stop at 2 hours',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: Colors.orange.shade800,
+                height: 1.2,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -22,10 +22,10 @@ services:
     networks:
       - pm_network
     logging:
-      driver: json-file
+      driver: gelf
       options:
-        max-size: "10m"
-        max-file: "3"
+        gelf-address: "udp://127.0.0.1:12201"
+        tag: "{{.Name}}"
 
   # Qdrant v1.15.5 - Vector database for semantic search
   qdrant:
@@ -57,10 +57,10 @@ services:
     networks:
       - pm_network
     logging:
-      driver: json-file
+      driver: gelf
       options:
-        max-size: "10m"
-        max-file: "3"
+        gelf-address: "udp://127.0.0.1:12201"
+        tag: "{{.Name}}"
 
   # Redis 8 - Required for Langfuse v3 queue and caching
   redis:
@@ -82,10 +82,10 @@ services:
     networks:
       - pm_network
     logging:
-      driver: json-file
+      driver: gelf
       options:
-        max-size: "10m"
-        max-file: "3"
+        gelf-address: "udp://127.0.0.1:12201"
+        tag: "{{.Name}}"
 
   # MinIO - S3-compatible storage for Langfuse v3
   minio:
@@ -109,10 +109,10 @@ services:
     networks:
       - pm_network
     logging:
-      driver: json-file
+      driver: gelf
       options:
-        max-size: "10m"
-        max-file: "3"
+        gelf-address: "udp://127.0.0.1:12201"
+        tag: "{{.Name}}"
 
   # MinIO Client - Initialize buckets for Langfuse
   minio-init:
@@ -145,10 +145,10 @@ services:
     networks:
       - pm_network
     logging:
-      driver: json-file
+      driver: gelf
       options:
-        max-size: "10m"
-        max-file: "3"
+        gelf-address: "udp://127.0.0.1:12201"
+        tag: "{{.Name}}"
 
   # Zookeeper - Required for ClickHouse clustering
   zookeeper:
@@ -172,10 +172,10 @@ services:
     networks:
       - pm_network
     logging:
-      driver: json-file
+      driver: gelf
       options:
-        max-size: "10m"
-        max-file: "3"
+        gelf-address: "udp://127.0.0.1:12201"
+        tag: "{{.Name}}"
 
   # ClickHouse - Required for Langfuse v3 analytics (with clustering support)
   clickhouse:
@@ -210,10 +210,10 @@ services:
     networks:
       - pm_network
     logging:
-      driver: json-file
+      driver: gelf
       options:
-        max-size: "10m"
-        max-file: "3"
+        gelf-address: "udp://127.0.0.1:12201"
+        tag: "{{.Name}}"
 
   # Langfuse v3 Worker - Background processing
   langfuse-worker:
@@ -270,10 +270,10 @@ services:
     networks:
       - pm_network
     logging:
-      driver: json-file
+      driver: gelf
       options:
-        max-size: "10m"
-        max-file: "3"
+        gelf-address: "udp://127.0.0.1:12201"
+        tag: "{{.Name}}"
 
   # Langfuse v3 Web - Main application
   langfuse-web:
@@ -349,10 +349,10 @@ services:
     networks:
       - pm_network
     logging:
-      driver: json-file
+      driver: gelf
       options:
-        max-size: "10m"
-        max-file: "3"
+        gelf-address: "udp://127.0.0.1:12201"
+        tag: "{{.Name}}"
 
   # ===== ELK STACK =====
   # Elasticsearch - Search and analytics engine
@@ -387,10 +387,10 @@ services:
     networks:
       - pm_network
     logging:
-      driver: json-file
+      driver: gelf
       options:
-        max-size: "10m"
-        max-file: "3"
+        gelf-address: "udp://127.0.0.1:12201"
+        tag: "{{.Name}}"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
       interval: 30s
@@ -422,10 +422,10 @@ services:
     networks:
       - pm_network
     logging:
-      driver: json-file
+      driver: gelf
       options:
-        max-size: "10m"
-        max-file: "3"
+        gelf-address: "udp://127.0.0.1:12201"
+        tag: "{{.Name}}"
     command: logstash -f /usr/share/logstash/pipeline/logstash.conf
 
   # Kibana - Visualization and exploration
@@ -449,10 +449,10 @@ services:
     networks:
       - pm_network
     logging:
-      driver: json-file
+      driver: gelf
       options:
-        max-size: "10m"
-        max-file: "3"
+        gelf-address: "udp://127.0.0.1:12201"
+        tag: "{{.Name}}"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
       interval: 30s

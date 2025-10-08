@@ -106,18 +106,27 @@ class WebSocketActiveJobsTracker extends _$WebSocketActiveJobsTracker {
           debugPrint('[WebSocketActiveJobsTracker] Marked summary $summaryId as NEW');
         }
 
-        // Refresh the lists to show the new items
-        // This ensures the UI updates even after page refresh
-        // Use actual project_id from metadata if available (AI matching scenario)
+        // Check if a new project was created during this job
+        final projectWasCreated = result?['project_was_created'] as bool? ?? false;
         final actualProjectId = job.metadata['project_id'] as String? ?? job.projectId;
 
+        debugPrint('[WebSocketActiveJobsTracker] Job completed - projectWasCreated: $projectWasCreated, actualProjectId: $actualProjectId, result keys: ${result?.keys.toList()}');
+
+        if (projectWasCreated && actualProjectId.isNotEmpty) {
+          ref.read(newItemsProvider.notifier).addNewItem(actualProjectId);
+          debugPrint('[WebSocketActiveJobsTracker] Marked project $actualProjectId as NEW');
+        }
+
+        // Refresh the lists to show the new items
+        // This ensures the UI updates even after page refresh
         ref.invalidate(meetingsListProvider);
         ref.invalidate(projectSummariesProvider(actualProjectId));
         ref.invalidate(risksNotifierProvider(actualProjectId));
         ref.invalidate(tasksNotifierProvider(actualProjectId));
         ref.invalidate(lessonsLearnedNotifierProvider(actualProjectId));
         ref.invalidate(projectDetailProvider(actualProjectId));
-        debugPrint('[WebSocketActiveJobsTracker] Refreshed all content sections (meetings, summaries, risks, tasks, lessons, description) for project $actualProjectId');
+        ref.invalidate(projectsListProvider);
+        debugPrint('[WebSocketActiveJobsTracker] Refreshed all content sections (meetings, summaries, risks, tasks, lessons, description, projects) for project $actualProjectId');
 
         // If it's a transcription or text upload job with content_id, consider navigation
         if (contentId != null &&
@@ -209,8 +218,13 @@ class WebSocketActiveJobsTracker extends _$WebSocketActiveJobsTracker {
   /// Cancel a job
   Future<void> cancelJob(String jobId) async {
     final service = ref.read(jobWebSocketServiceProvider);
-    service.cancelJob(jobId);
-    debugPrint('[WebSocketActiveJobsTracker] Cancelling job $jobId');
+    try {
+      await service.cancelJob(jobId);
+      debugPrint('[WebSocketActiveJobsTracker] Successfully sent cancel request for job $jobId');
+    } catch (e) {
+      debugPrint('[WebSocketActiveJobsTracker] Error cancelling job $jobId: $e');
+      rethrow;
+    }
   }
 }
 
