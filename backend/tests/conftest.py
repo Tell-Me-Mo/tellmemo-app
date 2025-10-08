@@ -555,19 +555,40 @@ def mock_llm_client():
     This fixture automatically mocks the MultiProviderLLMClient for all tests,
     preventing accidental calls to Anthropic or OpenAI APIs.
     """
-    # Create mock response that mimics Claude API response structure
-    mock_response = Mock()
-    mock_response.content = [Mock(text='{"subject": "Test Meeting Summary", "body": "This is a test summary generated for testing purposes.", "key_points": ["Point 1", "Point 2", "Point 3"], "action_items": [{"title": "Action 1", "assignee": "Test User", "due_date": "2025-10-14"}], "decisions": [{"title": "Decision 1", "description": "Test decision"}], "risks": [], "blockers": [], "lessons_learned": []}')]
-    mock_response.usage = Mock(input_tokens=100, output_tokens=200)
+    async def mock_create_message(**kwargs):
+        """Return different mock responses based on the system prompt or prompt content."""
+        system_prompt = kwargs.get('system', '')
+        prompt = kwargs.get('prompt', '')
+
+        # Create mock usage
+        mock_usage = Mock(input_tokens=100, output_tokens=200)
+
+        # Project matcher response
+        if 'project management assistant' in system_prompt.lower() or 'project matching' in prompt.lower():
+            response = Mock()
+            response.content = [Mock(text='{"action": "create_new", "project_name": "Test Project", "project_description": "Test project created from meeting", "confidence": 0.85, "reasoning": "New project needed for this meeting"}')]
+            response.usage = mock_usage
+            return response
+
+        # Default summary response
+        response = Mock()
+        response.content = [Mock(text='{"subject": "Test Meeting Summary", "body": "This is a test summary generated for testing purposes.", "key_points": ["Point 1", "Point 2", "Point 3"], "action_items": [{"title": "Action 1", "assignee": "Test User", "due_date": "2025-10-14"}], "decisions": [{"title": "Decision 1", "description": "Test decision"}], "risks": [], "blockers": [], "lessons_learned": []}')]
+        response.usage = mock_usage
+        return response
 
     # Create mock LLM client
     mock_client = Mock()
     mock_client.is_available.return_value = True
-    mock_client.create_message = AsyncMock(return_value=mock_response)
+    mock_client.create_message = AsyncMock(side_effect=mock_create_message)
 
     # Patch the get_multi_llm_client function to return our mock
     with patch('services.summaries.summary_service_refactored.get_multi_llm_client', return_value=mock_client):
         # Also patch the already-instantiated summary_service's llm_client
         from services.summaries.summary_service_refactored import summary_service
         summary_service.llm_client = mock_client
+
+        # Patch project_matcher_service's llm_client
+        from services.intelligence.project_matcher_service import project_matcher_service
+        project_matcher_service.llm_client = mock_client
+
         yield mock_client

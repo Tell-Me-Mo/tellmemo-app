@@ -149,9 +149,13 @@ class ProcessingJobs extends _$ProcessingJobs {
           ref.invalidate(meetingsListProvider);
           ref.invalidate(projectSummariesProvider(job.projectId));
 
-          // Also refresh the projects list in case a new project was created via AI matching
-          // This is important for the dashboard which shows all projects
-          ref.invalidate(projectsListProvider);
+          // Only refresh projects list if a new project was created via AI matching
+          // Check if the result indicates a new project was created
+          final isNewProject = jobModel.result?['project_created'] == true ||
+                               jobModel.result?['new_project'] == true;
+          if (isNewProject) {
+            ref.invalidate(projectsListProvider);
+          }
 
           // Refresh project items (risks, tasks, lessons, blockers)
           // Import is at the top of the file, so we can use these providers
