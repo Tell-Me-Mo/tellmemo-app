@@ -67,11 +67,11 @@ class UploadContent extends _$UploadContent {
     try {
       final apiClient = ref.read(apiClientProvider);
 
-      // Non-blocking progress simulation
+      // Smooth progress simulation - smaller increments, slower updates
       Future.microtask(() async {
-        for (int i = 10; i <= 90; i += 20) {
+        for (int i = 5; i <= 80; i += 5) {
           if (!state.isUploading) break;
-          await Future.delayed(const Duration(milliseconds: 200));
+          await Future.delayed(const Duration(milliseconds: 300));
           if (state.isUploading) {
             state = state.copyWith(progress: i / 100);
           }
@@ -146,11 +146,11 @@ class UploadContent extends _$UploadContent {
     try {
       final apiClient = ref.read(apiClientProvider);
 
-      // Non-blocking progress simulation
+      // Smooth progress simulation - smaller increments, slower updates
       Future.microtask(() async {
-        for (int i = 10; i <= 90; i += 20) {
+        for (int i = 5; i <= 80; i += 5) {
           if (!state.isUploading) break;
-          await Future.delayed(const Duration(milliseconds: 200));
+          await Future.delayed(const Duration(milliseconds: 300));
           if (state.isUploading) {
             state = state.copyWith(progress: i / 100);
           }
@@ -223,11 +223,11 @@ class UploadContent extends _$UploadContent {
       // Get the API client
       final apiClient = ref.read(apiClientProvider);
 
-      // Non-blocking progress simulation
+      // Smooth progress simulation - smaller increments, slower updates
       Future.microtask(() async {
-        for (int i = 10; i <= 90; i += 20) {
+        for (int i = 5; i <= 80; i += 5) {
           if (!state.isUploading) break;
-          await Future.delayed(const Duration(milliseconds: 200));
+          await Future.delayed(const Duration(milliseconds: 300));
           if (state.isUploading) {
             state = state.copyWith(progress: i / 100);
           }
@@ -298,11 +298,11 @@ class UploadContent extends _$UploadContent {
       // Get the API client
       final apiClient = ref.read(apiClientProvider);
 
-      // Non-blocking progress simulation
+      // Smooth progress simulation - smaller increments, slower updates
       Future.microtask(() async {
-        for (int i = 10; i <= 90; i += 20) {
+        for (int i = 5; i <= 80; i += 5) {
           if (!state.isUploading) break;
-          await Future.delayed(const Duration(milliseconds: 200));
+          await Future.delayed(const Duration(milliseconds: 300));
           if (state.isUploading) {
             state = state.copyWith(progress: i / 100);
           }
@@ -615,13 +615,13 @@ class MultiFileUpload extends _$MultiFileUpload {
   /// Simulate progress updates for a file
   void _simulateProgress(String fileId) {
     Future.microtask(() async {
-      for (int i = 10; i <= 90; i += 15) {
+      for (int i = 5; i <= 80; i += 5) {
         if (_isCancelled) break;
 
         final file = state.getFileById(fileId);
         if (file == null || file.status != FileUploadStatus.uploading) break;
 
-        await Future.delayed(const Duration(milliseconds: 150));
+        await Future.delayed(const Duration(milliseconds: 300));
 
         if (state.getFileById(fileId)?.status == FileUploadStatus.uploading) {
           state = state.updateFile(

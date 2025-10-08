@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'dart:io';
+import 'dart:async';
 import '../../features/projects/domain/entities/project.dart';
 import '../../features/meetings/presentation/providers/upload_provider.dart';
 import '../../features/projects/presentation/providers/projects_provider.dart';
@@ -64,6 +65,7 @@ class _UploadContentDialogState extends ConsumerState<UploadContentDialog> {
   String _uploadStatus = '';
   bool _isTextInput = false;
   bool _isMultiFileMode = false;
+  Timer? _progressTimer;
 
   // Project selection
   ProjectSelectionMode _projectMode = ProjectSelectionMode.automatic;
@@ -80,9 +82,32 @@ class _UploadContentDialogState extends ConsumerState<UploadContentDialog> {
 
   @override
   void dispose() {
+    _progressTimer?.cancel();
     _titleController.dispose();
     _contentController.dispose();
     super.dispose();
+  }
+
+  void _startProgressAnimation() {
+    _progressTimer?.cancel();
+    int progress = 0;
+    _progressTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      if (!mounted || !_isUploading) {
+        timer.cancel();
+        return;
+      }
+
+      progress++;
+      final newProgress = (progress * 0.8) / 100; // Max 80% during upload
+
+      if (newProgress < 0.8) {
+        setState(() {
+          _uploadProgress = newProgress;
+        });
+      } else {
+        timer.cancel();
+      }
+    });
   }
 
   Future<void> _pickFile() async {
@@ -193,9 +218,10 @@ class _UploadContentDialogState extends ConsumerState<UploadContentDialog> {
       Map<String, dynamic>? response;
       final uploadProvider = ref.read(uploadContentProvider.notifier);
 
-      // Simulate progress updates
+      // Start smooth progress animation
+      _startProgressAnimation();
+
       setState(() {
-        _uploadProgress = 0.2;
         _uploadStatus = 'Uploading file...';
       });
 
@@ -237,21 +263,19 @@ class _UploadContentDialogState extends ConsumerState<UploadContentDialog> {
         );
       }
 
-      setState(() {
-        _uploadProgress = 0.6;
-        _uploadStatus = 'Processing content...';
-      });
-
       if (response != null) {
+        _progressTimer?.cancel();
+
+        setState(() {
+          _uploadProgress = 0.9;
+          _uploadStatus = 'Processing content...';
+        });
+
         final jobId = response['job_id'] as String?;
         final contentId = response['id'] as String?;
         final returnedProjectId = response['project_id'] as String?;
 
-        if (_projectMode == ProjectSelectionMode.automatic && returnedProjectId != null) {
-          ref.invalidate(projectsListProvider);
-          await ref.read(projectsListProvider.future);
-        }
-
+        // Register the job for progress tracking
         if (jobId != null) {
           final projectIdToUse = returnedProjectId ?? _selectedProjectId ?? widget.project?.id ?? '';
           await ref.read(processingJobsProvider.notifier).addJob(
@@ -266,11 +290,13 @@ class _UploadContentDialogState extends ConsumerState<UploadContentDialog> {
           _uploadStatus = 'Upload complete!';
         });
 
-        ref.invalidate(meetingsListProvider);
-
         // Brief delay to show completion
-        await Future.delayed(const Duration(milliseconds: 500));
-        widget.onUploadComplete();
+        await Future.delayed(const Duration(milliseconds: 300));
+
+        // Close dialog immediately - don't wait for any refreshes
+        if (mounted) {
+          widget.onUploadComplete();
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -305,6 +331,7 @@ class _UploadContentDialogState extends ConsumerState<UploadContentDialog> {
         );
       }
     } finally {
+      _progressTimer?.cancel();
       if (mounted) {
         setState(() {
           _isUploading = false;
@@ -352,15 +379,6 @@ class _UploadContentDialogState extends ConsumerState<UploadContentDialog> {
           );
         },
       );
-
-      // Check if AI matching was used and refresh projects if needed
-      if (_projectMode == ProjectSelectionMode.automatic) {
-        ref.invalidate(projectsListProvider);
-        await ref.read(projectsListProvider.future);
-      }
-
-      // Refresh meetings list
-      ref.invalidate(meetingsListProvider);
 
       // Show success message
       final finalState = ref.read(multiFileUploadProvider);
