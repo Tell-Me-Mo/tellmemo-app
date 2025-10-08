@@ -883,18 +883,22 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
           _buildEmptyState()
         else
           Column(
-            children: recentProjects.take(3).map((project) =>
-              Padding(
+            children: recentProjects.take(3).map((project) {
+              // Check if this project is new
+              // Watch the provider state to trigger rebuilds when items change
+              ref.watch(newItemsProvider);
+              final isNew = ref.read(newItemsProvider.notifier).isNewItem(project.id);
+              return Padding(
                 padding: const EdgeInsets.only(bottom: 8),
-                child: _buildProjectCard(context, project),
-              ),
-            ).toList(),
+                child: _buildProjectCard(context, project, isNew: isNew),
+              );
+            }).toList(),
           ),
       ],
     );
   }
 
-  Widget _buildProjectCard(BuildContext context, Project project) {
+  Widget _buildProjectCard(BuildContext context, Project project, {bool isNew = false}) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
@@ -970,6 +974,26 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
                   children: [
                     Row(
                       children: [
+                        // NEW badge at the beginning
+                        if (isNew) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.green,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'NEW',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                        ],
                         Expanded(
                           child: Text(
                             project.name,
@@ -1173,9 +1197,9 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
               // Add actual summaries
               ...recentSummaries.map((item) {
                 final summary = item['summary'];
-                // Use watch to ensure we react to changes
-                final newItemsNotifier = ref.watch(newItemsProvider.notifier);
-                final isNew = newItemsNotifier.isNewItem(summary.id);
+                // Watch the provider state to trigger rebuilds when items change
+                ref.watch(newItemsProvider);
+                final isNew = ref.read(newItemsProvider.notifier).isNewItem(summary.id);
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: _buildSummaryCard(context, summary, item['project'], isNew: isNew),

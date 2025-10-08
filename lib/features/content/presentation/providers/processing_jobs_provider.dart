@@ -145,12 +145,22 @@ class ProcessingJobs extends _$ProcessingJobs {
               ref.read(newItemsProvider.notifier).addNewItem(summaryId);
             }
 
+            // Check if a new project was created during this job
+            final projectWasCreated = jobModel.result!['project_was_created'] as bool? ?? false;
+            final actualProjectId = jobModel.metadata['project_id'] as String? ?? job.projectId;
+            if (projectWasCreated && actualProjectId.isNotEmpty) {
+              print('[ProcessingJobs] Marking project as new: $actualProjectId');
+              ref.read(newItemsProvider.notifier).addNewItem(actualProjectId);
+            }
+
             // Don't call the navigation callback anymore - user will click button to navigate
           }
 
-          print('[ProcessingJobs] Starting provider refresh for project: ${job.projectId}');
+          // Use actual project ID for refreshing providers (important for AI-matched projects)
+          final actualProjectId = jobModel.metadata['project_id'] as String? ?? job.projectId;
+          print('[ProcessingJobs] Starting provider refresh for project: $actualProjectId');
           // Refresh providers immediately - backend only sends 'completed' when data is ready
-          _refreshProvidersAfterJobCompletion(job.projectId, jobModel.result);
+          _refreshProvidersAfterJobCompletion(actualProjectId, jobModel.result);
         }
 
         final updatedJob = job.copyWith(
