@@ -98,6 +98,7 @@ class UploadJobService:
         )
         self.jobs: Dict[str, UploadJob] = {}
         self.job_callbacks: Dict[str, List[callable]] = defaultdict(list)
+        self.running_tasks: Dict[str, asyncio.Task] = {}  # Track running asyncio tasks
         self._is_running = False
         logger.info("Upload job service initialized")
     
@@ -336,27 +337,47 @@ class UploadJobService:
     def cancel_job(self, job_id: str) -> bool:
         """
         Cancel a job.
-        
+
         Args:
             job_id: Job ID to cancel
-            
+
         Returns:
             True if cancelled, False if not found or already completed
         """
         job = self.jobs.get(job_id)
         if not job:
+            logger.warning(f"Cannot cancel job {sanitize_for_log(job_id)}: not found")
             return False
-        
+
         if job.status in [JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED]:
+            logger.info(f"Cannot cancel job {sanitize_for_log(job_id)}: already in terminal state {job.status.value}")
             return False
-        
+
+        # Update job status first
         job.status = JobStatus.CANCELLED
         job.completed_at = datetime.utcnow()
         job.updated_at = datetime.utcnow()
-        
+
+        # Cancel the running asyncio task if it exists
+        if job_id in self.running_tasks:
+            task = self.running_tasks[job_id]
+            if not task.done():
+                logger.info(f"Cancelling running asyncio task for job {sanitize_for_log(job_id)}")
+                task.cancel()
+            # Remove from tracking
+            del self.running_tasks[job_id]
+
         # Trigger callbacks
         self._trigger_callbacks(job_id, job)
-        
+
+        # Broadcast update via WebSocket if available
+        if job_websocket_manager:
+            try:
+                asyncio.create_task(self._broadcast_websocket_update(job_id, job))
+            except RuntimeError:
+                # No event loop running, skip WebSocket broadcast
+                pass
+
         logger.info(f"Cancelled job {sanitize_for_log(job_id)}")
         return True
     
@@ -520,6 +541,19 @@ class UploadJobService:
                     del self.job_callbacks[job_id]
                 logger.debug(f"Cleaned up job {job_id}")
     
+    def is_job_cancelled(self, job_id: str) -> bool:
+        """
+        Check if a job has been cancelled.
+
+        Args:
+            job_id: Job ID to check
+
+        Returns:
+            True if cancelled, False otherwise
+        """
+        job = self.jobs.get(job_id)
+        return job is not None and job.status == JobStatus.CANCELLED
+
     @track_background_task("execute_upload_job")
     async def execute_job(
         self,
@@ -530,7 +564,7 @@ class UploadJobService:
     ):
         """
         Execute a job function with automatic progress tracking.
-        
+
         Args:
             job_id: Job ID
             job_function: Async function to execute
@@ -540,14 +574,29 @@ class UploadJobService:
         if not job:
             logger.error(f"Job {job_id} not found")
             return
-        
+
+        # Get the current task for tracking
+        current_task = asyncio.current_task()
+        if current_task:
+            self.running_tasks[job_id] = current_task
+
         try:
+            # Check if already cancelled before starting
+            if self.is_job_cancelled(job_id):
+                logger.info(f"Job {job_id} was cancelled before execution started")
+                return
+
             # Update status to processing
             self.update_job_progress(job_id, status=JobStatus.PROCESSING)
-            
+
             # Execute the job function
             result = await job_function(job_id, *args, **kwargs)
-            
+
+            # Check if cancelled during execution
+            if self.is_job_cancelled(job_id):
+                logger.info(f"Job {job_id} was cancelled during execution")
+                return
+
             # Update status to completed
             self.update_job_progress(
                 job_id,
@@ -555,9 +604,9 @@ class UploadJobService:
                 progress=100.0,
                 result=result
             )
-            
+
             logger.info(f"Job {job_id} completed successfully")
-            
+
         except asyncio.CancelledError:
             # Handle cancellation
             self.update_job_progress(
@@ -565,21 +614,28 @@ class UploadJobService:
                 status=JobStatus.CANCELLED,
                 error_message="Job was cancelled"
             )
-            logger.info(f"Job {job_id} was cancelled")
+            logger.info(f"Job {job_id} was cancelled via asyncio.CancelledError")
             raise
-            
+
         except Exception as e:
             # Handle errors
             error_msg = str(e)
             error_trace = traceback.format_exc()
-            
-            self.update_job_progress(
-                job_id,
-                status=JobStatus.FAILED,
-                error_message=error_msg
-            )
-            
+
+            # Don't overwrite if already cancelled
+            if not self.is_job_cancelled(job_id):
+                self.update_job_progress(
+                    job_id,
+                    status=JobStatus.FAILED,
+                    error_message=error_msg
+                )
+
             logger.error(f"Job {job_id} failed: {error_msg}\n{error_trace}")
+
+        finally:
+            # Clean up task tracking
+            if job_id in self.running_tasks:
+                del self.running_tasks[job_id]
     
     def get_stats(self) -> Dict[str, Any]:
         """Get service statistics."""

@@ -218,8 +218,13 @@ class WebSocketActiveJobsTracker extends _$WebSocketActiveJobsTracker {
   /// Cancel a job
   Future<void> cancelJob(String jobId) async {
     final service = ref.read(jobWebSocketServiceProvider);
-    service.cancelJob(jobId);
-    debugPrint('[WebSocketActiveJobsTracker] Cancelling job $jobId');
+    try {
+      await service.cancelJob(jobId);
+      debugPrint('[WebSocketActiveJobsTracker] Successfully sent cancel request for job $jobId');
+    } catch (e) {
+      debugPrint('[WebSocketActiveJobsTracker] Error cancelling job $jobId: $e');
+      rethrow;
+    }
   }
 }
 

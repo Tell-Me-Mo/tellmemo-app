@@ -8,13 +8,11 @@ import '../../../content/presentation/providers/processing_jobs_provider.dart';
 class UploadProgressIndicator extends ConsumerWidget {
   final String? jobId;
   final VoidCallback? onDismiss;
-  final bool showCompact;
 
   const UploadProgressIndicator({
     super.key,
     this.jobId,
     this.onDismiss,
-    this.showCompact = false,
   });
 
   @override
@@ -41,10 +39,7 @@ class UploadProgressIndicator extends ConsumerWidget {
     if (processingJob != null) {
       if (processingJob.jobModel != null) {
         // Job has a model - display it
-        if (showCompact) {
-          return _buildCompactIndicator(context, processingJob.jobModel!);
-        }
-        return _buildFullIndicator(context, ref, processingJob.jobModel!);
+        return _buildCompactIndicator(context, ref, processingJob.jobModel!);
       } else {
         // Job is tracked but no model yet - show pending state
         final pendingJob = JobModel(
@@ -60,10 +55,7 @@ class UploadProgressIndicator extends ConsumerWidget {
           metadata: {},
         );
 
-        if (showCompact) {
-          return _buildCompactIndicator(context, pendingJob);
-        }
-        return _buildFullIndicator(context, ref, pendingJob);
+        return _buildCompactIndicator(context, ref, pendingJob);
       }
     }
 
@@ -76,18 +68,14 @@ class UploadProgressIndicator extends ConsumerWidget {
           return const SizedBox.shrink();
         }
 
-        if (showCompact) {
-          return _buildCompactIndicator(context, job);
-        }
-
-        return _buildFullIndicator(context, ref, job);
+        return _buildCompactIndicator(context, ref, job);
       },
       loading: () => const LinearProgressIndicator(),
       error: (error, _) => _buildErrorIndicator(context, error),
     );
   }
 
-  Widget _buildCompactIndicator(BuildContext context, JobModel job) {
+  Widget _buildCompactIndicator(BuildContext context, WidgetRef ref, JobModel job) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     
@@ -296,10 +284,61 @@ class UploadProgressIndicator extends ConsumerWidget {
                   const SizedBox(width: 6),
                 ],
                 
-                // Close button
+                // Close/Cancel button
                 if (onDismiss != null)
                   GestureDetector(
-                    onTap: onDismiss,
+                    onTap: () async {
+                      // Show confirmation dialog for active jobs
+                      if (job.isActive) {
+                        final shouldCancel = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Cancel Job'),
+                            content: Text(
+                              'Are you sure you want to cancel this ${job.jobType == JobType.transcription ? 'transcription' : 'upload'}?\n\nThe process will be stopped and any partial progress will be lost.',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(false),
+                                child: const Text('Keep Processing'),
+                              ),
+                              FilledButton(
+                                onPressed: () => Navigator.of(context).pop(true),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: theme.colorScheme.error.withValues(alpha: 0.9),
+                                  foregroundColor: theme.colorScheme.onError,
+                                ),
+                                child: const Text('Cancel Job'),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (shouldCancel == true) {
+                          try {
+                            // Cancel job via WebSocket
+                            final tracker = ref.read(webSocketActiveJobsTrackerProvider.notifier);
+                            await tracker.cancelJob(jobId!);
+                            // Also dismiss from UI
+                            onDismiss?.call();
+                          } catch (e) {
+                            // Show error if cancellation fails
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Failed to cancel job: ${e.toString()}'),
+                                  backgroundColor: Colors.red,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          }
+                        }
+                      } else {
+                        // Just dismiss completed/failed jobs
+                        onDismiss?.call();
+                      }
+                    },
                     child: Container(
                       padding: const EdgeInsets.all(3),
                       decoration: BoxDecoration(
@@ -307,7 +346,7 @@ class UploadProgressIndicator extends ConsumerWidget {
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        Icons.close, 
+                        Icons.close,
                         size: 14,
                         color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
@@ -321,97 +360,6 @@ class UploadProgressIndicator extends ConsumerWidget {
     );
   }
 
-  Widget _buildFullIndicator(BuildContext context, WidgetRef ref, JobModel job) {
-    final theme = Theme.of(context);
-    
-    return Card(
-      margin: const EdgeInsets.all(16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                _getStatusIcon(job.status),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _getJobTitle(job),
-                        style: theme.textTheme.titleMedium,
-                      ),
-                      Text(
-                        _getStatusText(job),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.7),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (job.isActive)
-                  IconButton(
-                    icon: const Icon(Icons.cancel),
-                    onPressed: () async {
-                      // Cancel job via WebSocket
-                      final tracker = ref.read(webSocketActiveJobsTrackerProvider.notifier);
-                      await tracker.cancelJob(jobId!);
-                    },
-                  ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            LinearProgressIndicator(
-              value: job.isComplete ? 1.0 : job.progress / 100,
-              minHeight: 8,
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Step ${job.currentStep} of ${job.totalSteps}',
-                  style: theme.textTheme.bodySmall,
-                ),
-                Text(
-                  '${job.progress.toInt()}%',
-                  style: theme.textTheme.bodySmall,
-                ),
-              ],
-            ),
-            if (job.errorMessage != null) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.error, color: Colors.red, size: 16),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        job.errorMessage!,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: Colors.red,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildErrorIndicator(BuildContext context, Object error) {
     return Container(
@@ -438,24 +386,6 @@ class UploadProgressIndicator extends ConsumerWidget {
     );
   }
 
-  Widget _getStatusIcon(JobStatus status) {
-    switch (status) {
-      case JobStatus.pending:
-        return const Icon(Icons.schedule, color: Colors.grey);
-      case JobStatus.processing:
-        return const SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        );
-      case JobStatus.completed:
-        return const Icon(Icons.check_circle, color: Colors.green);
-      case JobStatus.failed:
-        return const Icon(Icons.error, color: Colors.red);
-      case JobStatus.cancelled:
-        return const Icon(Icons.cancel, color: Colors.orange);
-    }
-  }
 
   String _getJobTitle(JobModel job) {
     // Check if this is a Fireflies import job
@@ -480,21 +410,6 @@ class UploadProgressIndicator extends ConsumerWidget {
     }
   }
   
-  String _getStatusText(JobModel job) {
-    switch (job.status) {
-      case JobStatus.pending:
-        return 'Waiting to start...';
-      case JobStatus.processing:
-        return _getProcessingStepText(job);
-      case JobStatus.completed:
-        return 'Upload completed successfully';
-      case JobStatus.failed:
-        return _getErrorMessage(job);
-      case JobStatus.cancelled:
-        return 'Upload cancelled';
-    }
-  }
-
   String _getErrorMessage(JobModel job) {
     // Map common error messages to friendly user messages
     final error = job.errorMessage?.toLowerCase() ?? '';
@@ -537,61 +452,6 @@ class UploadProgressIndicator extends ConsumerWidget {
     }
   }
 
-  String _getProcessingStepText(JobModel job) {
-    // Use step description if available from backend
-    if (job.stepDescription != null && job.stepDescription!.isNotEmpty) {
-      // Check for AI processing steps and add status indicators
-      final description = job.stepDescription!;
-      if (description.contains('summary') || description.contains('AI') || description.contains('Claude')) {
-        // Check metadata for AI processing status
-        final metadata = job.metadata;
-        if (metadata['ai_retry_count'] != null && metadata['ai_retry_count'] > 0) {
-          return '$description (retrying...)';
-        }
-        return description;
-      }
-      return description;
-    }
-
-    // Fallback to default descriptions
-    if (job.jobType == JobType.transcription) {
-      switch (job.currentStep) {
-        case 1:
-          return 'Uploading audio file...';
-        case 2:
-          return 'Transcribing audio...';
-        case 3:
-          return 'Processing transcript...';
-        case 4:
-          return 'Generating AI insights...';
-        case 5:
-          return 'Finalizing...';
-        default:
-          return 'Processing...';
-      }
-    } else {
-      switch (job.currentStep) {
-        case 1:
-          return 'Uploading file...';
-        case 2:
-          return 'Preprocessing content...';
-        case 3:
-          return 'Chunking text...';
-        case 4:
-          return 'Generating embeddings...';
-        case 5:
-          return 'Storing in database...';
-        case 6:
-          return 'Generating AI summary...';
-        case 7:
-          return 'Extracting risks & tasks...';
-        case 8:
-          return 'Finalizing...';
-        default:
-          return 'Processing...';
-      }
-    }
-  }
 }
 
 // Global progress overlay widget that can be shown on any screen
@@ -657,7 +517,6 @@ class GlobalUploadProgressOverlay extends ConsumerWidget {
                       return UploadProgressIndicator(
                         key: ValueKey(job.jobId),
                         jobId: job.jobId,
-                        showCompact: true,
                         onDismiss: () {
                           // Remove the job from processing tracker
                           ref.read(processingJobsProvider.notifier).removeJob(job.jobId);

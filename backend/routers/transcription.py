@@ -3,6 +3,7 @@ HTTP endpoints for audio file transcription.
 Handles file uploads and batch transcription processing.
 """
 
+import asyncio
 import os
 import shutil
 import logging
@@ -69,6 +70,11 @@ async def process_audio_transcription(
                 step_description="Loading AI model..."
             )
 
+            # Check if job was cancelled before starting
+            if upload_job_service.is_job_cancelled(job_id):
+                logger.info(f"Job {job_id} was cancelled before transcription started")
+                return
+
             # Get settings for environment variable defaults
             settings = get_settings()
 
@@ -102,6 +108,9 @@ async def process_audio_transcription(
 
             # Create progress callback for transcription
             async def transcription_progress(progress: float, description: str):
+                # Check if job was cancelled
+                if upload_job_service.is_job_cancelled(job_id):
+                    raise asyncio.CancelledError("Job was cancelled by user")
                 # Map transcription progress (0-100%) to overall job progress (10-65%)
                 job_progress = 10.0 + (progress * 0.55)  # 10% to 65% range
                 upload_job_service.update_job_progress(
@@ -171,6 +180,11 @@ async def process_audio_transcription(
                 raise Exception("Transcription failed - no text generated")
 
             logger.info(f"Transcription completed: {len(transcription_text)} characters")
+
+            # Check if job was cancelled after transcription
+            if upload_job_service.is_job_cancelled(job_id):
+                logger.info(f"Job {job_id} was cancelled after transcription completed")
+                return
 
             # Update job: transcription complete, saving to database
             upload_job_service.update_job_progress(
@@ -277,6 +291,15 @@ async def process_audio_transcription(
                     logger.error(f"Failed to save to database: {sanitize_for_log(str(e))}")
                     raise
 
+    except asyncio.CancelledError:
+        # Job was cancelled by user
+        logger.info(f"Transcription job {job_id} was cancelled by user")
+        # Status already updated by cancel_job, but ensure it's marked as cancelled
+        upload_job_service.update_job_progress(
+            job_id,
+            status=JobStatus.CANCELLED,
+            error_message="Job was cancelled by user"
+        )
     except Exception as e:
         logger.error(f"Transcription background task error: {sanitize_for_log(str(e))}", exc_info=True)
         await upload_job_service.fail_job(job_id, "Transcription failed")

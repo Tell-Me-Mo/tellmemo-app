@@ -148,9 +148,19 @@ class JobWebSocketService {
   }
   
   /// Cancel a job
-  void cancelJob(String jobId) {
-    if (!_isConnected) return;
-    
+  Future<void> cancelJob(String jobId) async {
+    // Ensure connection before cancelling
+    if (!_isConnected) {
+      debugPrint('[JobWebSocket] Not connected, attempting to connect before cancelling job $jobId');
+      await connect();
+    }
+
+    if (!_isConnected) {
+      debugPrint('[JobWebSocket] Failed to connect, cannot cancel job $jobId');
+      throw Exception('WebSocket not connected. Cannot cancel job.');
+    }
+
+    debugPrint('[JobWebSocket] Sending cancel request for job $jobId');
     _sendMessage({
       'action': 'cancel',
       'job_id': jobId,
@@ -181,21 +191,31 @@ class JobWebSocketService {
           break;
           
         case 'job_update':
-          final jobData = data['job'] as Map<String, dynamic>;
-          final job = JobModel.fromJson(jobData);
-          _jobUpdateController.add(job);
-          debugPrint('[JobWebSocket] Job update: ${job.jobId} - ${job.status.value} (${job.progress}%)');
+          try {
+            final jobData = data['job'] as Map<String, dynamic>;
+            final job = JobModel.fromJson(jobData);
+            _jobUpdateController.add(job);
+            debugPrint('[JobWebSocket] Job update: ${job.jobId} - ${job.status.value} (${job.progress}%)');
+          } catch (e) {
+            debugPrint('[JobWebSocket] Error parsing job_update: $e');
+            debugPrint('[JobWebSocket] Raw job data: ${data['job']}');
+          }
           break;
-          
+
         case 'new_job':
           // Handle new job notification (e.g., from Fireflies webhook)
-          final jobData = data['job'] as Map<String, dynamic>;
-          final job = JobModel.fromJson(jobData);
-          _jobUpdateController.add(job);
-          debugPrint('[JobWebSocket] New job started: ${job.jobId} - ${job.jobType.value} from integration');
-          
-          // Auto-subscribe to this job for updates
-          subscribeToJob(job.jobId);
+          try {
+            final jobData = data['job'] as Map<String, dynamic>;
+            final job = JobModel.fromJson(jobData);
+            _jobUpdateController.add(job);
+            debugPrint('[JobWebSocket] New job started: ${job.jobId} - ${job.jobType.value} from integration');
+
+            // Auto-subscribe to this job for updates
+            subscribeToJob(job.jobId);
+          } catch (e) {
+            debugPrint('[JobWebSocket] Error parsing new_job: $e');
+            debugPrint('[JobWebSocket] Raw job data: ${data['job']}');
+          }
           break;
           
         case 'job_cancelled':
