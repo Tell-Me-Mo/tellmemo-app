@@ -1295,7 +1295,7 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
                   ? Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Mobile: Title + GENERAL badge on same line
+                        // Mobile: Badges + Title on same line
                         Row(
                           children: [
                             // NEW badge at the beginning
@@ -1318,17 +1318,7 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
                               ),
                               const SizedBox(width: 6),
                             ],
-                            Expanded(
-                              child: Text(
-                                summary.subject ?? typeLabel,
-                                style: textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
+                            // GENERAL badge after NEW badge
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
@@ -1343,6 +1333,17 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
                                   fontWeight: FontWeight.w600,
                                   letterSpacing: 0.5,
                                 ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                summary.subject ?? typeLabel,
+                                style: textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
