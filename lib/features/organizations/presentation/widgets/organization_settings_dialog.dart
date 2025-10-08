@@ -216,13 +216,15 @@ class _OrganizationSettingsDialogState extends ConsumerState<OrganizationSetting
                     ),
                     child: Row(
                       children: [
-                        Text(
-                          _getViewTitle(),
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
+                        Expanded(
+                          child: Text(
+                            _getViewTitle(),
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const Spacer(),
                         IconButton(
                           onPressed: () => Navigator.of(context).pop(),
                           icon: const Icon(Icons.close),
@@ -245,12 +247,13 @@ class _OrganizationSettingsDialogState extends ConsumerState<OrganizationSetting
                     child: ListView(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 8),
+                      cacheExtent: 1000, // Ensure all tabs are built
                       children: [
                         _buildMobileTab('general', 'General', isAdmin),
                         _buildMobileTab('notifications', 'Notifications', isAdmin),
                         _buildMobileTab('data', 'Data', isAdmin),
                         _buildMobileTab('members', 'Members', true),
-                        if (isAdmin) _buildMobileTab('danger', 'Danger', true),
+                        if (isAdmin) _buildMobileTab('danger', 'Danger', isAdmin),
                       ],
                     ),
                   ),
@@ -749,11 +752,17 @@ class _OrganizationSettingsDialogState extends ConsumerState<OrganizationSetting
                         )
                       : Row(
                           children: [
-                            _buildStatItem('Members', memberCount.toString(), Icons.people_outline),
+                            Expanded(
+                              child: _buildStatItem('Members', memberCount.toString(), Icons.people_outline),
+                            ),
                             const SizedBox(width: 24),
-                            _buildStatItem('Projects', projectCount.toString(), Icons.folder_outlined),
+                            Expanded(
+                              child: _buildStatItem('Projects', projectCount.toString(), Icons.folder_outlined),
+                            ),
                             const SizedBox(width: 24),
-                            _buildStatItem('Documents', documentCount.toString(), Icons.description_outlined),
+                            Expanded(
+                              child: _buildStatItem('Documents', documentCount.toString(), Icons.description_outlined),
+                            ),
                           ],
                         ),
                 ],
@@ -975,6 +984,7 @@ class _OrganizationSettingsDialogState extends ConsumerState<OrganizationSetting
     final colorScheme = theme.colorScheme;
 
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Icon(
           icon,
@@ -982,22 +992,25 @@ class _OrganizationSettingsDialogState extends ConsumerState<OrganizationSetting
           color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
         ),
         const SizedBox(width: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              value,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
+        Flexible(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-            Text(
-              label,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+              Text(
+                label,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );
