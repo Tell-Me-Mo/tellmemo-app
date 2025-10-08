@@ -1322,13 +1322,13 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: colorScheme.primaryContainer.withValues(alpha: 0.3),
+                                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
                                 summary.format?.toString().split('.').last.toUpperCase() ?? 'GENERAL',
                                 style: TextStyle(
-                                  color: colorScheme.primary,
+                                  color: colorScheme.onSurfaceVariant,
                                   fontSize: 9,
                                   fontWeight: FontWeight.w600,
                                   letterSpacing: 0.5,
