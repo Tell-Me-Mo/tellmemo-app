@@ -486,6 +486,101 @@ class TestLanguageSupport:
 
 
 # ============================================================================
+# Test Class: Transcription Service Selection
+# ============================================================================
+
+class TestTranscriptionServiceSelection:
+    """Tests for transcription service selection (Whisper, Salad, Replicate)."""
+
+    @pytest.mark.asyncio
+    async def test_replicate_service_selection(
+        self,
+        authenticated_client: AsyncClient,
+        test_project: Project
+    ):
+        """Test that Replicate service can be selected via environment variable."""
+        audio_file = mock_audio_file(size_mb=1.0)
+
+        files = {
+            'audio_file': ('meeting.m4a', audio_file, 'audio/mp4')
+        }
+        data = {
+            'project_id': str(test_project.id),
+            'language': 'en'
+        }
+
+        # Mock environment to use Replicate
+        with patch.dict('os.environ', {'DEFAULT_TRANSCRIPTION_SERVICE': 'replicate', 'REPLICATE_API_KEY': 'test_key'}):
+            with patch('routers.transcription.process_audio_transcription'):
+                response = await authenticated_client.post(
+                    '/api/v1/transcribe',
+                    files=files,
+                    data=data
+                )
+
+        assert response.status_code == 200
+        assert 'job_id' in response.json()
+
+    @pytest.mark.asyncio
+    async def test_salad_service_selection(
+        self,
+        authenticated_client: AsyncClient,
+        test_project: Project
+    ):
+        """Test that Salad service can be selected via environment variable."""
+        audio_file = mock_audio_file(size_mb=1.0)
+
+        files = {
+            'audio_file': ('meeting.m4a', audio_file, 'audio/mp4')
+        }
+        data = {
+            'project_id': str(test_project.id),
+            'language': 'en'
+        }
+
+        # Mock environment to use Salad
+        with patch.dict('os.environ', {'DEFAULT_TRANSCRIPTION_SERVICE': 'salad', 'SALAD_API_KEY': 'test_key', 'SALAD_ORGANIZATION_NAME': 'test_org'}):
+            with patch('routers.transcription.process_audio_transcription'):
+                response = await authenticated_client.post(
+                    '/api/v1/transcribe',
+                    files=files,
+                    data=data
+                )
+
+        assert response.status_code == 200
+        assert 'job_id' in response.json()
+
+    @pytest.mark.asyncio
+    async def test_whisper_service_default(
+        self,
+        authenticated_client: AsyncClient,
+        test_project: Project
+    ):
+        """Test that Whisper is used as default service."""
+        audio_file = mock_audio_file(size_mb=1.0)
+
+        files = {
+            'audio_file': ('meeting.m4a', audio_file, 'audio/mp4')
+        }
+        data = {
+            'project_id': str(test_project.id),
+            'language': 'en'
+        }
+
+        # No environment override - should default to Whisper
+        with patch.dict('os.environ', {'DEFAULT_TRANSCRIPTION_SERVICE': 'whisper'}):
+            with patch('routers.transcription.process_audio_transcription'):
+                response = await authenticated_client.post(
+                    '/api/v1/transcribe',
+                    files=files,
+                    data=data
+                )
+
+        assert response.status_code == 200
+        assert 'job_id' in response.json()
+
+
+# ============================================================================
 # Test Class: Temp File Cleanup
 # ============================================================================
 

@@ -24,6 +24,7 @@ from models.organization import Organization
 from utils.logger import sanitize_for_log
 from services.transcription.whisper_service import get_whisper_service
 from services.transcription.salad_transcription_service import get_salad_service
+from services.transcription.replicate_transcription_service import get_replicate_service
 from services.core.content_service import ContentService
 from services.core.upload_job_service import upload_job_service, JobType, JobStatus
 from services.integrations.integration_service import integration_service
@@ -87,24 +88,36 @@ async def process_audio_transcription(
 
             # Determine which transcription service to use
             # Priority: UI Integration settings > Environment variables > Default (whisper)
-            use_salad = False
-            salad_api_key = None
-            salad_org = None
+            service_type = 'whisper'  # Default
+            service_config = {}
 
             if transcription_config:
                 # UI Integration settings take precedence
                 custom_settings = transcription_config.get('custom_settings', {})
                 service_type = custom_settings.get('service_type', 'whisper')
-                use_salad = (service_type == 'salad')
-                if use_salad:
-                    salad_api_key = transcription_config.get('api_key')
-                    salad_org = custom_settings.get('organization_name')
+
+                if service_type == 'salad':
+                    service_config = {
+                        'api_key': transcription_config.get('api_key'),
+                        'organization_name': custom_settings.get('organization_name')
+                    }
+                elif service_type == 'replicate':
+                    service_config = {
+                        'api_key': transcription_config.get('api_key')
+                    }
             else:
                 # Fall back to environment variable configuration
-                use_salad = (settings.default_transcription_service.lower() == 'salad')
-                if use_salad:
-                    salad_api_key = settings.salad_api_key
-                    salad_org = settings.salad_organization_name
+                service_type = settings.default_transcription_service.lower()
+
+                if service_type == 'salad':
+                    service_config = {
+                        'api_key': settings.salad_api_key,
+                        'organization_name': settings.salad_organization_name
+                    }
+                elif service_type == 'replicate':
+                    service_config = {
+                        'api_key': settings.replicate_api_key
+                    }
 
             # Create progress callback for transcription
             async def transcription_progress(progress: float, description: str):
@@ -120,18 +133,21 @@ async def process_audio_transcription(
                 )
 
             # Transcribe using selected service
-            logger.info(f"Starting transcription for file: {temp_file_path} using {'Salad' if use_salad else 'Whisper'}")
+            logger.info(f"Starting transcription for file: {temp_file_path} using {service_type.capitalize()}")
 
-            if use_salad:
+            # Pass language as None for auto-detection, or use specified language
+            transcription_language = None if language == "auto" else language
+
+            if service_type == 'salad':
                 # Use Salad transcription service
                 try:
                     # Validate Salad credentials
-                    if not salad_api_key or not salad_org:
+                    if not service_config.get('api_key') or not service_config.get('organization_name'):
                         raise ValueError("Salad API key and organization name are required. Configure via UI Integration settings or environment variables (SALAD_API_KEY, SALAD_ORGANIZATION_NAME).")
 
                     salad_service = get_salad_service(
-                        api_key=salad_api_key,
-                        organization_name=salad_org
+                        api_key=service_config['api_key'],
+                        organization_name=service_config['organization_name']
                     )
 
                     upload_job_service.update_job_progress(
@@ -140,10 +156,6 @@ async def process_audio_transcription(
                         step_description="Connecting to Salad API..."
                     )
 
-                    # Pass language as None for auto-detection, or use specified language
-                    # Auto-detection is preferred for better accuracy with multilingual content
-                    transcription_language = None if language == "auto" else language
-
                     transcription_result = await salad_service.transcribe_audio_file(
                         audio_path=temp_file_path,
                         language=transcription_language,
@@ -151,8 +163,34 @@ async def process_audio_transcription(
                     )
                 except Exception as e:
                     raise Exception("Salad API transcription failed")
+
+            elif service_type == 'replicate':
+                # Use Replicate transcription service
+                try:
+                    # Validate Replicate credentials
+                    if not service_config.get('api_key'):
+                        raise ValueError("Replicate API key is required. Configure via UI Integration settings or environment variable (REPLICATE_API_KEY).")
+
+                    replicate_service = get_replicate_service(
+                        api_key=service_config['api_key']
+                    )
+
+                    upload_job_service.update_job_progress(
+                        job_id,
+                        progress=10.0,
+                        step_description="Connecting to Replicate API..."
+                    )
+
+                    transcription_result = await replicate_service.transcribe_audio_file(
+                        audio_path=temp_file_path,
+                        language=transcription_language,
+                        progress_callback=transcription_progress
+                    )
+                except Exception as e:
+                    raise Exception("Replicate API transcription failed")
+
             else:
-                # Use local Whisper service
+                # Use local Whisper service (default)
                 whisper_service = get_whisper_service()
 
                 # Update progress after model is loaded
