@@ -78,7 +78,7 @@ class AudioRecordingService {
         // For native platforms, create a file path
         final directory = await getApplicationDocumentsDirectory();
         final timestamp = DateTime.now().millisecondsSinceEpoch;
-        final fileName = 'recording_${projectId ?? "temp"}_$timestamp.wav';
+        final fileName = 'recording_${projectId ?? "temp"}_$timestamp.m4a';
         _currentRecordingPath = path.join(directory.path, 'recordings', fileName);
         
         // Create recordings directory if it doesn't exist
@@ -106,15 +106,15 @@ class AudioRecordingService {
       } else {
         // Native platform configuration
         config = const RecordConfig(
-          encoder: AudioEncoder.wav, // WAV format for best quality
+          encoder: AudioEncoder.aacLc, // AAC-LC format - excellent compression for speech (.m4a)
           sampleRate: 44100, // Higher sample rate for better quality
           numChannels: 1, // Mono is sufficient for speech
-          bitRate: 128000, // High bitrate for quality
+          bitRate: 128000, // 128kbps - good quality for speech
           autoGain: true,
           echoCancel: true,
           noiseSuppress: true,
         );
-        print('[AudioRecordingService] Using native audio configuration: wav/44.1kHz');
+        print('[AudioRecordingService] Using native audio configuration: aac-lc/44.1kHz');
       }
       
       // Start recording

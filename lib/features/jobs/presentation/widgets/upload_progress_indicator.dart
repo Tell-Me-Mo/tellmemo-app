@@ -170,7 +170,7 @@ class UploadProgressIndicator extends ConsumerWidget {
                 Expanded(
                   child: Row(
                     children: [
-                      Expanded(
+                      Flexible(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,

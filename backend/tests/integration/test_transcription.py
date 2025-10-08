@@ -64,31 +64,59 @@ async def test_project(
     return project
 
 
-def mock_audio_file(size_mb: float = 0.1):
+def mock_audio_file(size_mb: float = 0.1, format: str = 'm4a'):
     """
     Create a mock audio file without generating actual large files.
 
     Args:
         size_mb: Size in MB (default 0.1 MB = 100 KB)
+        format: Audio format - 'm4a', 'mp3', or 'wav' (default 'm4a')
 
     Returns:
         BytesIO object simulating an audio file
     """
-    # Create a small WAV-like header + dummy data
     size_bytes = int(size_mb * 1024 * 1024)
-    # Simple WAV header (44 bytes) + audio data
-    wav_header = b'RIFF' + (size_bytes - 8).to_bytes(4, 'little') + b'WAVEfmt '
-    wav_header += b'\x10\x00\x00\x00'  # Format chunk size
-    wav_header += b'\x01\x00'  # Audio format (PCM)
-    wav_header += b'\x01\x00'  # Number of channels (mono)
-    wav_header += b'\x44\xac\x00\x00'  # Sample rate (44100)
-    wav_header += b'\x88\x58\x01\x00'  # Byte rate
-    wav_header += b'\x02\x00'  # Block align
-    wav_header += b'\x10\x00'  # Bits per sample
-    wav_header += b'data' + (size_bytes - 44).to_bytes(4, 'little')
 
-    # Fill rest with zeros (silent audio)
-    audio_data = wav_header + b'\x00' * (size_bytes - len(wav_header))
+    if format == 'wav':
+        # Create WAV header (44 bytes) + audio data
+        wav_header = b'RIFF' + (size_bytes - 8).to_bytes(4, 'little') + b'WAVEfmt '
+        wav_header += b'\x10\x00\x00\x00'  # Format chunk size
+        wav_header += b'\x01\x00'  # Audio format (PCM)
+        wav_header += b'\x01\x00'  # Number of channels (mono)
+        wav_header += b'\x44\xac\x00\x00'  # Sample rate (44100)
+        wav_header += b'\x88\x58\x01\x00'  # Byte rate
+        wav_header += b'\x02\x00'  # Block align
+        wav_header += b'\x10\x00'  # Bits per sample
+        wav_header += b'data' + (size_bytes - 44).to_bytes(4, 'little')
+
+        # Fill rest with zeros (silent audio)
+        audio_data = wav_header + b'\x00' * (size_bytes - len(wav_header))
+    elif format == 'mp3':
+        # Create minimal MP3 header (ID3v2 tag + MP3 frame header)
+        # ID3v2 header (10 bytes)
+        mp3_header = b'ID3\x04\x00\x00\x00\x00\x00\x00'
+
+        # MP3 frame header (4 bytes) - MPEG 1 Layer 3, 128kbps, 44.1kHz, mono
+        mp3_header += b'\xff\xfb\x90\x00'
+
+        # Fill rest with valid MP3 frame data (0xff can be used as padding)
+        audio_data = mp3_header + b'\xff' * (size_bytes - len(mp3_header))
+    else:  # m4a (AAC in MP4 container)
+        # Create minimal M4A/MP4 header
+        # ftyp atom (28 bytes) - file type box
+        m4a_header = b'\x00\x00\x00\x1c'  # Size (28 bytes)
+        m4a_header += b'ftyp'  # Type
+        m4a_header += b'M4A '  # Major brand
+        m4a_header += b'\x00\x00\x00\x00'  # Minor version
+        m4a_header += b'M4A mp42isom\x00\x00\x00\x00'  # Compatible brands
+
+        # mdat atom header (8 bytes + data)
+        mdat_size = size_bytes - len(m4a_header)
+        m4a_header += mdat_size.to_bytes(4, 'big')  # Size
+        m4a_header += b'mdat'  # Type
+
+        # Fill rest with AAC audio data (can use zeros for mock)
+        audio_data = m4a_header + b'\x00' * (size_bytes - len(m4a_header))
 
     return io.BytesIO(audio_data)
 
@@ -111,7 +139,7 @@ class TestAudioFileSizeValidation:
         audio_file = mock_audio_file(size_mb=1.0)
 
         files = {
-            'audio_file': ('meeting.wav', audio_file, 'audio/wav')
+            'audio_file': ('meeting.m4a', audio_file, 'audio/mp4')
         }
         data = {
             'project_id': str(test_project.id),
@@ -144,7 +172,7 @@ class TestAudioFileSizeValidation:
         audio_file = mock_audio_file(size_mb=0.1)  # Small file
 
         files = {
-            'audio_file': ('huge_meeting.wav', audio_file, 'audio/wav')
+            'audio_file': ('huge_meeting.m4a', audio_file, 'audio/mp4')
         }
         data = {
             'project_id': str(test_project.id),
@@ -178,7 +206,7 @@ class TestAudioFileSizeValidation:
         audio_file = mock_audio_file(size_mb=0.1)
 
         files = {
-            'audio_file': ('oversized.wav', audio_file, 'audio/wav')
+            'audio_file': ('oversized.m4a', audio_file, 'audio/mp4')
         }
         data = {
             'project_id': str(test_project.id),
@@ -209,7 +237,7 @@ class TestAudioFileSizeValidation:
         empty_file = io.BytesIO(b'')
 
         files = {
-            'audio_file': ('empty.wav', empty_file, 'audio/wav')
+            'audio_file': ('empty.m4a', empty_file, 'audio/mp4')
         }
         data = {
             'project_id': str(test_project.id),
@@ -240,7 +268,7 @@ class TestAudioFileSizeValidation:
         audio_file = mock_audio_file(size_mb=0.1)
 
         files = {
-            'audio_file': ('boundary.wav', audio_file, 'audio/wav')
+            'audio_file': ('boundary.m4a', audio_file, 'audio/mp4')
         }
         data = {
             'project_id': str(test_project.id),
@@ -273,7 +301,7 @@ class TestAudioFileSizeValidation:
         audio_file = mock_audio_file(size_mb=0.1)
 
         files = {
-            'audio_file': ('over_boundary.wav', audio_file, 'audio/wav')
+            'audio_file': ('over_boundary.m4a', audio_file, 'audio/mp4')
         }
         data = {
             'project_id': str(test_project.id),
@@ -313,7 +341,7 @@ class TestAIProjectMatching:
         audio_file = mock_audio_file(size_mb=1.0)
 
         files = {
-            'audio_file': ('sprint_planning.wav', audio_file, 'audio/wav')
+            'audio_file': ('sprint_planning.m4a', audio_file, 'audio/mp4')
         }
         data = {
             'project_id': 'auto',  # Trigger AI matching
@@ -374,7 +402,7 @@ class TestMultiTenantIsolation:
         audio_file = mock_audio_file(size_mb=1.0)
 
         files = {
-            'audio_file': ('meeting.wav', audio_file, 'audio/wav')
+            'audio_file': ('meeting.m4a', audio_file, 'audio/mp4')
         }
         data = {
             'project_id': str(other_project.id),  # Different org's project
@@ -409,7 +437,7 @@ class TestLanguageSupport:
         audio_file = mock_audio_file(size_mb=1.0)
 
         files = {
-            'audio_file': ('meeting_multilingual.wav', audio_file, 'audio/wav')
+            'audio_file': ('meeting_multilingual.m4a', audio_file, 'audio/mp4')
         }
         data = {
             'project_id': str(test_project.id),
@@ -439,7 +467,7 @@ class TestLanguageSupport:
             audio_file = mock_audio_file(size_mb=1.0)
 
             files = {
-                'audio_file': (f'meeting_{lang}.wav', audio_file, 'audio/wav')
+                'audio_file': (f'meeting_{lang}.m4a', audio_file, 'audio/mp4')
             }
             data = {
                 'project_id': str(test_project.id),
@@ -480,7 +508,7 @@ class TestTempFileCleanup:
         files_before = set(temp_dir.glob('*')) if temp_dir.exists() else set()
 
         files = {
-            'audio_file': ('oversized.wav', audio_file, 'audio/wav')
+            'audio_file': ('oversized.m4a', audio_file, 'audio/mp4')
         }
         data = {
             'project_id': str(test_project.id),
@@ -517,7 +545,7 @@ class TestTempFileCleanup:
         empty_file = io.BytesIO(b'')
 
         files = {
-            'audio_file': ('empty.wav', empty_file, 'audio/wav')
+            'audio_file': ('empty.m4a', empty_file, 'audio/mp4')
         }
         data = {
             'project_id': str(test_project.id),
@@ -551,7 +579,7 @@ class TestTempFileCleanup:
         audio_file = mock_audio_file(size_mb=1.0)
 
         files = {
-            'audio_file': ('meeting.wav', audio_file, 'audio/wav')
+            'audio_file': ('meeting.m4a', audio_file, 'audio/mp4')
         }
         data = {
             'project_id': '00000000-0000-0000-0000-000000000000',  # Non-existent project
@@ -585,7 +613,7 @@ class TestTempFileCleanup:
         audio_file = mock_audio_file(size_mb=1.0)
 
         files = {
-            'audio_file': ('meeting.wav', audio_file, 'audio/wav')
+            'audio_file': ('meeting.m4a', audio_file, 'audio/mp4')
         }
         data = {
             'project_id': 'invalid-uuid-format',  # Invalid UUID
@@ -623,7 +651,7 @@ class TestTempFileCleanup:
         audio_file = mock_audio_file(size_mb=1.0)
 
         files = {
-            'audio_file': ('meeting.wav', audio_file, 'audio/wav')
+            'audio_file': ('meeting.m4a', audio_file, 'audio/mp4')
         }
         data = {
             'project_id': str(test_project.id),
