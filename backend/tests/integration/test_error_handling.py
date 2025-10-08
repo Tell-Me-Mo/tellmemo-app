@@ -419,7 +419,7 @@ class TestErrorHandlingConsistency:
         """Test that validation errors have consistent format"""
         endpoints = [
             "/api/v1/projects/",
-            "/api/v1/portfolios",
+            "/api/v1/portfolios/",
             "/api/v1/programs/",
         ]
 
