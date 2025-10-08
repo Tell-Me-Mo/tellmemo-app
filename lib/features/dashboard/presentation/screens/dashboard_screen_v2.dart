@@ -1003,31 +1003,6 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        // Status Badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: isActive
-                                ? Colors.green.withValues(alpha: 0.2)
-                                : Colors.orange.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: isActive
-                                  ? Colors.green.withValues(alpha: 0.4)
-                                  : Colors.orange.withValues(alpha: 0.4),
-                              width: 1,
-                            ),
-                          ),
-                          child: Text(
-                            isActive ? 'ACTIVE' : 'ARCHIVED',
-                            style: TextStyle(
-                              color: isActive ? Colors.green[700] : Colors.orange[700],
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                     if (project.description?.isNotEmpty == true) ...[
