@@ -419,7 +419,7 @@ class TestLanguageSupport:
         with patch('routers.transcription.process_audio_transcription'):
             response = await authenticated_client.post(
                 '/api/v1/transcribe',
-                
+
                 files=files,
                 data=data
             )
@@ -449,9 +449,203 @@ class TestLanguageSupport:
             with patch('routers.transcription.process_audio_transcription'):
                 response = await authenticated_client.post(
                     '/api/v1/transcribe',
-                    
+
                     files=files,
                     data=data
                 )
 
             assert response.status_code == 200, f"Failed for language: {lang}"
+
+
+# ============================================================================
+# Test Class: Temp File Cleanup
+# ============================================================================
+
+class TestTempFileCleanup:
+    """Tests for temporary file cleanup on errors."""
+
+    @pytest.mark.asyncio
+    async def test_temp_file_cleaned_up_on_file_size_error(
+        self,
+        authenticated_client: AsyncClient,
+        test_project: Project
+    ):
+        """Test that temp file is cleaned up when file size validation fails."""
+        settings = get_settings()
+        max_size_mb = settings.max_audio_file_size_mb
+        audio_file = mock_audio_file(size_mb=0.1)
+
+        # Count existing temp files before test
+        temp_dir = Path("backend/temp_audio")
+        files_before = set(temp_dir.glob('*')) if temp_dir.exists() else set()
+
+        files = {
+            'audio_file': ('oversized.wav', audio_file, 'audio/wav')
+        }
+        data = {
+            'project_id': str(test_project.id),
+            'language': 'en'
+        }
+
+        # Mock file size exceeding limit
+        with patch('os.path.getsize', return_value=(max_size_mb + 1) * 1024 * 1024):
+            response = await authenticated_client.post(
+                '/api/v1/transcribe',
+                files=files,
+                data=data
+            )
+
+        # Should reject with 413
+        assert response.status_code == 413
+
+        # Verify no new temp files remain (should be same as before)
+        files_after = set(temp_dir.glob('*')) if temp_dir.exists() else set()
+        new_files = files_after - files_before
+        assert len(new_files) == 0, f"New temp files not cleaned up: {new_files}"
+
+    @pytest.mark.asyncio
+    async def test_temp_file_cleaned_up_on_empty_file_error(
+        self,
+        authenticated_client: AsyncClient,
+        test_project: Project
+    ):
+        """Test that temp file is cleaned up when empty file validation fails."""
+        # Count existing temp files before test
+        temp_dir = Path("backend/temp_audio")
+        files_before = set(temp_dir.glob('*')) if temp_dir.exists() else set()
+
+        empty_file = io.BytesIO(b'')
+
+        files = {
+            'audio_file': ('empty.wav', empty_file, 'audio/wav')
+        }
+        data = {
+            'project_id': str(test_project.id),
+            'language': 'en'
+        }
+
+        response = await authenticated_client.post(
+            '/api/v1/transcribe',
+            files=files,
+            data=data
+        )
+
+        # Should reject with 400
+        assert response.status_code == 400
+
+        # Verify no new temp files remain
+        files_after = set(temp_dir.glob('*')) if temp_dir.exists() else set()
+        new_files = files_after - files_before
+        assert len(new_files) == 0, f"New temp files not cleaned up: {new_files}"
+
+    @pytest.mark.asyncio
+    async def test_temp_file_cleaned_up_on_project_not_found_error(
+        self,
+        authenticated_client: AsyncClient
+    ):
+        """Test that temp file is cleaned up when project validation fails."""
+        # Count existing temp files before test
+        temp_dir = Path("backend/temp_audio")
+        files_before = set(temp_dir.glob('*')) if temp_dir.exists() else set()
+
+        audio_file = mock_audio_file(size_mb=1.0)
+
+        files = {
+            'audio_file': ('meeting.wav', audio_file, 'audio/wav')
+        }
+        data = {
+            'project_id': '00000000-0000-0000-0000-000000000000',  # Non-existent project
+            'language': 'en'
+        }
+
+        response = await authenticated_client.post(
+            '/api/v1/transcribe',
+            files=files,
+            data=data
+        )
+
+        # Should reject with 404
+        assert response.status_code == 404
+
+        # Verify no new temp files remain
+        files_after = set(temp_dir.glob('*')) if temp_dir.exists() else set()
+        new_files = files_after - files_before
+        assert len(new_files) == 0, f"New temp files not cleaned up: {new_files}"
+
+    @pytest.mark.asyncio
+    async def test_temp_file_cleaned_up_on_invalid_project_id_format(
+        self,
+        authenticated_client: AsyncClient
+    ):
+        """Test that temp file is cleaned up when project_id format is invalid."""
+        # Count existing temp files before test
+        temp_dir = Path("backend/temp_audio")
+        files_before = set(temp_dir.glob('*')) if temp_dir.exists() else set()
+
+        audio_file = mock_audio_file(size_mb=1.0)
+
+        files = {
+            'audio_file': ('meeting.wav', audio_file, 'audio/wav')
+        }
+        data = {
+            'project_id': 'invalid-uuid-format',  # Invalid UUID
+            'language': 'en'
+        }
+
+        response = await authenticated_client.post(
+            '/api/v1/transcribe',
+            files=files,
+            data=data
+        )
+
+        # Should reject with 400 (invalid format) or 404 (not found)
+        assert response.status_code in [400, 404]
+
+        # Verify no new temp files remain
+        files_after = set(temp_dir.glob('*')) if temp_dir.exists() else set()
+        new_files = files_after - files_before
+        assert len(new_files) == 0, f"New temp files not cleaned up: {new_files}"
+
+    @pytest.mark.asyncio
+    async def test_temp_file_persists_when_task_queued_successfully(
+        self,
+        authenticated_client: AsyncClient,
+        test_project: Project
+    ):
+        """Test that temp file is NOT cleaned up when background task is queued.
+
+        The background task is responsible for cleanup in success case.
+        """
+        # Count existing temp files before test
+        temp_dir = Path("backend/temp_audio")
+        files_before = set(temp_dir.glob('*')) if temp_dir.exists() else set()
+
+        audio_file = mock_audio_file(size_mb=1.0)
+
+        files = {
+            'audio_file': ('meeting.wav', audio_file, 'audio/wav')
+        }
+        data = {
+            'project_id': str(test_project.id),
+            'language': 'en'
+        }
+
+        with patch('routers.transcription.process_audio_transcription'):
+            response = await authenticated_client.post(
+                '/api/v1/transcribe',
+                files=files,
+                data=data
+            )
+
+        # Should succeed
+        assert response.status_code == 200
+
+        # Verify exactly one new temp file exists (will be cleaned up by background task)
+        assert temp_dir.exists(), "Temp directory should exist"
+        files_after = set(temp_dir.glob('*'))
+        new_files = files_after - files_before
+        assert len(new_files) == 1, f"Expected 1 new temp file, got {len(new_files)}: {new_files}"
+
+        # Clean up the new temp file manually since we mocked the background task
+        for temp_file in new_files:
+            temp_file.unlink()
