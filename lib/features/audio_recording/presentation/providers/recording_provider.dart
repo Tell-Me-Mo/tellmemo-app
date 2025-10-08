@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,10 +6,10 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:http/http.dart' as http;
 import '../../domain/services/audio_recording_service.dart';
 import '../../domain/services/transcription_service.dart';
-import '../../../../features/jobs/presentation/providers/job_websocket_provider.dart';
 import '../../../../features/meetings/presentation/providers/upload_provider.dart';
 import '../../../../features/content/presentation/providers/processing_jobs_provider.dart';
 import '../../../../core/services/firebase_analytics_service.dart';
+import '../../../../core/utils/error_utils.dart';
 
 part 'recording_provider.g.dart';
 
@@ -24,9 +23,9 @@ class RecordingStateModel {
   final String? sessionId;
   final String? errorMessage;
   final double amplitude;
-  final String? contentId;  // Added to track uploaded content
-  final bool isUploading;  // Added to track upload status
-  
+  final String? contentId; // Added to track uploaded content
+  final bool isUploading; // Added to track upload status
+
   RecordingStateModel({
     this.state = RecordingState.idle,
     this.duration = Duration.zero,
@@ -39,7 +38,7 @@ class RecordingStateModel {
     this.contentId,
     this.isUploading = false,
   });
-  
+
   RecordingStateModel copyWith({
     RecordingState? state,
     Duration? duration,
@@ -91,18 +90,18 @@ class RecordingNotifier extends _$RecordingNotifier {
   StreamSubscription? _amplitudeSubscription;
   StreamSubscription? _durationSubscription;
   StreamSubscription? _stateSubscription;
-  
+
   @override
   RecordingStateModel build() {
     _audioService = ref.watch(audioRecordingServiceProvider);
     _transcriptionService = ref.watch(transcriptionServiceProvider);
-    
+
     // Set up listeners
     _setupListeners();
-    
+
     return RecordingStateModel();
   }
-  
+
   void _setupListeners() {
     // Listen to recording state changes
     _stateSubscription?.cancel();
@@ -112,20 +111,20 @@ class RecordingNotifier extends _$RecordingNotifier {
         currentRecordingPath: _audioService.currentRecordingPath,
       );
     });
-    
+
     // Listen to duration updates
     _durationSubscription?.cancel();
     _durationSubscription = _audioService.durationStream.listen((duration) {
       state = state.copyWith(duration: duration);
     });
-    
+
     // Listen to amplitude updates for visualization
     _amplitudeSubscription?.cancel();
     _amplitudeSubscription = _audioService.amplitudeStream.listen((amplitude) {
       state = state.copyWith(amplitude: amplitude);
     });
   }
-  
+
   // Start recording (audio only, transcription happens after stopping)
   Future<void> startRecording({
     required String projectId,
@@ -133,7 +132,7 @@ class RecordingNotifier extends _$RecordingNotifier {
   }) async {
     try {
       print('[RecordingProvider] Starting recording for project: $projectId');
-      
+
       // Clear previous transcription and errors
       state = state.copyWith(
         transcriptionText: '',
@@ -147,17 +146,18 @@ class RecordingNotifier extends _$RecordingNotifier {
         projectId: projectId,
         meetingTitle: meetingTitle,
       );
-      
+
       if (!recordingStarted) {
         print('[RecordingProvider] Failed to start recording');
         state = state.copyWith(
-          errorMessage: 'Failed to start recording. Please check microphone permissions.',
+          errorMessage:
+              'Failed to start recording. Please check microphone permissions.',
           state: RecordingState.error,
         );
         return;
       }
       print('[RecordingProvider] Recording started successfully');
-      
+
       // Generate session ID for this recording
       final sessionId = '${projectId}_${DateTime.now().millisecondsSinceEpoch}';
       state = state.copyWith(sessionId: sessionId);
@@ -171,7 +171,6 @@ class RecordingNotifier extends _$RecordingNotifier {
       } catch (e) {
         // Silently fail analytics
       }
-
     } catch (e) {
       state = state.copyWith(
         errorMessage: 'Recording error: $e',
@@ -179,7 +178,7 @@ class RecordingNotifier extends _$RecordingNotifier {
       );
     }
   }
-  
+
   // Pause recording
   Future<void> pauseRecording() async {
     await _audioService.pauseRecording();
@@ -205,7 +204,7 @@ class RecordingNotifier extends _$RecordingNotifier {
       // Silently fail analytics
     }
   }
-  
+
   // Stop recording and upload using the same flow as file upload
   Future<Map<String, dynamic>?> stopRecording({
     String? projectId,
@@ -232,14 +231,17 @@ class RecordingNotifier extends _$RecordingNotifier {
 
       // Use the same upload flow as file uploads
       try {
-        print('[RecordingProvider] Uploading audio file via upload provider: $filePath');
+        print(
+          '[RecordingProvider] Uploading audio file via upload provider: $filePath',
+        );
 
         // Get the upload provider to use the exact same upload flow
         final uploadProvider = ref.read(uploadContentProvider.notifier);
 
         // Prepare file data for upload
         Uint8List? fileBytes;
-        String fileName = 'recording_${DateTime.now().millisecondsSinceEpoch}.webm';
+        String fileName =
+            'recording_${DateTime.now().millisecondsSinceEpoch}.webm';
 
         if (kIsWeb) {
           // For web, fetch the blob data
@@ -261,7 +263,8 @@ class RecordingNotifier extends _$RecordingNotifier {
         final response = await uploadProvider.uploadAudioFile(
           projectId: projectId ?? state.sessionId?.split('_')[0] ?? '',
           contentType: 'meeting',
-          title: meetingTitle ?? 'Recording ${DateTime.now().toIso8601String()}',
+          title:
+              meetingTitle ?? 'Recording ${DateTime.now().toIso8601String()}',
           date: DateTime.now().toIso8601String().split('T')[0],
           filePath: kIsWeb ? null : filePath,
           fileBytes: fileBytes,
@@ -276,16 +279,22 @@ class RecordingNotifier extends _$RecordingNotifier {
           final jobId = response['job_id'] as String?;
           final contentId = response['content_id'] as String?;
           // When using AI matching, backend returns the actual project UUID
-          final actualProjectId = response['project_id'] as String? ?? projectId;
+          final actualProjectId =
+              response['project_id'] as String? ?? projectId;
 
           // Add job to processing tracker using the actual project ID
           if (jobId != null && actualProjectId != null) {
-            await ref.read(processingJobsProvider.notifier).addJob(
-              jobId: jobId,
-              contentId: contentId,
-              projectId: actualProjectId,  // Use actual project ID, not "auto"
+            await ref
+                .read(processingJobsProvider.notifier)
+                .addJob(
+                  jobId: jobId,
+                  contentId: contentId,
+                  projectId:
+                      actualProjectId, // Use actual project ID, not "auto"
+                );
+            print(
+              '[RecordingProvider] Added job to processing tracker: $jobId for project: $actualProjectId',
             );
-            print('[RecordingProvider] Added job to processing tracker: $jobId for project: $actualProjectId');
           }
 
           // Update state
@@ -304,7 +313,7 @@ class RecordingNotifier extends _$RecordingNotifier {
 
             if (actualProjectId != null && contentId != null) {
               await FirebaseAnalyticsService().logRecordingUploaded(
-                projectId: actualProjectId,  // Use actual project ID
+                projectId: actualProjectId, // Use actual project ID
                 fileSize: fileBytes?.length ?? 0,
                 duration: state.duration.inSeconds,
               );
@@ -318,30 +327,36 @@ class RecordingNotifier extends _$RecordingNotifier {
             'filePath': filePath,
             'contentId': contentId,
             'jobId': jobId,
-            'projectId': actualProjectId,  // Include actual project ID
+            'projectId': actualProjectId, // Include actual project ID
             'transcription': '', // Will be available via job tracking
           };
         } else {
           throw Exception('Upload failed - no response');
         }
       } catch (e) {
+        // Extract user-friendly error message
+        final errorMessage = ErrorUtils.getUserFriendlyMessage(e);
+
         state = state.copyWith(
-          errorMessage: 'Upload failed: $e',
+          errorMessage: errorMessage,
           isProcessing: false,
           state: RecordingState.error,
         );
         return {'filePath': filePath}; // Return path even if upload fails
       }
     } catch (e) {
+      // Extract user-friendly error message
+      final errorMessage = ErrorUtils.getUserFriendlyMessage(e);
+
       state = state.copyWith(
-        errorMessage: 'Error stopping recording: $e',
+        errorMessage: errorMessage,
         isProcessing: false,
         state: RecordingState.error,
       );
       return null;
     }
   }
-  
+
   // Cancel recording without saving
   Future<void> cancelRecording() async {
     // Cancel recording and delete file
@@ -357,25 +372,22 @@ class RecordingNotifier extends _$RecordingNotifier {
       currentRecordingPath: null,
     );
   }
-  
+
   // Retry transcription with existing file
   Future<void> retryTranscription({
     required String filePath,
     String? projectId,
     String? language,
   }) async {
-    state = state.copyWith(
-      isProcessing: true,
-      errorMessage: null,
-    );
-    
+    state = state.copyWith(isProcessing: true, errorMessage: null);
+
     try {
       final result = await _transcriptionService.transcribeAudioFile(
         audioFilePath: filePath,
         projectId: projectId,
         language: language,
       );
-      
+
       state = state.copyWith(
         transcriptionText: result.text,
         isProcessing: false,
@@ -389,25 +401,22 @@ class RecordingNotifier extends _$RecordingNotifier {
       );
     }
   }
-  
+
   // Clear error message
   void clearError() {
     state = state.copyWith(errorMessage: null);
   }
-  
+
   // Clear transcription and content ID
   void clearTranscription() {
-    state = state.copyWith(
-      transcriptionText: '',
-      contentId: null,
-    );
+    state = state.copyWith(transcriptionText: '', contentId: null);
   }
-  
+
   // Get supported languages
   Future<List<String>> getSupportedLanguages() async {
     return await _transcriptionService.getSupportedLanguages();
   }
-  
+
   // Clean up subscriptions
   void disposeSubscriptions() {
     _amplitudeSubscription?.cancel();

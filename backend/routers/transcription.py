@@ -323,7 +323,9 @@ async def transcribe_audio(
         JSON response with job ID for tracking transcription progress
     """
     try:
-        # Validate file size (max 100MB)
+        # Validate file size
+        settings = get_settings()
+        max_size_bytes = settings.max_audio_file_size_mb * 1024 * 1024
         file_size = 0
         temp_file_path = None
 
@@ -342,11 +344,11 @@ async def transcribe_audio(
             file_size = os.path.getsize(temp_file_path)
 
         # Check file size
-        if file_size > 100 * 1024 * 1024:  # 100MB
+        if file_size > max_size_bytes:
             os.unlink(temp_file_path)
             raise HTTPException(
                 status_code=413,
-                detail="File too large. Maximum size is 100MB"
+                detail=f"File too large. Maximum size is {settings.max_audio_file_size_mb}MB"
             )
 
         if file_size == 0:

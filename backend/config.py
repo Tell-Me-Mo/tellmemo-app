@@ -65,6 +65,7 @@ class Settings(BaseSettings):
     
     # Application Settings
     max_file_size_mb: int = Field(default=10, env="MAX_FILE_SIZE_MB")
+    max_audio_file_size_mb: int = Field(default=500, env="MAX_AUDIO_FILE_SIZE_MB")  # Audio files can be larger
     chunk_size_words: int = Field(default=1500, env="CHUNK_SIZE_WORDS")  # Optimized for 2048 token context
     chunk_overlap_words: int = Field(default=200, env="CHUNK_OVERLAP_WORDS")  # Better coherence
     embedding_model: str = Field(default="google/embeddinggemma-300m", env="EMBEDDING_MODEL")
