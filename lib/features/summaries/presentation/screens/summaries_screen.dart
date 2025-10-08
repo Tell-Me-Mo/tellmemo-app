@@ -553,46 +553,48 @@ class _SummariesScreenState extends ConsumerState<SummariesScreen>
                                     }),
                                 ],
                               ),
-                              const SizedBox(width: 8),
 
-                              // View Mode Toggle
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: colorScheme.outline.withValues(alpha: 0.2),
-                                    width: 1,
+                              // View Mode Toggle - Hidden on mobile, shown on tablet/desktop
+                              if (!isMobile) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: colorScheme.outline.withValues(alpha: 0.2),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  padding: const EdgeInsets.all(2),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      _buildViewModeButton(
+                                        icon: Icons.view_list,
+                                        mode: SummaryViewMode.list,
+                                        currentMode: _viewMode,
+                                        tooltip: 'List',
+                                        onTap: () => setState(() => _viewMode = SummaryViewMode.list),
+                                      ),
+                                      _buildViewModeButton(
+                                        icon: Icons.view_compact,
+                                        mode: SummaryViewMode.compact,
+                                        currentMode: _viewMode,
+                                        tooltip: 'Compact',
+                                        onTap: () => setState(() => _viewMode = SummaryViewMode.compact),
+                                      ),
+                                      _buildViewModeButton(
+                                        icon: Icons.grid_view,
+                                        mode: SummaryViewMode.grid,
+                                        currentMode: _viewMode,
+                                        tooltip: 'Grid',
+                                        onTap: () => setState(() => _viewMode = SummaryViewMode.grid),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                padding: const EdgeInsets.all(2),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    _buildViewModeButton(
-                                      icon: Icons.view_list,
-                                      mode: SummaryViewMode.list,
-                                      currentMode: _viewMode,
-                                      tooltip: 'List',
-                                      onTap: () => setState(() => _viewMode = SummaryViewMode.list),
-                                    ),
-                                    _buildViewModeButton(
-                                      icon: Icons.view_compact,
-                                      mode: SummaryViewMode.compact,
-                                      currentMode: _viewMode,
-                                      tooltip: 'Compact',
-                                      onTap: () => setState(() => _viewMode = SummaryViewMode.compact),
-                                    ),
-                                    _buildViewModeButton(
-                                      icon: Icons.grid_view,
-                                      mode: SummaryViewMode.grid,
-                                      currentMode: _viewMode,
-                                      tooltip: 'Grid',
-                                      onTap: () => setState(() => _viewMode = SummaryViewMode.grid),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                              ],
                             ],
                           ),
 

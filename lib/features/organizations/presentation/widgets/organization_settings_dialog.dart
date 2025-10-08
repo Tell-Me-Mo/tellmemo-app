@@ -171,15 +171,17 @@ class _OrganizationSettingsDialogState extends ConsumerState<OrganizationSetting
     final organizationAsync = ref.watch(currentOrganizationProvider);
     final screenSize = MediaQuery.of(context).size;
     final isDesktop = screenSize.width > 1200;
+    final isMobile = screenSize.width <= 768;
 
     return Dialog(
       backgroundColor: Colors.transparent,
+      insetPadding: isMobile ? EdgeInsets.zero : const EdgeInsets.all(40),
       child: Container(
-        width: isDesktop ? 720 : screenSize.width * 0.9,
-        height: screenSize.height * 0.75,
+        width: isMobile ? screenSize.width : (isDesktop ? 720 : screenSize.width * 0.9),
+        height: isMobile ? screenSize.height : screenSize.height * 0.75,
         decoration: BoxDecoration(
           color: colorScheme.surface,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: isMobile ? BorderRadius.zero : BorderRadius.circular(20),
         ),
         child: organizationAsync.when(
           loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
@@ -197,6 +199,107 @@ class _OrganizationSettingsDialogState extends ConsumerState<OrganizationSetting
 
             final isAdmin = organization.currentUserRole == 'admin';
 
+            // Mobile layout - no sidebar
+            if (isMobile) {
+              return Column(
+                children: [
+                  // Header Bar
+                  Container(
+                    height: 56,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(
+                          color: colorScheme.outline.withValues(alpha: 0.1),
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(
+                          _getViewTitle(),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(Icons.close),
+                          tooltip: 'Close',
+                          iconSize: 20,
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Mobile Tabs
+                  Container(
+                    height: 48,
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(
+                          color: colorScheme.outline.withValues(alpha: 0.1),
+                        ),
+                      ),
+                    ),
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      children: [
+                        _buildMobileTab('general', 'General', isAdmin),
+                        _buildMobileTab('notifications', 'Notifications', isAdmin),
+                        _buildMobileTab('data', 'Data', isAdmin),
+                        _buildMobileTab('members', 'Members', true),
+                        if (isAdmin) _buildMobileTab('danger', 'Danger', true),
+                      ],
+                    ),
+                  ),
+                  // Content
+                  Expanded(
+                    child: Form(
+                      key: _formKey,
+                      onChanged: _markChanged,
+                      child: _buildContent(organization, isAdmin),
+                    ),
+                  ),
+                  // Footer
+                  if (isAdmin && _selectedView != 'members')
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          top: BorderSide(
+                            color: colorScheme.outline.withValues(alpha: 0.1),
+                          ),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          if (_hasChanges) ...[
+                            TextButton(
+                              onPressed: () {
+                                _initializeFromOrganization(organization);
+                                setState(() {
+                                  _hasChanges = false;
+                                });
+                              },
+                              child: const Text('Reset'),
+                            ),
+                            const SizedBox(width: 8),
+                            FilledButton(
+                              onPressed: _isSaving ? null : _saveChanges,
+                              child: Text(_isSaving ? 'Saving...' : 'Save'),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                ],
+              );
+            }
+
+            // Desktop/Tablet layout - with sidebar
             return Row(
               children: [
                 // Sidebar
@@ -367,12 +470,10 @@ class _OrganizationSettingsDialogState extends ConsumerState<OrganizationSetting
                               if (_hasChanges) ...[
                                 TextButton(
                                   onPressed: () {
-                                    if (organization != null) {
-                                      _initializeFromOrganization(organization);
-                                      setState(() {
-                                        _hasChanges = false;
-                                      });
-                                    }
+                                    _initializeFromOrganization(organization);
+                                    setState(() {
+                                      _hasChanges = false;
+                                    });
                                   },
                                   child: const Text('Reset'),
                                 ),
@@ -391,6 +492,53 @@ class _OrganizationSettingsDialogState extends ConsumerState<OrganizationSetting
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileTab(String view, String label, bool enabled) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isSelected = _selectedView == view;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: enabled
+              ? () {
+                  setState(() {
+                    _selectedView = view;
+                  });
+                }
+              : null,
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? colorScheme.primaryContainer
+                  : colorScheme.surface,
+              border: Border.all(
+                color: isSelected
+                    ? colorScheme.primary.withValues(alpha: 0.2)
+                    : colorScheme.outline.withValues(alpha: 0.2),
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              label,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: isSelected
+                    ? colorScheme.primary
+                    : colorScheme.onSurfaceVariant,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -501,6 +649,7 @@ class _OrganizationSettingsDialogState extends ConsumerState<OrganizationSetting
   Widget _buildGeneralContent(Organization organization, bool isAdmin) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final isMobile = MediaQuery.of(context).size.width <= 768;
 
     // Watch real data
     final projectsAsync = ref.watch(projectsListProvider);
@@ -511,7 +660,7 @@ class _OrganizationSettingsDialogState extends ConsumerState<OrganizationSetting
     final documentCount = documentsAsync.valueOrNull?['total'] ?? 0;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isMobile ? 16 : 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -587,15 +736,26 @@ class _OrganizationSettingsDialogState extends ConsumerState<OrganizationSetting
                     ),
                   ),
                   const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      _buildStatItem('Members', memberCount.toString(), Icons.people_outline),
-                      const SizedBox(width: 24),
-                      _buildStatItem('Projects', projectCount.toString(), Icons.folder_outlined),
-                      const SizedBox(width: 24),
-                      _buildStatItem('Documents', documentCount.toString(), Icons.description_outlined),
-                    ],
-                  ),
+                  isMobile
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildStatItem('Members', memberCount.toString(), Icons.people_outline),
+                            const SizedBox(height: 12),
+                            _buildStatItem('Projects', projectCount.toString(), Icons.folder_outlined),
+                            const SizedBox(height: 12),
+                            _buildStatItem('Documents', documentCount.toString(), Icons.description_outlined),
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            _buildStatItem('Members', memberCount.toString(), Icons.people_outline),
+                            const SizedBox(width: 24),
+                            _buildStatItem('Projects', projectCount.toString(), Icons.folder_outlined),
+                            const SizedBox(width: 24),
+                            _buildStatItem('Documents', documentCount.toString(), Icons.description_outlined),
+                          ],
+                        ),
                 ],
               ),
             ),
@@ -608,9 +768,10 @@ class _OrganizationSettingsDialogState extends ConsumerState<OrganizationSetting
   Widget _buildNotificationsContent(bool isAdmin) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final isMobile = MediaQuery.of(context).size.width <= 768;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isMobile ? 16 : 24),
       child: Card(
         elevation: 0,
         shape: RoundedRectangleBorder(
@@ -657,9 +818,10 @@ class _OrganizationSettingsDialogState extends ConsumerState<OrganizationSetting
   Widget _buildDataContent(bool isAdmin) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final isMobile = MediaQuery.of(context).size.width <= 768;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isMobile ? 16 : 24),
       child: Card(
         elevation: 0,
         shape: RoundedRectangleBorder(
@@ -681,7 +843,7 @@ class _OrganizationSettingsDialogState extends ConsumerState<OrganizationSetting
               ),
               const SizedBox(height: 20),
               DropdownButtonFormField<String>(
-                value: _selectedDataRetentionDays,
+                initialValue: _selectedDataRetentionDays,
                 decoration: const InputDecoration(
                   labelText: 'Retention Period',
                   helperText: 'How long to keep your data',
@@ -750,9 +912,10 @@ class _OrganizationSettingsDialogState extends ConsumerState<OrganizationSetting
   Widget _buildDangerContent() {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final isMobile = MediaQuery.of(context).size.width <= 768;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isMobile ? 16 : 24),
       child: Card(
         elevation: 0,
         color: colorScheme.errorContainer.withValues(alpha: 0.05),

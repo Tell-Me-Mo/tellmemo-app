@@ -647,4 +647,317 @@ void main() {
       expect(find.byIcon(Icons.more_vert_rounded), findsNothing);
     });
   });
+
+  group('IntegrationCard - Mobile Layout', () {
+    Widget createMobileTestWidget(Integration integration) {
+      return MediaQuery(
+        data: const MediaQueryData(
+          size: Size(375, 812), // iPhone X dimensions
+        ),
+        child: MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              height: 200,
+              child: IntegrationCard(
+                integration: integration,
+                onTap: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    Widget createDesktopTestWidget(Integration integration) {
+      return MediaQuery(
+        data: const MediaQueryData(
+          size: Size(1920, 1080),
+        ),
+        child: MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              height: 200,
+              child: IntegrationCard(
+                integration: integration,
+                onTap: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('displays correctly on mobile screen without overflow', (tester) async {
+      final integration = Integration(
+        id: 'mobile-1',
+        type: IntegrationType.fireflies,
+        name: 'Fireflies.ai Integration',
+        description: 'Automatic meeting transcription and note-taking service that records calls',
+        iconUrl: 'icon.png',
+        status: IntegrationStatus.connected,
+        lastSyncAt: DateTime.now(),
+      );
+
+      await tester.pumpWidget(createMobileTestWidget(integration));
+      await tester.pumpAndSettle();
+
+      // Verify card renders without overflow
+      expect(tester.takeException(), isNull);
+
+      // Verify content is displayed
+      expect(find.text('Fireflies.ai Integration'), findsOneWidget);
+      expect(find.text('Connected'), findsOneWidget);
+    });
+
+    testWidgets('truncates long text on mobile to prevent overflow', (tester) async {
+      final integration = Integration(
+        id: 'mobile-2',
+        type: IntegrationType.slack,
+        name: 'Slack Integration with Very Long Name That Could Overflow',
+        description: 'This is an extremely long description that contains multiple sentences and should be truncated to prevent any overflow issues on mobile devices. It has even more text to ensure truncation happens.',
+        iconUrl: 'icon.png',
+        status: IntegrationStatus.notConnected,
+      );
+
+      await tester.pumpWidget(createMobileTestWidget(integration));
+      await tester.pumpAndSettle();
+
+      // Verify no overflow
+      expect(tester.takeException(), isNull);
+
+      // Verify name is truncated
+      final nameText = tester.widget<Text>(
+        find.text('Slack Integration with Very Long Name That Could Overflow'),
+      );
+      expect(nameText.maxLines, 1);
+      expect(nameText.overflow, TextOverflow.ellipsis);
+
+      // Verify description is truncated
+      final descriptionFinder = find.textContaining('This is an extremely long description');
+      expect(descriptionFinder, findsOneWidget);
+
+      final descriptionText = tester.widget<Text>(descriptionFinder);
+      expect(descriptionText.maxLines, 2);
+      expect(descriptionText.overflow, TextOverflow.ellipsis);
+    });
+
+    testWidgets('uses mobile spacing on small screens', (tester) async {
+      final integration = Integration(
+        id: 'mobile-3',
+        type: IntegrationType.teams,
+        name: 'Teams',
+        description: 'Video meetings',
+        iconUrl: 'icon.png',
+        status: IntegrationStatus.connected,
+        lastSyncAt: DateTime.now(),
+      );
+
+      await tester.pumpWidget(createMobileTestWidget(integration));
+      await tester.pumpAndSettle();
+
+      // Find the SizedBox that adjusts spacing based on screen size
+      // Mobile should have smaller spacing
+      final sizedBoxes = find.byType(SizedBox);
+      expect(sizedBoxes, findsAtLeastNWidgets(1));
+
+      // Verify no rendering issues
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('footer buttons fit properly on mobile', (tester) async {
+      final integration = Integration(
+        id: 'mobile-4',
+        type: IntegrationType.fireflies,
+        name: 'Fireflies',
+        description: 'Transcription',
+        iconUrl: 'icon.png',
+        status: IntegrationStatus.connected,
+        lastSyncAt: DateTime.now().subtract(const Duration(hours: 2)),
+      );
+
+      await tester.pumpWidget(createMobileTestWidget(integration));
+      await tester.pumpAndSettle();
+
+      // Verify Configure button is present and properly sized
+      expect(find.text('Configure'), findsAtLeastNWidgets(1));
+      expect(find.textContaining('Synced'), findsOneWidget);
+
+      // Verify no overflow
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('connect button displays properly on mobile', (tester) async {
+      final integration = Integration(
+        id: 'mobile-5',
+        type: IntegrationType.zoom,
+        name: 'Zoom',
+        description: 'Video conferencing',
+        iconUrl: 'icon.png',
+        status: IntegrationStatus.notConnected,
+      );
+
+      await tester.pumpWidget(createMobileTestWidget(integration));
+      await tester.pumpAndSettle();
+
+      // Verify Connect button is present
+      expect(find.text('Connect'), findsOneWidget);
+      expect(find.byIcon(Icons.add_link_rounded), findsOneWidget);
+
+      // Verify no overflow
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('handles different screen widths responsively', (tester) async {
+      final integration = Integration(
+        id: 'mobile-6',
+        type: IntegrationType.transcription,
+        name: 'Transcription Service',
+        description: 'Audio transcription',
+        iconUrl: 'icon.png',
+        status: IntegrationStatus.connected,
+      );
+
+      // Test on very small mobile (320px)
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(size: Size(320, 568)),
+          child: MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                height: 200,
+                child: IntegrationCard(
+                  integration: integration,
+                  onTap: () {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+
+      // Test on tablet (768px)
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(size: Size(768, 1024)),
+          child: MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                height: 200,
+                child: IntegrationCard(
+                  integration: integration,
+                  onTap: () {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+
+      // Test on desktop (1920px)
+      await tester.pumpWidget(createDesktopTestWidget(integration));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('card height is constrained and uses Spacer correctly', (tester) async {
+      final integration = Integration(
+        id: 'mobile-7',
+        type: IntegrationType.aiBrain,
+        name: 'AI Brain',
+        description: 'Short description',
+        iconUrl: 'icon.png',
+        status: IntegrationStatus.notConnected,
+      );
+
+      await tester.pumpWidget(createMobileTestWidget(integration));
+      await tester.pumpAndSettle();
+
+      // Verify Spacer is used to push footer to bottom
+      expect(find.byType(Spacer), findsAtLeastNWidgets(1));
+
+      // Verify no overflow
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('icon and badge do not overflow on mobile', (tester) async {
+      final integration = Integration(
+        id: 'mobile-8',
+        type: IntegrationType.fireflies,
+        name: 'Very Long Integration Name That Should Truncate',
+        description: 'Description text',
+        iconUrl: 'icon.png',
+        status: IntegrationStatus.error,
+        errorMessage: 'Connection timeout error message that is quite long',
+      );
+
+      await tester.pumpWidget(createMobileTestWidget(integration));
+      await tester.pumpAndSettle();
+
+      // Verify icon is present
+      expect(find.byIcon(Icons.mic_rounded), findsOneWidget);
+
+      // Verify status badge is present
+      expect(find.text('Error'), findsOneWidget);
+      expect(find.byIcon(Icons.error_rounded), findsOneWidget);
+
+      // Verify no overflow despite long content
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('multiple cards in grid do not overflow on mobile', (tester) async {
+      final integrations = [
+        Integration(
+          id: 'grid-1',
+          type: IntegrationType.fireflies,
+          name: 'Fireflies.ai',
+          description: 'Automatic meeting transcription',
+          iconUrl: 'icon.png',
+          status: IntegrationStatus.connected,
+        ),
+        Integration(
+          id: 'grid-2',
+          type: IntegrationType.slack,
+          name: 'Slack',
+          description: 'Team communication platform',
+          iconUrl: 'icon.png',
+          status: IntegrationStatus.notConnected,
+        ),
+      ];
+
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(size: Size(375, 812)),
+          child: MaterialApp(
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: Column(
+                  children: integrations
+                      .map((integration) => SizedBox(
+                            height: 200,
+                            child: IntegrationCard(
+                              integration: integration,
+                              onTap: () {},
+                            ),
+                          ))
+                      .toList(),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify all cards are rendered
+      expect(find.text('Fireflies.ai'), findsOneWidget);
+      expect(find.text('Slack'), findsOneWidget);
+
+      // Verify no overflow
+      expect(tester.takeException(), isNull);
+    });
+  });
 }

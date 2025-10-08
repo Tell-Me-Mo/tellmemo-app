@@ -17,6 +17,8 @@ class IntegrationCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isConnected = integration.status == IntegrationStatus.connected;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth <= 768;
 
     return Card(
       elevation: 0,
@@ -66,7 +68,7 @@ class IntegrationCard extends StatelessWidget {
                 ),
 
                 // Description
-                const SizedBox(height: 12),
+                SizedBox(height: isMobile ? 8 : 12),
                 Text(
                   integration.description,
                   style: TextStyle(
@@ -81,7 +83,7 @@ class IntegrationCard extends StatelessWidget {
                 const Spacer(),
 
                 // Footer with action button
-                const SizedBox(height: 12),
+                SizedBox(height: isMobile ? 8 : 12),
                 if (isConnected) ...[
                   _buildConnectedFooter(context, colorScheme),
                 ] else ...[

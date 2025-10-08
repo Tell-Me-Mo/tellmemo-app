@@ -813,49 +813,49 @@ class _RisksAggregationScreenV2State extends ConsumerState<RisksAggregationScree
                 : colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
           ),
         ),
-        const SizedBox(width: 8),
 
-        // View Mode Toggle - Consolidated segmented button
-        Container(
-          decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: colorScheme.outline.withValues(alpha: 0.2),
-              width: 1,
+        // View Mode Toggle - Hidden on mobile, shown on tablet/desktop
+        if (!isMobile) ...[
+          const SizedBox(width: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: colorScheme.outline.withValues(alpha: 0.2),
+                width: 1,
+              ),
             ),
-          ),
-          padding: const EdgeInsets.all(2),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildViewModeButton(
-                icon: Icons.view_list,
-                mode: RiskViewMode.list,
-                currentMode: _viewMode,
-                tooltip: 'List',
-                onTap: () {
-                  setState(() {
-                    _viewMode = RiskViewMode.list;
-                  });
-                  // Persist the change
-                  ref.read(riskViewModeProvider.notifier).state = RiskViewMode.list;
-                },
-              ),
-              _buildViewModeButton(
-                icon: Icons.view_compact,
-                mode: RiskViewMode.compact,
-                currentMode: _viewMode,
-                tooltip: 'Compact',
-                onTap: () {
-                  setState(() {
-                    _viewMode = RiskViewMode.compact;
-                  });
-                  // Persist the change
-                  ref.read(riskViewModeProvider.notifier).state = RiskViewMode.compact;
-                },
-              ),
-              if (!isMobile) ...[
+            padding: const EdgeInsets.all(2),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildViewModeButton(
+                  icon: Icons.view_list,
+                  mode: RiskViewMode.list,
+                  currentMode: _viewMode,
+                  tooltip: 'List',
+                  onTap: () {
+                    setState(() {
+                      _viewMode = RiskViewMode.list;
+                    });
+                    // Persist the change
+                    ref.read(riskViewModeProvider.notifier).state = RiskViewMode.list;
+                  },
+                ),
+                _buildViewModeButton(
+                  icon: Icons.view_compact,
+                  mode: RiskViewMode.compact,
+                  currentMode: _viewMode,
+                  tooltip: 'Compact',
+                  onTap: () {
+                    setState(() {
+                      _viewMode = RiskViewMode.compact;
+                    });
+                    // Persist the change
+                    ref.read(riskViewModeProvider.notifier).state = RiskViewMode.compact;
+                  },
+                ),
                 _buildViewModeButton(
                   icon: Icons.view_kanban,
                   mode: RiskViewMode.kanban,
@@ -870,9 +870,9 @@ class _RisksAggregationScreenV2State extends ConsumerState<RisksAggregationScree
                   },
                 ),
               ],
-            ],
+            ),
           ),
-        ),
+        ],
       ],
     );
   }

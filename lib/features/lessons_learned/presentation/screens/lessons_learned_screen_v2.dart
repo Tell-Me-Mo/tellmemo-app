@@ -748,28 +748,30 @@ class _LessonsLearnedScreenV2State extends ConsumerState<LessonsLearnedScreenV2>
                                       },
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
 
-                                  // Compact View Toggle
-                                  IconButton(
-                                    onPressed: () {
-                                      ref.read(lessonCompactViewProvider.notifier).toggle();
-                                    },
-                                    icon: Icon(
-                                      ref.watch(lessonCompactViewProvider)
-                                          ? Icons.view_agenda
-                                          : Icons.view_stream,
-                                      color: colorScheme.onSurfaceVariant,
-                                      size: 22,
+                                  // Compact View Toggle - Hidden on mobile, shown on tablet/desktop
+                                  if (!isMobile) ...[
+                                    const SizedBox(width: 8),
+                                    IconButton(
+                                      onPressed: () {
+                                        ref.read(lessonCompactViewProvider.notifier).toggle();
+                                      },
+                                      icon: Icon(
+                                        ref.watch(lessonCompactViewProvider)
+                                            ? Icons.view_agenda
+                                            : Icons.view_stream,
+                                        color: colorScheme.onSurfaceVariant,
+                                        size: 22,
+                                      ),
+                                      tooltip: ref.watch(lessonCompactViewProvider)
+                                          ? 'Regular View'
+                                          : 'Compact View',
+                                      style: IconButton.styleFrom(
+                                        backgroundColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                                      ),
                                     ),
-                                    tooltip: ref.watch(lessonCompactViewProvider)
-                                        ? 'Regular View'
-                                        : 'Compact View',
-                                    style: IconButton.styleFrom(
-                                      backgroundColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
+                                    const SizedBox(width: 8),
+                                  ],
 
                                   // Group Button
                                   Consumer(

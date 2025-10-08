@@ -140,17 +140,7 @@ class RecordingNotifier extends _$RecordingNotifier {
         errorMessage: null,
         isProcessing: false,
       );
-      
-      // Check transcription service health (optional)
-      print('[RecordingProvider] Checking transcription service health...');
-      final serviceHealthy = await _transcriptionService.checkServiceHealth();
-      if (!serviceHealthy) {
-        print('[RecordingProvider] Warning: Transcription service may be unavailable');
-        // Continue anyway - transcription will be attempted after recording
-      } else {
-        print('[RecordingProvider] Transcription service is healthy');
-      }
-      
+
       // Start audio recording to file
       print('[RecordingProvider] Starting audio recording...');
       final recordingStarted = await _audioService.startRecording(
@@ -354,11 +344,6 @@ class RecordingNotifier extends _$RecordingNotifier {
   
   // Cancel recording without saving
   Future<void> cancelRecording() async {
-    // Cancel any ongoing transcription if session exists
-    if (state.sessionId != null) {
-      await _transcriptionService.cancelTranscription(state.sessionId!);
-    }
-
     // Cancel recording and delete file
     await _audioService.cancelRecording();
 
