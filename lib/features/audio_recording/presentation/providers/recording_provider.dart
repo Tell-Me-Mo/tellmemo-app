@@ -25,6 +25,7 @@ class RecordingStateModel {
   final double amplitude;
   final String? contentId; // Added to track uploaded content
   final bool isUploading; // Added to track upload status
+  final bool showDurationWarning; // Added to track 90-minute warning
 
   RecordingStateModel({
     this.state = RecordingState.idle,
@@ -37,6 +38,7 @@ class RecordingStateModel {
     this.amplitude = 0.0,
     this.contentId,
     this.isUploading = false,
+    this.showDurationWarning = false,
   });
 
   RecordingStateModel copyWith({
@@ -50,6 +52,7 @@ class RecordingStateModel {
     double? amplitude,
     String? contentId,
     bool? isUploading,
+    bool? showDurationWarning,
   }) {
     return RecordingStateModel(
       state: state ?? this.state,
@@ -62,6 +65,7 @@ class RecordingStateModel {
       amplitude: amplitude ?? this.amplitude,
       contentId: contentId ?? this.contentId,
       isUploading: isUploading ?? this.isUploading,
+      showDurationWarning: showDurationWarning ?? this.showDurationWarning,
     );
   }
 }
@@ -90,6 +94,7 @@ class RecordingNotifier extends _$RecordingNotifier {
   StreamSubscription? _amplitudeSubscription;
   StreamSubscription? _durationSubscription;
   StreamSubscription? _stateSubscription;
+  StreamSubscription? _warningSubscription;
 
   @override
   RecordingStateModel build() {
@@ -123,6 +128,12 @@ class RecordingNotifier extends _$RecordingNotifier {
     _amplitudeSubscription = _audioService.amplitudeStream.listen((amplitude) {
       state = state.copyWith(amplitude: amplitude);
     });
+
+    // Listen to warning notifications
+    _warningSubscription?.cancel();
+    _warningSubscription = _audioService.warningStream.listen((showWarning) {
+      state = state.copyWith(showDurationWarning: showWarning);
+    });
   }
 
   // Start recording (audio only, transcription happens after stopping)
@@ -133,11 +144,12 @@ class RecordingNotifier extends _$RecordingNotifier {
     try {
       print('[RecordingProvider] Starting recording for project: $projectId');
 
-      // Clear previous transcription and errors
+      // Clear previous transcription, errors, and warning
       state = state.copyWith(
         transcriptionText: '',
         errorMessage: null,
         isProcessing: false,
+        showDurationWarning: false,
       );
 
       // Start audio recording to file
@@ -422,5 +434,6 @@ class RecordingNotifier extends _$RecordingNotifier {
     _amplitudeSubscription?.cancel();
     _durationSubscription?.cancel();
     _stateSubscription?.cancel();
+    _warningSubscription?.cancel();
   }
 }

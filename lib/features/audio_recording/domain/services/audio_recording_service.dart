@@ -14,11 +14,16 @@ enum RecordingState {
 }
 
 class AudioRecordingService {
+  // Recording duration limits
+  static const Duration maxRecordingDuration = Duration(hours: 2); // 2 hours max
+  static const Duration warningThreshold = Duration(minutes: 90); // Warning at 90 minutes
+
   final AudioRecorder _recorder = AudioRecorder();
   final StreamController<RecordingState> _stateController = StreamController<RecordingState>.broadcast();
   final StreamController<Duration> _durationController = StreamController<Duration>.broadcast();
   final StreamController<double> _amplitudeController = StreamController<double>.broadcast();
-  
+  final StreamController<bool> _warningController = StreamController<bool>.broadcast();
+
   RecordingState _currentState = RecordingState.idle;
   Timer? _durationTimer;
   Timer? _amplitudeTimer;
@@ -26,11 +31,13 @@ class AudioRecordingService {
   Duration _pausedDuration = Duration.zero;
   DateTime? _pauseStartTime;
   String? _currentRecordingPath;
+  bool _hasShownWarning = false;
   
   // Getters
   Stream<RecordingState> get stateStream => _stateController.stream;
   Stream<Duration> get durationStream => _durationController.stream;
   Stream<double> get amplitudeStream => _amplitudeController.stream;
+  Stream<bool> get warningStream => _warningController.stream;
   RecordingState get currentState => _currentState;
   String? get currentRecordingPath => _currentRecordingPath;
   
@@ -131,9 +138,10 @@ class AudioRecordingService {
       // Start duration and amplitude tracking
       _recordingStartTime = DateTime.now();
       _pausedDuration = Duration.zero;
+      _hasShownWarning = false; // Reset warning flag for new recording
       _startDurationTimer();
       _startAmplitudeMonitoring();
-      
+
       _updateState(RecordingState.recording);
       print('[AudioRecordingService] Recording started successfully');
       return true;
@@ -278,9 +286,23 @@ class AudioRecordingService {
   // Start duration timer
   void _startDurationTimer() {
     _durationTimer?.cancel();
-    _durationTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+    _durationTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
       if (_recordingStartTime != null) {
-        _durationController.add(getRecordingDuration());
+        final duration = getRecordingDuration();
+        _durationController.add(duration);
+
+        // Check for warning threshold (90 minutes)
+        if (!_hasShownWarning && duration >= warningThreshold) {
+          _hasShownWarning = true;
+          _warningController.add(true);
+          print('[AudioRecordingService] Warning: Recording has reached 90 minutes');
+        }
+
+        // Auto-stop at max duration (2 hours)
+        if (duration >= maxRecordingDuration) {
+          print('[AudioRecordingService] Max duration reached - auto-stopping recording');
+          await stopRecording();
+        }
       }
     });
   }
@@ -293,6 +315,7 @@ class AudioRecordingService {
     _stateController.close();
     _durationController.close();
     _amplitudeController.close();
+    _warningController.close();
   }
   
   // Delete a recording file

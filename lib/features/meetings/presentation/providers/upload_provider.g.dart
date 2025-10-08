@@ -23,7 +23,7 @@ final uploadStateProvider = AutoDisposeProvider<UploadState>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef UploadStateRef = AutoDisposeProviderRef<UploadState>;
-String _$uploadContentHash() => r'f9c2e4fcea7eb17c9c88d6d374fa0df93b9650cb';
+String _$uploadContentHash() => r'67e015c68be029d1ccd54ce9c10c8e3456dff512';
 
 /// See also [UploadContent].
 @ProviderFor(UploadContent)
@@ -39,7 +39,7 @@ final uploadContentProvider =
     );
 
 typedef _$UploadContent = AutoDisposeNotifier<UploadState>;
-String _$multiFileUploadHash() => r'f2352a04a15e9e84881ead4d64a116f6183a6b72';
+String _$multiFileUploadHash() => r'add8bb1c577d687f801674846f9023e9d239870e';
 
 /// See also [MultiFileUpload].
 @ProviderFor(MultiFileUpload)
