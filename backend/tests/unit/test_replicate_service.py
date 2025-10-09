@@ -40,12 +40,13 @@ class TestReplicateServiceConnectionTest:
         """Test successful API connection."""
         service = ReplicateTranscriptionService(api_key="test_key")
 
-        # Mock successful model fetch
-        mock_model = MagicMock()
-        mock_model.owner = "vaibhavs10"
-        mock_model.name = "incredibly-fast-whisper"
+        # Mock successful model fetch with a simple class instead of MagicMock
+        class MockModel:
+            owner = "vaibhavs10"
+            name = "incredibly-fast-whisper"
 
-        with patch('replicate.models.get', return_value=mock_model):
+        # Patch the client's models.get method
+        with patch.object(service.client.models, 'get', return_value=MockModel()):
             result = await service.test_connection()
 
         assert result["success"] is True
@@ -58,7 +59,7 @@ class TestReplicateServiceConnectionTest:
         service = ReplicateTranscriptionService(api_key="invalid_key")
 
         # Mock authentication error
-        with patch('replicate.models.get', side_effect=ReplicateError("Unauthorized")):
+        with patch.object(service.client.models, 'get', side_effect=ReplicateError("Unauthorized")):
             result = await service.test_connection()
 
         assert result["success"] is False
@@ -77,7 +78,7 @@ class TestReplicateTranscription:
         test_audio = tmp_path / "test.mp3"
         test_audio.write_bytes(b"fake audio data")
 
-        # Mock replicate.run() response
+        # Mock replicate.run() response - ensure all data is serializable
         mock_output = {
             "text": "This is a test transcription.",
             "detected_language": "en",
@@ -96,8 +97,14 @@ class TestReplicateTranscription:
             ]
         }
 
-        with patch('replicate.run', return_value=mock_output):
-            with patch('builtins.open', mock_open(read_data=b"fake audio data")):
+        # Mock open to avoid actual file operations
+        mock_file = MagicMock()
+        mock_file.__enter__ = MagicMock(return_value=mock_file)
+        mock_file.__exit__ = MagicMock(return_value=False)
+        mock_file.read = MagicMock(return_value=b"fake audio data")
+
+        with patch.object(service.client, 'run', return_value=mock_output):
+            with patch('builtins.open', return_value=mock_file):
                 result = await service.transcribe_audio_file(
                     audio_path=str(test_audio),
                     language="en"
@@ -117,14 +124,21 @@ class TestReplicateTranscription:
         test_audio = tmp_path / "test.mp3"
         test_audio.write_bytes(b"fake audio data")
 
-        # Mock replicate.run() response with French
+        # Mock replicate.run() response with French - ensure complete structure
         mock_output = {
             "text": "Bonjour le monde",
-            "detected_language": "fr"
+            "detected_language": "fr",
+            "segments": []
         }
 
-        with patch('replicate.run', return_value=mock_output):
-            with patch('builtins.open', mock_open(read_data=b"fake audio data")):
+        # Mock open to avoid actual file operations
+        mock_file = MagicMock()
+        mock_file.__enter__ = MagicMock(return_value=mock_file)
+        mock_file.__exit__ = MagicMock(return_value=False)
+        mock_file.read = MagicMock(return_value=b"fake audio data")
+
+        with patch.object(service.client, 'run', return_value=mock_output):
+            with patch('builtins.open', return_value=mock_file):
                 result = await service.transcribe_audio_file(
                     audio_path=str(test_audio),
                     language=None  # Auto-detect
@@ -144,8 +158,14 @@ class TestReplicateTranscription:
         # Mock replicate.run() returning plain text
         mock_output = "This is plain text output."
 
-        with patch('replicate.run', return_value=mock_output):
-            with patch('builtins.open', mock_open(read_data=b"fake audio data")):
+        # Mock open to avoid actual file operations
+        mock_file = MagicMock()
+        mock_file.__enter__ = MagicMock(return_value=mock_file)
+        mock_file.__exit__ = MagicMock(return_value=False)
+        mock_file.read = MagicMock(return_value=b"fake audio data")
+
+        with patch.object(service.client, 'run', return_value=mock_output):
+            with patch('builtins.open', return_value=mock_file):
                 result = await service.transcribe_audio_file(
                     audio_path=str(test_audio),
                     language="en"
@@ -162,16 +182,22 @@ class TestReplicateTranscription:
         test_audio = tmp_path / "test.mp3"
         test_audio.write_bytes(b"fake audio data")
 
+        # Mock open to avoid actual file operations
+        mock_file = MagicMock()
+        mock_file.__enter__ = MagicMock(return_value=mock_file)
+        mock_file.__exit__ = MagicMock(return_value=False)
+        mock_file.read = MagicMock(return_value=b"fake audio data")
+
         # Mock ReplicateError
-        with patch('replicate.run', side_effect=ReplicateError("Audio file is corrupted")):
-            with patch('builtins.open', mock_open(read_data=b"fake audio data")):
+        with patch.object(service.client, 'run', side_effect=ReplicateError("Audio file is corrupted")):
+            with patch('builtins.open', return_value=mock_file):
                 with pytest.raises(Exception) as exc_info:
                     await service.transcribe_audio_file(
                         audio_path=str(test_audio),
                         language="en"
                     )
 
-                assert "Replicate API error" in str(exc_info.value)
+        assert "Replicate API error" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_transcribe_authentication_error(self, tmp_path):
@@ -181,16 +207,22 @@ class TestReplicateTranscription:
         test_audio = tmp_path / "test.mp3"
         test_audio.write_bytes(b"fake audio data")
 
+        # Mock open to avoid actual file operations
+        mock_file = MagicMock()
+        mock_file.__enter__ = MagicMock(return_value=mock_file)
+        mock_file.__exit__ = MagicMock(return_value=False)
+        mock_file.read = MagicMock(return_value=b"fake audio data")
+
         # Mock authentication error
-        with patch('replicate.run', side_effect=ReplicateError("Unauthorized")):
-            with patch('builtins.open', mock_open(read_data=b"fake audio data")):
+        with patch.object(service.client, 'run', side_effect=ReplicateError("Unauthorized")):
+            with patch('builtins.open', return_value=mock_file):
                 with pytest.raises(Exception) as exc_info:
                     await service.transcribe_audio_file(
                         audio_path=str(test_audio),
                         language="en"
                     )
 
-                assert "Authentication failed" in str(exc_info.value)
+        assert "Authentication failed" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_transcribe_with_progress_callback(self, tmp_path):
@@ -206,11 +238,21 @@ class TestReplicateTranscription:
         async def progress_callback(progress: float, description: str):
             progress_updates.append((progress, description))
 
-        # Mock replicate.run()
-        mock_output = {"text": "Test transcription"}
+        # Mock replicate.run() - return complete dict structure
+        mock_output = {
+            "text": "Test transcription",
+            "detected_language": "en",
+            "segments": []
+        }
 
-        with patch('replicate.run', return_value=mock_output):
-            with patch('builtins.open', mock_open(read_data=b"fake audio data")):
+        # Mock open to avoid actual file operations
+        mock_file = MagicMock()
+        mock_file.__enter__ = MagicMock(return_value=mock_file)
+        mock_file.__exit__ = MagicMock(return_value=False)
+        mock_file.read = MagicMock(return_value=b"fake audio data")
+
+        with patch.object(service.client, 'run', return_value=mock_output):
+            with patch('builtins.open', return_value=mock_file):
                 await service.transcribe_audio_file(
                     audio_path=str(test_audio),
                     language="en",

@@ -12,7 +12,6 @@ from models.organization import Organization
 from models.user import User
 from models.content import ContentType
 from services.core.content_service import ContentService
-from services.core.upload_job_service import upload_job_service, JobType
 from services.observability.langfuse_service import langfuse_service
 from services.intelligence.project_matcher_service import project_matcher_service
 from utils.logger import get_logger, sanitize_for_log
@@ -185,8 +184,14 @@ async def upload_content(
                             output={"content_id": str(content.id)}
                         )
                 
-                # Create job for tracking
-                job_metadata = {"content_id": str(content.id), "title": title}
+                # Prepare metadata for RQ job
+                job_metadata = {
+                    "content_id": str(content.id),
+                    "title": title,
+                    "filename": file.filename,
+                    "file_size": file_size,
+                    "project_id": str(project_uuid)
+                }
                 if project_match_info:
                     job_metadata.update({
                         "ai_matched": True,
@@ -195,17 +200,8 @@ async def upload_content(
                         "project_name": project_match_info['project_name']
                     })
 
-                job_id = upload_job_service.create_job(
-                    project_id=str(project_uuid),
-                    job_type=JobType.TEXT_UPLOAD if content_type == "meeting" else JobType.EMAIL_UPLOAD,
-                    filename=file.filename,
-                    file_size=file_size,
-                    total_steps=6,
-                    metadata=job_metadata
-                )
-                
-                # Trigger async processing with job tracking
-                await ContentService.trigger_async_processing(content.id, job_id)
+                # Trigger async processing and get RQ job ID
+                rq_job_id = await ContentService.trigger_async_processing(content.id, job_metadata)
                 
                 # Update main span
                 total_time = (time.time() - start_time) * 1000
@@ -236,7 +232,7 @@ async def upload_content(
                     title=title,
                     uploaded_at=content.uploaded_at,
                     chunk_count=0,  # Will be updated after processing
-                    job_id=job_id
+                    job_id=rq_job_id  # Return RQ job ID directly
                 )
 
             except ValueError as e:
@@ -292,22 +288,21 @@ async def upload_content(
             
             await session.commit()
             
-            # Create job for tracking
+            # Prepare metadata for RQ job
             file_size = len(file_content)
-            job_id = upload_job_service.create_job(
-                project_id=project_id,
-                job_type=JobType.TEXT_UPLOAD if content_type == "meeting" else JobType.EMAIL_UPLOAD,
-                filename=file.filename,
-                file_size=file_size,
-                total_steps=6,
-                metadata={"content_id": str(content.id), "title": title}
-            )
-            
-            # Trigger async processing with job tracking
-            await ContentService.trigger_async_processing(content.id, job_id)
+            job_metadata = {
+                "content_id": str(content.id),
+                "title": title,
+                "filename": file.filename,
+                "file_size": file_size,
+                "project_id": project_id
+            }
+
+            # Trigger async processing and get RQ job ID
+            rq_job_id = await ContentService.trigger_async_processing(content.id, job_metadata)
 
             logger.info(f"Successfully uploaded content {content.id} for project {sanitize_for_log(project_id)}")
-            
+
             return UploadResponse(
                 id=str(content.id),
                 message=f"File '{file.filename}' uploaded successfully and queued for processing",
@@ -317,7 +312,7 @@ async def upload_content(
                 title=title,
                 uploaded_at=content.uploaded_at,
                 chunk_count=0,  # Will be updated after processing
-                job_id=job_id
+                job_id=rq_job_id  # Return RQ job ID directly
             )
         
         except ValueError as e:
@@ -410,9 +405,14 @@ async def upload_text_content(
         
         await session.commit()
         
-        # Create job for tracking
+        # Prepare metadata for RQ job
         content_size = len(request.content.encode('utf-8'))
-        job_metadata = {"content_id": str(content.id), "title": request.title}
+        job_metadata = {
+            "content_id": str(content.id),
+            "title": request.title,
+            "file_size": content_size,
+            "project_id": str(project_uuid)
+        }
         if project_match_info:
             job_metadata.update({
                 "ai_matched": True,
@@ -421,17 +421,8 @@ async def upload_text_content(
                 "project_name": project_match_info['project_name']
             })
 
-        job_id = upload_job_service.create_job(
-            project_id=str(project_uuid),
-            job_type=JobType.TEXT_UPLOAD if request.content_type == "meeting" else JobType.EMAIL_UPLOAD,
-            filename=None,
-            file_size=content_size,
-            total_steps=6,
-            metadata=job_metadata
-        )
-        
-        # Trigger async processing with job tracking
-        await ContentService.trigger_async_processing(content.id, job_id)
+        # Trigger async processing and get RQ job ID
+        rq_job_id = await ContentService.trigger_async_processing(content.id, job_metadata)
 
         logger.info(f"Successfully uploaded text content {content.id} for project {sanitize_for_log(project_id)}")
 
@@ -450,7 +441,7 @@ async def upload_text_content(
             title=request.title,
             uploaded_at=content.uploaded_at,
             chunk_count=0,  # Will be updated after processing
-            job_id=job_id
+            job_id=rq_job_id  # Return RQ job ID directly
         )
         
     except HTTPException:

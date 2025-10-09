@@ -45,6 +45,9 @@ from models.organization import Organization
 from models.organization_member import OrganizationMember
 from services.auth.native_auth_service import native_auth_service
 
+# Import all models to register them with Base.metadata before create_all()
+import models  # noqa: F401
+
 # CRITICAL: Force native_auth_service to use test JWT secret
 # The service was already initialized with a random secret before we set the env var
 native_auth_service.jwt_secret = os.environ["JWT_SECRET"]
@@ -115,9 +118,26 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
     - Yields a database session
     - Drops all tables after the test to ensure clean state
     """
-    # Drop tables first to ensure clean slate (in case previous test failed)
+    from sqlalchemy import text
+
+    # Drop all tables using CASCADE to handle foreign key dependencies
+    # Use raw SQL to avoid errors when tables don't exist
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+        # Drop all tables in the public schema with CASCADE
+        await conn.execute(text("""
+            DO $$
+            DECLARE
+                r RECORD;
+            BEGIN
+                FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+                    EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE';
+                END LOOP;
+                -- Also drop custom types
+                FOR r IN (SELECT typname FROM pg_type WHERE typnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public') AND typtype = 'e') LOOP
+                    EXECUTE 'DROP TYPE IF EXISTS ' || quote_ident(r.typname) || ' CASCADE';
+                END LOOP;
+            END $$;
+        """))
 
     # Create tables
     async with engine.begin() as conn:
@@ -134,7 +154,19 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
     finally:
         # Always drop tables to ensure clean state for next test
         async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.drop_all)
+            await conn.execute(text("""
+                DO $$
+                DECLARE
+                    r RECORD;
+                BEGIN
+                    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+                        EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE';
+                    END LOOP;
+                    FOR r IN (SELECT typname FROM pg_type WHERE typnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public') AND typtype = 'e') LOOP
+                        EXECUTE 'DROP TYPE IF EXISTS ' || quote_ident(r.typname) || ' CASCADE';
+                    END LOOP;
+                END $$;
+            """))
 
 
 @pytest.fixture(scope="function")
@@ -592,3 +624,50 @@ def mock_llm_client():
         project_matcher_service.llm_client = mock_client
 
         yield mock_client
+
+
+@pytest.fixture(scope="function", autouse=True)
+def mock_redis_for_rq():
+    """
+    Replace real Redis with FakeRedis for RQ job queue testing.
+
+    This fixture automatically replaces the Redis connection in queue_config
+    with FakeRedis for all tests, preventing the need for:
+    - A running Redis server
+    - RQ workers to process jobs
+    - Cleanup between tests
+
+    Jobs are stored in-memory and can be inspected/manipulated without workers.
+    """
+    import fakeredis
+    from queue_config import queue_config
+
+    # Create a fresh FakeRedis instance for each test
+    fake_redis = fakeredis.FakeRedis(decode_responses=False)
+
+    # Replace the Redis connection in queue_config
+    original_redis_conn = queue_config._redis_conn
+    original_pubsub_conn = queue_config._pubsub_conn
+    original_high_queue = queue_config._high_queue
+    original_default_queue = queue_config._default_queue
+    original_low_queue = queue_config._low_queue
+
+    # Set FakeRedis as the connection
+    queue_config._redis_conn = fake_redis
+
+    # Create a separate FakeRedis instance for pub/sub (with decode_responses=True)
+    queue_config._pubsub_conn = fakeredis.FakeRedis(decode_responses=True)
+
+    # Reset queues so they'll be recreated with FakeRedis
+    queue_config._high_queue = None
+    queue_config._default_queue = None
+    queue_config._low_queue = None
+
+    yield fake_redis
+
+    # Restore original connections after test
+    queue_config._redis_conn = original_redis_conn
+    queue_config._pubsub_conn = original_pubsub_conn
+    queue_config._high_queue = original_high_queue
+    queue_config._default_queue = original_default_queue
+    queue_config._low_queue = original_low_queue

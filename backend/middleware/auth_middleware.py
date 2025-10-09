@@ -154,8 +154,27 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 organization = None
                 role = None
 
-                # If we have cached session data, use it
+                # Check if X-Organization-Id header specifies a different org than cached
+                org_id_from_header = request.headers.get("X-Organization-Id")
+                requested_org_id = None
+                if org_id_from_header:
+                    try:
+                        requested_org_id = UUID(org_id_from_header)
+                    except ValueError:
+                        logger.warning(f"Invalid organization ID in header: {org_id_from_header}")
+
+                # Check if cached session matches requested organization
+                use_cache = False
                 if cached_session:
+                    cached_org_id = UUID(cached_session["org_id"]) if cached_session.get("org_id") else None
+                    # Only use cache if no specific org requested, or if it matches cached org
+                    if not requested_org_id or (cached_org_id and cached_org_id == requested_org_id):
+                        use_cache = True
+                    else:
+                        logger.debug(f"Cache invalidated due to org switch: cached={cached_org_id}, requested={requested_org_id}")
+
+                # If we have cached session data and it matches requested org, use it
+                if use_cache and cached_session:
                     # Reconstruct user from cache
                     user = User(
                         id=UUID(cached_session["user_id"]),
@@ -184,18 +203,10 @@ class AuthMiddleware(BaseHTTPMiddleware):
                         user = await auth_service.get_user_from_token(db, token)
 
                     if user:
-                        # Extract organization ID from headers or use last active
-                        org_id_str = request.headers.get("X-Organization-Id")
-                        organization_id = None
-                        if org_id_str:
-                            try:
-                                organization_id = UUID(org_id_str)
-                            except ValueError:
-                                logger.warning(f"Invalid organization ID in header: {org_id_str}")
-
-                        # Get user's organization
+                        # Use already-extracted requested_org_id from header
+                        # Get user's organization (will validate membership)
                         organization = await auth_service.get_user_organization(
-                            db, user, organization_id
+                            db, user, requested_org_id
                         )
 
                         # Get user's role in the organization

@@ -146,7 +146,13 @@ class TestAudioFileSizeValidation:
             'language': 'en'
         }
 
-        with patch('routers.transcription.process_audio_transcription'):
+        # Mock the RQ enqueue to avoid serialization issues
+        from unittest.mock import MagicMock
+        mock_job = MagicMock()
+        mock_job.id = 'test-job-123'
+        mock_job.meta = {}
+
+        with patch('queue_config.queue_config.high_queue.enqueue', return_value=mock_job):
             response = await authenticated_client.post(
                 '/api/v1/transcribe',
                 files=files,
@@ -277,10 +283,16 @@ class TestAudioFileSizeValidation:
 
         # Test exactly at limit (should pass)
         with patch('os.path.getsize', return_value=max_size_bytes):
-            with patch('routers.transcription.process_audio_transcription'):
+            # Mock the RQ enqueue to avoid serialization issues
+            from unittest.mock import MagicMock
+            mock_job = MagicMock()
+            mock_job.id = 'test-job-123'
+            mock_job.meta = {}
+
+            with patch('queue_config.queue_config.high_queue.enqueue', return_value=mock_job):
                 response = await authenticated_client.post(
                     '/api/v1/transcribe',
-                    
+
                     files=files,
                     data=data
                 )
@@ -350,7 +362,12 @@ class TestAIProjectMatching:
             'use_ai_matching': 'true'
         }
 
-        with patch('routers.transcription.process_audio_transcription'):
+        # Mock the RQ enqueue to avoid serialization issues
+        mock_job = MagicMock()
+        mock_job.id = 'test-job-123'
+        mock_job.meta = {}
+
+        with patch('queue_config.queue_config.high_queue.enqueue', return_value=mock_job):
             response = await authenticated_client.post(
                 '/api/v1/transcribe',
 
@@ -444,7 +461,12 @@ class TestLanguageSupport:
             'language': 'auto'  # Auto-detect language
         }
 
-        with patch('routers.transcription.process_audio_transcription'):
+        # Mock the RQ enqueue to avoid serialization issues
+        mock_job = MagicMock()
+        mock_job.id = 'test-job-123'
+        mock_job.meta = {}
+
+        with patch('queue_config.queue_config.high_queue.enqueue', return_value=mock_job):
             response = await authenticated_client.post(
                 '/api/v1/transcribe',
 
@@ -474,7 +496,12 @@ class TestLanguageSupport:
                 'language': lang
             }
 
-            with patch('routers.transcription.process_audio_transcription'):
+            # Mock the RQ enqueue to avoid serialization issues
+            mock_job = MagicMock()
+            mock_job.id = 'test-job-123'
+            mock_job.meta = {}
+
+            with patch('queue_config.queue_config.high_queue.enqueue', return_value=mock_job):
                 response = await authenticated_client.post(
                     '/api/v1/transcribe',
 
@@ -511,7 +538,12 @@ class TestTranscriptionServiceSelection:
 
         # Mock environment to use Replicate
         with patch.dict('os.environ', {'DEFAULT_TRANSCRIPTION_SERVICE': 'replicate', 'REPLICATE_API_KEY': 'test_key'}):
-            with patch('routers.transcription.process_audio_transcription'):
+            # Mock the RQ enqueue to avoid serialization issues
+            mock_job = MagicMock()
+            mock_job.id = 'test-job-123'
+            mock_job.meta = {}
+
+            with patch('queue_config.queue_config.high_queue.enqueue', return_value=mock_job):
                 response = await authenticated_client.post(
                     '/api/v1/transcribe',
                     files=files,
@@ -540,7 +572,12 @@ class TestTranscriptionServiceSelection:
 
         # Mock environment to use Salad
         with patch.dict('os.environ', {'DEFAULT_TRANSCRIPTION_SERVICE': 'salad', 'SALAD_API_KEY': 'test_key', 'SALAD_ORGANIZATION_NAME': 'test_org'}):
-            with patch('routers.transcription.process_audio_transcription'):
+            # Mock the RQ enqueue to avoid serialization issues
+            mock_job = MagicMock()
+            mock_job.id = 'test-job-123'
+            mock_job.meta = {}
+
+            with patch('queue_config.queue_config.high_queue.enqueue', return_value=mock_job):
                 response = await authenticated_client.post(
                     '/api/v1/transcribe',
                     files=files,
@@ -569,7 +606,12 @@ class TestTranscriptionServiceSelection:
 
         # No environment override - should default to Whisper
         with patch.dict('os.environ', {'DEFAULT_TRANSCRIPTION_SERVICE': 'whisper'}):
-            with patch('routers.transcription.process_audio_transcription'):
+            # Mock the RQ enqueue to avoid serialization issues
+            mock_job = MagicMock()
+            mock_job.id = 'test-job-123'
+            mock_job.meta = {}
+
+            with patch('queue_config.queue_config.high_queue.enqueue', return_value=mock_job):
                 response = await authenticated_client.post(
                     '/api/v1/transcribe',
                     files=files,
@@ -753,7 +795,13 @@ class TestTempFileCleanup:
             'language': 'en'
         }
 
-        with patch('routers.transcription.process_audio_transcription'):
+        # Mock the RQ enqueue to avoid serialization issues
+        from unittest.mock import MagicMock
+        mock_job = MagicMock()
+        mock_job.id = 'test-job-123'
+        mock_job.meta = {}
+
+        with patch('queue_config.queue_config.high_queue.enqueue', return_value=mock_job):
             response = await authenticated_client.post(
                 '/api/v1/transcribe',
                 files=files,

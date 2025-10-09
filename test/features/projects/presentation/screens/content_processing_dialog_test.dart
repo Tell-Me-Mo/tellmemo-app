@@ -31,8 +31,8 @@ class MockJobWebSocketService extends Mock implements JobWebSocketService {
   }
 
   @override
-  void dispose() {
-    _jobUpdatesController.close();
+  Future<void> dispose() async {
+    await _jobUpdatesController.close();
   }
 }
 
@@ -56,8 +56,8 @@ void main() {
     );
   });
 
-  tearDown(() {
-    mockJobService.dispose();
+  tearDown(() async {
+    await mockJobService.dispose();
   });
 
   Widget createTestWidget({

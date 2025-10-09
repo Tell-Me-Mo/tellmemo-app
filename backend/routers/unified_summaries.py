@@ -1,6 +1,6 @@
 """Unified API endpoints for all summary operations across projects, programs, and portfolios."""
 
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from typing import Optional, List, Literal
 from datetime import datetime, timedelta
@@ -17,8 +17,8 @@ from models.program import Program
 from models.portfolio import Portfolio
 from models.user import User
 from models.organization import Organization
-from services.core.upload_job_service import upload_job_service, JobType
 from dependencies.auth import get_current_user, get_current_organization
+from queue_config import queue_config
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -95,7 +95,6 @@ class SummaryFilters(BaseModel):
 )
 async def generate_summary(
     request: UnifiedSummaryRequest,
-    background_tasks: BackgroundTasks,
     session: AsyncSession = Depends(get_db),
     current_org: Organization = Depends(get_current_organization),
     current_user: User = Depends(get_current_user)
@@ -174,35 +173,43 @@ async def generate_summary(
 
         # Handle job-based generation for long-running summaries
         if request.use_job and request.summary_type in ["project", "program", "portfolio"]:
-            job_id = upload_job_service.create_job(
-                project_id=str(entity_uuid),
-                job_type=JobType.PROJECT_SUMMARY,
-                filename=f"{request.summary_type}_summary_{request.date_range_start.strftime('%Y%m%d')}",
-                metadata={
-                    "entity_type": request.entity_type,
-                    "entity_id": str(entity_uuid),
-                    "summary_type": request.summary_type,
-                    "format": request.format,
-                    "date_range_start": request.date_range_start.isoformat(),
-                    "date_range_end": request.date_range_end.isoformat(),
-                    "created_by": current_user.email,
-                    "created_by_id": str(current_user.id)
-                },
-                total_steps=3
+            # Enqueue RQ task for summary generation
+            from tasks.summary_tasks import generate_summary_task
+
+            rq_job = queue_config.default_queue.enqueue(
+                generate_summary_task,
+                tracking_job_id=None,
+                entity_type=request.entity_type,
+                entity_id=str(entity_uuid),
+                entity_name=entity_name,
+                summary_type=request.summary_type,
+                content_id=request.content_id,
+                date_range_start=request.date_range_start.isoformat() if request.date_range_start else None,
+                date_range_end=request.date_range_end.isoformat() if request.date_range_end else None,
+                format_type=request.format,
+                created_by=current_user.email,
+                created_by_id=str(current_user.id),
+                job_timeout='20m',  # 20 minute timeout for summaries
+                result_ttl=3600,  # Keep result for 1 hour
+                failure_ttl=86400  # Keep failed jobs for 24 hours
             )
 
-            # Start background task
-            background_tasks.add_task(
-                generate_summary_with_job,
-                job_id,
-                request,
-                entity_uuid,
-                entity_name
-            )
+            # Initialize RQ job metadata for progress tracking
+            rq_job.meta['status'] = 'processing'
+            rq_job.meta['progress'] = 0.0
+            rq_job.meta['step'] = 'Initializing summary generation...'
+            rq_job.meta['current_step'] = 0
+            rq_job.meta['total_steps'] = 3
+            rq_job.meta['entity_type'] = request.entity_type
+            rq_job.meta['entity_id'] = str(entity_uuid)
+            rq_job.meta['summary_type'] = request.summary_type
+            rq_job.save_meta()
 
-            # Return job response
+            logger.info(f"Enqueued summary generation (RQ job: {rq_job.id})")
+
+            # Return job response with RQ job ID
             return UnifiedSummaryResponse(
-                summary_id=job_id,
+                summary_id=rq_job.id,  # Return RQ job ID directly
                 entity_type=request.entity_type,
                 entity_id=str(entity_uuid),
                 entity_name=entity_name,
@@ -577,108 +584,6 @@ async def delete_summary(
         logger.error(f"Failed to delete summary: {sanitize_for_log(str(e))}")
         await session.rollback()
         raise HTTPException(status_code=500, detail="Failed to delete summary")
-
-
-async def generate_summary_with_job(
-    job_id: str,
-    request: UnifiedSummaryRequest,
-    entity_uuid: uuid.UUID,
-    entity_name: str
-):
-    """Background task to generate summary with job tracking."""
-    try:
-        # Import here to avoid circular dependency
-        from db.database import db_manager
-
-        # Get job to retrieve metadata with user info
-        job = upload_job_service.get_job(job_id)
-        if not job or not job.metadata:
-            raise ValueError(f"Job {job_id} not found or missing metadata")
-
-        # Extract created_by info from metadata
-        created_by = job.metadata.get("created_by")
-        created_by_id = job.metadata.get("created_by_id")
-
-        if not created_by or not created_by_id:
-            raise ValueError("Job metadata missing created_by or created_by_id")
-
-        # Update job progress
-        await upload_job_service.update_job_progress_async(
-            job_id,
-            progress=10.0,
-            current_step=1,
-            step_description="Initializing summary generation"
-        )
-
-        async with db_manager.sessionmaker() as session:
-            # Update progress
-            await upload_job_service.update_job_progress_async(
-                job_id,
-                progress=30.0,
-                current_step=2,
-                step_description="Collecting and analyzing data"
-            )
-
-            # Generate the summary based on type
-            summary_data = None
-
-            if request.summary_type == "program":
-                summary_data = await summary_service.generate_program_summary(
-                    session=session,
-                    program_id=entity_uuid,
-                    week_start=request.date_range_start,
-                    week_end=request.date_range_end,
-                    created_by=created_by,
-                    created_by_id=created_by_id,
-                    format_type=request.format
-                )
-            elif request.summary_type == "portfolio":
-                summary_data = await summary_service.generate_portfolio_summary(
-                    session=session,
-                    portfolio_id=entity_uuid,
-                    week_start=request.date_range_start,
-                    week_end=request.date_range_end,
-                    created_by=created_by,
-                    created_by_id=created_by_id,
-                    format_type=request.format
-                )
-            elif request.summary_type == "project":
-                summary_data = await summary_service.generate_project_summary(
-                    session=session,
-                    project_id=entity_uuid,
-                    week_start=request.date_range_start,
-                    week_end=request.date_range_end,
-                    created_by=created_by,
-                    created_by_id=created_by_id,
-                    format_type=request.format
-                )
-
-            # Update progress
-            await upload_job_service.update_job_progress_async(
-                job_id,
-                progress=90.0,
-                current_step=3,
-                step_description="Finalizing summary"
-            )
-
-            # Complete job
-            await upload_job_service.complete_job(
-                job_id,
-                result={
-                    "summary_id": summary_data.get("id"),
-                    "entity_type": request.entity_type,
-                    "entity_id": str(entity_uuid),
-                    "entity_name": entity_name,
-                    "summary_type": request.summary_type
-                }
-            )
-
-    except Exception as e:
-        logger.error(f"Failed to generate summary in job {job_id}: {sanitize_for_log(str(e))}")
-        await upload_job_service.fail_job(
-            job_id,
-            error_message="Failed to generate summary"
-        )
 
 
 class UpdateSummaryRequest(BaseModel):

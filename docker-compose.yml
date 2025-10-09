@@ -72,7 +72,90 @@ services:
     networks:
       - pm_network
 
+  # RQ Dashboard - Web UI for monitoring Redis Queue jobs
+  rq-dashboard:
+    image: eoranged/rq-dashboard:latest
+    container_name: tellmemo_rq_dashboard
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      RQ_DASHBOARD_REDIS_URL: redis://:${REDIS_PASSWORD:-redispassword123}@redis:6379
+    ports:
+      - "9181:9181"
+    networks:
+      - pm_network
+
   # ===== APPLICATION SERVICES =====
+  # RQ Workers - Background job processing (2 workers for high/default/low queues)
+  rq-worker:
+    image: nkondratyk93/tellmemo-backend:latest
+    container_name: tellmemo_rq_worker
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: python start_rq_worker.py --workers 2 --log-level INFO
+    environment:
+      # Database
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-pm_master}:${POSTGRES_PASSWORD:-pm_master_pass}@postgres:5432/${POSTGRES_DB:-pm_master_db}
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-pm_master}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pm_master_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-pm_master_db}
+      POSTGRES_PORT: 5432
+
+      # Qdrant
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6333
+
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redispassword123}
+
+      # Langfuse (only if enabled)
+      LANGFUSE_ENABLED: ${LANGFUSE_ENABLED:-false}
+      LANGFUSE_HOST: http://langfuse-web:3000
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+
+      # Supabase
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+
+      # Anthropic
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+
+      # Transcription Services
+      REPLICATE_API_KEY: ${REPLICATE_API_KEY:-}
+      SALAD_API_KEY: ${SALAD_API_KEY:-}
+      SALAD_ORGANIZATION_NAME: ${SALAD_ORGANIZATION_NAME:-}
+
+      # Hugging Face
+      HF_TOKEN: ${HF_TOKEN}
+
+      # Application
+      API_ENV: ${API_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - backend_uploads:/app/uploads
+      - backend_logs:/app/logs
+    networks:
+      - pm_network
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'from queue_config import queue_config; queue_config._get_redis_connection().ping()' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
   # Backend - FastAPI application
   backend:
     image: nkondratyk93/tellmemo-backend:latest

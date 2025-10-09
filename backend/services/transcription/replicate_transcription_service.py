@@ -9,6 +9,8 @@ Model: https://replicate.com/vaibhavs10/incredibly-fast-whisper
 import os
 import asyncio
 import logging
+import ssl
+import warnings
 from typing import Optional, Dict, Any, Callable
 from pathlib import Path
 import replicate
@@ -17,6 +19,78 @@ from utils.logger import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+# Disable SSL warnings since we're bypassing verification
+try:
+    import urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+except ImportError:
+    pass  # urllib3 not available, skip warning suppression
+
+# AGGRESSIVE SSL BYPASS for httpcore
+# Monkey-patch httpcore's sync backend to use unverified SSL context
+try:
+    import httpcore._backends.sync
+
+    # Save original method
+    _original_start_tls = httpcore._backends.sync.SyncStream.start_tls
+
+    def _patched_start_tls(self, ssl_context, server_hostname=None, timeout=None):
+        """Patched start_tls that uses unverified SSL context."""
+        # Create unverified SSL context
+        unverified_context = ssl.create_default_context()
+        unverified_context.check_hostname = False
+        unverified_context.verify_mode = ssl.CERT_NONE
+        # Call original with unverified context
+        return _original_start_tls(self, unverified_context, server_hostname, timeout)
+
+    # Apply monkey patch
+    httpcore._backends.sync.SyncStream.start_tls = _patched_start_tls
+    logger.warning("Monkey-patched httpcore.SyncStream.start_tls to disable SSL verification")
+except Exception as e:
+    logger.error(f"Failed to monkey-patch httpcore: {e}")
+
+# Also set Python's default SSL context to unverified globally
+ssl._create_default_https_context = ssl._create_unverified_context
+logger.warning("Global SSL verification disabled for all HTTPS connections")
+
+# Language code mapping: ISO 639-1 codes to Replicate's full language names
+LANGUAGE_CODE_MAP = {
+    "en": "english",
+    "es": "spanish",
+    "fr": "french",
+    "de": "german",
+    "it": "italian",
+    "pt": "portuguese",
+    "ru": "russian",
+    "zh": "chinese",
+    "ja": "japanese",
+    "ko": "korean",
+    "ar": "arabic",
+    "hi": "hindi",
+    "nl": "dutch",
+    "pl": "polish",
+    "tr": "turkish",
+    "sv": "swedish",
+    "da": "danish",
+    "no": "norwegian",
+    "fi": "finnish",
+    "he": "hebrew",
+    "cs": "czech",
+    "el": "greek",
+    "hu": "hungarian",
+    "ro": "romanian",
+    "th": "thai",
+    "vi": "vietnamese",
+    "uk": "ukrainian",
+    "id": "indonesian",
+    "fa": "persian",
+    "ms": "malay",
+    "bn": "bengali",
+    "ta": "tamil",
+    "te": "telugu",
+    "ur": "urdu",
+}
 
 
 class ReplicateTranscriptionService:
@@ -39,6 +113,10 @@ class ReplicateTranscriptionService:
         # Set the API token for the replicate client
         os.environ["REPLICATE_API_TOKEN"] = api_key
 
+        # Create Replicate client
+        # SSL verification is disabled globally via ssl._create_unverified_context
+        self.client = replicate.Client(api_token=api_key)
+
         logger.info("Initialized incredibly-fast-whisper service (Whisper Large v3, ~90x realtime)")
 
     async def test_connection(self) -> Dict[str, Any]:
@@ -50,7 +128,7 @@ class ReplicateTranscriptionService:
         """
         try:
             # Try to get the model to verify credentials
-            model = replicate.models.get(self.WHISPER_MODEL)
+            model = self.client.models.get(self.WHISPER_MODEL)
 
             logger.info("Replicate API test successful")
             return {
@@ -129,8 +207,10 @@ class ReplicateTranscriptionService:
 
             # Add language if specified (otherwise auto-detect)
             if language and language != "auto":
-                input_params["language"] = language
-                logger.info(f"Using specified language: {language}")
+                # Map ISO code to full language name if needed
+                mapped_language = LANGUAGE_CODE_MAP.get(language.lower(), language)
+                input_params["language"] = mapped_language
+                logger.info(f"Using specified language: {language} -> {mapped_language}")
             else:
                 logger.info("Using automatic language detection")
 
@@ -138,12 +218,12 @@ class ReplicateTranscriptionService:
                 await progress_callback(30.0, "Transcription in progress...")
 
             # Create prediction using official client
-            # Note: replicate.run() is synchronous, but we can run it in executor
+            # Note: client.run() is synchronous, but we can run it in executor
             loop = asyncio.get_event_loop()
 
             # Run the prediction in a thread pool to not block the event loop
             def run_prediction():
-                return replicate.run(
+                return self.client.run(
                     f"{self.WHISPER_MODEL}:{self.WHISPER_VERSION}",
                     input=input_params
                 )

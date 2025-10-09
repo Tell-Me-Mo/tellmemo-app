@@ -30,7 +30,6 @@ from models.program import Program
 from models.portfolio import Portfolio
 from services.observability.langfuse_service import langfuse_service
 from services.activity.activity_service import ActivityService
-from services.core.upload_job_service import upload_job_service
 from services.llm.multi_llm_client import get_multi_llm_client
 from services.prompts.summary_prompts import (
     get_meeting_summary_prompt,
@@ -58,7 +57,25 @@ class SummaryService:
 
         if not self.llm_client.is_available():
             logger.warning("LLM client not available, summary generation will use placeholder responses")
-    
+
+    def _update_rq_job_progress(self, rq_job, progress: float, step: str):
+        """Helper to update RQ job meta and publish to Redis pub/sub."""
+        if not rq_job:
+            return
+
+        from queue_config import queue_config
+
+        rq_job.meta['progress'] = progress
+        rq_job.meta['step'] = step
+        rq_job.save_meta()
+
+        # Publish via Redis pub/sub
+        queue_config.publish_job_update(rq_job.id, {
+            'status': 'processing',
+            'progress': progress,
+            'step': step
+        })
+
     async def generate_meeting_summary(
         self,
         session: AsyncSession,
@@ -66,7 +83,7 @@ class SummaryService:
         content_id: uuid.UUID,
         created_by: Optional[str] = None,
         created_by_id: Optional[str] = None,
-        job_id: Optional[str] = None,
+        rq_job=None,
         format_type: str = "general"
     ) -> Dict[str, Any]:
         """Generate a meeting summary with proper Langfuse v3 context managers."""
@@ -102,12 +119,7 @@ class SummaryService:
             ) as trace_span:
                 
                 # Update progress: Starting summary generation (91%)
-                if job_id:
-                    upload_job_service.update_job_progress(
-                        job_id,
-                        progress=91.0,
-                        step_description="Starting summary generation"
-                    )
+                self._update_rq_job_progress(rq_job, 91.0, "Starting summary generation")
                 
                 # Validate project exists
                 project = None
@@ -138,12 +150,7 @@ class SummaryService:
                         )
                 
                 # Update progress: Fetching content (92%)
-                if job_id:
-                    upload_job_service.update_job_progress(
-                        job_id,
-                        progress=92.0,
-                        step_description="Fetching content for summary"
-                    )
+                self._update_rq_job_progress(rq_job, 92.0, "Fetching content for summary")
                 
                 # Get content to summarize
                 content = None
@@ -181,12 +188,7 @@ class SummaryService:
                         )
                 
                 # Update progress: Generating summary with AI (93%)
-                if job_id:
-                    upload_job_service.update_job_progress(
-                        job_id,
-                        progress=93.0,
-                        step_description="Analyzing with AI"
-                    )
+                self._update_rq_job_progress(rq_job, 93.0, "Analyzing with AI")
                 
                 # Generate summary using Claude API
                 llm_start = time.time()
@@ -202,7 +204,7 @@ class SummaryService:
                     content_title=content.title,
                     content_text=content.content,
                     content_date=content.date,
-                    job_id=job_id,
+                    rq_job=rq_job,
                     format_type=format_type
                 )
                 llm_duration = (time.time() - llm_start) * 1000
@@ -214,12 +216,7 @@ class SummaryService:
                 )
                 
                 # Update progress: Processing AI response (97%)
-                if job_id:
-                    upload_job_service.update_job_progress(
-                        job_id,
-                        progress=97.0,
-                        step_description="Extracting insights"
-                    )
+                self._update_rq_job_progress(rq_job, 97.0, "Extracting insights")
                 
                 # Process Claude's extracted intelligence (sentiment, risks, blockers)
                 sentiment_data = None
@@ -251,12 +248,7 @@ class SummaryService:
                         risks_blockers_data = None
                 
                 # Update progress: Saving summary (98%)
-                if job_id:
-                    upload_job_service.update_job_progress(
-                        job_id,
-                        progress=98.0,
-                        step_description="Saving summary"
-                    )
+                self._update_rq_job_progress(rq_job, 98.0, "Saving summary")
                 
                 # Create summary record
                 summary = None
@@ -344,12 +336,7 @@ class SummaryService:
                     )
             
             # Update progress: Finalizing (99%)
-            if job_id:
-                upload_job_service.update_job_progress(
-                    job_id,
-                    progress=99.0,
-                    step_description="Finalizing"
-                )
+            self._update_rq_job_progress(rq_job, 99.0, "Finalizing")
             
             # Flush Langfuse events
             langfuse_service.flush()
@@ -387,6 +374,7 @@ class SummaryService:
         week_end: Optional[datetime] = None,
         created_by: Optional[str] = None,
         created_by_id: Optional[str] = None,
+        rq_job=None,
         format_type: str = "general"
     ) -> Dict[str, Any]:
         """Generate a project summary with proper Langfuse v3 context managers."""
@@ -526,6 +514,7 @@ class SummaryService:
                         "meeting_titles": [contents_map.get(str(s.id), {}).get('title', s.subject) for s in summaries],
                         "structured_data": meeting_data_for_claude
                     },
+                    rq_job=rq_job,
                     format_type=format_type
                 )
                 
@@ -646,6 +635,7 @@ class SummaryService:
         week_end: Optional[datetime] = None,
         created_by: Optional[str] = None,
         created_by_id: Optional[str] = None,
+        rq_job=None,
         format_type: str = "general"
     ) -> Dict[str, Any]:
         """Generate a summary for all projects in a program."""
@@ -804,6 +794,7 @@ class SummaryService:
                     "summary_count": len(all_summaries),
                     "project_names": [p.name for p in projects]
                 },
+                rq_job=rq_job,
                 format_type=format_type
             )
 
@@ -924,6 +915,7 @@ class SummaryService:
         week_end: Optional[datetime] = None,
         created_by: Optional[str] = None,
         created_by_id: Optional[str] = None,
+        rq_job=None,
         format_type: str = "general"
     ) -> Dict[str, Any]:
         """Generate a summary for all projects in a portfolio."""
@@ -1066,6 +1058,7 @@ class SummaryService:
                     "program_names": [p.name for p in programs],
                     "project_names": [p.name for p in all_projects]
                 },
+                rq_job=rq_job,
                 format_type=format_type
             )
 
@@ -1540,7 +1533,7 @@ class SummaryService:
         content_text: str,
         content_date: Any,
         additional_context: Optional[Dict[str, Any]] = None,
-        job_id: Optional[str] = None,
+        rq_job=None,
         format_type: str = "general"
     ) -> Dict[str, Any]:
         """Generate summary using Claude API with Langfuse context managers."""
@@ -1592,12 +1585,7 @@ class SummaryService:
                 )
             
             # Update progress: Making API call (94%)
-            if job_id:
-                upload_job_service.update_job_progress(
-                    job_id,
-                    progress=94.0,
-                    step_description="Calling Claude AI"
-                )
+            self._update_rq_job_progress(rq_job, 94.0, "Calling Claude AI")
             
             # Generate with Claude using context manager
             if langfuse_client and hasattr(langfuse_client, 'start_as_current_generation'):
@@ -1614,12 +1602,7 @@ class SummaryService:
                     response = await self._call_claude_api_with_retry(prompt)
                     
                     # Update progress: Processing API response (96%)
-                    if job_id:
-                        upload_job_service.update_job_progress(
-                            job_id,
-                            progress=96.0,
-                            step_description="Processing AI response"
-                        )
+                    self._update_rq_job_progress(rq_job, 96.0, "Processing AI response")
                     
                     response_text = response.content[0].text
                     
@@ -1646,23 +1629,13 @@ class SummaryService:
                         )
             else:
                 # Update progress: Making API call (94%)
-                if job_id:
-                    upload_job_service.update_job_progress(
-                        job_id,
-                        progress=94.0,
-                        step_description="Calling Claude AI"
-                    )
-                
+                self._update_rq_job_progress(rq_job, 94.0, "Calling Claude AI")
+
                 # Fallback without context manager but with retry logic
                 response = await self._call_claude_api_with_retry(prompt)
-                
+
                 # Update progress: Processing API response (96%)
-                if job_id:
-                    upload_job_service.update_job_progress(
-                        job_id,
-                        progress=96.0,
-                        step_description="Processing AI response"
-                    )
+                self._update_rq_job_progress(rq_job, 96.0, "Processing AI response")
                 
                 response_text = response.content[0].text
                 input_tokens = response.usage.input_tokens

@@ -4,7 +4,7 @@ Integration router for handling external service integrations
 import uuid
 from datetime import datetime
 from typing import Dict, Any, List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Header, Request, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Header, Request
 from pydantic import BaseModel
 import json
 import hashlib
@@ -20,13 +20,13 @@ from models.user import User
 from models.project import Project
 from models.integration import IntegrationType, IntegrationStatus as IntegrationStatusEnum
 from services.core.content_service import ContentService
-from services.core.upload_job_service import upload_job_service, JobType, JobStatus
 from services.transcription.fireflies_service import FirefliesService
 from services.transcription.salad_transcription_service import SaladTranscriptionService
 from services.intelligence.project_matcher_service import project_matcher_service
 from services.integrations.integration_service import integration_service
 from models.content import ContentType
 from utils.logger import sanitize_for_log
+from queue_config import queue_config
 
 logger = logging.getLogger(__name__)
 
@@ -411,7 +411,6 @@ async def sync_integration(
 async def fireflies_webhook(
     integration_id: str,
     payload: FirefliesWebhookPayload,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     x_fireflies_signature: Optional[str] = Header(None),
     # Note: Webhooks don't have user context, we'll need to identify org from integration_id
@@ -469,19 +468,36 @@ async def fireflies_webhook(
         # Get target project ID from config or use "All Projects" logic
         project_id = config.get("selected_project_id")
         use_smart_matching = not project_id or project_id == "all_projects"
-        
-        # Process the transcript in background with smart matching if needed
+
+        # Enqueue RQ task for Fireflies transcript processing
+        from tasks.integration_tasks import process_fireflies_transcript_task
+
         organization_id = uuid.UUID(config['organization_id'])
-        background_tasks.add_task(
-            process_fireflies_webhook,
-            payload.meetingId,
-            api_key,
-            project_id,
-            db,
-            organization_id,
-            use_smart_matching
+
+        rq_job = queue_config.default_queue.enqueue(
+            process_fireflies_transcript_task,
+            meeting_id=payload.meetingId,
+            api_key=api_key,
+            organization_id=str(organization_id),  # Convert UUID to string for RQ
+            project_id=str(project_id) if project_id and project_id != "all_projects" else None,
+            use_smart_matching=use_smart_matching,
+            job_timeout='20m',  # 20 minute timeout
+            result_ttl=3600,  # Keep result for 1 hour
+            failure_ttl=86400  # Keep failed jobs for 24 hours
         )
-        
+
+        # Initialize RQ job metadata for progress tracking
+        rq_job.meta['status'] = 'processing'
+        rq_job.meta['progress'] = 0.0
+        rq_job.meta['step'] = 'Fireflies webhook received, queuing for processing...'
+        rq_job.meta['current_step'] = 0
+        rq_job.meta['total_steps'] = 6
+        rq_job.meta['meeting_id'] = payload.meetingId
+        rq_job.meta['source'] = 'fireflies'
+        rq_job.save_meta()
+
+        logger.info(f"Enqueued Fireflies webhook processing for meeting {payload.meetingId} (RQ job: {rq_job.id})")
+
         # Update last sync time in database for the organization that owns this integration
         if config and config.get('organization_id'):
             await integration_service.update_sync_time(db, IntegrationType.FIREFLIES, config['organization_id'])
@@ -501,136 +517,6 @@ async def fireflies_webhook(
         logger.error(f"Error processing Fireflies webhook: {sanitize_for_log(str(e))}")
         raise HTTPException(status_code=500, detail="Failed to process webhook")
 
-async def process_fireflies_webhook(
-    meeting_id: str,
-    api_key: str,
-    project_id: Optional[str],
-    db: AsyncSession,
-    organization_id: uuid.UUID,
-    use_smart_matching: bool = True
-):
-    """
-    Background task to fetch and process Fireflies transcript
-    """
-    job_id = None
-    try:
-        # Create initial job (returns job ID as string)
-        # Use a special job type or metadata to indicate this is from Fireflies
-        job_id = upload_job_service.create_job(
-            project_id=str(project_id) if project_id else "pending",
-            job_type=JobType.TEXT_UPLOAD,
-            metadata={
-                "source": "fireflies",
-                "meeting_id": meeting_id,
-                "title": "Fireflies Meeting Import"
-            }
-        )
-        
-        # Update progress: Fetching transcript
-        await upload_job_service.update_job_progress_async(
-            job_id=job_id,
-            progress=10,
-            current_step=1,
-            step_description="Fetching transcript from Fireflies",
-            total_steps=7  # Total steps for Fireflies import
-        )
-        
-        # Initialize Fireflies service and fetch meeting data
-        fireflies_service = FirefliesService(api_key)
-        meeting_data = await fireflies_service.get_meeting_transcription(meeting_id)
-        
-        # Update progress: Processing transcript
-        await upload_job_service.update_job_progress_async(
-            job_id=job_id,
-            progress=30,
-            current_step=2,
-            step_description=f"Processing transcript: {meeting_data['title']}",
-            total_steps=7
-        )
-        
-        # Parse date
-        try:
-            meeting_date = datetime.fromisoformat(meeting_data['date'].replace('Z', '+00:00'))
-        except:
-            meeting_date = datetime.now()
-        
-        # Use smart project matching if enabled
-        if use_smart_matching:
-            # Let AI determine the best project
-            match_result = await project_matcher_service.match_transcript_to_project(
-                session=db,
-                organization_id=organization_id,
-                transcript=meeting_data['transcript'],
-                meeting_title=meeting_data['title'],
-                meeting_date=meeting_date,
-                participants=meeting_data.get('participants', [])
-            )
-            
-            project_id = match_result['project_id']
-            
-            # Log the matching decision
-            logger.info(
-                f"Smart matching result: {match_result['project_name']} "
-                f"(new: {match_result['is_new']}, confidence: {match_result['confidence']})"
-            )
-            
-            # Update job with matching info
-            await upload_job_service.update_job_progress_async(
-                job_id=job_id,
-                progress=25,
-                current_step=2,
-                step_description=f"Assigned to project: {match_result['project_name']}",
-                total_steps=7
-            )
-        else:
-            # Use the specified project ID
-            if not project_id:
-                raise ValueError("No project ID specified and smart matching disabled")
-        
-        # Create content entry using ContentService static method
-        content = await ContentService.create_content(
-            session=db,
-            project_id=project_id,
-            content_type=ContentType.MEETING,
-            title=meeting_data['title'],
-            content=meeting_data['transcript'],
-            content_date=meeting_date.date() if hasattr(meeting_date, 'date') else meeting_date,
-            uploaded_by="fireflies_integration"
-        )
-        
-        # Update job with content ID
-        await upload_job_service.update_job_progress_async(
-            job_id=job_id,
-            progress=50,
-            current_step=3,
-            step_description="Generating embeddings and processing content",
-            total_steps=7
-        )
-        
-        # Trigger async content processing (embeddings, RAG, summaries)
-        await ContentService.trigger_async_processing(
-            content_id=content.id,
-            job_id=job_id
-        )
-        
-        logger.info(f"Successfully processed Fireflies transcript: {content.id} - {meeting_data['title']}")
-        
-    except Exception as e:
-        error_msg = f"Error processing Fireflies meeting {meeting_id}: {str(e)}"
-        logger.error(error_msg)
-        
-        # Update job with error status
-        if job_id:
-            try:
-                await upload_job_service.update_job_progress_async(
-                    job_id=job_id,
-                    progress=0,
-                    step_description=f"Failed: {str(e)[:100]}"
-                )
-            except:
-                pass  # Ignore error in error handler
-        
-        raise
 
 @router.get("/{integration_id}/activity")
 async def get_integration_activity(
