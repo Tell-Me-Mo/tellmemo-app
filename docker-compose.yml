@@ -52,6 +52,26 @@ services:
     networks:
       - pm_network
 
+  # Redis 8 - Caching and queue management
+  redis:
+    image: redis:8.2.2-alpine
+    container_name: tellmemo_redis
+    restart: unless-stopped
+    command: >
+      --requirepass ${REDIS_PASSWORD:-redispassword123}
+      --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redispassword123}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pm_network
+
   # ===== APPLICATION SERVICES =====
   # Backend - FastAPI application
   backend:
@@ -62,6 +82,8 @@ services:
       postgres:
         condition: service_healthy
       qdrant:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     environment:
       # Database
@@ -146,6 +168,8 @@ volumes:
   qdrant_data:
     driver: local
   qdrant_snapshots:
+    driver: local
+  redis_data:
     driver: local
   # Application volumes
   backend_uploads:

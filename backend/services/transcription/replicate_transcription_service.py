@@ -19,11 +19,12 @@ logger.setLevel(logging.DEBUG)
 
 
 class ReplicateTranscriptionService:
-    """Service for transcribing audio using Replicate API with Whisper large-v3."""
+    """Service for transcribing audio using Replicate API with Whisper (medium model for balanced speed/quality)."""
 
-    # Whisper large-v3 model on Replicate (official version hash from docs)
+    # Whisper model on Replicate (latest version hash from docs - January 2025)
+    # Model size is controlled by "model" parameter in input (tiny, base, small, medium, large, large-v3)
     WHISPER_MODEL = "openai/whisper"
-    WHISPER_VERSION = "4d50797290df275329f202e48c76360b3f22b08d28c196cbc54600319435f8d2"
+    WHISPER_VERSION = "8099696689d249cf8b122d833c36ac3f75505c666a395ca40ef26f68e7d3d16e"
 
     def __init__(self, api_key: str):
         """
@@ -36,7 +37,7 @@ class ReplicateTranscriptionService:
         # Set the API token for the replicate client
         os.environ["REPLICATE_API_TOKEN"] = api_key
 
-        logger.info("Initialized Replicate transcription service with Whisper large-v3")
+        logger.info("Initialized Replicate transcription service with Whisper (medium model)")
 
     async def test_connection(self) -> Dict[str, Any]:
         """
@@ -110,20 +111,26 @@ class ReplicateTranscriptionService:
             if progress_callback:
                 await progress_callback(15.0, "Submitting to Replicate API...")
 
-            # Prepare input parameters following official Replicate best practices
+            # Prepare input parameters optimized for speed while maintaining good quality
+            # Model size tradeoff: large-v3 (best, slowest) > medium (balanced) > small (fast, good) > base/tiny (fastest, lower quality)
+
+            # Open file for Replicate to upload
+            # Note: Replicate client handles the upload, which can be slow for large files
+            audio_file = open(audio_path, "rb")
+
             input_params = {
-                "audio": open(audio_path, "rb"),  # Replicate handles file upload
-                "model": "large-v3",  # Use Whisper large-v3 for best quality
+                "audio": audio_file,  # Replicate handles file upload
+                "model": "medium",  # OPTIMIZED: medium is 2-3x faster than large-v3 with ~5-10% quality loss
                 "transcription": "plain text",  # Options: "plain text", "srt", "vtt"
                 "translate": False,  # Don't translate, keep original language
                 "temperature": 0.0,  # Greedy decoding for deterministic results
-                "patience": 1.0,  # Beam search patience
                 "suppress_tokens": "-1",  # Default suppression
                 "logprob_threshold": -1.0,  # Default logprob threshold
                 "no_speech_threshold": 0.6,  # No speech detection threshold
-                "condition_on_previous_text": True,  # Use context from previous segments
+                "condition_on_previous_text": False,  # OPTIMIZED: Disabled for speed (loses some context accuracy)
                 "compression_ratio_threshold": 2.4,  # Detect repetitive output
                 "temperature_increment_on_fallback": 0.2,  # Increase temp on failure
+                # Note: patience requires beam_size, so we omit it for greedy decoding (temperature=0)
             }
 
             # Add language if specified (otherwise auto-detect)
@@ -162,6 +169,8 @@ class ReplicateTranscriptionService:
             output = await prediction_task
 
             logger.info(f"Transcription completed, processing output")
+            logger.debug(f"Output type: {type(output)}")
+            logger.debug(f"Output content (first 500 chars): {str(output)[:500]}")
 
             # Parse output based on type
             transcription_text = ""
@@ -171,9 +180,12 @@ class ReplicateTranscriptionService:
             if isinstance(output, str):
                 # Plain text output
                 transcription_text = output
+                logger.info("Received plain text output from Replicate")
             elif isinstance(output, dict):
-                # Structured output with text and segments
-                transcription_text = output.get("text", "")
+                # Structured output from Replicate Python SDK
+                # Replicate returns {"transcription": "text", "detected_language": "en", ...}
+                logger.info(f"Received dict output with keys: {list(output.keys())}")
+                transcription_text = output.get("transcription", output.get("text", ""))
                 detected_language = output.get("detected_language", detected_language)
 
                 # Extract segments if available
@@ -190,10 +202,23 @@ class ReplicateTranscriptionService:
                         "compression_ratio": seg.get("compression_ratio", 0.0),
                         "no_speech_prob": seg.get("no_speech_prob", 0.0)
                     })
+            elif hasattr(output, '__iter__'):
+                # Iterator/generator output - join all parts
+                logger.info("Received iterable output from Replicate")
+                parts = []
+                for part in output:
+                    if isinstance(part, str):
+                        parts.append(part)
+                    elif isinstance(part, dict):
+                        parts.append(part.get("text", str(part)))
+                transcription_text = "".join(parts)
+            else:
+                logger.warning(f"Unexpected output type: {type(output)}, attempting str conversion")
+                transcription_text = str(output)
 
             if not transcription_text:
-                logger.error("Transcription succeeded but no text was generated")
-                raise Exception("Transcription succeeded but no text was generated. Check audio file quality.")
+                logger.error(f"Transcription succeeded but no text was generated. Output type: {type(output)}, Output: {output}")
+                raise Exception("Transcription succeeded but no text was generated. Check audio file quality or output format.")
 
             logger.info(f"Transcription completed: {len(transcription_text)} characters, {len(segments)} segments")
 

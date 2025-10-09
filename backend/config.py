@@ -19,6 +19,13 @@ class Settings(BaseSettings):
     postgres_db: str = Field(default="pm_master_db", env="POSTGRES_DB")
     postgres_host: str = Field(default="localhost", env="POSTGRES_HOST")
     postgres_port: int = Field(default=5432, env="POSTGRES_PORT")
+
+    # Redis Configuration
+    redis_host: str = Field(default="localhost", env="REDIS_HOST")
+    redis_port: int = Field(default=6379, env="REDIS_PORT")
+    redis_password: str = Field(default="", env="REDIS_PASSWORD")
+    redis_db: int = Field(default=0, env="REDIS_DB")
+    session_cache_ttl_minutes: int = Field(default=30, env="SESSION_CACHE_TTL_MINUTES")
     
     # Qdrant Configuration
     qdrant_host: str = Field(default="localhost", env="QDRANT_HOST")
