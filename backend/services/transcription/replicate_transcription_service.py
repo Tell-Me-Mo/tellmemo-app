@@ -1,8 +1,9 @@
 """
 Replicate transcription service for audio processing using official Replicate Python client.
-Uses OpenAI Whisper large-v3 model via Replicate for high-quality transcription.
+Uses incredibly-fast-whisper (Whisper Large v3 optimized) for high-speed, high-quality transcription.
 
 Official Documentation: https://replicate.com/docs/get-started/python
+Model: https://replicate.com/vaibhavs10/incredibly-fast-whisper
 """
 
 import os
@@ -19,12 +20,13 @@ logger.setLevel(logging.DEBUG)
 
 
 class ReplicateTranscriptionService:
-    """Service for transcribing audio using Replicate API with Whisper (medium model for balanced speed/quality)."""
+    """Service for transcribing audio using incredibly-fast-whisper (optimized Large v3, ~90x realtime)."""
 
-    # Whisper model on Replicate (latest version hash from docs - January 2025)
-    # Model size is controlled by "model" parameter in input (tiny, base, small, medium, large, large-v3)
-    WHISPER_MODEL = "openai/whisper"
-    WHISPER_VERSION = "8099696689d249cf8b122d833c36ac3f75505c666a395ca40ef26f68e7d3d16e"
+    # incredibly-fast-whisper: Optimized Whisper Large v3 with GPU acceleration
+    # Performance: 150 minutes transcribed in ~98 seconds (91.8x realtime)
+    # Model: https://replicate.com/vaibhavs10/incredibly-fast-whisper
+    WHISPER_MODEL = "vaibhavs10/incredibly-fast-whisper"
+    WHISPER_VERSION = "3ab86df6c8f54c11309d4d1f930ac292bad43ace52d10c80d87eb258b3c9f79c"
 
     def __init__(self, api_key: str):
         """
@@ -37,7 +39,7 @@ class ReplicateTranscriptionService:
         # Set the API token for the replicate client
         os.environ["REPLICATE_API_TOKEN"] = api_key
 
-        logger.info("Initialized Replicate transcription service with Whisper (medium model)")
+        logger.info("Initialized incredibly-fast-whisper service (Whisper Large v3, ~90x realtime)")
 
     async def test_connection(self) -> Dict[str, Any]:
         """
@@ -54,7 +56,7 @@ class ReplicateTranscriptionService:
             return {
                 "success": True,
                 "message": "Successfully connected to Replicate API",
-                "model": f"{model.owner}/{model.name} (large-v3)"
+                "model": f"{model.owner}/{model.name} (incredibly-fast-whisper)"
             }
 
         except ReplicateError as e:
@@ -90,7 +92,7 @@ class ReplicateTranscriptionService:
         progress_callback: Optional[Callable] = None
     ) -> Dict[str, Any]:
         """
-        Transcribe an audio file using Replicate Whisper large-v3.
+        Transcribe an audio file using incredibly-fast-whisper (optimized Whisper Large v3).
 
         Args:
             audio_path: Path to the audio file
@@ -111,26 +113,18 @@ class ReplicateTranscriptionService:
             if progress_callback:
                 await progress_callback(15.0, "Submitting to Replicate API...")
 
-            # Prepare input parameters optimized for speed while maintaining good quality
-            # Model size tradeoff: large-v3 (best, slowest) > medium (balanced) > small (fast, good) > base/tiny (fastest, lower quality)
+            # Prepare input parameters for incredibly-fast-whisper
+            # This model is pre-optimized for speed with batch_size=24 and GPU acceleration
 
             # Open file for Replicate to upload
-            # Note: Replicate client handles the upload, which can be slow for large files
             audio_file = open(audio_path, "rb")
 
+            # Minimal parameters - incredibly-fast-whisper is already optimized
             input_params = {
                 "audio": audio_file,  # Replicate handles file upload
-                "model": "medium",  # OPTIMIZED: medium is 2-3x faster than large-v3 with ~5-10% quality loss
-                "transcription": "plain text",  # Options: "plain text", "srt", "vtt"
-                "translate": False,  # Don't translate, keep original language
-                "temperature": 0.0,  # Greedy decoding for deterministic results
-                "suppress_tokens": "-1",  # Default suppression
-                "logprob_threshold": -1.0,  # Default logprob threshold
-                "no_speech_threshold": 0.6,  # No speech detection threshold
-                "condition_on_previous_text": False,  # OPTIMIZED: Disabled for speed (loses some context accuracy)
-                "compression_ratio_threshold": 2.4,  # Detect repetitive output
-                "temperature_increment_on_fallback": 0.2,  # Increase temp on failure
-                # Note: patience requires beam_size, so we omit it for greedy decoding (temperature=0)
+                "task": "transcribe",  # transcribe (not translate)
+                "batch_size": 24,  # Default optimized batch size
+                "timestamp": "chunk",  # chunk-level timestamps (faster than word-level)
             }
 
             # Add language if specified (otherwise auto-detect)
@@ -180,16 +174,17 @@ class ReplicateTranscriptionService:
             if isinstance(output, str):
                 # Plain text output
                 transcription_text = output
-                logger.info("Received plain text output from Replicate")
+                logger.info("Received plain text output from incredibly-fast-whisper")
             elif isinstance(output, dict):
-                # Structured output from Replicate Python SDK
-                # Replicate returns {"transcription": "text", "detected_language": "en", ...}
+                # Structured output from incredibly-fast-whisper
+                # Model returns {"text": "...", "chunks": [...], "detected_language": "en"}
                 logger.info(f"Received dict output with keys: {list(output.keys())}")
-                transcription_text = output.get("transcription", output.get("text", ""))
+                transcription_text = output.get("text", output.get("transcription", ""))
                 detected_language = output.get("detected_language", detected_language)
 
-                # Extract segments if available
-                raw_segments = output.get("segments", [])
+                # Extract segments/chunks if available
+                # incredibly-fast-whisper may use "chunks" instead of "segments"
+                raw_segments = output.get("segments", output.get("chunks", []))
                 for seg in raw_segments:
                     segments.append({
                         "id": seg.get("id", 0),
@@ -204,7 +199,7 @@ class ReplicateTranscriptionService:
                     })
             elif hasattr(output, '__iter__'):
                 # Iterator/generator output - join all parts
-                logger.info("Received iterable output from Replicate")
+                logger.info("Received iterable output from incredibly-fast-whisper")
                 parts = []
                 for part in output:
                     if isinstance(part, str):

@@ -1,8 +1,8 @@
 """
 Unit tests for Replicate transcription service.
 
-Tests the ReplicateTranscriptionService with mocked official Replicate client.
-Follows official Replicate Python client patterns.
+Tests the ReplicateTranscriptionService with incredibly-fast-whisper model.
+Uses mocked official Replicate client following official patterns.
 """
 
 import pytest
@@ -21,7 +21,7 @@ class TestReplicateServiceInitialization:
         """Test that service initializes with API key."""
         service = ReplicateTranscriptionService(api_key="test_key")
         assert service.api_key == "test_key"
-        assert service.WHISPER_MODEL == "openai/whisper"
+        assert service.WHISPER_MODEL == "vaibhavs10/incredibly-fast-whisper"
 
     def test_singleton_get_service(self):
         """Test singleton pattern for get_replicate_service."""
@@ -42,15 +42,15 @@ class TestReplicateServiceConnectionTest:
 
         # Mock successful model fetch
         mock_model = MagicMock()
-        mock_model.owner = "openai"
-        mock_model.name = "whisper"
+        mock_model.owner = "vaibhavs10"
+        mock_model.name = "incredibly-fast-whisper"
 
         with patch('replicate.models.get', return_value=mock_model):
             result = await service.test_connection()
 
         assert result["success"] is True
         assert "Successfully connected" in result["message"]
-        assert "openai/whisper" in result["model"]
+        assert "vaibhavs10/incredibly-fast-whisper" in result["model"]
 
     @pytest.mark.asyncio
     async def test_connection_invalid_api_key(self):
