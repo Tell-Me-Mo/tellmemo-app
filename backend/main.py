@@ -149,19 +149,24 @@ async def lifespan(app: FastAPI):
         logger.error(f"Failed to start scheduler service: {e}")
         # Continue running even if scheduler fails
     
-    # Pre-load Whisper model at startup (optional - improves first transcription speed)
-    try:
-        from services.transcription.whisper_service import get_whisper_service
-        logger.info("Pre-loading Whisper transcription model...")
-        whisper_service = get_whisper_service()
-        if whisper_service.is_model_loaded():
-            logger.info("✅ Whisper model pre-loaded successfully")
-        else:
-            logger.warning("⚠️ Whisper model not loaded")
-    except Exception as e:
-        logger.warning(f"⚠️ Failed to pre-load Whisper model: {e}")
-        logger.info("Model will be loaded on first transcription request")
-        # Continue running - model will load on demand
+    # Pre-load Whisper model at startup (only if using Whisper as default service)
+    # This improves first transcription speed but consumes ~1-2GB RAM
+    if settings.default_transcription_service.lower() == 'whisper':
+        try:
+            from services.transcription.whisper_service import get_whisper_service
+            logger.info("Pre-loading Whisper transcription model...")
+            whisper_service = get_whisper_service()
+            if whisper_service.is_model_loaded():
+                logger.info("✅ Whisper model pre-loaded successfully")
+            else:
+                logger.warning("⚠️ Whisper model not loaded")
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to pre-load Whisper model: {e}")
+            logger.info("Model will be loaded on first transcription request")
+            # Continue running - model will load on demand
+    else:
+        logger.info(f"Skipping Whisper pre-load (using {settings.default_transcription_service} service)")
+        logger.info("Whisper will load on-demand if needed")
 
     # Start upload job service
     try:
