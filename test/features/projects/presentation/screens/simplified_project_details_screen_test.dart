@@ -103,6 +103,9 @@ void main() {
     // - Complex tab system with conditional rendering
     // Comprehensive testing would require significant mock infrastructure setup
     // that is beyond the scope of basic widget testing.
+    //
+    // Provider invalidation behavior (update, archive, restore, delete operations)
+    // is tested in: test/features/projects/presentation/providers/projects_provider_test.dart
   });
 }
 
