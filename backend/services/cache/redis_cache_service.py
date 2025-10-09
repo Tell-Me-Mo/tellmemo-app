@@ -83,7 +83,7 @@ class RedisCacheService:
     async def close(self):
         """Close Redis connection"""
         if self._client:
-            await self._client.close()
+            await self._client.aclose()
             self._client = None
             self._is_available = False
 
