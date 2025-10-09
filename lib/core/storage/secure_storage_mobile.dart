@@ -45,13 +45,13 @@ class SecureStorageMobile implements SecureStorage {
   Future<void> deleteAll() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final keys = prefs.getKeys();
+      final keys = prefs.getKeys().where((key) => key.startsWith(_prefix)).toList();
 
-      for (final key in keys) {
-        if (key.startsWith(_prefix)) {
-          await prefs.remove(key);
-        }
-      }
+      // Remove all matching keys in parallel
+      await Future.wait(keys.map((key) => prefs.remove(key)));
+
+      // Force reload to ensure changes are persisted
+      await prefs.reload();
     } catch (e) {
       // Silently fail if storage is not available
     }

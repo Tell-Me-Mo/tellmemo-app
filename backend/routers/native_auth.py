@@ -74,6 +74,7 @@ class AuthResponse(BaseModel):
     token_type: str = "Bearer"
     user_id: str
     email: str
+    name: Optional[str] = None
     organization_id: Optional[str] = None
 
 
@@ -141,6 +142,7 @@ async def sign_up(
             refresh_token=refresh_token,
             user_id=str(user.id),
             email=user.email,
+            name=user.name,
             organization_id=str(user.last_active_organization_id) if user.last_active_organization_id else None
         )
 
@@ -203,6 +205,7 @@ async def sign_in(
             refresh_token=refresh_token,
             user_id=str(user.id),
             email=user.email,
+            name=user.name,
             organization_id=str(user.last_active_organization_id) if user.last_active_organization_id else None
         )
 
@@ -307,6 +310,7 @@ async def refresh_token(
             refresh_token=refresh_token,
             user_id=str(user.id),
             email=user.email,
+            name=user.name,
             organization_id=str(user.last_active_organization_id) if user.last_active_organization_id else None
         )
 

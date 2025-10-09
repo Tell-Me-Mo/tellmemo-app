@@ -3,6 +3,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../../domain/auth_interface.dart';
 import '../../../../core/services/auth_service.dart';
+import '../../../../core/network/dio_client.dart';
+import './auth_repository_factory.dart';
 
 class BackendAuthRepository implements AuthInterface {
   final Dio _dio;
@@ -52,6 +54,7 @@ class BackendAuthRepository implements AuthInterface {
       final token = data['access_token'] as String;
       final refreshToken = data['refresh_token'] as String?;
       final userId = data['user_id'] as String;
+      final name = data['name'] as String?;
 
       // Store tokens and user info
       await _authService.setToken(token);
@@ -64,10 +67,16 @@ class BackendAuthRepository implements AuthInterface {
         await _authService.setOrganizationId(data['organization_id'] as String);
       }
 
+      // Merge backend name with any additional metadata from client
+      final mergedMetadata = <String, dynamic>{
+        if (name != null) 'name': name,
+        ...?metadata,
+      };
+
       final user = AppAuthUser(
         id: userId,
         email: email,
-        metadata: metadata,
+        metadata: mergedMetadata,
       );
 
       final session = AuthSession(
@@ -116,6 +125,7 @@ class BackendAuthRepository implements AuthInterface {
       final token = data['access_token'] as String;
       final refreshToken = data['refresh_token'] as String?;
       final userId = data['user_id'] as String;
+      final name = data['name'] as String?;
 
       // Store tokens and user info
       await _authService.setToken(token);
@@ -131,6 +141,7 @@ class BackendAuthRepository implements AuthInterface {
       final user = AppAuthUser(
         id: userId,
         email: email,
+        metadata: name != null ? {'name': name} : null,
       );
 
       final session = AuthSession(
@@ -157,23 +168,40 @@ class BackendAuthRepository implements AuthInterface {
   @override
   Future<void> signOut() async {
     try {
-      // Call backend logout endpoint if available
-      try {
-        await _dio.post('/api/v1/auth/logout');
-      } catch (_) {
-        // Ignore backend errors during logout
-      }
-
-      // Clear local auth state
-      await _authService.clearAuth();
-
-      // Clear cached user and session
+      // Clear cached user and session first (before any network calls)
       _cachedUser = null;
       _cachedSession = null;
 
+      // Clear local auth state (this is critical and must succeed)
+      await _authService.clearAuth();
+
       // Emit auth state change
       _authStateController.add(AuthStateChange(session: null, user: null));
+
+      // Call backend logout endpoint if available (but don't block on errors)
+      try {
+        await _dio.post('/api/v1/auth/logout');
+      } catch (_) {
+        // Ignore backend errors during logout - local state is already cleared
+      }
+
+      // Reset singletons to prevent stale state
+      // This ensures next app start gets fresh instances
+      DioClient.reset();
+      AuthRepositoryFactory.reset();
     } catch (e) {
+      // Even if something fails, try to clear local state as a last resort
+      try {
+        _cachedUser = null;
+        _cachedSession = null;
+        await _authService.clearAuth();
+        _authStateController.add(AuthStateChange(session: null, user: null));
+        DioClient.reset();
+        AuthRepositoryFactory.reset();
+      } catch (_) {
+        // Final fallback failed
+      }
+
       throw Exception('Failed to sign out: ${e.toString()}');
     }
   }
@@ -192,16 +220,21 @@ class BackendAuthRepository implements AuthInterface {
   @override
   Future<AuthResult> updatePassword(String newPassword) async {
     try {
-      final response = await _dio.put('/api/v1/auth/password', data: {
+      await _dio.put('/api/v1/auth/password', data: {
         'new_password': newPassword,
       });
 
-      final data = response.data;
-      final userId = await _authService.getUserId();
+      // Password update doesn't change user data, just return current cached user
+      // Backend only returns MessageResponse, not user data
+      if (_cachedUser != null) {
+        return AuthResult(user: _cachedUser!);
+      }
 
+      // If no cached user, fetch from auth service
+      final userId = await _authService.getUserId();
       final user = AppAuthUser(
         id: userId ?? '',
-        email: data['email'] as String?,
+        email: null, // Email doesn't change during password update
       );
 
       return AuthResult(user: user);
@@ -269,10 +302,12 @@ class BackendAuthRepository implements AuthInterface {
         final data = response.data;
 
         final userId = data['user_id'] as String;
+        final name = data['name'] as String?;
 
         final user = AppAuthUser(
           id: userId,
           email: data['email'] as String?,
+          metadata: name != null ? {'name': name} : null,
         );
 
         final session = AuthSession(
@@ -312,6 +347,7 @@ class BackendAuthRepository implements AuthInterface {
             final newAccessToken = refreshData['access_token'] as String;
             final newRefreshToken = refreshData['refresh_token'] as String?;
             final userId = refreshData['user_id'] as String;
+            final name = refreshData['name'] as String?;
 
             // Store new tokens
             await _authService.setToken(newAccessToken);
@@ -322,6 +358,7 @@ class BackendAuthRepository implements AuthInterface {
             final user = AppAuthUser(
               id: userId,
               email: refreshData['email'] as String?,
+              metadata: name != null ? {'name': name} : null,
             );
 
             final session = AuthSession(

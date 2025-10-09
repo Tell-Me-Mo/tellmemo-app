@@ -7,7 +7,7 @@ part of 'organization_provider.dart';
 // **************************************************************************
 
 String _$currentOrganizationHash() =>
-    r'eddcf34d4b30979aa8d0101e1f51aac3b29fd4f5';
+    r'4df00740ef5fc046d2f9e21d721a7bb9f3a85fbb';
 
 /// See also [CurrentOrganization].
 @ProviderFor(CurrentOrganization)

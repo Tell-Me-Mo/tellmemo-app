@@ -73,6 +73,9 @@ class _EditProjectDialogState extends ConsumerState<EditProjectDialog> {
         },
       );
 
+      // Invalidate the project detail provider to refresh the UI
+      ref.invalidate(projectDetailProvider(widget.project.id));
+
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(

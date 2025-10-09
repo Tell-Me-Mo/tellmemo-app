@@ -261,17 +261,28 @@
                         └────────┬─────────┘
                                  │
                 ┌────────────────┼────────────────┐
-                │                │                │
-                ▼                ▼                ▼
-        ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-        │ <span style="color: #10b981;">PostgreSQL</span> │ │   <span style="color: #10b981;">Qdrant</span>    │ │ <span style="color: #10b981;">Anthropic</span>  │
-        │   (Docker)   │ │   (Docker)   │ │    Claude    │
-        │  Port 5432   │ │  Port 6333   │ │   API Key    │
-        │              │ │              │ │              │
-        │ • Users      │ │ • Vectors    │ │ • LLM        │
-        │ • Projects   │ │ • Embeddings │ │ • Reasoning  │
-        │ • Content    │ │ • Search     │ │ • Summaries  │
-        └──────────────┘ └──────────────┘ └──────────────┘
+                │                        │                        │
+                ▼                        ▼                        ▼
+┌──────────────────┐        ┌──────────────────┐        ┌──────────────────┐
+│ <span style="color: #10b981;">PostgreSQL</span>     │        │   <span style="color: #10b981;">Redis</span>         │        │   <span style="color: #10b981;">Qdrant</span>        │
+│   (Docker)       │        │   (Docker)       │        │   (Docker)       │
+│  Port 5432       │        │  Port 6379       │        │  Port 6333       │
+│                  │        │                  │        │                  │
+│ • Users          │        │ • Job Queue (RQ) │        │ • Vectors        │
+│ • Projects       │        │ • Pub/Sub        │        │ • Embeddings     │
+│ • Content        │        │ • Caching        │        │ • Search         │
+└──────────────────┘        └──────────────────┘        └──────────────────┘
+                                     │
+                                     ▼
+                            ┌──────────────────┐
+                            │ <span style="color: #10b981;">Anthropic</span>      │
+                            │    Claude        │
+                            │   API Key        │
+                            │                  │
+                            │ • LLM            │
+                            │ • Reasoning      │
+                            │ • Summaries      │
+                            └──────────────────┘
 
 <span style="color: #f59e0b;">Optional Services:</span>
   • Sentry (error tracking - configured via backend .env)
@@ -283,6 +294,7 @@
                             <li><strong>Frontend (Flutter Web):</strong> User interface running in Docker container on port 8100</li>
                             <li><strong>Backend (FastAPI):</strong> REST API, WebSocket server, authentication, and RAG processing in Docker</li>
                             <li><strong>PostgreSQL:</strong> Primary database for users, projects, content metadata, and conversations</li>
+                            <li><strong>Redis:</strong> Job queue (RQ), pub/sub for real-time updates, and caching</li>
                             <li><strong>Qdrant:</strong> Vector database for semantic search and embeddings</li>
                             <li><strong>Claude API:</strong> Anthropic's LLM for AI reasoning and summary generation</li>
                         </ol>
@@ -313,9 +325,19 @@
                                     <td>Primary database (metadata, users, projects)</td>
                                 </tr>
                                 <tr>
+                                    <td><strong>Redis</strong></td>
+                                    <td>6379</td>
+                                    <td>Job queue (RQ), Pub/Sub, caching</td>
+                                </tr>
+                                <tr>
                                     <td><strong>Qdrant</strong></td>
                                     <td>6333</td>
                                     <td>Vector database (embeddings, semantic search)</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>RQ Dashboard</strong></td>
+                                    <td>9181</td>
+                                    <td>Job queue monitoring and management (optional)</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -347,6 +369,7 @@
                                 <li><strong>Frontend UI</strong> - Flutter web app on port 8100</li>
                                 <li><strong>Backend API</strong> - FastAPI with authentication & RAG on port 8000</li>
                                 <li><strong>PostgreSQL</strong> - Primary database on port 5432</li>
+                                <li><strong>Redis</strong> - Job queue and pub/sub on port 6379</li>
                                 <li><strong>Qdrant</strong> - Vector database on port 6333</li>
                             </ul>
                             <p>All services are containerized and managed by Docker Compose. No manual setup required!</p>
@@ -536,12 +559,20 @@ ENABLE_LOGSTASH=false</code></pre>
 
                         <h4>Transcription Service</h4>
                         <div class="code-block">
-                            <pre><code># Choose: "whisper" (local) or "salad" (Salad API)
-DEFAULT_TRANSCRIPTION_SERVICE=whisper
+                            <pre><code># Choose: "whisper" (local), "salad" (Salad API), or "replicate" (incredibly-fast-whisper)
+DEFAULT_TRANSCRIPTION_SERVICE=replicate
 
-# Only if using Salad:
+# Replicate (recommended - 242x faster than local Whisper)
+REPLICATE_API_TOKEN=your-replicate-token-here
+
+# Salad Cloud (cost-effective for batch processing)
 SALAD_API_KEY=your-salad-api-key
-SALAD_ORGANIZATION_NAME=your-org-name</code></pre>
+SALAD_ORGANIZATION_NAME=your-org-name
+
+# Performance comparison (30-min audio):
+# - Replicate: ~20 seconds (242x speedup)
+# - Salad: ~5-8 minutes
+# - Local Whisper: ~696 seconds</code></pre>
                         </div>
 
                         <h3>⚙️ Advanced Settings</h3>

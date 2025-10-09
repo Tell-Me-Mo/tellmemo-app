@@ -100,6 +100,103 @@ void main() {
         expect(org, isNull);
         verify(mockSecureStorage.delete('current_organization_id')).called(1);
       });
+
+      test('switchOrganization updates state and persists to storage', () async {
+        // Arrange
+        const orgId = 'org-1';
+        const newOrgId = 'org-2';
+        final initialOrg = OrganizationTestFixtures.sampleOrganizationModel;
+        final newOrg = OrganizationTestFixtures.sampleOrganizationModel.copyWith(
+          id: newOrgId,
+          name: 'New Organization',
+        );
+
+        when(mockSecureStorage.read('current_organization_id')).thenAnswer((_) async => orgId);
+        when(mockSecureStorage.write('current_organization_id', any)).thenAnswer((_) async {});
+        when(mockApiService.getOrganization(orgId)).thenAnswer((_) async => initialOrg);
+        when(mockApiService.switchOrganization(newOrgId)).thenAnswer((_) async => {});
+        when(mockApiService.getOrganization(newOrgId)).thenAnswer((_) async => newOrg);
+        when(mockApiService.listUserOrganizations()).thenAnswer((_) async => {
+              'organizations': [initialOrg.toJson(), newOrg.toJson()]
+            });
+
+        container = createAuthenticatedContainer(
+          additionalOverrides: [
+            organizationApiServiceProvider.overrideWithValue(mockApiService),
+            secureStorageProvider.overrideWithValue(mockSecureStorage),
+          ],
+        );
+
+        // Load initial organization
+        final initialState = await container.read(currentOrganizationProvider.future);
+        expect(initialState!.id, orgId);
+
+        // Act - switch organization
+        await container.read(currentOrganizationProvider.notifier).switchOrganization(newOrgId);
+
+        // Assert
+        final updatedState = await container.read(currentOrganizationProvider.future);
+        expect(updatedState!.id, newOrgId);
+        expect(updatedState.name, 'New Organization');
+        verify(mockApiService.switchOrganization(newOrgId)).called(1);
+        verify(mockSecureStorage.write('current_organization_id', newOrgId)).called(1);
+      });
+
+      test('switchOrganization triggers organizationChangedProvider', () async {
+        // Arrange
+        const newOrgId = 'org-2';
+        final newOrg = OrganizationTestFixtures.sampleOrganizationModel.copyWith(
+          id: newOrgId,
+          name: 'New Organization',
+        );
+
+        when(mockSecureStorage.read('current_organization_id')).thenAnswer((_) async => null);
+        when(mockSecureStorage.write('current_organization_id', any)).thenAnswer((_) async {});
+        when(mockApiService.switchOrganization(newOrgId)).thenAnswer((_) async => {});
+        when(mockApiService.getOrganization(newOrgId)).thenAnswer((_) async => newOrg);
+        when(mockApiService.listUserOrganizations()).thenAnswer((_) async => {
+              'organizations': [newOrg.toJson()]
+            });
+
+        container = createAuthenticatedContainer(
+          additionalOverrides: [
+            organizationApiServiceProvider.overrideWithValue(mockApiService),
+            secureStorageProvider.overrideWithValue(mockSecureStorage),
+          ],
+        );
+
+        // Track organizationChangedProvider state
+        final initialCounter = container.read(organizationChangedProvider);
+
+        // Act
+        await container.read(currentOrganizationProvider.notifier).switchOrganization(newOrgId);
+
+        // Assert
+        final updatedCounter = container.read(organizationChangedProvider);
+        expect(updatedCounter, greaterThan(initialCounter));
+      });
+
+      test('switchOrganization propagates error when API call fails', () async {
+        // Arrange
+        const newOrgId = 'org-2';
+
+        when(mockSecureStorage.read('current_organization_id')).thenAnswer((_) async => null);
+        when(mockApiService.switchOrganization(newOrgId)).thenThrow(Exception('Network error'));
+        when(mockApiService.listUserOrganizations()).thenAnswer((_) async => {'organizations': []});
+
+        container = createAuthenticatedContainer(
+          additionalOverrides: [
+            organizationApiServiceProvider.overrideWithValue(mockApiService),
+            secureStorageProvider.overrideWithValue(mockSecureStorage),
+          ],
+        );
+
+        // Act & Assert
+        await expectLater(
+          container.read(currentOrganizationProvider.notifier).switchOrganization(newOrgId),
+          throwsA(isA<Exception>()),
+        );
+      });
     });
 
     group('UserOrganizations Provider', () {

@@ -11,12 +11,13 @@ sequenceDiagram
     participant API as API Client
     participant BE as Backend API
     participant CS as Content Service
-    participant JS as Job Service
+    participant RQ as Redis Queue
+    participant RP as Redis Pub/Sub
+    participant RW as RQ Worker
     participant WS as WebSocket
     participant DB as PostgreSQL
     participant VDB as Qdrant Vector DB
     participant AI as AI Services
-    participant BG as Background Tasks
 
     Note over U,DS: 1. INITIATION PHASE
     U->>DS: Click "Upload Document"
@@ -74,60 +75,61 @@ sequenceDiagram
     CS->>DB: Log activity
     deactivate CS
 
-    BE->>JS: create_job()
-    activate JS
-    JS->>JS: Generate job_id
-    JS->>WS: Notify job created
+    BE->>RQ: Enqueue job (high priority)
+    activate RQ
+    RQ->>RQ: Generate job_id
+    RQ->>RP: Publish job created
+    RP->>WS: Broadcast job status
     WS-->>UD: Job status: PENDING
-    deactivate JS
+    deactivate RQ
     deactivate BE
 
-    Note over BG,VDB: 6. ASYNC PROCESSING
-    BE->>BG: trigger_async_processing()
-    activate BG
+    Note over RW,VDB: 6. ASYNC PROCESSING (RQ Worker)
+    RQ->>RW: Dequeue job
+    activate RW
 
-    BG->>JS: Update status: PROCESSING
-    JS->>WS: Notify progress (10%)
+    RW->>RP: Publish status: PROCESSING
+    RP->>WS: Broadcast progress (10%)
     WS-->>UD: Update progress bar
 
-    BG->>BG: Extract & chunk text
-    Note right of BG: - Parse documents<br/>- Split into chunks<br/>- Clean text
+    RW->>RW: Extract & chunk text
+    Note right of RW: - Parse documents<br/>- Split into chunks<br/>- Clean text
 
-    BG->>JS: Update progress (30%)
-    JS->>WS: Notify progress
+    RW->>RP: Publish progress (30%)
+    RP->>WS: Broadcast progress
     WS-->>UD: Update progress bar
 
-    BG->>AI: Generate embeddings
+    RW->>AI: Generate embeddings
     activate AI
-    Note right of AI: SentenceTransformers<br/>all-MiniLM-L6-v2
-    AI-->>BG: Vector embeddings
+    Note right of AI: EmbeddingGemma<br/>768-dim vectors
+    AI-->>RW: Vector embeddings
     deactivate AI
 
-    BG->>JS: Update progress (60%)
-    JS->>WS: Notify progress
+    RW->>RP: Publish progress (60%)
+    RP->>WS: Broadcast progress
     WS-->>UD: Update progress bar
 
-    BG->>VDB: Store vectors
+    RW->>VDB: Store vectors
     activate VDB
     VDB->>VDB: Index vectors
-    VDB-->>BG: Success
+    VDB-->>RW: Success
     deactivate VDB
 
-    BG->>DB: Update content metadata
+    RW->>DB: Update content metadata
 
-    BG->>JS: Update progress (90%)
-    JS->>WS: Notify progress
+    RW->>RP: Publish progress (90%)
+    RP->>WS: Broadcast progress
     WS-->>UD: Update progress bar
 
     opt Additional AI Processing
-        BG->>AI: Extract metadata
-        AI-->>BG: Tags, categories
-        BG->>DB: Update metadata
+        RW->>AI: Extract metadata
+        AI-->>RW: Tags, categories
+        RW->>DB: Update metadata
     end
 
-    BG->>JS: Complete job
-    JS->>WS: Notify completion
-    deactivate BG
+    RW->>RP: Publish job complete
+    RP->>WS: Broadcast completion
+    deactivate RW
 
     Note over WS,U: 7. COMPLETION & UI UPDATE
     WS-->>UD: Job status: COMPLETED
@@ -155,29 +157,32 @@ sequenceDiagram
 | Component | File | Responsibilities |
 |-----------|------|-----------------|
 | **Upload Router** | `upload.py` | - Request validation<br/>- AI matching coordination<br/>- Response formatting |
-| **Content Router** | `content.py` | - Project-specific uploads<br/>- File validation<br/>- Job creation |
+| **Content Router** | `content.py` | - Project-specific uploads<br/>- File validation<br/>- Job enqueuing |
 | **Content Service** | `content_service.py` | - Business logic<br/>- Database operations<br/>- Activity logging |
-| **Job Service** | `upload_job_service.py` | - Job lifecycle<br/>- Progress tracking<br/>- WebSocket notifications |
-| **Background Tasks** | Various | - Text processing<br/>- Embedding generation<br/>- Vector storage |
+| **Redis Queue** | `queue_config.py` | - Multi-priority queues (high, default, low)<br/>- Job enqueuing and management<br/>- Worker coordination |
+| **Redis Pub/Sub** | `redis_cache_service.py` | - Real-time job status broadcasts<br/>- WebSocket integration<br/>- Multi-instance communication |
+| **RQ Worker Tasks** | `content_tasks.py`<br/>`transcription_tasks.py`<br/>`integration_tasks.py`<br/>`summary_tasks.py` | - Async job processing<br/>- Text chunking and embedding<br/>- Vector storage<br/>- Progress updates |
 
 ## Data Flow Summary
 
 ### Upload Types
-1. **Text Upload**: Direct text → Content Service → Vector DB
-2. **File Upload**: File → Parse → Content Service → Vector DB
-3. **Audio Upload**: Audio → Transcription → Content Service → Vector DB
+1. **Text Upload**: Direct text → Content Service → Redis Queue → RQ Worker → Vector DB
+2. **File Upload**: File → Parse → Content Service → Redis Queue → RQ Worker → Vector DB
+3. **Audio Upload**: Audio → Redis Queue → Transcription (Whisper/Salad/Replicate) → RQ Worker → Vector DB
 
 ### Processing Stages
 1. **Validation** (Sync): File type, size, format checks
 2. **Storage** (Sync): Database record creation
-3. **Processing** (Async): Chunking, embedding, indexing
-4. **Notification** (Real-time): WebSocket progress updates
+3. **Job Enqueuing** (Sync): Redis Queue job creation with priority
+4. **Processing** (Async): RQ Worker processes chunking, embedding, indexing
+5. **Notification** (Real-time): Redis Pub/Sub → WebSocket progress updates
 
 ### AI Integration Points
 - **Project Matching**: Analyzes content to suggest/create projects
 - **Content Classification**: Determines content type (meeting/email)
 - **Metadata Extraction**: Extracts tags, topics, entities
-- **Embedding Generation**: Creates semantic vectors for search
+- **Embedding Generation**: EmbeddingGemma creates 768-dim semantic vectors
+- **Transcription**: Replicate (242x faster), Salad Cloud, or Local Whisper
 
 ## Error Handling Flow
 
@@ -201,18 +206,25 @@ graph TD
 
 ## Performance Characteristics
 
-- **Sync Operations**: ~200-500ms (validation + DB insert)
+- **Sync Operations**: ~200-500ms (validation + DB insert + job enqueue)
+- **Job Enqueuing**: ~10-50ms (Redis Queue)
 - **Async Processing**: 2-10s depending on content size
-- **Embedding Generation**: ~100-500ms per chunk
-- **Vector Storage**: ~50-100ms per batch
-- **Total End-to-End**: 3-15s for typical documents
+- **Transcription**:
+  - Replicate: ~20s for 30-min audio (242x speedup)
+  - Salad Cloud: ~5-8 minutes for 30-min audio
+  - Local Whisper: ~696s for 30-min audio
+- **Embedding Generation**: ~100-500ms per chunk (EmbeddingGemma)
+- **Vector Storage**: ~50-100ms per batch (Qdrant)
+- **Total End-to-End**: 3-15s for typical documents (text), 20s-10min for audio
 
 ## WebSocket Events
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `job.created` | `{job_id, status: "pending"}` | New upload job created |
-| `job.processing` | `{job_id, progress: 0-100}` | Processing progress update |
-| `job.completed` | `{job_id, content_id}` | Upload completed successfully |
-| `job.failed` | `{job_id, error}` | Upload failed with error |
-| `content.ready` | `{content_id, project_id}` | Content indexed and searchable |
+| `job.created` | `{job_id, status: "queued", priority: "high"}` | New RQ job enqueued |
+| `job.processing` | `{job_id, progress: 0-100, current_step: "chunking"}` | Processing progress update via Redis Pub/Sub |
+| `job.completed` | `{job_id, content_id, duration: "3.5s"}` | Upload completed successfully |
+| `job.failed` | `{job_id, error, retry_count: 0}` | Upload failed with error (auto-retry enabled) |
+| `content.ready` | `{content_id, project_id, chunks: 15, vectors: 15}` | Content indexed and searchable |
+
+**Note**: All WebSocket events are powered by Redis Pub/Sub for real-time multi-instance synchronization.

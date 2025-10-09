@@ -27,6 +27,7 @@ import '../widgets/edit_project_dialog.dart';
 import '../../../activities/presentation/providers/activity_provider.dart';
 import '../../../activities/domain/entities/activity.dart';
 import '../../../meetings/presentation/providers/upload_provider.dart';
+import '../../../hierarchy/presentation/providers/hierarchy_providers.dart';
 import './content_processing_dialog.dart';
 import '../../../content/presentation/providers/processing_jobs_provider.dart';
 import '../../../../shared/widgets/upload_content_dialog.dart';
@@ -95,12 +96,14 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
   }
 
   void _ensureProjectSelected() {
-    if (mounted) {
-      final project = ref.read(projectDetailProvider(widget.projectId)).value;
-      if (project != null) {
-        ref.read(selectedProjectProvider.notifier).state = project;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final project = ref.read(projectDetailProvider(widget.projectId)).value;
+        if (project != null) {
+          ref.read(selectedProjectProvider.notifier).state = project;
+        }
       }
-    }
+    });
   }
 
   Future<void> _checkContentAvailability() async {
@@ -3017,22 +3020,28 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
   }
 
   void _showArchiveConfirmation(BuildContext context, Project project) {
+    // Capture the outer context for snackbar after dialog is dismissed
+    final outerContext = context;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Archive Project'),
         content: Text('Are you sure you want to archive "${project.name}"? The project will be moved to archived status.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               await ref.read(projectsListProvider.notifier).archiveProject(project.id);
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
+              // Invalidate providers to refresh the UI
+              ref.invalidate(projectDetailProvider(project.id));
+              ref.invalidate(hierarchyStateProvider);
+              if (outerContext.mounted) {
+                ScaffoldMessenger.of(outerContext).showSnackBar(
                   const SnackBar(content: Text('Project archived')),
                 );
               }
@@ -3045,22 +3054,28 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
   }
 
   void _showActivateConfirmation(BuildContext context, Project project) {
+    // Capture the outer context for snackbar after dialog is dismissed
+    final outerContext = context;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Activate Project'),
         content: Text('Are you sure you want to activate "${project.name}"? The project will be moved to active status.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               await ref.read(projectsListProvider.notifier).restoreProject(project.id);
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
+              // Invalidate providers to refresh the UI
+              ref.invalidate(projectDetailProvider(project.id));
+              ref.invalidate(hierarchyStateProvider);
+              if (outerContext.mounted) {
+                ScaffoldMessenger.of(outerContext).showSnackBar(
                   const SnackBar(content: Text('Project activated')),
                 );
               }
@@ -3073,23 +3088,30 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
   }
 
   void _showDeleteConfirmation(BuildContext context, Project project) {
+    // Capture the outer context for navigation after dialog is dismissed
+    final outerContext = context;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Project'),
         content: Text('Are you sure you want to delete "${project.name}"? This action cannot be undone.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               await ref.read(projectsListProvider.notifier).deleteProject(project.id);
-              if (context.mounted) {
-                context.go('/hierarchy');
-                ScaffoldMessenger.of(context).showSnackBar(
+              // Invalidate all related providers to ensure fresh data
+              ref.invalidate(projectDetailProvider(project.id));
+              ref.invalidate(projectsListProvider);
+              ref.invalidate(hierarchyStateProvider);
+              if (outerContext.mounted) {
+                outerContext.go('/hierarchy');
+                ScaffoldMessenger.of(outerContext).showSnackBar(
                   const SnackBar(content: Text('Project deleted')),
                 );
               }

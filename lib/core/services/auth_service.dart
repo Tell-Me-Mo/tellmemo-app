@@ -61,10 +61,22 @@ class AuthService {
   }
 
   Future<void> clearAuth() async {
+    // Clear memory cache first
     _cachedToken = null;
     _cachedRefreshToken = null;
     _cachedUserId = null;
     _cachedOrganizationId = null;
+
+    // Delete individual keys to ensure they're cleared
+    // This is more reliable than deleteAll() on some platforms
+    await Future.wait([
+      _storage.delete(_tokenKey),
+      _storage.delete(_refreshTokenKey),
+      _storage.delete(_userIdKey),
+      _storage.delete(_organizationIdKey),
+    ]);
+
+    // Also call deleteAll to catch any other auth-related keys
     await _storage.deleteAll();
   }
 

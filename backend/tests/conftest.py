@@ -671,3 +671,37 @@ def mock_redis_for_rq():
     queue_config._high_queue = original_high_queue
     queue_config._default_queue = original_default_queue
     queue_config._low_queue = original_low_queue
+
+
+@pytest.fixture(scope="function", autouse=True)
+async def mock_redis_cache():
+    """
+    Replace real Redis with FakeRedis for cache service testing.
+
+    This fixture automatically replaces the Redis connection in redis_cache service
+    with FakeRedis for all tests, preventing the need for a running Redis server.
+
+    The cache service operates in-memory and is automatically cleaned up between tests.
+    """
+    import fakeredis.aioredis
+    from services.cache.redis_cache_service import redis_cache
+
+    # Create a fresh FakeRedis async instance for each test
+    fake_redis_async = fakeredis.aioredis.FakeRedis(decode_responses=True)
+
+    # Store original client and availability state
+    original_client = redis_cache._client
+    original_is_available = redis_cache._is_available
+
+    # Replace with FakeRedis
+    redis_cache._client = fake_redis_async
+    redis_cache._is_available = True
+
+    yield fake_redis_async
+
+    # Close FakeRedis connection
+    await fake_redis_async.aclose()
+
+    # Restore original state
+    redis_cache._client = original_client
+    redis_cache._is_available = original_is_available
