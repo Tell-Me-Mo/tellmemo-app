@@ -294,7 +294,7 @@
 - ✅ Shows in card view
 - ✅ Can be favorited (star icon)
 - ✅ Portfolio statistics card shows 0 programs, 0 projects
-- ✅ Activity logged
+- ✅ Activity logged - TODO
 
 ---
 
@@ -498,7 +498,7 @@
 2. Click "Edit" button (or three-dot menu → Edit)
 3. Update name: `Q1 2025 Planning Initiative`
 4. Update description
-5. Change status: `Active` → `On Hold` → `Active`
+5. Change status: `Active` → `On Hold` → `Active`: TODO
 6. Update tags
 7. Click "Save Changes"
 
