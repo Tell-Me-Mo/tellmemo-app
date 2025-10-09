@@ -17,7 +17,6 @@ from db.database import init_database, close_database
 from db.multi_tenant_vector_store import multi_tenant_vector_store
 from services.rag.embedding_service import init_embedding_service
 from services.scheduling.scheduler_service import scheduler_service
-from services.core.upload_job_service import upload_job_service
 from services.observability.langfuse_service import langfuse_service
 from services.llm.multi_llm_client import get_multi_llm_client
 from middleware.langfuse_middleware import add_langfuse_middleware
@@ -141,57 +140,32 @@ async def lifespan(app: FastAPI):
         logger.error(f"Failed to initialize multi-provider LLM client: {e}")
         # Continue running - services will handle unavailable client
 
-    # Start scheduler for automated tasks
-    try:
-        scheduler_service.start()
-        logger.info("Scheduler service started for automated weekly reports")
-    except Exception as e:
-        logger.error(f"Failed to start scheduler service: {e}")
-        # Continue running even if scheduler fails
+    # Note: Scheduler service provides manual triggers only
+    # Automated scheduling has been moved to Redis Queue (RQ)
+    logger.info("Scheduler service initialized (manual weekly report triggers available)")
     
-    # Pre-load Whisper model at startup (optional - improves first transcription speed)
-    try:
-        from services.transcription.whisper_service import get_whisper_service
-        logger.info("Pre-loading Whisper transcription model...")
-        whisper_service = get_whisper_service()
-        if whisper_service.is_model_loaded():
-            logger.info("✅ Whisper model pre-loaded successfully")
-        else:
-            logger.warning("⚠️ Whisper model not loaded")
-    except Exception as e:
-        logger.warning(f"⚠️ Failed to pre-load Whisper model: {e}")
-        logger.info("Model will be loaded on first transcription request")
-        # Continue running - model will load on demand
+    # Pre-load Whisper model at startup (only if using Whisper as default service)
+    # This improves first transcription speed but consumes ~1-2GB RAM
+    if settings.default_transcription_service.lower() == 'whisper':
+        try:
+            from services.transcription.whisper_service import get_whisper_service
+            logger.info("Pre-loading Whisper transcription model...")
+            whisper_service = get_whisper_service()
+            if whisper_service.is_model_loaded():
+                logger.info("✅ Whisper model pre-loaded successfully")
+            else:
+                logger.warning("⚠️ Whisper model not loaded")
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to pre-load Whisper model: {e}")
+            logger.info("Model will be loaded on first transcription request")
+            # Continue running - model will load on demand
+    else:
+        logger.info(f"Skipping Whisper pre-load (using {settings.default_transcription_service} service)")
+        logger.info("Whisper will load on-demand if needed")
 
-    # Start upload job service
-    try:
-        upload_job_service.start()
-        logger.info("Upload job service started for tracking file upload progress")
-        
-        # Connect WebSocket manager to job service
-        from routers.websocket_jobs import job_manager
-        from services.core.upload_job_service import set_websocket_manager
-        set_websocket_manager(job_manager)
-        logger.info("WebSocket job manager connected to upload service")
-    except Exception as e:
-        logger.error(f"Failed to start upload job service: {e}")
-        # Continue running even if job service fails
-    
     yield
-    
+
     logger.info("Shutting down PM Master V2 Backend...")
-    
-    # Shutdown scheduler
-    try:
-        scheduler_service.shutdown()
-    except Exception as e:
-        logger.error(f"Error shutting down scheduler: {e}")
-    
-    # Shutdown upload job service
-    try:
-        upload_job_service.shutdown()
-    except Exception as e:
-        logger.error(f"Error shutting down upload job service: {e}")
     
     # Shutdown Langfuse
     try:

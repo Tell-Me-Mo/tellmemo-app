@@ -13,6 +13,11 @@ asyncpg==0.30.0
 sqlalchemy[asyncio]==2.0.43
 alembic==1.16.5
 
+# Cache & Job Queue
+redis[hiredis]==6.4.0
+rq==2.6.0  # Redis Queue for background job processing (latest)
+rq-dashboard==0.8.5
+
 # Validation & Settings
 pydantic==2.11.10
 pydantic-settings==2.11.0
@@ -31,6 +36,7 @@ numpy==2.3.3
 faster-whisper==1.2.0
 # pyaudio==0.2.14  # Only needed for local audio recording, not on server
 soundfile==0.13.1
+replicate==1.0.7  # Replicate API for cloud-based Whisper transcription
 
 # NLP & Text Processing
 spacy==3.8.7
@@ -66,6 +72,7 @@ apscheduler==3.11.0
 # Development & Testing
 pytest==8.4.2
 pytest-asyncio==0.25.0
+fakeredis==2.32.0  # In-memory Redis for testing (no workers needed)
 black==25.1.0
 ruff==0.9.1
 cryptography>=46.0.1

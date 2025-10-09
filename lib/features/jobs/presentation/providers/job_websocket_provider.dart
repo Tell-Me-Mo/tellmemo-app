@@ -14,18 +14,20 @@ import '../../../projects/presentation/providers/projects_provider.dart';
 part 'job_websocket_provider.g.dart';
 
 /// WebSocket service provider
-@riverpod
+/// Using keepAlive to prevent recreation and connection leaks
+@Riverpod(keepAlive: true)
 JobWebSocketService jobWebSocketService(Ref ref) {
   final service = JobWebSocketService();
-  
+
   // Auto-connect when service is created
   service.connect();
-  
+
   // Cleanup on dispose
   ref.onDispose(() {
+    debugPrint('[JobWebSocketProvider] Disposing service and closing connection');
     service.dispose();
   });
-  
+
   return service;
 }
 
@@ -49,6 +51,7 @@ class WebSocketActiveJobsTracker extends _$WebSocketActiveJobsTracker {
   final Map<String, JobModel> _activeJobs = {};
   StreamSubscription? _jobUpdateSubscription;
   Timer? _cleanupTimer;
+  final Set<String> _invalidatedJobs = {}; // Track which jobs have already triggered invalidations
   
   @override
   Future<List<JobModel>> build() async {
@@ -78,6 +81,84 @@ class WebSocketActiveJobsTracker extends _$WebSocketActiveJobsTracker {
   }
   
   void _handleJobUpdate(JobModel job) {
+    // Check if this is a child content processing job updating its parent
+    final parentJobId = job.metadata['parent_transcription_job_id'] as String?;
+    if (parentJobId != null && parentJobId.isNotEmpty && _activeJobs.containsKey(parentJobId)) {
+      // This is a child job - update the parent's progress based on child progress
+      final parentJob = _activeJobs[parentJobId]!;
+
+      // Map child progress (0-100) to parent progress (75-100)
+      // 75 = transcription complete, 100 = everything complete
+      final mappedProgress = 75 + (job.progress * 0.25);
+
+      final updatedParent = JobModel(
+        jobId: parentJob.jobId,
+        projectId: parentJob.projectId,
+        jobType: parentJob.jobType,
+        status: job.status == JobStatus.completed ? JobStatus.completed : JobStatus.processing,
+        progress: job.status == JobStatus.completed ? 100 : mappedProgress,
+        currentStep: parentJob.currentStep,
+        totalSteps: parentJob.totalSteps,
+        stepDescription: job.status == JobStatus.completed
+            ? 'All processing complete'
+            : (job.stepDescription ?? 'Processing content and generating summary...'),
+        createdAt: parentJob.createdAt,
+        updatedAt: DateTime.now(),
+        completedAt: job.status == JobStatus.completed ? DateTime.now() : null,
+        metadata: parentJob.metadata,
+        result: job.status == JobStatus.completed ? job.result : parentJob.result,
+        errorMessage: job.errorMessage,
+        filename: parentJob.filename,
+      );
+
+      _activeJobs[parentJobId] = updatedParent;
+      debugPrint('[WebSocketActiveJobsTracker] Updated parent job $parentJobId based on child ${job.jobId} progress: ${job.progress}% -> parent: ${mappedProgress.toInt()}%');
+
+      // Don't process the child job itself - we only care about updating the parent
+      // Call _updateState() once and return early
+      _updateState();
+      return;
+    }
+
+    // Check if this job has a child content processing job that we should track
+    final childJobId = job.metadata['content_processing_job_id'] as String?;
+    if (childJobId != null && childJobId.isNotEmpty) {
+      // This is a transcription job that has spawned a content processing job
+      // Subscribe to the child job so we can track the complete pipeline
+      if (!_activeJobs.containsKey(childJobId)) {
+        debugPrint('[WebSocketActiveJobsTracker] Transcription job ${job.jobId} has child job $childJobId - subscribing');
+        subscribeToJob(childJobId);
+      }
+
+      // Check if the child job has completed by looking at the parent's metadata
+      final childCompleted = job.metadata['content_processing_completed'] as bool? ?? false;
+      if (!childCompleted) {
+        // Child is still processing, so keep showing processing status
+        // Override the parent job status to show processing
+        final updatedJob = JobModel(
+          jobId: job.jobId,
+          projectId: job.projectId,
+          jobType: job.jobType,
+          status: JobStatus.processing,  // Keep as processing until child completes
+          progress: 75,  // Show as 75% complete (transcription done, summary in progress)
+          currentStep: job.currentStep,
+          totalSteps: job.totalSteps,
+          stepDescription: job.stepDescription ?? 'Transcription complete. Processing content and generating summary...',
+          createdAt: job.createdAt,
+          updatedAt: job.updatedAt,
+          completedAt: job.completedAt,
+          metadata: job.metadata,
+          result: job.result,
+          errorMessage: job.errorMessage,
+          filename: job.filename,
+        );
+        _activeJobs[job.jobId] = updatedJob;
+        _updateState();
+        return;  // Don't process as completed yet
+      }
+      // If childCompleted is true, fall through to normal completion handling
+    }
+
     // Update or add job to active jobs
     if (job.status == JobStatus.pending || job.status == JobStatus.processing) {
       _activeJobs[job.jobId] = job;
@@ -87,53 +168,61 @@ class WebSocketActiveJobsTracker extends _$WebSocketActiveJobsTracker {
       _activeJobs[job.jobId] = job;
 
       if (job.status == JobStatus.completed) {
-        // Check if this is a meeting content that generated a summary
+        // Check if this is a child job - don't invalidate for child jobs, only for parent jobs
+        final isChildJob = job.metadata['parent_transcription_job_id'] != null;
+
+        // Get result and contentId outside the guard so it's available for navigation
         final result = job.result;
         final contentId = result?['content_id'] as String?;
 
-        // Mark the content document as NEW when job completes
-        // This ensures items are marked as NEW even after page refresh
-        if (contentId != null) {
-          ref.read(newItemsProvider.notifier).addNewItem(contentId);
-          debugPrint('[WebSocketActiveJobsTracker] Marked content $contentId as NEW');
-        }
+        // Only invalidate providers once per parent job
+        if (!isChildJob && !_invalidatedJobs.contains(job.jobId)) {
+          _invalidatedJobs.add(job.jobId);
 
-        // Check for summary ID in the result
-        final summaryId = result?['summary_id'] as String? ??
-                         result?['id'] as String?;
-        if (summaryId != null) {
-          ref.read(newItemsProvider.notifier).addNewItem(summaryId);
-          debugPrint('[WebSocketActiveJobsTracker] Marked summary $summaryId as NEW');
-        }
+          // Mark the content document as NEW when job completes
+          // This ensures items are marked as NEW even after page refresh
+          if (contentId != null) {
+            ref.read(newItemsProvider.notifier).addNewItem(contentId);
+            debugPrint('[WebSocketActiveJobsTracker] Marked content $contentId as NEW');
+          }
 
-        // Check if a new project was created during this job
-        final projectWasCreated = result?['project_was_created'] as bool? ?? false;
-        final actualProjectId = job.metadata['project_id'] as String? ?? job.projectId;
+          // Check for summary ID in the result
+          final summaryId = result?['summary_id'] as String? ??
+                           result?['id'] as String?;
+          if (summaryId != null) {
+            ref.read(newItemsProvider.notifier).addNewItem(summaryId);
+            debugPrint('[WebSocketActiveJobsTracker] Marked summary $summaryId as NEW');
+          }
 
-        debugPrint('[WebSocketActiveJobsTracker] Job completed - projectWasCreated: $projectWasCreated, actualProjectId: $actualProjectId, result keys: ${result?.keys.toList()}');
+          // Check if a new project was created during this job
+          final projectWasCreated = result?['project_was_created'] as bool? ?? false;
+          final actualProjectId = job.metadata['project_id'] as String? ?? job.projectId;
 
-        if (projectWasCreated && actualProjectId.isNotEmpty) {
-          ref.read(newItemsProvider.notifier).addNewItem(actualProjectId);
-          debugPrint('[WebSocketActiveJobsTracker] Marked project $actualProjectId as NEW');
-        }
+          debugPrint('[WebSocketActiveJobsTracker] Job completed - projectWasCreated: $projectWasCreated, actualProjectId: $actualProjectId, result keys: ${result?.keys.toList()}');
 
-        // Refresh the lists to show the new items
-        // This ensures the UI updates even after page refresh
-        ref.invalidate(meetingsListProvider);
-        ref.invalidate(projectSummariesProvider(actualProjectId));
-        ref.invalidate(risksNotifierProvider(actualProjectId));
-        ref.invalidate(tasksNotifierProvider(actualProjectId));
-        ref.invalidate(lessonsLearnedNotifierProvider(actualProjectId));
-        ref.invalidate(projectDetailProvider(actualProjectId));
-        ref.invalidate(projectsListProvider);
-        debugPrint('[WebSocketActiveJobsTracker] Refreshed all content sections (meetings, summaries, risks, tasks, lessons, description, projects) for project $actualProjectId');
+          if (projectWasCreated && actualProjectId.isNotEmpty) {
+            ref.read(newItemsProvider.notifier).addNewItem(actualProjectId);
+            debugPrint('[WebSocketActiveJobsTracker] Marked project $actualProjectId as NEW');
+          }
 
-        // If it's a transcription or text upload job with content_id, consider navigation
-        if (contentId != null &&
-            (job.jobType == JobType.transcription || job.jobType == JobType.textUpload)) {
+          // Refresh the lists to show the new items (ONLY ONCE)
+          // This ensures the UI updates even after page refresh
+          ref.invalidate(meetingsListProvider);
+          ref.invalidate(projectSummariesProvider(actualProjectId));
+          ref.invalidate(risksNotifierProvider(actualProjectId));
+          ref.invalidate(tasksNotifierProvider(actualProjectId));
+          ref.invalidate(lessonsLearnedNotifierProvider(actualProjectId));
+          ref.invalidate(projectDetailProvider(actualProjectId));
+          ref.invalidate(projectsListProvider);
+          debugPrint('[WebSocketActiveJobsTracker] Refreshed all content sections (meetings, summaries, risks, tasks, lessons, description, projects) for project $actualProjectId');
 
-          // Smart navigation logic to handle multiple parallel jobs
-          _handleNavigationForCompletedJob(job, contentId);
+          // If it's a transcription or text upload job with content_id, consider navigation
+          if (contentId != null &&
+              (job.jobType == JobType.transcription || job.jobType == JobType.textUpload)) {
+
+            // Smart navigation logic to handle multiple parallel jobs
+            _handleNavigationForCompletedJob(job, contentId);
+          }
         }
       }
 
@@ -233,12 +322,9 @@ class WebSocketActiveJobsTracker extends _$WebSocketActiveJobsTracker {
 class WebSocketProjectJobsTracker extends _$WebSocketProjectJobsTracker {
   final Map<String, JobModel> _projectJobs = {};
   StreamSubscription? _jobUpdateSubscription;
-  String? _currentProjectId;
   
   @override
   Future<List<JobModel>> build(String projectId) async {
-    _currentProjectId = projectId;
-    
     final service = ref.watch(jobWebSocketServiceProvider);
     
     // Subscribe to project jobs

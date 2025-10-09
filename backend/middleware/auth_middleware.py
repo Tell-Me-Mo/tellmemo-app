@@ -19,11 +19,13 @@ from jwt import ExpiredSignatureError
 
 from services.auth.auth_service import auth_service
 from services.auth.native_auth_service import native_auth_service
+from services.cache.redis_cache_service import redis_cache
 from config import get_settings
 from db import get_db_context
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from models.user import User
+from models.organization import Organization
 
 logger = logging.getLogger(__name__)
 
@@ -132,39 +134,100 @@ class AuthMiddleware(BaseHTTPMiddleware):
             async with get_db_context() as db:
                 # Use auth service based on AUTH_PROVIDER setting
                 settings = get_settings()
-                if settings.auth_provider == 'backend':
-                    user = await native_auth_service.get_user_from_token(db, token)
-                else:  # supabase
-                    user = await auth_service.get_user_from_token(db, token)
 
-                if user:
-                    # Store user in request state for access in endpoints
-                    request.state.user = user
+                # Try to get session from cache first
+                cached_session = None
+                try:
+                    # Get user ID from token for cache lookup
+                    if settings.auth_provider == 'backend':
+                        payload = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"], options={"verify_exp": False})
+                    else:
+                        payload = jwt.decode(token, auth_service.jwt_secret, algorithms=["HS256"], options={"verify_exp": False})
 
-                    # Extract organization ID from headers or use last active
-                    org_id_str = request.headers.get("X-Organization-Id")
-                    organization_id = None
-                    if org_id_str:
-                        try:
-                            organization_id = UUID(org_id_str)
-                        except ValueError:
-                            logger.warning(f"Invalid organization ID in header: {org_id_str}")
+                    user_id = payload.get("sub")
+                    if user_id:
+                        cached_session = await redis_cache.get_session(UUID(user_id))
+                except Exception as e:
+                    logger.debug(f"Cache lookup skipped: {e}")
 
-                    # Get user's organization
-                    organization = await auth_service.get_user_organization(
-                        db, user, organization_id
+                user = None
+                organization = None
+                role = None
+
+                # Check if X-Organization-Id header specifies a different org than cached
+                org_id_from_header = request.headers.get("X-Organization-Id")
+                requested_org_id = None
+                if org_id_from_header:
+                    try:
+                        requested_org_id = UUID(org_id_from_header)
+                    except ValueError:
+                        logger.warning(f"Invalid organization ID in header: {org_id_from_header}")
+
+                # Check if cached session matches requested organization
+                use_cache = False
+                if cached_session:
+                    cached_org_id = UUID(cached_session["org_id"]) if cached_session.get("org_id") else None
+                    # Only use cache if no specific org requested, or if it matches cached org
+                    if not requested_org_id or (cached_org_id and cached_org_id == requested_org_id):
+                        use_cache = True
+                    else:
+                        logger.debug(f"Cache invalidated due to org switch: cached={cached_org_id}, requested={requested_org_id}")
+
+                # If we have cached session data and it matches requested org, use it
+                if use_cache and cached_session:
+                    # Reconstruct user from cache
+                    user = User(
+                        id=UUID(cached_session["user_id"]),
+                        supabase_id=cached_session.get("supabase_id"),
+                        email=cached_session["email"],
+                        name=cached_session.get("name"),
+                        avatar_url=cached_session.get("avatar_url"),
+                        email_verified=cached_session.get("email_verified", False),
+                        last_active_organization_id=UUID(cached_session["org_id"]) if cached_session.get("org_id") else None
                     )
 
-                    role = None  # Initialize role variable
+                    # Reconstruct organization from cache if available
+                    if cached_session.get("org_id"):
+                        organization = Organization(
+                            id=UUID(cached_session["org_id"]),
+                            name=cached_session.get("org_name", "Unknown")
+                        )
+
+                    role = cached_session.get("role")
+                    logger.debug(f"Session loaded from cache: {user.email}")
+                else:
+                    # Cache miss - load from database
+                    if settings.auth_provider == 'backend':
+                        user = await native_auth_service.get_user_from_token(db, token)
+                    else:  # supabase
+                        user = await auth_service.get_user_from_token(db, token)
+
+                    if user:
+                        # Use already-extracted requested_org_id from header
+                        # Get user's organization (will validate membership)
+                        organization = await auth_service.get_user_organization(
+                            db, user, requested_org_id
+                        )
+
+                        # Get user's role in the organization
+                        if organization:
+                            role = await auth_service.validate_user_role(
+                                db, user, organization
+                            )
+
+                        # Cache the session for future requests
+                        await auth_service.cache_user_session(user, organization, role)
+                        logger.debug(f"Session cached for user: {user.email}")
+
+                # Set request state
+                if user:
+                    request.state.user = user
+
                     if organization:
                         request.state.organization = organization
 
-                        # Get user's role in the organization
-                        role = await auth_service.validate_user_role(
-                            db, user, organization
-                        )
-                        if role:
-                            request.state.user_role = role
+                    if role:
+                        request.state.user_role = role
 
                     # Log request with organization context
                     logger.info(
