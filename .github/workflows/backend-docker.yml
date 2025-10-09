@@ -112,9 +112,9 @@ Branch: ${branch}
 Commit: ${sha}
 
 Docker Images:
-- \`${dockerUsername}/${imageName}:${version}\`
-- \`${dockerUsername}/${imageName}:${branch === 'main' ? 'latest' : 'develop'}\`
-- \`${dockerUsername}/${imageName}:${sha}\`
+* \`${dockerUsername}/${imageName}:${version}\`
+* \`${dockerUsername}/${imageName}:${branch === 'main' ? 'latest' : 'develop'}\`
+* \`${dockerUsername}/${imageName}:${sha}\`
 
 Changes:
 ${commitMessage}`;
