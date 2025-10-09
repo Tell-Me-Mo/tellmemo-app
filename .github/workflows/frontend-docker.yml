@@ -153,14 +153,12 @@ jobs:
 Branch: ${branch}
 Commit: ${sha}
 
-<h3>Docker Images</h3>
-
+Docker Images:
 - \`${dockerUsername}/${imageName}:${version}\`
 - \`${dockerUsername}/${imageName}:${branch === 'main' ? 'latest' : 'develop'}\`
 - \`${dockerUsername}/${imageName}:${sha}\`
 
-<h3>Changes</h3>
-
+Changes:
 ${commitMessage}`;
 
             await github.rest.repos.createRelease({
