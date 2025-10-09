@@ -54,6 +54,7 @@ class BackendAuthRepository implements AuthInterface {
       final token = data['access_token'] as String;
       final refreshToken = data['refresh_token'] as String?;
       final userId = data['user_id'] as String;
+      final name = data['name'] as String?;
 
       // Store tokens and user info
       await _authService.setToken(token);
@@ -66,10 +67,16 @@ class BackendAuthRepository implements AuthInterface {
         await _authService.setOrganizationId(data['organization_id'] as String);
       }
 
+      // Merge backend name with any additional metadata from client
+      final mergedMetadata = <String, dynamic>{
+        if (name != null) 'name': name,
+        ...?metadata,
+      };
+
       final user = AppAuthUser(
         id: userId,
         email: email,
-        metadata: metadata,
+        metadata: mergedMetadata,
       );
 
       final session = AuthSession(
@@ -118,6 +125,7 @@ class BackendAuthRepository implements AuthInterface {
       final token = data['access_token'] as String;
       final refreshToken = data['refresh_token'] as String?;
       final userId = data['user_id'] as String;
+      final name = data['name'] as String?;
 
       // Store tokens and user info
       await _authService.setToken(token);
@@ -133,6 +141,7 @@ class BackendAuthRepository implements AuthInterface {
       final user = AppAuthUser(
         id: userId,
         email: email,
+        metadata: name != null ? {'name': name} : null,
       );
 
       final session = AuthSession(
@@ -288,10 +297,12 @@ class BackendAuthRepository implements AuthInterface {
         final data = response.data;
 
         final userId = data['user_id'] as String;
+        final name = data['name'] as String?;
 
         final user = AppAuthUser(
           id: userId,
           email: data['email'] as String?,
+          metadata: name != null ? {'name': name} : null,
         );
 
         final session = AuthSession(
@@ -331,6 +342,7 @@ class BackendAuthRepository implements AuthInterface {
             final newAccessToken = refreshData['access_token'] as String;
             final newRefreshToken = refreshData['refresh_token'] as String?;
             final userId = refreshData['user_id'] as String;
+            final name = refreshData['name'] as String?;
 
             // Store new tokens
             await _authService.setToken(newAccessToken);
@@ -341,6 +353,7 @@ class BackendAuthRepository implements AuthInterface {
             final user = AppAuthUser(
               id: userId,
               email: refreshData['email'] as String?,
+              metadata: name != null ? {'name': name} : null,
             );
 
             final session = AuthSession(

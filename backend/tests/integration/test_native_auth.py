@@ -39,6 +39,11 @@ class TestUserSignup:
         assert "email" in data
         assert data["email"] == sample_signup_data["email"]
 
+        # Verify name is returned if provided
+        assert "name" in data
+        if "name" in sample_signup_data:
+            assert data["name"] == sample_signup_data["name"]
+
         # Verify tokens are valid JWT strings
         assert isinstance(data["access_token"], str)
         assert isinstance(data["refresh_token"], str)
@@ -101,6 +106,8 @@ class TestUserSignup:
         assert response.status_code == 200
         data = response.json()
         assert data["email"] == signup_data["email"]
+        # Name should be None when not provided
+        assert data.get("name") is None
 
 
 class TestUserLogin:
@@ -127,6 +134,10 @@ class TestUserLogin:
         assert "user_id" in data
         assert "email" in data
         assert data["email"] == sample_login_data["email"]
+
+        # Verify name is returned (from database)
+        assert "name" in data
+        assert data["name"] == test_user.name
 
     @pytest.mark.integration
     async def test_login_wrong_password(
@@ -237,6 +248,9 @@ class TestTokenRefresh:
         assert data["access_token"] != test_user_refresh_token
         assert "user_id" in data
         assert "email" in data
+
+        # Verify name is returned
+        assert "name" in data
 
     @pytest.mark.integration
     async def test_refresh_with_invalid_token(self, client: AsyncClient):
@@ -487,6 +501,10 @@ class TestTokenVerification:
         assert "email" in data
         assert data["email"] == test_user.email
         assert data["user_id"] == str(test_user.id)
+
+        # Verify name is returned
+        assert "name" in data
+        assert data["name"] == test_user.name
 
     @pytest.mark.integration
     async def test_verify_token_unauthenticated(self, client: AsyncClient):
