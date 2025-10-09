@@ -106,18 +106,14 @@ jobs:
             const imageName = '${{ env.IMAGE_NAME }}';
             const commitMessage = `${{ github.event.head_commit.message }}`.replace(/`/g, '\\`').replace(/\$/g, '\\$');
 
-            const bodyText = `## Backend Release v${version}
-
-Branch: ${branch}
-Commit: ${sha}
-
-Docker Images:
-* \`${dockerUsername}/${imageName}:${version}\`
-* \`${dockerUsername}/${imageName}:${branch === 'main' ? 'latest' : 'develop'}\`
-* \`${dockerUsername}/${imageName}:${sha}\`
-
-Changes:
-${commitMessage}`;
+            const bodyText = '## Backend Release v' + version + '\n\n' +
+              'Branch: ' + branch + '\n' +
+              'Commit: ' + sha + '\n\n' +
+              'Docker Images:\n' +
+              '- `' + dockerUsername + '/' + imageName + ':' + version + '`\n' +
+              '- `' + dockerUsername + '/' + imageName + ':' + (branch === 'main' ? 'latest' : 'develop') + '`\n' +
+              '- `' + dockerUsername + '/' + imageName + ':' + sha + '`\n\n' +
+              'Changes:\n' + commitMessage;
 
             await github.rest.repos.createRelease({
               owner: context.repo.owner,
