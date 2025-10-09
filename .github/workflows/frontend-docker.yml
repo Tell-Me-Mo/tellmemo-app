@@ -142,24 +142,31 @@ jobs:
             const tagName = `frontend-v${{ steps.version.outputs.version }}`;
             const releaseName = `Frontend v${{ steps.version.outputs.version }}`;
             const branch = '${{ github.ref }}' === 'refs/heads/main' ? 'main' : 'develop';
+            const version = '${{ steps.version.outputs.version }}';
+            const sha = '${{ github.sha }}';
+            const dockerUsername = '${{ secrets.DOCKER_USERNAME }}';
+            const imageName = '${{ env.IMAGE_NAME }}';
+            const commitMessage = `${{ github.event.head_commit.message }}`.replace(/`/g, '\\`').replace(/\$/g, '\\$');
+
+            const bodyText = `## Frontend Release v${version}
+
+**Branch:** ${branch}
+**Commit:** ${sha}
+
+### Docker Images
+- \`${dockerUsername}/${imageName}:${version}\`
+- \`${dockerUsername}/${imageName}:${branch === 'main' ? 'latest' : 'develop'}\`
+- \`${dockerUsername}/${imageName}:${sha}\`
+
+### Changes
+${commitMessage}`;
 
             await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag_name: tagName,
               name: releaseName,
-              body: `## Frontend Release v${{ steps.version.outputs.version }}
-
-            **Branch:** ${branch}
-            **Commit:** ${{ github.sha }}
-
-            ### Docker Images
-            - \`${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}\`
-            - \`${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${branch === 'main' ? 'latest' : 'develop'}\`
-            - \`${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}\`
-
-            ### Changes
-            ${{ github.event.head_commit.message }}`,
+              body: bodyText,
               draft: false,
               prerelease: branch !== 'main'
             });
