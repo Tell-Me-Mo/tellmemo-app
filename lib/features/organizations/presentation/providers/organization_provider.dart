@@ -9,6 +9,7 @@ import '../../data/models/create_organization_request.dart';
 import '../../data/services/organization_api_service.dart';
 import '../../domain/entities/organization.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../projects/presentation/providers/projects_provider.dart';
 
 part 'organization_provider.g.dart';
 
@@ -174,16 +175,25 @@ class CurrentOrganization extends _$CurrentOrganization {
     // Invalidate all providers that depend on organization context
     // This will force them to refetch data with the new organization
 
-    // Reset the Dio client to ensure interceptors pick up new organization
-    DioClient.reset();
+    // NOTE: We do NOT need to reset DioClient because OrganizationInterceptor
+    // reads the organization ID from secure storage on EVERY request.
+    // Since switchOrganization() already updated secure storage, the next
+    // API call will automatically use the new organization ID.
 
-    // Don't invalidate apiClientProvider here as it already watches currentOrganizationProvider
-    // and will automatically rebuild when this provider changes
-    // ref.invalidate(apiClientProvider); // REMOVED to prevent circular dependency
+    // We also do NOT invalidate apiClientProvider to avoid circular dependency:
+    // - apiClientProvider watches currentOrganizationProvider
+    // - If we invalidate it here, it creates a circular dependency
+    // - It's not needed anyway since the interceptor reads from storage
 
     // Trigger a global refresh event that other providers can listen to
     // This event-based approach prevents circular dependencies
     ref.read(organizationChangedProvider.notifier).trigger();
+
+    // IMPORTANT: Explicitly invalidate data providers to clear any error states
+    // and force fresh data fetching with the new organization context
+    // This is necessary because providers with keepAlive: true may retain
+    // error states across organization switches
+    ref.invalidate(projectsListProvider);
   }
 }
 

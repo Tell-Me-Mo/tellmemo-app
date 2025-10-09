@@ -190,18 +190,20 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
       setState(() {
         if (e is AuthInvalidCredentialsError) {
           errorType = 'invalid_credentials';
-          _errorMessage = 'We couldn\'t sign you in with these credentials.';
+          _errorMessage = 'Invalid email or password';
           _showSignUpSuggestion = true;
-          _showPasswordResetSuggestion = true;
+          _showPasswordResetSuggestion = false;
         } else {
           final errorString = e.toString().toLowerCase();
-          if (errorString.contains('invalid login credentials') ||
+          if (errorString.contains('invalid email') ||
               errorString.contains('invalid password') ||
-              errorString.contains('user not found')) {
+              errorString.contains('invalid login') ||
+              errorString.contains('user not found') ||
+              errorString.contains('unauthorized')) {
             errorType = 'invalid_credentials';
-            _errorMessage = 'We couldn\'t sign you in with these credentials.';
+            _errorMessage = 'Invalid email or password';
             _showSignUpSuggestion = true;
-            _showPasswordResetSuggestion = true;
+            _showPasswordResetSuggestion = false;
           } else if (errorString.contains('email not confirmed')) {
             errorType = 'email_not_confirmed';
             _errorMessage = 'Please verify your email before signing in';
@@ -213,7 +215,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen>
             _showPasswordResetSuggestion = false;
             _showSignUpSuggestion = false;
           } else if (errorString.contains('network') ||
-              errorString.contains('connection')) {
+              errorString.contains('connection') ||
+              errorString.contains('timeout')) {
             errorType = 'network';
             _errorMessage = 'Network error. Please check your connection';
             _showPasswordResetSuggestion = false;

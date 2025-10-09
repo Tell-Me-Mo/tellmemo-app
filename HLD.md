@@ -83,16 +83,17 @@ TellMeMo helps teams extract insights from project content using AI:
 ┌─────────────────────────────────────────────────────────────────┐
 │                    PROCESSING LAYER                             │
 ├─────────────────────────────────────────────────────────────────┤
-│  Upload Jobs │ Transcription │ Chunking │ Embedding │ RAG      │
-│  APScheduler │ Whisper/Salad │ Service  │ Service   │ Service  │
+│  Redis Queue │ Transcription  │ Chunking │ Embedding │ RAG     │
+│  (RQ Jobs)   │ Whisper/Salad/ │ Service  │ Service   │ Service │
+│              │ Replicate      │          │           │         │
 └─────────────────────────────────────────────────────────────────┘
                                 │
                                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                      STORAGE LAYER                              │
 ├─────────────────────────────────────────────────────────────────┤
-│  PostgreSQL    │  Qdrant        │  Claude API  │  Supabase     │
-│  (Metadata)    │  (Vectors)     │  (LLM)       │  (Auth)       │
+│  PostgreSQL │  Qdrant   │  Redis    │  Claude API │  Supabase  │
+│  (Metadata) │  (Vectors)│  (Queue)  │  (LLM)      │  (Auth)    │
 └─────────────────────────────────────────────────────────────────┘
                                 │
                                 ▼
@@ -127,9 +128,11 @@ TellMeMo helps teams extract insights from project content using AI:
 | **Auth** | Supabase Auth | User authentication |
 | **LLM** | Anthropic Claude | AI generation (Haiku/Sonnet/Opus) |
 | **Embeddings** | EmbeddingGemma | Local embedding model |
-| **Transcription** | OpenAI Whisper + Salad Cloud | Audio to text |
-| **Scheduling** | APScheduler | Background jobs |
+| **Transcription** | OpenAI Whisper + Salad Cloud + Replicate | Audio to text (242x speedup with Replicate) |
+| **Job Queue** | Redis Queue (RQ) | Background job processing with multi-priority queues |
+| **Cache & Pub/Sub** | Redis | Job state management and real-time updates |
 | **Monitoring** | Sentry + Langfuse | Error & LLM tracking |
+| **Queue Dashboard** | RQ Dashboard | Job queue visualization and management |
 
 ### Frontend Stack
 
@@ -146,10 +149,12 @@ TellMeMo helps teams extract insights from project content using AI:
 
 ### Infrastructure
 
-- **Development**: Docker Compose (local PostgreSQL + Qdrant)
+- **Development**: Docker Compose (local PostgreSQL + Qdrant + Redis)
 - **Production Backend**: Hetzner VPS
 - **Database**: Managed PostgreSQL instance
 - **Vector Database**: Qdrant Cloud
+- **Job Queue**: Redis (in-memory or managed instance)
+- **Queue Dashboard**: RQ Dashboard for job monitoring
 - **Deployment**: Git-based with automated migrations
 
 ---
@@ -238,8 +243,9 @@ Standalone Projects (no parent)
 - WebSocket progress updates
 
 **Step 2: Transcription (Audio Only)**
-- Local Whisper transcription (small files)
-- Salad Cloud transcription (large files)
+- Local Whisper transcription (small files, slower)
+- Salad Cloud transcription (large files, cost-effective)
+- Replicate "incredibly-fast-whisper" (242x speedup, 30-min audio in ~20s)
 - Text extraction and storage
 
 **Step 3: Chunking**
@@ -258,12 +264,21 @@ Standalone Projects (no parent)
 - Ready for semantic search
 
 **Services:**
-- `upload_job_service.py` - Async job management
-- `whisper_service.py` - Local transcription
-- `salad_transcription_service.py` - Cloud transcription
-- `chunking_service.py` - Text chunking
-- `embedding_service.py` - Embedding generation
-- `multi_tenant_vector_store.py` - Qdrant operations
+- **Job Management (Redis Queue)**:
+  - `queue_config.py` - Multi-priority queue configuration (high, default, low)
+  - `content_tasks.py` - Content processing jobs
+  - `transcription_tasks.py` - Transcription jobs
+  - `integration_tasks.py` - Integration sync jobs
+  - `summary_tasks.py` - Summary generation jobs
+- **Transcription Services**:
+  - `whisper_service.py` - Local Whisper transcription
+  - `salad_transcription_service.py` - Salad Cloud API
+  - `replicate_transcription_service.py` - Replicate API (incredibly-fast-whisper)
+- **Processing Services**:
+  - `chunking_service.py` - Text chunking
+  - `embedding_service.py` - Embedding generation
+  - `multi_tenant_vector_store.py` - Qdrant operations
+  - `redis_cache_service.py` - Redis caching and pub/sub
 
 ### 5. RAG-Based Querying
 
@@ -400,15 +415,20 @@ Standalone Projects (no parent)
 **Delivery:**
 - In-app notification center
 - Toast notifications
-- Real-time WebSocket updates
+- Real-time WebSocket updates via Redis Pub/Sub
 
 **Database Tables:**
 - `notifications` - Notification records
 
 **WebSocket Endpoints:**
 - `/ws/notifications` - Real-time notification stream
-- `/ws/jobs` - Upload job progress
+- `/ws/jobs` - Upload job progress (powered by Redis Pub/Sub)
 - `/ws/tickets` - Support ticket updates
+
+**Real-Time Architecture:**
+- Redis Pub/Sub channels for job status updates
+- Multiple connection types: binary for RQ, JSON for pub/sub
+- Supports horizontal scaling across multiple backend instances
 
 ### 11. Support Ticket System
 
@@ -422,7 +442,40 @@ Standalone Projects (no parent)
 - `support_tickets` - Ticket data
 - `support_ticket_responses` - Responses
 
-### 12. Fireflies Integration
+### 12. Background Job Queue System
+
+**Technology**: Redis Queue (RQ)
+
+**Features:**
+- **Multi-Priority Queues**: high, default, low priority queues
+- **Task Modules**:
+  - `content_tasks.py` - Content upload and processing
+  - `transcription_tasks.py` - Audio transcription jobs
+  - `integration_tasks.py` - External integration syncs
+  - `summary_tasks.py` - Summary generation
+- **Job Management**:
+  - Automatic retries on failure
+  - Job state persistence in Redis
+  - Real-time status tracking
+  - Failed job monitoring
+- **Dashboard**: RQ Dashboard for visual job monitoring
+- **Scalability**:
+  - Horizontal scaling with multiple workers
+  - Shared state via Redis
+  - No single point of failure
+
+**Real-Time Updates:**
+- Redis Pub/Sub for job status broadcasts
+- WebSocket integration for client notifications
+- Multiple connection types: binary (RQ) and JSON (pub/sub)
+
+**Performance:**
+- Non-blocking async job processing
+- Priority-based execution
+- Efficient resource utilization
+- Supports background job retries
+
+### 13. Fireflies Integration
 
 **Capabilities:**
 - Connect Fireflies.ai account with API key
@@ -448,17 +501,20 @@ User uploads file
 FastAPI validates and stores file
      │
      ▼
-Upload job created (WebSocket notifies progress)
+Redis Queue job enqueued (high/default/low priority)
      │
      ▼
-[If Audio] → Transcription service → Text
-[If Text]  → Direct to chunking
+Redis Pub/Sub notifies job created
      │
      ▼
-Chunking service (500-word chunks)
+[If Audio] → Transcription task (Whisper/Salad/Replicate) → Text
+[If Text]  → Direct to chunking task
      │
      ▼
-Embedding service (EmbeddingGemma)
+Chunking task (500-word chunks)
+     │
+     ▼
+Embedding task (EmbeddingGemma)
      │
      ▼
 Qdrant storage (organization collection)
@@ -467,7 +523,7 @@ Qdrant storage (organization collection)
 PostgreSQL metadata updated
      │
      ▼
-WebSocket notifies completion
+Redis Pub/Sub notifies completion → WebSocket updates client
      │
      ▼
 User receives notification
@@ -740,6 +796,13 @@ Return to user
 - `GET /api/scheduler/schedules` - List schedules
 - `DELETE /api/scheduler/schedules/{schedule_id}` - Cancel schedule
 
+### Job Queue Management
+- **RQ Dashboard**: `http://localhost:9181` - Visual interface for monitoring jobs
+- Jobs organized by priority: high, default, low
+- Real-time job status tracking
+- Failed job retry management
+- Worker pool monitoring
+
 ### Health
 - `GET /api/health` - Health check
 
@@ -851,18 +914,26 @@ Return to user
 
 ### Capacity
 
-- **Current Deployment**: Single server
+- **Current Deployment**: Single server (horizontally scalable)
 - **Concurrent Users**: Tested to 50+ simultaneous
-- **Content Processing**: Async background jobs
+- **Content Processing**: Redis Queue with multi-worker support
 - **Database**: PostgreSQL connection pooling
-- **Scalability**: Horizontal scaling ready (architecture supports)
+- **Job Queue**: Multi-priority queues (high, default, low)
+- **Scalability**: Horizontal scaling enabled via Redis Queue
+  - Multiple worker instances can process jobs concurrently
+  - Shared job state via Redis
+  - No single point of failure for background processing
 
 ### Cost Optimization
 
 - **Embeddings**: Local model (no API costs)
-- **Transcription**: Salad Cloud (cost-effective)
+- **Transcription**:
+  - Replicate (242x speedup, ~20s for 30-min audio)
+  - Salad Cloud (cost-effective for large batches)
+  - Local Whisper (free but slower)
 - **LLM**: Model selection (Haiku for routine, Sonnet/Opus for quality)
 - **Monitoring**: Langfuse tracks per-operation costs
+- **Job Queue**: Redis Queue (open-source, no licensing costs)
 
 ---
 

@@ -38,15 +38,20 @@ class TestReplicateServiceConnectionTest:
     @pytest.mark.asyncio
     async def test_connection_success(self):
         """Test successful API connection."""
-        service = ReplicateTranscriptionService(api_key="test_key")
-
         # Mock successful model fetch with a simple class instead of MagicMock
         class MockModel:
             owner = "vaibhavs10"
             name = "incredibly-fast-whisper"
 
-        # Patch the client's models.get method
-        with patch.object(service.client.models, 'get', return_value=MockModel()):
+        # Create a mock client with models.get method
+        mock_client = MagicMock()
+        mock_models = MagicMock()
+        mock_models.get = MagicMock(return_value=MockModel())
+        mock_client.models = mock_models
+
+        # Patch replicate.Client where it's imported in the service module
+        with patch('services.transcription.replicate_transcription_service.replicate.Client', return_value=mock_client):
+            service = ReplicateTranscriptionService(api_key="test_key")
             result = await service.test_connection()
 
         assert result["success"] is True
