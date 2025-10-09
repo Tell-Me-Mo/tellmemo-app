@@ -108,8 +108,8 @@ jobs:
 
             const bodyText = `## Backend Release v${version}
 
-**Branch:** ${branch}
-**Commit:** ${sha}
+Branch: ${branch}
+Commit: ${sha}
 
 ### Docker Images
 - \`${dockerUsername}/${imageName}:${version}\`
