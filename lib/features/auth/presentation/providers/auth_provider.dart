@@ -110,6 +110,10 @@ class AuthController extends _$AuthController {
     state = const AsyncLoading();
     await _repository.signOut();
     state = const AsyncData(null);
+
+    // Invalidate all auth-related providers to ensure fresh state on next sign in
+    ref.invalidate(authRepositoryProvider);
+    ref.invalidate(authServiceProvider);
   }
 
   Future<void> resetPassword(String email) async {

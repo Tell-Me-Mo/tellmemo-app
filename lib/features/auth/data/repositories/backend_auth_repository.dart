@@ -3,6 +3,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../../domain/auth_interface.dart';
 import '../../../../core/services/auth_service.dart';
+import '../../../../core/network/dio_client.dart';
+import './auth_repository_factory.dart';
 
 class BackendAuthRepository implements AuthInterface {
   final Dio _dio;
@@ -157,23 +159,40 @@ class BackendAuthRepository implements AuthInterface {
   @override
   Future<void> signOut() async {
     try {
-      // Call backend logout endpoint if available
-      try {
-        await _dio.post('/api/v1/auth/logout');
-      } catch (_) {
-        // Ignore backend errors during logout
-      }
-
-      // Clear local auth state
-      await _authService.clearAuth();
-
-      // Clear cached user and session
+      // Clear cached user and session first (before any network calls)
       _cachedUser = null;
       _cachedSession = null;
 
+      // Clear local auth state (this is critical and must succeed)
+      await _authService.clearAuth();
+
       // Emit auth state change
       _authStateController.add(AuthStateChange(session: null, user: null));
+
+      // Call backend logout endpoint if available (but don't block on errors)
+      try {
+        await _dio.post('/api/v1/auth/logout');
+      } catch (_) {
+        // Ignore backend errors during logout - local state is already cleared
+      }
+
+      // Reset singletons to prevent stale state
+      // This ensures next app start gets fresh instances
+      DioClient.reset();
+      AuthRepositoryFactory.reset();
     } catch (e) {
+      // Even if something fails, try to clear local state as a last resort
+      try {
+        _cachedUser = null;
+        _cachedSession = null;
+        await _authService.clearAuth();
+        _authStateController.add(AuthStateChange(session: null, user: null));
+        DioClient.reset();
+        AuthRepositoryFactory.reset();
+      } catch (_) {
+        // Final fallback failed
+      }
+
       throw Exception('Failed to sign out: ${e.toString()}');
     }
   }
