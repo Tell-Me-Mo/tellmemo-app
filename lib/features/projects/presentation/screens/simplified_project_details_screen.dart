@@ -96,12 +96,14 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
   }
 
   void _ensureProjectSelected() {
-    if (mounted) {
-      final project = ref.read(projectDetailProvider(widget.projectId)).value;
-      if (project != null) {
-        ref.read(selectedProjectProvider.notifier).state = project;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final project = ref.read(projectDetailProvider(widget.projectId)).value;
+        if (project != null) {
+          ref.read(selectedProjectProvider.notifier).state = project;
+        }
       }
-    }
+    });
   }
 
   Future<void> _checkContentAvailability() async {
