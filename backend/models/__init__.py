@@ -14,6 +14,9 @@ from .organization_member import OrganizationMember, OrganizationRole
 from .integration import Integration
 from .risk import Risk
 from .task import Task
+from .lesson_learned import LessonLearned
+from .blocker import Blocker
+from .conversation import Conversation
 from .notification import Notification, NotificationType, NotificationPriority, NotificationCategory
 from .support_ticket import SupportTicket, TicketComment, TicketAttachment
 
@@ -35,6 +38,9 @@ __all__ = [
     "Integration",
     "Risk",
     "Task",
+    "LessonLearned",
+    "Blocker",
+    "Conversation",
     "Notification",
     "NotificationType",
     "NotificationPriority",

@@ -22,6 +22,7 @@ from config import get_settings
 from models.user import User
 from models.organization import Organization
 from models.organization_member import OrganizationMember
+from services.cache.redis_cache_service import redis_cache
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -220,7 +221,7 @@ class AuthService:
         token: str
     ) -> Optional[User]:
         """
-        Get user from JWT token
+        Get user from JWT token (with Redis caching)
 
         Args:
             db: Database session
@@ -238,6 +239,22 @@ class AuthService:
         if not supabase_id:
             logger.warning("No user ID in token payload")
             return None
+
+        # Try to get user from cache first
+        cached_session = await self._get_cached_session(supabase_id)
+        if cached_session:
+            # Reconstruct User object from cache
+            user = User(
+                id=UUID(cached_session["user_id"]),
+                supabase_id=cached_session.get("supabase_id"),
+                email=cached_session["email"],
+                name=cached_session.get("name"),
+                avatar_url=cached_session.get("avatar_url"),
+                email_verified=cached_session.get("email_verified", False),
+                last_active_organization_id=UUID(cached_session["org_id"]) if cached_session.get("org_id") else None
+            )
+            logger.debug(f"User loaded from cache: {user.email}")
+            return user
 
         # Get user from database
         result = await db.execute(
@@ -408,6 +425,82 @@ class AuthService:
                 return None
 
         return role
+
+    # ==================== Redis Cache Methods ====================
+
+    async def _get_cached_session(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get cached session data from Redis
+
+        Args:
+            user_id: User ID (can be UUID or string)
+
+        Returns:
+            Cached session data or None
+        """
+        try:
+            # Convert to UUID if string
+            if isinstance(user_id, str):
+                user_uuid = UUID(user_id)
+            else:
+                user_uuid = user_id
+
+            return await redis_cache.get_session(user_uuid)
+        except Exception as e:
+            logger.debug(f"Cache lookup failed: {e}")
+            return None
+
+    async def cache_user_session(
+        self,
+        user: User,
+        organization: Optional[Organization] = None,
+        role: Optional[str] = None
+    ) -> bool:
+        """
+        Cache user session data in Redis
+
+        Args:
+            user: User object
+            organization: Optional organization object
+            role: Optional user role
+
+        Returns:
+            True if cached successfully
+        """
+        try:
+            session_data = {
+                "user_id": str(user.id),
+                "supabase_id": user.supabase_id,
+                "email": user.email,
+                "name": user.name,
+                "avatar_url": user.avatar_url,
+                "email_verified": user.email_verified,
+                "org_id": str(organization.id) if organization else None,
+                "org_name": organization.name if organization else None,
+                "role": role,
+                "cached_at": datetime.now(timezone.utc).isoformat()
+            }
+
+            return await redis_cache.set_session(user.id, session_data)
+        except Exception as e:
+            logger.error(f"Failed to cache session: {e}")
+            return False
+
+    async def invalidate_user_session(self, user_id: UUID) -> bool:
+        """
+        Invalidate cached session for a user
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            True if invalidated successfully
+        """
+        try:
+            return await redis_cache.delete_session(user_id)
+        except Exception as e:
+            logger.error(f"Failed to invalidate session: {e}")
+            return False
 
 
 # Singleton instance

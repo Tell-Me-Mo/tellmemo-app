@@ -209,24 +209,31 @@ class TestRescheduleProjectReports:
     async def test_reschedule_with_cron_expression(
         self, authenticated_org_client: AsyncClient
     ):
-        """Test rescheduling using a cron expression."""
+        """Test rescheduling using a cron expression.
+
+        NOTE: This endpoint is deprecated and returns 501.
+        Scheduling has been moved to Redis Queue (RQ).
+        """
         # Act
         response = await authenticated_org_client.post(
             "/api/v1/scheduler/reschedule",
             json={"cron_expression": "0 18 * * fri"},
         )
 
-        # Assert
-        assert response.status_code == 200
+        # Assert - endpoint is deprecated and returns 501
+        assert response.status_code == 501
         data = response.json()
-        assert data["status"] == "success"
-        assert "cron expression" in data["message"]
-        assert "next_run_time" in data
+        assert "detail" in data
+        assert "Redis Queue" in data["detail"]
 
     async def test_reschedule_with_individual_components(
         self, authenticated_org_client: AsyncClient
     ):
-        """Test rescheduling using individual time components."""
+        """Test rescheduling using individual time components.
+
+        NOTE: This endpoint is deprecated and returns 501.
+        Scheduling has been moved to Redis Queue (RQ).
+        """
         # Act
         response = await authenticated_org_client.post(
             "/api/v1/scheduler/reschedule",
@@ -237,27 +244,29 @@ class TestRescheduleProjectReports:
             },
         )
 
-        # Assert
-        # FIXED: Method names corrected, should work now
-        assert response.status_code == 200
+        # Assert - endpoint is deprecated and returns 501
+        assert response.status_code == 501
         data = response.json()
-        assert data["status"] == "success"
-        assert "next_run_time" in data
+        assert "detail" in data
+        assert "Redis Queue" in data["detail"]
 
     async def test_reschedule_with_defaults(self, authenticated_org_client: AsyncClient):
-        """Test rescheduling with default values (Friday 5 PM)."""
+        """Test rescheduling with default values (Friday 5 PM).
+
+        NOTE: This endpoint is deprecated and returns 501.
+        Scheduling has been moved to Redis Queue (RQ).
+        """
         # Act
         response = await authenticated_org_client.post(
             "/api/v1/scheduler/reschedule",
             json={},  # Use defaults
         )
 
-        # Assert
-        # FIXED: Method names corrected, should work now
-        assert response.status_code == 200
+        # Assert - endpoint is deprecated and returns 501
+        assert response.status_code == 501
         data = response.json()
-        assert data["status"] == "success"
-        assert "next_run_time" in data
+        assert "detail" in data
+        assert "Redis Queue" in data["detail"]
 
     async def test_reschedule_invalid_hour(self, authenticated_org_client: AsyncClient):
         """Test rescheduling with invalid hour value."""

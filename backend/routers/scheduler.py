@@ -6,6 +6,7 @@ from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from utils.logger import get_logger, sanitize_for_log
 from services.scheduling.scheduler_service import scheduler_service
@@ -47,17 +48,16 @@ async def get_scheduler_status(
     current_user: User = Depends(get_current_user),
     current_org: Organization = Depends(get_current_organization),
 ):
-    """Get the current scheduler status and scheduled jobs."""
-    try:
-        jobs = scheduler_service.get_scheduled_jobs()
+    """
+    Get the current scheduler status and scheduled jobs.
 
-        return SchedulerStatusResponse(
-            scheduler_running=scheduler_service._is_running,
-            jobs=jobs
-        )
-    except Exception as e:
-        logger.error(f"Failed to get scheduler status: {e}")
-        raise HTTPException(status_code=500, detail="Failed to get scheduler status")
+    Note: Automated scheduling has been moved to Redis Queue (RQ).
+    This endpoint returns empty for backward compatibility.
+    """
+    return SchedulerStatusResponse(
+        scheduler_running=False,
+        jobs=[]
+    )
 
 
 @router.post("/trigger-project-reports")
@@ -87,7 +87,6 @@ async def trigger_project_reports(
 
             # Validate project belongs to user's organization
             from models.project import Project
-            from sqlalchemy import select
 
             result = await db.execute(
                 select(Project).where(Project.id == project_uuid)
@@ -118,13 +117,47 @@ async def trigger_project_reports(
             # Trigger for all projects in user's organization
             logger.info(f"Manual trigger for project reports - All active projects in organization {current_org.id}")
 
-            # Use correct method name
-            count = await scheduler_service._generate_weekly_reports()
+            # Get all active projects in organization
+            from models.project import Project, ProjectStatus
+
+            result = await db.execute(
+                select(Project).where(
+                    Project.organization_id == current_org.id,
+                    Project.status == ProjectStatus.ACTIVE
+                )
+            )
+            projects = result.scalars().all()
+
+            if not projects:
+                return {
+                    "status": "success",
+                    "message": "No active projects found in organization",
+                    "summaries_generated": 0
+                }
+
+            # Generate reports for each project
+            count = 0
+            errors = []
+            for project in projects:
+                try:
+                    await scheduler_service.trigger_weekly_report(
+                        project_id=str(project.id),
+                        date_range_start=request.date_range_start,
+                        date_range_end=request.date_range_end
+                    )
+                    count += 1
+                except Exception as e:
+                    logger.error(f"Failed to generate report for project {project.id}: {e}")
+                    errors.append(str(project.id))
+
+            message = f"Project reports generated for {count} projects"
+            if errors:
+                message += f" ({len(errors)} failed)"
 
             return {
-                "status": "success",
-                "message": "Project report generation triggered for all active projects",
-                "summaries_generated": count if count else 0
+                "status": "success" if count > 0 else "partial_failure",
+                "message": message,
+                "summaries_generated": count
             }
 
     except HTTPException:
@@ -144,33 +177,12 @@ async def reschedule_project_reports(
     """
     Reschedule the project report generation time.
 
+    Note: Automated scheduling has been moved to Redis Queue (RQ).
+    This endpoint is deprecated and returns a 501 Not Implemented status.
+
     Requires admin role.
     """
-
-    try:
-        # Handle cron expression or individual time components
-        if request.cron_expression:
-            # Parse cron expression and reschedule
-            # For simplicity, just return success
-            return {
-                "status": "success",
-                "message": f"Project reports rescheduled with cron expression: {request.cron_expression}",
-                "next_run_time": datetime.utcnow().isoformat()
-            }
-        else:
-            # Use correct method name
-            next_run = scheduler_service.reschedule_weekly_reports(
-                day_of_week=request.day_of_week or "fri",
-                hour=request.hour or 17,
-                minute=request.minute or 0
-            )
-
-            return {
-                "status": "success",
-                "message": f"Project reports rescheduled to {(request.day_of_week or 'FRI').upper()} at {request.hour or 17:02d}:{request.minute or 0:02d} UTC",
-                "next_run_time": next_run.isoformat() if next_run else datetime.utcnow().isoformat()
-            }
-
-    except Exception as e:
-        logger.error(f"Failed to reschedule project reports: {e}")
-        raise HTTPException(status_code=500, detail="Failed to reschedule project reports")
+    raise HTTPException(
+        status_code=501,
+        detail="Automated scheduling has been moved to Redis Queue. Use manual triggers via /trigger-project-reports instead."
+    )

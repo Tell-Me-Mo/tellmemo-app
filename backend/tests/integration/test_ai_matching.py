@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models.organization import Organization
 from models.user import User
 from models.project import Project
-from services.core.upload_job_service import upload_job_service
+from queue_config import queue_config
 
 
 # ============================================================================
@@ -153,13 +153,12 @@ class TestAIMatchingNewProject:
 
         # Get job details to verify metadata
         job_id = data["job_id"]
-        job = upload_job_service.get_job(job_id)
+        job = queue_config.get_job(job_id)
 
         # Verify job exists and has correct metadata
         assert job is not None, "Job should exist in job service"
-        assert "metadata" in job.to_dict()
 
-        job_metadata = job.metadata
+        job_metadata = job.meta or {}
 
         # Verify project_created flag exists and is True for new projects
         assert "is_new_project" in job_metadata, \
@@ -198,10 +197,10 @@ class TestAIMatchingNewProject:
 
         # Get job and check confidence in metadata
         job_id = data["job_id"]
-        job = upload_job_service.get_job(job_id)
+        job = queue_config.get_job(job_id)
 
         assert job is not None
-        job_metadata = job.metadata
+        job_metadata = job.meta or {}
 
         # Verify confidence score exists
         assert "match_confidence" in job_metadata, \
@@ -266,10 +265,10 @@ class TestAIMatchingExistingProject:
 
         # Verify job has project matching metadata
         job_id = data["job_id"]
-        job = upload_job_service.get_job(job_id)
+        job = queue_config.get_job(job_id)
         assert job is not None
 
-        job_metadata = job.metadata
+        job_metadata = job.meta or {}
         assert "ai_matched" in job_metadata
         assert job_metadata["ai_matched"] is True
         assert "is_new_project" in job_metadata
@@ -444,11 +443,12 @@ class TestAIMatchingEmail:
 
         # Verify job metadata
         job_id = data["job_id"]
-        job = upload_job_service.get_job(job_id)
+        job = queue_config.get_job(job_id)
 
         assert job is not None
-        assert "is_new_project" in job.metadata
-        assert "match_confidence" in job.metadata
+        job_metadata = job.meta or {}
+        assert "is_new_project" in job_metadata
+        assert "match_confidence" in job_metadata
 
 
 # ============================================================================

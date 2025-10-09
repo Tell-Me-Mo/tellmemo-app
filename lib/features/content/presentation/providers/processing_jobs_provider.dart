@@ -56,6 +56,7 @@ class ProcessingJob {
 @Riverpod(keepAlive: true)
 class ProcessingJobs extends _$ProcessingJobs {
   final Map<String, StreamSubscription<JobModel>> _subscriptions = {};
+  final Set<String> _completedJobs = {}; // Track which jobs have already been processed
   JobWebSocketService? _service;
 
   @override
@@ -119,48 +120,54 @@ class ProcessingJobs extends _$ProcessingJobs {
         // Check if summary was generated
         String? summaryId;
         if (jobModel.status == JobStatus.completed) {
-          print('[ProcessingJobs] Job completed: $jobId for project: ${job.projectId}');
+          // Only process completion logic ONCE per job
+          if (!_completedJobs.contains(jobId)) {
+            _completedJobs.add(jobId);
+            print('[ProcessingJobs] Job completed: $jobId for project: ${job.projectId}');
 
-          // For transcription jobs, extract content_id from result if not already set
-          String? contentId = job.contentId;
-          if (contentId == null && jobModel.result != null) {
-            contentId = jobModel.result!['content_id'] as String?;
-          }
-
-          // Mark the content document as new if we have a contentId
-          if (contentId != null) {
-            print('[ProcessingJobs] Marking content as new: $contentId');
-            ref.read(newItemsProvider.notifier).addNewItem(contentId);
-          }
-
-          // Extract summary ID from result if available
-          // The result might have 'summary_id' or 'id' depending on the backend response
-          if (jobModel.result != null) {
-            summaryId = jobModel.result!['summary_id'] as String? ??
-                       jobModel.result!['id'] as String?;
-
-            // Mark the summary as new
-            if (summaryId != null) {
-              print('[ProcessingJobs] Marking summary as new: $summaryId');
-              ref.read(newItemsProvider.notifier).addNewItem(summaryId);
+            // For transcription jobs, extract content_id from result if not already set
+            String? contentId = job.contentId;
+            if (contentId == null && jobModel.result != null) {
+              contentId = jobModel.result!['content_id'] as String?;
             }
 
-            // Check if a new project was created during this job
-            final projectWasCreated = jobModel.result!['project_was_created'] as bool? ?? false;
+            // Mark the content document as new if we have a contentId
+            if (contentId != null) {
+              print('[ProcessingJobs] Marking content as new: $contentId');
+              ref.read(newItemsProvider.notifier).addNewItem(contentId);
+            }
+
+            // Extract summary ID from result if available
+            // The result might have 'summary_id' or 'id' depending on the backend response
+            if (jobModel.result != null) {
+              summaryId = jobModel.result!['summary_id'] as String? ??
+                         jobModel.result!['id'] as String?;
+
+              // Mark the summary as new
+              if (summaryId != null) {
+                print('[ProcessingJobs] Marking summary as new: $summaryId');
+                ref.read(newItemsProvider.notifier).addNewItem(summaryId);
+              }
+
+              // Check if a new project was created during this job
+              final projectWasCreated = jobModel.result!['project_was_created'] as bool? ?? false;
+              final actualProjectId = jobModel.metadata['project_id'] as String? ?? job.projectId;
+              if (projectWasCreated && actualProjectId.isNotEmpty) {
+                print('[ProcessingJobs] Marking project as new: $actualProjectId');
+                ref.read(newItemsProvider.notifier).addNewItem(actualProjectId);
+              }
+
+              // Don't call the navigation callback anymore - user will click button to navigate
+            }
+
+            // Use actual project ID for refreshing providers (important for AI-matched projects)
             final actualProjectId = jobModel.metadata['project_id'] as String? ?? job.projectId;
-            if (projectWasCreated && actualProjectId.isNotEmpty) {
-              print('[ProcessingJobs] Marking project as new: $actualProjectId');
-              ref.read(newItemsProvider.notifier).addNewItem(actualProjectId);
-            }
-
-            // Don't call the navigation callback anymore - user will click button to navigate
+            print('[ProcessingJobs] Starting provider refresh for project: $actualProjectId');
+            // Refresh providers immediately - backend only sends 'completed' when data is ready
+            _refreshProvidersAfterJobCompletion(actualProjectId, jobModel.result);
+          } else {
+            print('[ProcessingJobs] Job $jobId already processed, skipping duplicate refresh');
           }
-
-          // Use actual project ID for refreshing providers (important for AI-matched projects)
-          final actualProjectId = jobModel.metadata['project_id'] as String? ?? job.projectId;
-          print('[ProcessingJobs] Starting provider refresh for project: $actualProjectId');
-          // Refresh providers immediately - backend only sends 'completed' when data is ready
-          _refreshProvidersAfterJobCompletion(actualProjectId, jobModel.result);
         }
 
         final updatedJob = job.copyWith(
@@ -217,6 +224,9 @@ class ProcessingJobs extends _$ProcessingJobs {
     // Cancel subscription
     _subscriptions[jobId]?.cancel();
     _subscriptions.remove(jobId);
+
+    // Remove from completed jobs set
+    _completedJobs.remove(jobId);
 
     // Unsubscribe from WebSocket
     try {

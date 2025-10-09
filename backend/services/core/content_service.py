@@ -11,7 +11,6 @@ from sqlalchemy.orm import selectinload
 from models.content import Content, ContentType
 from models.project import Project
 from services.activity.activity_service import ActivityService
-from services.core.upload_job_service import upload_job_service, JobType, JobStatus
 from utils.logger import get_logger
 from utils.monitoring import monitor_operation, track_background_task
 from config import get_settings
@@ -19,6 +18,26 @@ from config import get_settings
 settings = get_settings()
 
 logger = get_logger(__name__)
+
+
+def _update_rq_job_progress(rq_job, progress: float, step: str, current_step: int = None):
+    """Helper to update RQ job meta and publish to Redis."""
+    if not rq_job:
+        return
+
+    from queue_config import queue_config
+
+    rq_job.meta['progress'] = progress
+    rq_job.meta['step'] = step
+    if current_step is not None:
+        rq_job.meta['current_step'] = current_step
+    rq_job.save_meta()
+
+    queue_config.publish_job_update(rq_job.id, {
+        'status': 'processing',
+        'progress': progress,
+        'step': step
+    })
 
 # Language detection will be handled by langdetect_service
 # which initializes at startup with SSL bypass
@@ -196,25 +215,29 @@ class ContentService:
     async def process_content_async(
         session: AsyncSession,
         content_id: uuid.UUID,
-        job_id: Optional[str] = None
+        rq_job=None
     ) -> None:
         """
         Process content asynchronously (chunking, embedding, storage).
-        
+
         Args:
             session: Database session
             content_id: UUID of content to process
-            job_id: Optional job ID for progress tracking
+            rq_job: Optional RQ job object for progress tracking (with Redis pub/sub)
         """
         try:
-            # Update job progress if job_id provided
-            if job_id:
-                upload_job_service.update_job_progress(
-                    job_id, 
-                    current_step=1, 
-                    status=JobStatus.PROCESSING,
-                    step_description="Validating content"
-                )
+            # Update job progress via RQ + Redis pub/sub
+            if rq_job:
+                from queue_config import queue_config
+                rq_job.meta['progress'] = 10.0
+                rq_job.meta['current_step'] = 1
+                rq_job.meta['step'] = 'Validating content'
+                rq_job.save_meta()
+                queue_config.publish_job_update(rq_job.id, {
+                    'status': 'processing',
+                    'progress': 10.0,
+                    'step': 'Validating content'
+                })
             # Get content
             result = await session.execute(
                 select(Content).where(Content.id == content_id)
@@ -227,13 +250,7 @@ class ContentService:
             logger.info(f"Starting async processing for content {content_id}")
             
             # Update job: preprocessing
-            if job_id:
-                upload_job_service.update_job_progress(
-                    job_id, 
-                    current_step=2,
-                    progress=20.0,
-                    step_description="Preprocessing content"
-                )
+            _update_rq_job_progress(rq_job, 20.0, "Preprocessing content", current_step=2)
             
             # Preprocess content based on type, especially for meeting transcripts
             processed_content = content.content
@@ -259,13 +276,7 @@ class ContentService:
                     processed_content = content.content
             
             # Update job: chunking
-            if job_id:
-                upload_job_service.update_job_progress(
-                    job_id, 
-                    current_step=3,
-                    progress=40.0,
-                    step_description="Splitting into chunks"
-                )
+            _update_rq_job_progress(rq_job, 40.0, "Splitting into chunks", current_step=3)
             
             # Chunk the processed text using the chunking service
             from services.rag.chunking_service import chunking_service
@@ -280,13 +291,7 @@ class ContentService:
             content.processed_at = datetime.utcnow()
             
             # Update job: generating embeddings
-            if job_id:
-                upload_job_service.update_job_progress(
-                    job_id, 
-                    current_step=4,
-                    progress=60.0,
-                    step_description="Generating embeddings"
-                )
+            _update_rq_job_progress(rq_job, 60.0, "Generating embeddings", current_step=4)
             
             # Generate embeddings and store in Qdrant
             from services.rag.embedding_service import embedding_service
@@ -349,13 +354,7 @@ class ContentService:
                 points.append(point)
             
             # Update job: storing in vector database
-            if job_id:
-                upload_job_service.update_job_progress(
-                    job_id, 
-                    current_step=5,
-                    progress=80.0,
-                    step_description="Storing in database"
-                )
+            _update_rq_job_progress(rq_job, 80.0, "Storing in database", current_step=5)
             
             # Get organization_id from project
             project = await session.get(Project, content.project_id)
@@ -375,13 +374,7 @@ class ContentService:
             logger.info(f"Completed processing for content {content_id}: {len(chunks)} chunks")
             
             # Update job: almost complete
-            if job_id:
-                upload_job_service.update_job_progress(
-                    job_id, 
-                    current_step=6,
-                    progress=90.0,
-                    step_description="Preparing for summary generation"
-                )
+            _update_rq_job_progress(rq_job, 90.0, "Preparing for summary generation", current_step=6)
             
             # Track partial failures for AI features
             partial_failures = {}
@@ -395,13 +388,7 @@ class ContentService:
                     from services.summaries.summary_service_refactored import summary_service
 
                     # Update job progress to indicate AI processing
-                    if job_id:
-                        upload_job_service.update_job_progress(
-                            job_id,
-                            current_step=6,
-                            step_description="Generating AI summary...",
-                            progress=85.0
-                        )
+                    _update_rq_job_progress(rq_job, 85.0, "Generating AI summary...", current_step=6)
 
                     # Generate meeting summary in background with job tracking
                     summary_data = await summary_service.generate_meeting_summary(
@@ -409,7 +396,7 @@ class ContentService:
                         project_id=content.project_id,
                         content_id=content_id,
                         created_by="system",
-                        job_id=job_id  # Pass job_id for progress tracking
+                        rq_job=rq_job  # Pass RQ job for progress tracking
                     )
                     summary_id = summary_data.get('id')
                     logger.info(f"Auto-generated meeting summary {summary_id} for content {content_id}")
@@ -545,7 +532,9 @@ class ContentService:
             # which handles extraction, deduplication, and database updates in one place
 
             # Mark job as completed (with partial success if applicable)
-            if job_id:
+            if rq_job:
+                from queue_config import queue_config
+
                 result_data = {
                     "content_id": str(content_id),
                     "chunks": len(chunks)
@@ -555,11 +544,10 @@ class ContentService:
                     result_data["summary_id"] = summary_data['id']
 
                 # Include project_was_created flag if this was an AI-matched project
-                # Check job metadata for is_new_project (set during AI matching)
-                job = upload_job_service.get_job(job_id)
-                if job and job.metadata.get('is_new_project'):
+                # Check RQ job metadata for is_new_project (set during AI matching)
+                if rq_job.meta.get('is_new_project'):
                     result_data["project_was_created"] = True
-                    logger.info(f"✓ Added project_was_created flag to job result (job_id: {job_id})")
+                    logger.info(f"✓ Added project_was_created flag to job result (job_id: {rq_job.id})")
 
                 # Check for partial failures
                 if partial_failures:
@@ -575,32 +563,40 @@ class ContentService:
                 else:
                     status_msg = "Processing complete"
 
+                # Update RQ job with completion status
+                rq_job.meta['status'] = 'completed'
+                rq_job.meta['progress'] = 100.0
+                rq_job.meta['step'] = status_msg
+                rq_job.meta['result'] = result_data
+
                 # Add metadata about AI processing status
-                metadata = {}
                 if partial_failures:
-                    metadata.update(partial_failures)
+                    rq_job.meta.update(partial_failures)
                     # Track retry count if AI was overloaded
                     if partial_failures.get('ai_overloaded'):
-                        metadata['ai_retry_count'] = metadata.get('ai_retry_count', 0) + 1
+                        rq_job.meta['ai_retry_count'] = rq_job.meta.get('ai_retry_count', 0) + 1
 
-                upload_job_service.update_job_progress(
-                    job_id,
-                    status=JobStatus.COMPLETED,
-                    progress=100.0,
-                    step_description=status_msg,
-                    result=result_data,
-                    metadata=metadata
-                )
+                rq_job.save_meta()
+
+                # Publish completion via Redis
+                queue_config.publish_job_update(rq_job.id, {
+                    'status': 'completed',
+                    'progress': 100.0,
+                    'step': status_msg
+                })
 
         except Exception as e:
             logger.error(f"Content processing failed for {content_id}: {e}")
-            # Update job with error
-            if job_id:
-                upload_job_service.update_job_progress(
-                    job_id,
-                    status=JobStatus.FAILED,
-                    error_message=str(e)
-                )
+            # Update RQ job with error
+            if rq_job:
+                from queue_config import queue_config
+                rq_job.meta['status'] = 'failed'
+                rq_job.meta['error'] = str(e)
+                rq_job.save_meta()
+                queue_config.publish_job_update(rq_job.id, {
+                    'status': 'failed',
+                    'error': str(e)
+                })
             # Update content with error
             if content:
                 content.processing_error = str(e)
@@ -618,23 +614,47 @@ class ContentService:
     @monitor_operation("trigger_async_processing", "async_worker")
     async def trigger_async_processing(
         content_id: uuid.UUID,
-        job_id: Optional[str] = None
-    ) -> Optional[str]:
+        job_metadata: Optional[Dict[str, Any]] = None
+    ) -> str:
         """
-        Trigger async processing for content.
+        Trigger async processing for content using RQ.
 
         Args:
             content_id: UUID of content to process
-            job_id: Optional job ID for tracking
+            job_metadata: Optional metadata to store in RQ job
 
         Returns:
-            Job ID if created
+            RQ job ID
         """
-        # For MVP, using asyncio.create_task for simple async processing
-        # In production, would use Celery or similar task queue
-        asyncio.create_task(ContentService._process_in_background(content_id, job_id))
-        logger.info(f"Triggered async processing for content {content_id} with job {job_id}")
-        return job_id
+        # Use RQ for background processing
+        from queue_config import queue_config
+        from tasks.content_tasks import process_content_task
+
+        rq_job = queue_config.default_queue.enqueue(
+            process_content_task,
+            content_id=str(content_id),  # Convert UUID to string for RQ
+            tracking_job_id=None,
+            job_timeout='20m',  # 20 minute timeout
+            result_ttl=3600,  # Keep result for 1 hour
+            failure_ttl=86400  # Keep failed jobs for 24 hours
+        )
+
+        # Initialize RQ job metadata for progress tracking
+        rq_job.meta['status'] = 'processing'
+        rq_job.meta['progress'] = 0.0
+        rq_job.meta['step'] = 'Content uploaded, queuing for processing...'
+        rq_job.meta['current_step'] = 0
+        rq_job.meta['total_steps'] = 6
+        rq_job.meta['content_id'] = str(content_id)
+
+        # Add custom metadata if provided
+        if job_metadata:
+            rq_job.meta.update(job_metadata)
+
+        rq_job.save_meta()
+
+        logger.info(f"Enqueued content processing for {content_id} (RQ job: {rq_job.id})")
+        return rq_job.id
 
     @staticmethod
     @track_background_task("process_content_background", {"task_type": "content_processing"})

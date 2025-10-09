@@ -19,6 +19,13 @@ class Settings(BaseSettings):
     postgres_db: str = Field(default="pm_master_db", env="POSTGRES_DB")
     postgres_host: str = Field(default="localhost", env="POSTGRES_HOST")
     postgres_port: int = Field(default=5432, env="POSTGRES_PORT")
+
+    # Redis Configuration
+    redis_host: str = Field(default="localhost", env="REDIS_HOST")
+    redis_port: int = Field(default=6379, env="REDIS_PORT")
+    redis_password: str = Field(default="", env="REDIS_PASSWORD")
+    redis_db: int = Field(default=0, env="REDIS_DB")
+    session_cache_ttl_minutes: int = Field(default=30, env="SESSION_CACHE_TTL_MINUTES")
     
     # Qdrant Configuration
     qdrant_host: str = Field(default="localhost", env="QDRANT_HOST")
@@ -159,11 +166,13 @@ class Settings(BaseSettings):
     logstash_port: int = Field(default=8080, env="LOGSTASH_PORT")  # HTTP input port
 
     # Transcription Service Configuration (Defaults - can be overridden by UI integration settings)
-    # Options: "whisper" (local) or "salad" (Salad API)
+    # Options: "whisper" (local), "salad" (Salad API), or "replicate" (Replicate API)
     default_transcription_service: str = Field(default="whisper", env="DEFAULT_TRANSCRIPTION_SERVICE")
     # Salad API credentials (only needed if using Salad as default)
     salad_api_key: str = Field(default="", env="SALAD_API_KEY")
     salad_organization_name: str = Field(default="", env="SALAD_ORGANIZATION_NAME")
+    # Replicate API credentials (only needed if using Replicate as default)
+    replicate_api_key: str = Field(default="", env="REPLICATE_API_KEY")
     
     class Config:
         # Look for .env in parent directory (root of project)

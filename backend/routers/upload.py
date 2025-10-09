@@ -14,7 +14,6 @@ from dependencies.auth import get_current_organization
 from models.organization import Organization
 from models.content import ContentType
 from services.core.content_service import ContentService
-from services.core.upload_job_service import upload_job_service, JobType
 from services.intelligence.project_matcher_service import project_matcher_service
 from utils.logger import get_logger
 from config import get_settings
@@ -107,26 +106,20 @@ async def upload_content_with_ai_matching(
         )
         
         await session.commit()
-        
-        # Create job for tracking
-        content_size = len(request.content.encode('utf-8'))
-        job_id = upload_job_service.create_job(
-            project_id=str(project_uuid),
-            job_type=JobType.TEXT_UPLOAD if request.content_type == "meeting" else JobType.EMAIL_UPLOAD,
-            filename=None,
-            file_size=content_size,
-            total_steps=6,
-            metadata={
-                "content_id": str(content.id), 
+
+        # Trigger async processing (returns RQ job ID)
+        rq_job_id = await ContentService.trigger_async_processing(
+            content_id=content.id,
+            job_metadata={
+                "content_id": str(content.id),
                 "title": request.title,
+                "project_id": str(project_uuid),
+                "filename": request.title,
                 "ai_matched": True,
                 "is_new_project": match_result['is_new'],
                 "match_confidence": match_result['confidence']
             }
         )
-        
-        # Trigger async processing with job tracking
-        await ContentService.trigger_async_processing(content.id, job_id)
         
         logger.info(f"Successfully uploaded content {content.id} with AI matching to project {project_uuid}")
         
@@ -139,7 +132,7 @@ async def upload_content_with_ai_matching(
             title=request.title,
             uploaded_at=content.uploaded_at,
             chunk_count=0,  # Will be updated after processing
-            job_id=job_id
+            job_id=rq_job_id  # Return RQ job ID for websocket tracking
         )
         
     except HTTPException:

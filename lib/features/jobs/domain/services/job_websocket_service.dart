@@ -9,7 +9,8 @@ class JobWebSocketService {
   WebSocketChannel? _channel;
   String? _clientId;
   bool _isConnected = false;
-  
+  bool _isConnecting = false; // Prevent concurrent connection attempts
+
   // Stream controllers for job updates
   final _jobUpdateController = StreamController<JobModel>.broadcast();
   final _connectionStateController = StreamController<bool>.broadcast();
@@ -43,15 +44,35 @@ class JobWebSocketService {
   
   /// Connect to WebSocket server
   Future<void> connect({String? clientId}) async {
-    if (_isConnected) return;
-    
-    _clientId = clientId;
-    
+    // Prevent concurrent connection attempts
+    if (_isConnecting) {
+      debugPrint('[JobWebSocket] Connection already in progress, skipping');
+      return;
+    }
+
+    // If already connected and healthy, skip
+    if (_isConnected && _channel != null) {
+      debugPrint('[JobWebSocket] Already connected, skipping reconnect');
+      return;
+    }
+
+    _isConnecting = true;
+
     try {
+      // Close old connection if exists
+      if (_channel != null) {
+        debugPrint('[JobWebSocket] Closing existing connection before reconnecting');
+        await _channel!.sink.close();
+        _channel = null;
+        _isConnected = false;
+      }
+
+      _clientId = clientId;
+
       debugPrint('[JobWebSocket] Connecting to $_wsUrl');
-      
+
       _channel = WebSocketChannel.connect(Uri.parse(_wsUrl));
-      
+
       // Listen to messages
       _channel!.stream.listen(
         _handleMessage,
@@ -59,36 +80,46 @@ class JobWebSocketService {
         onDone: _handleDisconnect,
         cancelOnError: false,
       );
-      
+
       _isConnected = true;
       _reconnectAttempts = 0;
       _connectionStateController.add(true);
-      
+
       // Start ping timer for keepalive
       _startPingTimer();
-      
+
       // Re-subscribe to previous subscriptions
       await _resubscribe();
-      
+
       debugPrint('[JobWebSocket] Connected successfully');
     } catch (e) {
       debugPrint('[JobWebSocket] Connection failed: $e');
+      _isConnected = false;
       _handleError(e);
+    } finally {
+      _isConnecting = false;
     }
   }
   
   /// Disconnect from WebSocket server
-  void disconnect() {
+  Future<void> disconnect() async {
     debugPrint('[JobWebSocket] Disconnecting...');
-    
+
     _cancelReconnectTimer();
     _cancelPingTimer();
-    
-    _channel?.sink.close();
-    _channel = null;
-    
+
+    if (_channel != null) {
+      await _channel!.sink.close();
+      _channel = null;
+    }
+
     _isConnected = false;
-    _connectionStateController.add(false);
+    _isConnecting = false; // Reset connecting flag
+
+    // Only add to stream if not closed
+    if (!_connectionStateController.isClosed) {
+      _connectionStateController.add(false);
+    }
   }
   
   /// Subscribe to job updates
@@ -335,16 +366,24 @@ class JobWebSocketService {
   }
   
   /// Clean up resources
-  void dispose() {
+  Future<void> dispose() async {
+    debugPrint('[JobWebSocket] Disposing service...');
+
     // Cancel any timers first to prevent them from firing after disposal
     _cancelPingTimer();
     _cancelReconnectTimer();
 
     // Then disconnect
-    disconnect();
+    await disconnect();
+
+    // Clear subscriptions
+    _subscribedJobs.clear();
+    _subscribedProject = null;
 
     // Finally close the stream controllers
-    _jobUpdateController.close();
-    _connectionStateController.close();
+    await _jobUpdateController.close();
+    await _connectionStateController.close();
+
+    debugPrint('[JobWebSocket] Service disposed');
   }
 }

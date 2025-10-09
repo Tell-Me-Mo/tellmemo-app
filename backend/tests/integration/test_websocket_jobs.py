@@ -23,7 +23,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models.user import User
 from models.organization import Organization
 from models.project import Project, ProjectStatus
-from services.core.upload_job_service import upload_job_service, JobType, JobStatus
+from queue_config import queue_config
+from rq.job import Job as RQJob
 import uuid
 
 from tests.websocket_test_utils import WebSocketTestClient, send_and_receive, wait_for_websocket_message
@@ -56,15 +57,22 @@ async def test_project(
 @pytest.fixture
 def test_job(test_project: Project):
     """Create a test job for WebSocket tests."""
-    job_id = upload_job_service.create_job(
-        project_id=str(test_project.id),
-        job_type=JobType.TEXT_UPLOAD,
-        filename="websocket_test.txt",
-        file_size=2048,
-        total_steps=5,
-        metadata={"test": "websocket"}
+    def _test_task():
+        return {"status": "completed"}
+
+    # Enqueue job with metadata
+    job = queue_config.default_queue.enqueue(
+        _test_task,
+        meta={
+            "project_id": str(test_project.id),
+            "job_type": "text_upload",
+            "filename": "websocket_test.txt",
+            "file_size": 2048,
+            "total_steps": 5,
+            "test": "websocket"
+        }
     )
-    return upload_job_service.get_job(job_id)
+    return job
 
 
 # ============================================================================

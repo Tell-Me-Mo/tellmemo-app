@@ -7,26 +7,26 @@ part of 'job_websocket_provider.dart';
 // **************************************************************************
 
 String _$jobWebSocketServiceHash() =>
-    r'0863f56d40b16a351cc8b715538b088d5e4e074e';
+    r'd720f59522204a5a717f704f9afbba8e9374cb55';
 
 /// WebSocket service provider
+/// Using keepAlive to prevent recreation and connection leaks
 ///
 /// Copied from [jobWebSocketService].
 @ProviderFor(jobWebSocketService)
-final jobWebSocketServiceProvider =
-    AutoDisposeProvider<JobWebSocketService>.internal(
-      jobWebSocketService,
-      name: r'jobWebSocketServiceProvider',
-      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$jobWebSocketServiceHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
+final jobWebSocketServiceProvider = Provider<JobWebSocketService>.internal(
+  jobWebSocketService,
+  name: r'jobWebSocketServiceProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$jobWebSocketServiceHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef JobWebSocketServiceRef = AutoDisposeProviderRef<JobWebSocketService>;
+typedef JobWebSocketServiceRef = ProviderRef<JobWebSocketService>;
 String _$jobWebSocketUpdatesHash() =>
     r'62cf8d0f6f2043eef898ac67359462a44cebe32f';
 
@@ -70,7 +70,7 @@ final jobWebSocketConnectionStateProvider =
 // ignore: unused_element
 typedef JobWebSocketConnectionStateRef = AutoDisposeStreamProviderRef<bool>;
 String _$webSocketActiveJobsTrackerHash() =>
-    r'9d2bf98dd5668fc98a695cf7ea30d5a8e34141ab';
+    r'522b89608202f539d64b9eac4bb06c91b7b73d07';
 
 /// Active jobs tracker using WebSocket
 ///
@@ -92,7 +92,7 @@ final webSocketActiveJobsTrackerProvider =
 
 typedef _$WebSocketActiveJobsTracker = AutoDisposeAsyncNotifier<List<JobModel>>;
 String _$webSocketProjectJobsTrackerHash() =>
-    r'3e4ab531e3c748e8e59429554437d31fb5746580';
+    r'127ea44a0d47f639cae0c573e14a55a540b209f8';
 
 /// Copied from Dart SDK
 class _SystemHash {

@@ -13,7 +13,7 @@ from datetime import datetime, date
 from pathlib import Path
 import tempfile
 
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -22,300 +22,17 @@ from db.database import get_db
 from dependencies.auth import get_current_organization
 from models.organization import Organization
 from utils.logger import sanitize_for_log
-from services.transcription.whisper_service import get_whisper_service
-from services.transcription.salad_transcription_service import get_salad_service
-from services.core.content_service import ContentService
-from services.core.upload_job_service import upload_job_service, JobType, JobStatus
-from services.integrations.integration_service import integration_service
-from services.intelligence.project_matcher_service import project_matcher_service
 from models.content import Content, ContentType
-from models.integration import Integration, IntegrationType, IntegrationStatus
 from config import get_settings
+from queue_config import queue_config
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1", tags=["transcription"])
 
 
-async def process_audio_transcription(
-    temp_file_path: str,
-    project_id: str,
-    meeting_title: Optional[str],
-    language: str,
-    job_id: str,
-    file_size: int,
-    filename: str,
-    organization_id: uuid.UUID,
-    use_ai_matching: bool = False
-):
-    """
-    Background task to process audio transcription.
-
-    This function handles the actual transcription work:
-    1. Transcribes the audio file
-    2. Saves the transcription to database
-    3. Triggers content processing for embeddings
-    4. Triggers summary generation
-    """
-    from db.database import db_manager
-
-    try:
-        async with db_manager.sessionmaker() as db:
-            # Update job: starting transcription
-            upload_job_service.update_job_progress(
-                job_id,
-                current_step=1,
-                status=JobStatus.PROCESSING,
-                progress=5.0,
-                step_description="Loading AI model..."
-            )
-
-            # Check if job was cancelled before starting
-            if upload_job_service.is_job_cancelled(job_id):
-                logger.info(f"Job {job_id} was cancelled before transcription started")
-                return
-
-            # Get settings for environment variable defaults
-            settings = get_settings()
-
-            # Check for transcription integration configuration (UI settings override env vars)
-            transcription_config = await integration_service.get_integration_config(
-                db,
-                IntegrationType.TRANSCRIPTION,
-                organization_id
-            )
-
-            # Determine which transcription service to use
-            # Priority: UI Integration settings > Environment variables > Default (whisper)
-            use_salad = False
-            salad_api_key = None
-            salad_org = None
-
-            if transcription_config:
-                # UI Integration settings take precedence
-                custom_settings = transcription_config.get('custom_settings', {})
-                service_type = custom_settings.get('service_type', 'whisper')
-                use_salad = (service_type == 'salad')
-                if use_salad:
-                    salad_api_key = transcription_config.get('api_key')
-                    salad_org = custom_settings.get('organization_name')
-            else:
-                # Fall back to environment variable configuration
-                use_salad = (settings.default_transcription_service.lower() == 'salad')
-                if use_salad:
-                    salad_api_key = settings.salad_api_key
-                    salad_org = settings.salad_organization_name
-
-            # Create progress callback for transcription
-            async def transcription_progress(progress: float, description: str):
-                # Check if job was cancelled
-                if upload_job_service.is_job_cancelled(job_id):
-                    raise asyncio.CancelledError("Job was cancelled by user")
-                # Map transcription progress (0-100%) to overall job progress (10-65%)
-                job_progress = 10.0 + (progress * 0.55)  # 10% to 65% range
-                upload_job_service.update_job_progress(
-                    job_id,
-                    progress=job_progress,
-                    step_description=description
-                )
-
-            # Transcribe using selected service
-            logger.info(f"Starting transcription for file: {temp_file_path} using {'Salad' if use_salad else 'Whisper'}")
-
-            if use_salad:
-                # Use Salad transcription service
-                try:
-                    # Validate Salad credentials
-                    if not salad_api_key or not salad_org:
-                        raise ValueError("Salad API key and organization name are required. Configure via UI Integration settings or environment variables (SALAD_API_KEY, SALAD_ORGANIZATION_NAME).")
-
-                    salad_service = get_salad_service(
-                        api_key=salad_api_key,
-                        organization_name=salad_org
-                    )
-
-                    upload_job_service.update_job_progress(
-                        job_id,
-                        progress=10.0,
-                        step_description="Connecting to Salad API..."
-                    )
-
-                    # Pass language as None for auto-detection, or use specified language
-                    # Auto-detection is preferred for better accuracy with multilingual content
-                    transcription_language = None if language == "auto" else language
-
-                    transcription_result = await salad_service.transcribe_audio_file(
-                        audio_path=temp_file_path,
-                        language=transcription_language,
-                        progress_callback=transcription_progress
-                    )
-                except Exception as e:
-                    raise Exception("Salad API transcription failed")
-            else:
-                # Use local Whisper service
-                whisper_service = get_whisper_service()
-
-                # Update progress after model is loaded
-                upload_job_service.update_job_progress(
-                    job_id,
-                    progress=10.0,
-                    step_description="Model ready, starting transcription..."
-                )
-
-                transcription_result = await whisper_service.transcribe_audio_file(
-                    audio_path=temp_file_path,
-                    language=language,
-                    progress_callback=transcription_progress
-                )
-
-            if not transcription_result:
-                raise Exception("Transcription failed - no result returned")
-
-            # Extract text and segments
-            transcription_text = transcription_result.get("text", "")
-            segments = transcription_result.get("segments", [])
-            detected_language = transcription_result.get("language", language)
-
-            if not transcription_text:
-                raise Exception("Transcription failed - no text generated")
-
-            logger.info(f"Transcription completed: {len(transcription_text)} characters")
-
-            # Check if job was cancelled after transcription
-            if upload_job_service.is_job_cancelled(job_id):
-                logger.info(f"Job {job_id} was cancelled after transcription completed")
-                return
-
-            # Update job: transcription complete, saving to database
-            upload_job_service.update_job_progress(
-                job_id,
-                current_step=2,
-                progress=66.0,
-                step_description="Saving transcription to database"
-            )
-
-            # Calculate audio duration from segments
-            audio_duration = 0
-            if segments:
-                audio_duration = max(seg.get("end", 0) for seg in segments)
-
-            # Save to database
-            content_id = None
-            if transcription_text:
-                try:
-                    # Handle project matching if needed
-                    if project_id == "auto" and use_ai_matching:
-                        # Use AI to match transcription to project
-                        match_result = await project_matcher_service.match_transcript_to_project(
-                            session=db,
-                            organization_id=organization_id,
-                            transcript=transcription_text,
-                            meeting_title=meeting_title or f"Recording - {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-                            meeting_date=datetime.now(),
-                            participants=[]  # Could be extracted from transcription if needed
-                        )
-
-                        project_uuid = match_result["project_id"]
-                        project_match_info = match_result
-
-                        logger.info(
-                            f"AI Matching Result: {'Created new' if match_result['is_new'] else 'Matched to existing'} "
-                            f"project '{match_result['project_name']}' (confidence: {match_result['confidence']})"
-                        )
-
-                        # Update job metadata with match info AND actual project_id
-                        upload_job_service.update_job_metadata(
-                            job_id,
-                            {
-                                "ai_matched": True,
-                                "is_new_project": match_result['is_new'],
-                                "match_confidence": match_result['confidence'],
-                                "project_name": match_result['project_name'],
-                                "project_id": str(project_uuid)  # Add actual project UUID
-                            }
-                        )
-                    else:
-                        # Convert project_id to UUID if it's not already
-                        try:
-                            project_uuid = uuid.UUID(project_id)
-                        except ValueError:
-                            # If project_id is not a valid UUID, generate one based on the string
-                            project_uuid = uuid.uuid5(uuid.NAMESPACE_DNS, project_id)
-                            logger.info(f"Generated UUID for project_id '{project_id}': {project_uuid}")
-
-                    # Format the title with metadata
-                    title = meeting_title or f"Recording - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-
-                    # Add metadata to the content text as a header
-                    metadata_header = f"[Audio Recording - Duration: {int(audio_duration)}s, Language: {detected_language}]\n\n"
-                    full_content = metadata_header + transcription_text
-
-                    # Create content record using static method
-                    content = await ContentService.create_content(
-                        session=db,
-                        project_id=project_uuid,
-                        content_type=ContentType.MEETING,
-                        title=title,
-                        content=full_content,
-                        content_date=datetime.now().date(),
-                        uploaded_by="transcription_service"
-                    )
-
-                    await db.commit()
-
-                    content_id = str(content.id)
-                    logger.info(f"Saved transcription to database with ID: {content_id}")
-
-                    # Update job: triggering async processing
-                    upload_job_service.update_job_progress(
-                        job_id,
-                        current_step=3,
-                        progress=70.0,
-                        step_description="Starting content processing"
-                    )
-
-                    # Trigger async processing for embeddings and summary generation
-                    await ContentService.trigger_async_processing(content.id, job_id)
-                    logger.info(f"Triggered async processing for content ID: {content_id} with job {job_id}")
-
-                    # Update job progress
-                    upload_job_service.update_job_progress(
-                        job_id,
-                        current_step=4,
-                        progress=75.0,
-                        step_description="Processing content and generating summary",
-                        result={"content_id": content_id}
-                    )
-
-                except Exception as e:
-                    logger.error(f"Failed to save to database: {sanitize_for_log(str(e))}")
-                    raise
-
-    except asyncio.CancelledError:
-        # Job was cancelled by user
-        logger.info(f"Transcription job {job_id} was cancelled by user")
-        # Status already updated by cancel_job, but ensure it's marked as cancelled
-        upload_job_service.update_job_progress(
-            job_id,
-            status=JobStatus.CANCELLED,
-            error_message="Job was cancelled by user"
-        )
-    except Exception as e:
-        logger.error(f"Transcription background task error: {sanitize_for_log(str(e))}", exc_info=True)
-        await upload_job_service.fail_job(job_id, "Transcription failed")
-    finally:
-        # Clean up temp file
-        try:
-            if os.path.exists(temp_file_path):
-                os.unlink(temp_file_path)
-                logger.info(f"Cleaned up temp file: {temp_file_path}")
-        except Exception as e:
-            logger.warning(f"Failed to delete temp file: {sanitize_for_log(str(e))}")
-
-
 @router.post("/transcribe")
 async def transcribe_audio(
-    background_tasks: BackgroundTasks,
     audio_file: UploadFile = File(...),
     project_id: str = Form(...),
     meeting_title: Optional[str] = Form(None),
@@ -415,45 +132,41 @@ async def transcribe_audio(
                         detail="Invalid project_id format"
                     )
 
-            # Create job for tracking transcription and processing progress
-            job_id = upload_job_service.create_job(
-                project_id=project_id,
-                job_type=JobType.TRANSCRIPTION,
-                filename=audio_file.filename,
-                file_size=file_size,
-                total_steps=8,  # Upload, Transcribe, Save, Preprocess, Chunk, Embed, Store, Summary
-                metadata={"language": language, "meeting_title": meeting_title}
-            )
+            # Enqueue RQ task for transcription processing
+            from tasks.transcription_tasks import process_audio_transcription_task
 
-            # Update job: file uploaded, queuing for transcription
-            upload_job_service.update_job_progress(
-                job_id,
-                current_step=0,
-                status=JobStatus.PROCESSING,
-                progress=2.0,
-                step_description="Audio file uploaded, queuing for transcription..."
-            )
-
-            # Add background task to process transcription
-            background_tasks.add_task(
-                process_audio_transcription,
+            rq_job = queue_config.high_queue.enqueue(
+                process_audio_transcription_task,
                 temp_file_path=temp_file_path,
                 project_id=project_id,
                 meeting_title=meeting_title,
                 language=language,
-                job_id=job_id,
+                tracking_job_id=None,
                 file_size=file_size,
                 filename=audio_file.filename,
-                organization_id=current_org.id,
-                use_ai_matching=use_ai_matching
+                organization_id=str(current_org.id),  # Convert UUID to string for RQ serialization
+                use_ai_matching=use_ai_matching,
+                job_timeout='30m',  # 30 minute timeout for long transcriptions
+                result_ttl=3600,  # Keep result for 1 hour
+                failure_ttl=86400  # Keep failed jobs for 24 hours
             )
 
             task_queued = True  # Mark as successfully queued
-            logger.info(f"Queued transcription job {job_id} for processing")
+            logger.info(f"Queued transcription job (RQ job: {rq_job.id})")
 
-            # Return immediately with job ID
+            # Initialize RQ job metadata for progress tracking
+            rq_job.meta['status'] = 'processing'
+            rq_job.meta['progress'] = 2.0
+            rq_job.meta['step'] = 'Audio file uploaded, queuing for transcription...'
+            rq_job.meta['current_step'] = 0
+            rq_job.meta['total_steps'] = 8
+            rq_job.meta['filename'] = audio_file.filename
+            rq_job.meta['project_id'] = project_id
+            rq_job.save_meta()
+
+            # Return RQ job ID directly to Flutter
             return JSONResponse(content={
-                "job_id": job_id,
+                "job_id": rq_job.id,  # Return RQ job ID directly
                 "status": "processing",
                 "message": "Audio file uploaded successfully. Transcription in progress.",
                 "metadata": {
@@ -476,15 +189,11 @@ async def transcribe_audio(
                     logger.error(f"Failed to clean up temp file {temp_file_path}: {cleanup_error}")
 
     except HTTPException:
-        # Update job as failed if exists
-        if 'job_id' in locals():
-            await upload_job_service.fail_job(job_id, "Transcription failed")
+        # RQ job will be marked as failed automatically
         raise
     except Exception as e:
         logger.error(f"Transcription error: {sanitize_for_log(str(e))}", exc_info=True)
-        # Update job as failed if exists
-        if 'job_id' in locals():
-            await upload_job_service.fail_job(job_id, "Transcription failed")
+        # RQ job will be marked as failed automatically
         raise HTTPException(
             status_code=500,
             detail=f"Transcription error: {str(e)}"
