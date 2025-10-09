@@ -107,7 +107,8 @@ class AuthController extends _$AuthController {
   }
 
   Future<void> signOut() async {
-    state = const AsyncLoading();
+    // Don't set loading state during sign-out to prevent navigation flickering
+    // Directly clear the user state and let repository handle the cleanup
     await _repository.signOut();
     state = const AsyncData(null);
 

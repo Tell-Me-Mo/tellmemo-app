@@ -207,29 +207,44 @@ async def get_optional_current_user(
     Returns:
         Current authenticated User or None
     """
+    # Get user from request state (set by middleware) or from token
+    user_from_state = None
+
     # Check if user is in request state (set by middleware)
     if hasattr(request.state, 'user'):
-        return request.state.user
+        user_from_state = request.state.user
+    else:
+        # Check for authorization header
+        authorization = request.headers.get("Authorization")
+        if not authorization or not authorization.startswith("Bearer "):
+            return None
 
-    # Check for authorization header
-    authorization = request.headers.get("Authorization")
-    if not authorization or not authorization.startswith("Bearer "):
+        token = authorization[7:]  # Remove "Bearer " prefix
+
+        # Try to get user from token - try both auth methods
+        try:
+            # Try native auth first
+            user_from_state = await native_auth_service.get_user_from_token(db, token)
+            if not user_from_state:
+                # Fallback to Supabase auth
+                user_from_state = await auth_service.get_user_from_token(db, token)
+        except Exception:
+            return None
+
+    if not user_from_state:
         return None
 
-    token = authorization[7:]  # Remove "Bearer " prefix
+    # Re-fetch user in current session to avoid "not bound to Session" error
+    # This ensures the user object can be modified and committed
+    from sqlalchemy import select
+    from models.user import User as UserModel
 
-    # Try to get user from token - try both auth methods
-    try:
-        # Try native auth first
-        user = await native_auth_service.get_user_from_token(db, token)
-        if user:
-            return user
+    result = await db.execute(
+        select(UserModel).where(UserModel.id == user_from_state.id)
+    )
+    user = result.scalar_one_or_none()
 
-        # Fallback to Supabase auth
-        user = await auth_service.get_user_from_token(db, token)
-        return user
-    except Exception:
-        return None
+    return user
 
 
 async def get_optional_organization(

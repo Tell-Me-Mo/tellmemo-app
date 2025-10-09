@@ -220,16 +220,21 @@ class BackendAuthRepository implements AuthInterface {
   @override
   Future<AuthResult> updatePassword(String newPassword) async {
     try {
-      final response = await _dio.put('/api/v1/auth/password', data: {
+      await _dio.put('/api/v1/auth/password', data: {
         'new_password': newPassword,
       });
 
-      final data = response.data;
-      final userId = await _authService.getUserId();
+      // Password update doesn't change user data, just return current cached user
+      // Backend only returns MessageResponse, not user data
+      if (_cachedUser != null) {
+        return AuthResult(user: _cachedUser!);
+      }
 
+      // If no cached user, fetch from auth service
+      final userId = await _authService.getUserId();
       final user = AppAuthUser(
         id: userId ?? '',
-        email: data['email'] as String?,
+        email: null, // Email doesn't change during password update
       );
 
       return AuthResult(user: user);

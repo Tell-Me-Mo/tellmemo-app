@@ -421,6 +421,42 @@ class TestPasswordChange:
 
         assert response.status_code == 401
 
+    @pytest.mark.integration
+    async def test_password_change_persists_and_allows_login(
+        self,
+        authenticated_client: AsyncClient,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        test_user: User,
+        sample_login_data: dict
+    ):
+        """Test password change persists to database and new password can be used to login."""
+        old_password = sample_login_data["password"]
+        new_password = "NewSecurePassword456!"
+
+        # Update password
+        update_data = {"new_password": new_password}
+        response = await authenticated_client.put("/api/v1/auth/password", json=update_data)
+        assert response.status_code == 200
+
+        # Verify password was persisted in database
+        await db_session.refresh(test_user)
+        assert native_auth_service.verify_password(new_password, test_user.password_hash)
+        assert not native_auth_service.verify_password(old_password, test_user.password_hash)
+
+        # Verify old password no longer works for login
+        old_login = {"email": sample_login_data["email"], "password": old_password}
+        response = await client.post("/api/v1/auth/login", json=old_login)
+        assert response.status_code == 401
+
+        # Verify new password works for login
+        new_login = {"email": sample_login_data["email"], "password": new_password}
+        response = await client.post("/api/v1/auth/login", json=new_login)
+        assert response.status_code == 200
+        data = response.json()
+        assert "access_token" in data
+        assert data["email"] == sample_login_data["email"]
+
 
 class TestProfileUpdate:
     """Tests for PUT /api/auth/profile endpoint."""
