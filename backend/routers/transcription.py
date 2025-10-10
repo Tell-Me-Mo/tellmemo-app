@@ -70,8 +70,10 @@ async def transcribe_audio(
         temp_file_path = None
         task_queued = False  # Track if background task was successfully queued
 
-        # Create temp directory if it doesn't exist (use absolute path)
-        temp_dir = Path(__file__).parent.parent / "temp_audio"
+        # Create temp directory inside uploads (container-accessible)
+        # Use /app/uploads/temp_audio in production, backend/uploads/temp_audio in dev
+        uploads_base = Path("/app/uploads") if os.path.exists("/app/uploads") else Path(__file__).parent.parent / "uploads"
+        temp_dir = uploads_base / "temp_audio"
         temp_dir.mkdir(parents=True, exist_ok=True)
 
         try:
