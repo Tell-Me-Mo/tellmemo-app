@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
+import '../../../../core/services/notification_service.dart';
 
 class UserAvatar extends StatelessWidget {
   final String? imageUrl;
@@ -79,7 +81,7 @@ class UserAvatar extends StatelessWidget {
   }
 }
 
-class AvatarPicker extends StatelessWidget {
+class AvatarPicker extends ConsumerWidget {
   final String? currentImageUrl;
   final String? userName;
   final Function(String?) onImageSelected;
@@ -92,16 +94,16 @@ class AvatarPicker extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return UserAvatar(
       imageUrl: currentImageUrl,
       name: userName,
       isEditable: true,
-      onTap: () => _pickImage(context),
+      onTap: () => _pickImage(context, ref),
     );
   }
 
-  Future<void> _pickImage(BuildContext context) async {
+  Future<void> _pickImage(BuildContext context, WidgetRef ref) async {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.image,
@@ -117,22 +119,12 @@ class AvatarPicker extends StatelessWidget {
         onImageSelected(result.files.single.path);
 
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Profile picture updated'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          ref.read(notificationServiceProvider.notifier).showSuccess('Profile picture updated');
         }
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error selecting image: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Error selecting image: $e');
       }
     }
   }

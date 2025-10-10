@@ -73,6 +73,18 @@ async def create_program(
     current_user: User = Depends(get_current_user)
 ):
     """Create a new program."""
+    # Check if program with same name already exists in the organization
+    existing_program = await db.execute(
+        select(Program).where(
+            and_(
+                Program.name == program.name,
+                Program.organization_id == current_org.id
+            )
+        )
+    )
+    if existing_program.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Program with this name already exists in this organization")
+
     # If portfolio_id provided, verify it exists in the same organization
     portfolio_name = None
     if program.portfolio_id:
@@ -88,7 +100,7 @@ async def create_program(
         if not portfolio:
             raise HTTPException(status_code=404, detail="Portfolio not found")
         portfolio_name = portfolio.name
-    
+
     db_program = Program(
         name=program.name,
         description=program.description,

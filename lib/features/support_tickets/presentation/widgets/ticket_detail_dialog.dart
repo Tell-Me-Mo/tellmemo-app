@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:pm_master_v2/features/support_tickets/models/support_ticket.dart';
 import 'package:pm_master_v2/features/support_tickets/providers/support_ticket_provider.dart';
 import 'package:file_picker/file_picker.dart';
+import '../../../../core/services/notification_service.dart';
 
 class TicketDetailDialog extends ConsumerStatefulWidget {
   final SupportTicket ticket;
@@ -80,12 +81,7 @@ class _TicketDetailDialogState extends ConsumerState<TicketDetailDialog> {
       ref.invalidate(ticketCommentsProvider(_ticket.id));
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error adding comment: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Error adding comment: ${e.toString()}');
       }
     } finally {
       if (mounted) {
@@ -109,12 +105,7 @@ class _TicketDetailDialogState extends ConsumerState<TicketDetailDialog> {
         for (final file in result.files) {
           if (file.size > 10 * 1024 * 1024) {
             if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('File "${file.name}" exceeds 10MB limit'),
-                backgroundColor: Colors.orange,
-              ),
-            );
+            ref.read(notificationServiceProvider.notifier).showWarning('File "${file.name}" exceeds 10MB limit');
           } else {
             validFiles.add(file);
           }
@@ -128,12 +119,7 @@ class _TicketDetailDialogState extends ConsumerState<TicketDetailDialog> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error picking files: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      ref.read(notificationServiceProvider.notifier).showError('Error picking files: $e');
     }
   }
 

@@ -91,35 +91,31 @@ class _NotificationToastState extends State<NotificationToast>
             minWidth: 300,
             maxWidth: 400,
           ),
-          child: Material(
-            elevation: 8,
+          child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            color: isDark ? theme.colorScheme.surface : Colors.white,
-            child: InkWell(
-              onTap: widget.notification.onAction,
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: color.withValues(alpha: 0.3),
-                    width: 1,
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    Container(
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: color,
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(12),
-                          topRight: Radius.circular(12),
-                        ),
-                      ),
+            child: Material(
+              elevation: 8,
+              color: isDark ? theme.colorScheme.surface : Colors.white,
+              child: InkWell(
+                onTap: widget.notification.onAction,
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border(
+                      left: BorderSide(color: color.withValues(alpha: 0.3), width: 1),
+                      right: BorderSide(color: color.withValues(alpha: 0.3), width: 1),
+                      bottom: BorderSide(color: color.withValues(alpha: 0.3), width: 1),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        height: 4,
+                        color: color,
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -217,7 +213,8 @@ class _NotificationToastState extends State<NotificationToast>
                         ],
                       ),
                     ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

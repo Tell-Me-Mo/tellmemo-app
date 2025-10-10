@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/blocker.dart';
 import '../providers/risks_tasks_provider.dart';
+import '../../../../core/services/notification_service.dart';
 
 class BlockerDialog extends ConsumerStatefulWidget {
   final String projectId;
@@ -755,12 +756,7 @@ class _BlockerDialogState extends ConsumerState<BlockerDialog> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Error: $e');
       }
     } finally {
       if (mounted) {
@@ -805,12 +801,7 @@ class _BlockerDialogState extends ConsumerState<BlockerDialog> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error deleting blocker: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          ref.read(notificationServiceProvider.notifier).showError('Error deleting blocker: $e');
         }
       } finally {
         if (mounted) {

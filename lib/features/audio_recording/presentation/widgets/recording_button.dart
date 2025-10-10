@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/recording_provider.dart';
 import '../../domain/services/audio_recording_service.dart';
+import '../../../../core/services/notification_service.dart';
 
 class RecordingButton extends ConsumerWidget {
   final String projectId;
@@ -163,7 +164,7 @@ class RecordingButton extends ConsumerWidget {
               
               // Cancel button
               IconButton(
-                onPressed: () => _cancelRecording(context, recordingNotifier),
+                onPressed: () => _cancelRecording(context, ref, recordingNotifier),
                 icon: const Icon(Icons.close, size: 20),
                 style: IconButton.styleFrom(
                   backgroundColor: colorScheme.surfaceContainerHighest,
@@ -270,22 +271,11 @@ class RecordingButton extends ConsumerWidget {
         // No need to show any snackbar - the overlay handles it
       } else if (state.errorMessage != null) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Recording failed: ${state.errorMessage}'),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: Theme.of(context).colorScheme.errorContainer,
-            ),
-          );
+          ref.read(notificationServiceProvider.notifier).showError('Recording failed: ${state.errorMessage}');
         }
       } else {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Recording saved, processing...'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          ref.read(notificationServiceProvider.notifier).showInfo('Recording saved, processing...');
         }
       }
     }
@@ -293,6 +283,7 @@ class RecordingButton extends ConsumerWidget {
   
   Future<void> _cancelRecording(
     BuildContext context,
+    WidgetRef ref,
     RecordingNotifier notifier,
   ) async {
     // Show confirmation dialog
@@ -319,12 +310,7 @@ class RecordingButton extends ConsumerWidget {
     if (confirm == true) {
       await notifier.cancelRecording();
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Recording cancelled'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showInfo('Recording cancelled');
       }
     }
   }

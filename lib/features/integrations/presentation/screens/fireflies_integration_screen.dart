@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/utils/datetime_utils.dart';
 import '../../domain/models/integration.dart';
 import '../providers/integrations_provider.dart';
+import '../../../../core/services/notification_service.dart';
 import '../providers/fireflies_provider.dart' as fireflies;
 
 class FirefliesIntegrationScreen extends ConsumerStatefulWidget {
@@ -430,11 +431,7 @@ class _FirefliesIntegrationScreenState
                               icon: const Icon(Icons.copy),
                               onPressed: () {
                                 Clipboard.setData(ClipboardData(text: webhookUrl));
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Webhook URL copied to clipboard'),
-                                  ),
-                                );
+                                ref.read(notificationServiceProvider.notifier).showSuccess('Webhook URL copied to clipboard');
                               },
                             ),
                           ],
@@ -621,9 +618,7 @@ class _FirefliesIntegrationScreenState
 
   void _handleConnect() async {
     if (_apiKeyController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your API key')),
-      );
+      ref.read(notificationServiceProvider.notifier).showSuccess('Please enter your API key');
       return;
     }
 
@@ -643,17 +638,13 @@ class _FirefliesIntegrationScreenState
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Successfully connected to Fireflies!')),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess('Successfully connected to Fireflies!');
         _apiKeyController.clear();
         _webhookSecretController.clear();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to connect: $e')),
-        );
+        ref.read(notificationServiceProvider.notifier).showInfo('Failed to connect: $e');
       }
     } finally {
       if (mounted) {
@@ -688,19 +679,13 @@ class _FirefliesIntegrationScreenState
 
     if (confirm == true) {
       await ref.read(integrationsProvider.notifier).disconnectIntegration('fireflies');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Fireflies disconnected')),
-        );
-      }
+      ref.read(notificationServiceProvider.notifier).showSuccess('Fireflies disconnected');
     }
   }
 
   void _handleSync() async {
     // TODO: Implement sync functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Syncing with Fireflies...')),
-    );
+    ref.read(notificationServiceProvider.notifier).showSuccess('Syncing with Fireflies...');
   }
 
   void _updateSettings() {

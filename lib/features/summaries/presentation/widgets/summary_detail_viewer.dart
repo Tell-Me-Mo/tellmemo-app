@@ -5,6 +5,7 @@ import '../../../../core/network/api_client.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/utils/datetime_utils.dart';
 import '../../../../core/widgets/breadcrumb_navigation.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../data/models/summary_model.dart';
 import 'risks_blockers_widget.dart';
 import 'enhanced_action_items_widget.dart';
@@ -383,20 +384,14 @@ class _SummaryDetailViewerState extends ConsumerState<SummaryDetailViewer> {
         // Optional: Still call onEdit for any parent-level updates if needed
         // widget.onEdit?.call();
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${_getSectionName(section)} updated successfully'),
-            backgroundColor: Colors.green,
-          ),
+        ref.read(notificationServiceProvider.notifier).showSuccess(
+          '${_getSectionName(section)} updated successfully',
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update: $e'),
-            backgroundColor: Colors.red,
-          ),
+        ref.read(notificationServiceProvider.notifier).showError(
+          'Failed to update: $e',
         );
       }
     } finally {
@@ -717,11 +712,8 @@ class _SummaryDetailViewerState extends ConsumerState<SummaryDetailViewer> {
 
     Clipboard.setData(ClipboardData(text: buffer.toString()));
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Summary copied to clipboard'),
-        duration: Duration(seconds: 2),
-      ),
+    ref.read(notificationServiceProvider.notifier).showSuccess(
+      'Summary copied to clipboard',
     );
   }
 

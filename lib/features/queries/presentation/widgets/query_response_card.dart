@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
 import '../providers/query_provider.dart';
+import '../../../../core/services/notification_service.dart';
 
-class QueryResponseCard extends StatelessWidget {
+class QueryResponseCard extends ConsumerWidget {
   final ConversationItem response;
   final String query;
 
@@ -15,7 +17,7 @@ class QueryResponseCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -57,12 +59,7 @@ class QueryResponseCard extends StatelessWidget {
                   tooltip: 'Copy response',
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: response.answer));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Response copied to clipboard'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
+                    ref.read(notificationServiceProvider.notifier).showInfo('Response copied to clipboard');
                   },
                 ),
               ],

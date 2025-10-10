@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/breakpoints.dart';
 import '../../../../core/constants/layout_constants.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../projects/domain/entities/task.dart';
 import '../providers/aggregated_tasks_provider.dart';
 import '../providers/tasks_filter_provider.dart';
@@ -420,37 +421,8 @@ class _TasksScreenV2State extends ConsumerState<TasksScreenV2>
               // Show errors if any projects failed to load
               if (taskErrors.isNotEmpty && !isRefreshing) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Failed to load tasks from ${taskErrors.length} project(s)',
-                    ),
-                    action: SnackBarAction(
-                      label: 'Details',
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Load Errors'),
-                            content: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: taskErrors.map((e) => ListTile(
-                                title: Text(e.projectName),
-                                subtitle: Text(e.error),
-                                leading: const Icon(Icons.error, color: Colors.red),
-                              )).toList(),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.of(context).pop(),
-                                child: const Text('OK'),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
+                ref.read(notificationServiceProvider.notifier).showWarning(
+                  'Failed to load tasks from ${taskErrors.length} project(s)',
                 );
               });
             }

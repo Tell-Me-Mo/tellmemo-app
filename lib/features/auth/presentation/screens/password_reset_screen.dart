@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/validation_constants.dart';
 import '../../../../shared/widgets/forms/app_text_field.dart';
 import '../providers/auth_provider.dart';
+import '../../../../core/services/notification_service.dart';
 
 class PasswordResetScreen extends ConsumerStatefulWidget {
   final String? token;
@@ -113,16 +114,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen>
 
       if (mounted) {
         // Show success message and navigate to sign in
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Password updated successfully! Please sign in with your new password.'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess('Password updated successfully! Please sign in with your new password.');
         context.go('/auth/signin');
       }
     } catch (e) {

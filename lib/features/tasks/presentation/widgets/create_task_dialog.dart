@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../projects/domain/entities/task.dart';
 import '../../../projects/presentation/providers/projects_provider.dart';
 import '../../../projects/presentation/providers/risks_tasks_provider.dart';
@@ -65,9 +66,7 @@ class _CreateTaskDialogState extends ConsumerState<CreateTaskDialog> {
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedProjectId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a project')),
-      );
+      ref.read(notificationServiceProvider.notifier).showWarning('Please select a project');
       return;
     }
 
@@ -100,15 +99,11 @@ class _CreateTaskDialogState extends ConsumerState<CreateTaskDialog> {
 
       if (mounted) {
         Navigator.of(context).pop(true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Task created successfully')),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess('Task created successfully');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error creating task: $e')),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Error creating task: $e');
       }
     } finally {
       if (mounted) {
