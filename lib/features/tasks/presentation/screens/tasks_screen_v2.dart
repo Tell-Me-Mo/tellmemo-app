@@ -406,8 +406,6 @@ class _TasksScreenV2State extends ConsumerState<TasksScreenV2>
               final isRefreshing = ref.watch(tasksRefreshProvider);
               final taskErrors = ref.watch(taskLoadErrorsProvider);
 
-              print('📦 Consumer rebuild: filter.searchQuery="${filter.searchQuery}", viewMode=$viewMode');
-
               // Use provider-filtered tasks directly (no local filtering needed)
               final filteredTasks = filteredTasksFromProvider;
 

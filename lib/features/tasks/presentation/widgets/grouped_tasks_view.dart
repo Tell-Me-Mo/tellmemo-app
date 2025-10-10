@@ -511,9 +511,19 @@ class _GroupedTasksViewState extends ConsumerState<GroupedTasksView> {
   bool _listsEqual(List<TaskWithProject> list1, List<TaskWithProject> list2) {
     if (list1.length != list2.length) return false;
 
-    // Fast check - compare task IDs in order
+    // Compare task IDs AND key properties that affect rendering
     for (int i = 0; i < list1.length; i++) {
-      if (list1[i].task.id != list2[i].task.id) return false;
+      final task1 = list1[i].task;
+      final task2 = list2[i].task;
+
+      // If IDs differ, lists are different
+      if (task1.id != task2.id) return false;
+
+      // If same ID but different status or update time, lists are different
+      if (task1.status != task2.status ||
+          task1.lastUpdated != task2.lastUpdated) {
+        return false;
+      }
     }
 
     return true;

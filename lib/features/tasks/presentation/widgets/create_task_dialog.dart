@@ -95,7 +95,7 @@ class _CreateTaskDialogState extends ConsumerState<CreateTaskDialog> {
       await repository.createTask(_selectedProjectId!, newTask);
 
       // Force refresh the tasks list (clear cache and invalidate)
-      ref.read(forceRefreshTasksProvider)();
+      await ref.read(forceRefreshTasksProvider)();
 
       if (mounted) {
         Navigator.of(context).pop(true);

@@ -77,7 +77,7 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> {
       await repository.updateTask(_editedTask.id, updatedTask);
 
       // Force refresh the tasks list (clear cache and invalidate)
-      ref.read(forceRefreshTasksProvider)();
+      await ref.read(forceRefreshTasksProvider)();
 
       if (mounted) {
         setState(() {
@@ -122,7 +122,7 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> {
       await repository.updateTask(_editedTask.id, updatedTask);
 
       // Force refresh the tasks list
-      ref.read(forceRefreshTasksProvider)();
+      await ref.read(forceRefreshTasksProvider)();
 
       if (mounted) {
         setState(() {
@@ -163,7 +163,7 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> {
       await repository.updateTask(_editedTask.id, updatedTask);
 
       // Force refresh the tasks list
-      ref.read(forceRefreshTasksProvider)();
+      await ref.read(forceRefreshTasksProvider)();
 
       if (mounted) {
         setState(() {
@@ -350,7 +350,7 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> {
       await repository.updateTask(_editedTask.id, updatedTask);
 
       // Force refresh the tasks list
-      ref.read(forceRefreshTasksProvider)();
+      await ref.read(forceRefreshTasksProvider)();
 
       if (mounted) {
         setState(() {
@@ -402,7 +402,7 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> {
       await repository.deleteTask(_editedTask.id);
 
       // Force refresh the tasks list (clear cache and invalidate)
-      ref.read(forceRefreshTasksProvider)();
+      await ref.read(forceRefreshTasksProvider)();
 
       if (mounted) {
         Navigator.of(context).pop();
@@ -556,7 +556,7 @@ ${_buildTaskContext(_editedTask)}''';
                                         lastUpdated: DateTime.now(),
                                       );
                                       await repository.updateTask(_editedTask.id, updatedTask);
-                                      ref.read(forceRefreshTasksProvider)();
+                                      await ref.read(forceRefreshTasksProvider)();
                                       if (mounted) {
                                         setState(() {
                                           _editedTask = updatedTask;
@@ -753,7 +753,7 @@ ${_buildTaskContext(_editedTask)}''';
                                           lastUpdated: DateTime.now(),
                                         );
                                         await repository.updateTask(_editedTask.id, updatedTask);
-                                        ref.read(forceRefreshTasksProvider)();
+                                        await ref.read(forceRefreshTasksProvider)();
                                         if (mounted) {
                                           setState(() {
                                             _editedTask = updatedTask;
