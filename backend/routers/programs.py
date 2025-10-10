@@ -20,6 +20,45 @@ from pydantic import BaseModel
 router = APIRouter(prefix="/api/v1/programs", tags=["programs"])
 
 
+async def validate_program_name_uniqueness(
+    db: AsyncSession,
+    name: str,
+    organization_id: UUID,
+    exclude_program_id: Optional[UUID] = None
+) -> None:
+    """
+    Validate that a program name is unique within an organization.
+
+    Args:
+        db: Database session
+        name: Program name to validate
+        organization_id: Organization ID to check within
+        exclude_program_id: Optional program ID to exclude from check (for updates)
+
+    Raises:
+        HTTPException: If a duplicate name is found
+    """
+    query = select(Program).where(
+        and_(
+            func.lower(Program.name) == func.lower(name),
+            Program.organization_id == organization_id
+        )
+    )
+
+    # Exclude the current program when updating
+    if exclude_program_id:
+        query = query.where(Program.id != exclude_program_id)
+
+    result = await db.execute(query)
+    existing_program = result.scalar_one_or_none()
+
+    if existing_program:
+        raise HTTPException(
+            status_code=400,
+            detail="Program with this name already exists in this organization"
+        )
+
+
 class ProgramCreate(BaseModel):
     """Schema for creating a program."""
     name: str
@@ -73,17 +112,8 @@ async def create_program(
     current_user: User = Depends(get_current_user)
 ):
     """Create a new program."""
-    # Check if program with same name already exists in the organization
-    existing_program = await db.execute(
-        select(Program).where(
-            and_(
-                Program.name == program.name,
-                Program.organization_id == current_org.id
-            )
-        )
-    )
-    if existing_program.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail="Program with this name already exists in this organization")
+    # Validate program name uniqueness
+    await validate_program_name_uniqueness(db, program.name, current_org.id)
 
     # If portfolio_id provided, verify it exists in the same organization
     portfolio_name = None
@@ -268,8 +298,15 @@ async def update_program(
     program = result.scalar_one_or_none()
     if not program:
         raise HTTPException(status_code=404, detail="Program not found")
-    
+
+    # Validate name uniqueness if name is being updated
     if program_update.name is not None:
+        await validate_program_name_uniqueness(
+            db,
+            program_update.name,
+            current_org.id,
+            exclude_program_id=program_id
+        )
         program.name = program_update.name
     if program_update.description is not None:
         program.description = program_update.description
