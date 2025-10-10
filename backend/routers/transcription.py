@@ -87,12 +87,10 @@ async def transcribe_audio(
                 temp_file_path = temp_file.name
                 file_size = os.path.getsize(temp_file_path)
 
-                # Convert path to container-accessible path if running in development
-                # In production (/app/uploads exists), path is already correct
-                # In development, convert host path to container path
-                if not os.path.exists("/app/uploads"):
-                    # Running in development - convert path to container format
-                    # Example: /root/tellmemo-app/backend/uploads/temp_audio/file.m4a -> /app/uploads/temp_audio/file.m4a
+                # Convert to container path for RQ worker
+                # Worker always sees /app/uploads due to bind mount
+                if not temp_file_path.startswith("/app/"):
+                    # Running on host - convert to container path
                     temp_file_name = Path(temp_file_path).name
                     temp_file_path = f"/app/uploads/temp_audio/{temp_file_name}"
 
