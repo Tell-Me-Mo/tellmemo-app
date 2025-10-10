@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pm_master_v2/features/organizations/presentation/providers/invitation_notifications_provider.dart';
+import 'package:pm_master_v2/core/services/notification_service.dart';
 import '../../../../mocks/organization_test_fixtures.dart';
 
 void main() {
@@ -447,12 +448,16 @@ void main() {
 
         // Act
         await tester.tap(find.byType(ElevatedButton));
-        await tester.pumpAndSettle();
+        await tester.pump(); // Pump once to trigger notification
 
-        // Assert - Notification service was called (would show in notification center)
-        // Note: Since we switched to notification service, we can't test for SnackBar anymore
-        // The notification would appear in the notification center instead
-        expect(find.byType(ElevatedButton), findsOneWidget);
+        // Get the notification service to verify notification was added
+        final notificationService = container.read(notificationServiceProvider);
+
+        // Assert - Notification should be in active notifications
+        expect(notificationService.active.isNotEmpty, true);
+
+        // Complete any pending timers before finishing the test
+        await tester.pumpAndSettle(const Duration(seconds: 5));
       });
     });
 

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pm_master_v2/app/theme/app_theme.dart';
 import 'package:pm_master_v2/core/services/notification_service.dart';
 import 'package:pm_master_v2/core/models/notification_model.dart';
+import 'package:pm_master_v2/core/widgets/notifications/notification_overlay.dart';
 
 /// Creates a test app with necessary providers and routing
 /// Wraps a widget with MaterialApp and ProviderScope for testing
@@ -14,10 +15,12 @@ Widget createTestApp({
 }) {
   return ProviderScope(
     overrides: overrides ?? [],
-    child: MaterialApp(
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      home: wrapInScaffold ? Scaffold(body: child) : child,
+    child: NotificationOverlay(
+      child: MaterialApp(
+        theme: AppTheme.light,
+        darkTheme: AppTheme.dark,
+        home: wrapInScaffold ? Scaffold(body: child) : child,
+      ),
     ),
   );
 }
