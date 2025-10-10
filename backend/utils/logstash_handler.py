@@ -93,7 +93,7 @@ class LogstashHandler(logging.Handler):
             log_entry['exception'] = {
                 'type': record.exc_info[0].__name__,
                 'message': str(record.exc_info[1]),
-                'stacktrace': traceback.format_exception(*record.exc_info)
+                'stacktrace': ''.join(traceback.format_exception(*record.exc_info))
             }
         
         # Add custom fields from 'extra' parameter

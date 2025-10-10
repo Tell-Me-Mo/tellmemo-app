@@ -164,8 +164,8 @@ services:
       API_ENV: production
       LOG_LEVEL: INFO
     volumes:
-      - backend_uploads:/app/uploads
-      - backend_logs:/app/logs
+      - ./backend/uploads:/app/uploads  # Bind mount for shared access with host
+      - ./backend/logs:/app/logs
     networks:
       - pm_network
     logging:
@@ -578,9 +578,4 @@ volumes:
   elasticsearch_data:
     driver: local
   logstash_data:
-    driver: local
-  # Backend volumes
-  backend_uploads:
-    driver: local
-  backend_logs:
     driver: local
