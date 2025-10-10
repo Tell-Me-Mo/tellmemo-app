@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/user_profile_provider.dart';
 import '../../../../core/constants/validation_constants.dart';
+import '../../../../core/services/notification_service.dart';
 
 class ChangePasswordScreen extends ConsumerStatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -40,22 +41,12 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
           .updatePassword(_newPasswordController.text);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Password updated successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess('Password updated successfully');
         context.pop();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error updating password: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Error updating password: $e');
       }
     } finally {
       setState(() {

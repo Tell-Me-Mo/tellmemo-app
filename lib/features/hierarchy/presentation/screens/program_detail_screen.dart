@@ -19,6 +19,7 @@ import '../../../summaries/presentation/widgets/summary_generation_dialog.dart';
 import '../../../activities/domain/entities/activity.dart';
 import '../../../activities/data/models/activity_model.dart';
 import '../../../queries/presentation/widgets/ask_ai_panel.dart';
+import '../../../../core/services/notification_service.dart';
 
 class ProgramDetailScreen extends ConsumerStatefulWidget {
   final String programId;
@@ -1807,11 +1808,7 @@ class _ProgramDetailScreenState extends ConsumerState<ProgramDetailScreen> {
         onUploadContent: () {
           Navigator.of(dialogContext).pop();
           // Navigate to content upload screen or show upload dialog
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Navigate to a project to upload content'),
-            ),
-          );
+          ref.read(notificationServiceProvider.notifier).showSuccess('Navigate to a project to upload content');
         },
       ),
     );

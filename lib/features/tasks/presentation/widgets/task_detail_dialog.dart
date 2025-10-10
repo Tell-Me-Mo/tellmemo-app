@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../projects/domain/entities/task.dart';
 import '../../../projects/presentation/providers/risks_tasks_provider.dart';
 import '../providers/aggregated_tasks_provider.dart';
@@ -53,9 +54,7 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> {
 
   Future<void> _saveChanges() async {
     if (_titleController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Title cannot be empty')),
-      );
+      ref.read(notificationServiceProvider.notifier).showWarning('Title cannot be empty');
       return;
     }
 
@@ -78,22 +77,18 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> {
       await repository.updateTask(_editedTask.id, updatedTask);
 
       // Force refresh the tasks list (clear cache and invalidate)
-      ref.read(forceRefreshTasksProvider)();
+      await ref.read(forceRefreshTasksProvider)();
 
       if (mounted) {
         setState(() {
           _editedTask = updatedTask;
           _isEditing = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Task updated successfully')),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess('Task updated successfully');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating task: $e')),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Error updating task: $e');
       }
     } finally {
       if (mounted) {
@@ -127,27 +122,21 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> {
       await repository.updateTask(_editedTask.id, updatedTask);
 
       // Force refresh the tasks list
-      ref.read(forceRefreshTasksProvider)();
+      await ref.read(forceRefreshTasksProvider)();
 
       if (mounted) {
         setState(() {
           _editedTask = updatedTask;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              newStatus == TaskStatus.completed
-                  ? 'Task marked as completed'
-                  : 'Task marked as incomplete'
-            ),
-          ),
+        ref.read(notificationServiceProvider.notifier).showSuccess(
+          newStatus == TaskStatus.completed
+              ? 'Task marked as completed'
+              : 'Task marked as incomplete'
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating task: $e')),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Error updating task: $e');
       }
     } finally {
       if (mounted) {
@@ -174,23 +163,19 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> {
       await repository.updateTask(_editedTask.id, updatedTask);
 
       // Force refresh the tasks list
-      ref.read(forceRefreshTasksProvider)();
+      await ref.read(forceRefreshTasksProvider)();
 
       if (mounted) {
         setState(() {
           _editedTask = updatedTask;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Task marked as in progress')),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess('Task marked as in progress');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating task: $e')),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Error updating task: $e');
       }
-    } finally {
+    } finally{
       if (mounted) {
         setState(() {
           _isSaving = false;
@@ -365,22 +350,18 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> {
       await repository.updateTask(_editedTask.id, updatedTask);
 
       // Force refresh the tasks list
-      ref.read(forceRefreshTasksProvider)();
+      await ref.read(forceRefreshTasksProvider)();
 
       if (mounted) {
         setState(() {
           _editedTask = updatedTask;
           _blockerController.text = blockerDescription;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Task marked as blocked')),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess('Task marked as blocked');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating task: $e')),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Error updating task: $e');
       }
     } finally {
       if (mounted) {
@@ -421,19 +402,15 @@ class _TaskDetailDialogState extends ConsumerState<TaskDetailDialog> {
       await repository.deleteTask(_editedTask.id);
 
       // Force refresh the tasks list (clear cache and invalidate)
-      ref.read(forceRefreshTasksProvider)();
+      await ref.read(forceRefreshTasksProvider)();
 
       if (mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Task deleted successfully')),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess('Task deleted successfully');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error deleting task: $e')),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Error deleting task: $e');
       }
     } finally {
       if (mounted) {
@@ -579,23 +556,19 @@ ${_buildTaskContext(_editedTask)}''';
                                         lastUpdated: DateTime.now(),
                                       );
                                       await repository.updateTask(_editedTask.id, updatedTask);
-                                      ref.read(forceRefreshTasksProvider)();
+                                      await ref.read(forceRefreshTasksProvider)();
                                       if (mounted) {
                                         setState(() {
                                           _editedTask = updatedTask;
                                           _blockerController.clear();
                                         });
                                         if (!context.mounted) return;
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('Task unblocked and marked as in progress')),
-                                        );
+                                        ref.read(notificationServiceProvider.notifier).showSuccess('Task unblocked and marked as in progress');
                                       }
                                     } catch (e) {
                                       if (mounted) {
                                         if (!context.mounted) return;
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text('Error updating task: $e')),
-                                        );
+                                        ref.read(notificationServiceProvider.notifier).showError('Error updating task: $e');
                                       }
                                     } finally {
                                       if (mounted) {
@@ -780,23 +753,19 @@ ${_buildTaskContext(_editedTask)}''';
                                           lastUpdated: DateTime.now(),
                                         );
                                         await repository.updateTask(_editedTask.id, updatedTask);
-                                        ref.read(forceRefreshTasksProvider)();
+                                        await ref.read(forceRefreshTasksProvider)();
                                         if (mounted) {
                                           setState(() {
                                             _editedTask = updatedTask;
                                             _blockerController.clear();
                                           });
                                           if (!context.mounted) return;
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('Task unblocked and marked as in progress')),
-                                          );
+                                          ref.read(notificationServiceProvider.notifier).showSuccess('Task unblocked and marked as in progress');
                                         }
                                       } catch (e) {
                                         if (mounted) {
                                           if (!context.mounted) return;
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(content: Text('Error updating task: $e')),
-                                          );
+                                          ref.read(notificationServiceProvider.notifier).showError('Error updating task: $e');
                                         }
                                       } finally {
                                         if (mounted) {

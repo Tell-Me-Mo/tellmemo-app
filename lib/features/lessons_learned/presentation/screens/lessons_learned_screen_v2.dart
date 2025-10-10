@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/breakpoints.dart';
 import '../../../../core/constants/layout_constants.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../projects/domain/entities/lesson_learned.dart';
 import '../providers/aggregated_lessons_learned_provider.dart';
 import '../providers/lessons_learned_filter_provider.dart';
@@ -128,7 +129,7 @@ class _LessonsLearnedScreenV2State extends ConsumerState<LessonsLearnedScreenV2>
       developer.log('✅ [LessonsScreen] Refresh completed successfully', name: 'LessonsRefresh');
     } catch (e) {
       developer.log('❌ [LessonsScreen] Refresh failed: $e', name: 'LessonsRefresh');
-      // Handle refresh error silently - we'll show the error via SnackBar
+      // Handle refresh error silently - we'll show the error via notification
     } finally {
       if (mounted) {
         setState(() {
@@ -358,19 +359,10 @@ class _LessonsLearnedScreenV2State extends ConsumerState<LessonsLearnedScreenV2>
 
           // Show error snackbar for non-initial loads (only after initial load has completed)
           if (!_isRefreshing && _hasInitiallyLoaded) {
-            developer.log('🍞 [LessonsScreen] Showing error snackbar', name: 'LessonsState');
+            developer.log('🍞 [LessonsScreen] Showing error notification', name: 'LessonsState');
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Failed to refresh lessons'),
-                    backgroundColor: Colors.orange,
-                    action: SnackBarAction(
-                      label: 'Retry',
-                      onPressed: _handleRefresh,
-                    ),
-                  ),
-                );
+                ref.read(notificationServiceProvider.notifier).showWarning('Failed to refresh lessons');
               }
             });
           }
@@ -443,13 +435,8 @@ class _LessonsLearnedScreenV2State extends ConsumerState<LessonsLearnedScreenV2>
     if (loadErrors.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Failed to load lessons from ${loadErrors.length} project(s)',
-              ),
-              backgroundColor: Colors.orange,
-            ),
+          ref.read(notificationServiceProvider.notifier).showWarning(
+            'Failed to load lessons from ${loadErrors.length} project(s)',
           );
         }
       });

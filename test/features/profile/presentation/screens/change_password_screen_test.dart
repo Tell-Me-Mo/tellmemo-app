@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pm_master_v2/features/profile/presentation/screens/change_password_screen.dart';
 import 'package:pm_master_v2/features/profile/presentation/providers/user_profile_provider.dart';
 import 'package:pm_master_v2/features/profile/domain/entities/user_profile.dart';
+import 'package:pm_master_v2/core/services/notification_service.dart';
+import '../../../../helpers/test_helpers.dart';
 
 // Simple notifier for testing
 class TestUserProfileNotifier extends UserProfileController {
@@ -30,15 +32,18 @@ class TestUserProfileNotifier extends UserProfileController {
 void main() {
   group('ChangePasswordScreen', () {
     late TestUserProfileNotifier testNotifier;
+    late MockNotificationService mockNotificationService;
 
     setUp(() {
       testNotifier = TestUserProfileNotifier();
+      mockNotificationService = createMockNotificationService();
     });
 
     Widget createScreen() {
       return ProviderScope(
         overrides: [
           userProfileControllerProvider.overrideWith(() => testNotifier),
+          notificationServiceProvider.overrideWith((ref) => mockNotificationService),
         ],
         child: const MaterialApp(
           home: ChangePasswordScreen(),
@@ -174,7 +179,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(testNotifier.lastPassword, newPassword);
-      expect(find.text('Password updated successfully'), findsOneWidget);
+      expect(mockNotificationService.successCalls, contains('Password updated successfully'));
     });
 
 
@@ -195,7 +200,7 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Update Password'));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Error updating password'), findsOneWidget);
+      expect(mockNotificationService.errorCalls.any((msg) => msg.contains('Error updating password')), isTrue);
     });
 
     testWidgets('has lock icons on password fields', (tester) async {
@@ -250,7 +255,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(testNotifier.lastPassword, newPassword);
-      expect(find.text('Password updated successfully'), findsOneWidget);
+      expect(mockNotificationService.successCalls, contains('Password updated successfully'));
     });
 
     testWidgets('accepts long passwords', (tester) async {

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../../core/utils/datetime_utils.dart';
 import '../../domain/models/integration.dart';
 
-class IntegrationCard extends StatelessWidget {
+class IntegrationCard extends ConsumerWidget {
   final Integration integration;
   final VoidCallback onTap;
 
@@ -13,7 +15,7 @@ class IntegrationCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isConnected = integration.status == IntegrationStatus.connected;
@@ -282,10 +284,16 @@ class IntegrationCard extends StatelessWidget {
                 title: const Text('Sync Now'),
                 onTap: () {
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Syncing ${integration.name}...'),
-                      behavior: SnackBarBehavior.floating,
+                  // Access ref through a Builder or StatefulBuilder
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (dialogContext) => Consumer(
+                      builder: (context, ref, _) {
+                        ref.read(notificationServiceProvider.notifier).showInfo('Syncing ${integration.name}...');
+                        Navigator.of(dialogContext).pop();
+                        return const SizedBox.shrink();
+                      },
                     ),
                   );
                 },
@@ -308,33 +316,30 @@ class IntegrationCard extends StatelessWidget {
   void _showDisconnectDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Disconnect ${integration.name}?'),
-        content: Text(
-          'Are you sure you want to disconnect from ${integration.name}? '
-          'You can reconnect at any time.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+      builder: (dialogContext) => Consumer(
+        builder: (context, ref, _) => AlertDialog(
+          title: Text('Disconnect ${integration.name}?'),
+          content: Text(
+            'Are you sure you want to disconnect from ${integration.name}? '
+            'You can reconnect at any time.',
           ),
-          FilledButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Disconnected from ${integration.name}'),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.red,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
             ),
-            child: const Text('Disconnect'),
-          ),
-        ],
+            FilledButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                ref.read(notificationServiceProvider.notifier).showSuccess('Disconnected from ${integration.name}');
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.red,
+              ),
+              child: const Text('Disconnect'),
+            ),
+          ],
+        ),
       ),
     );
   }

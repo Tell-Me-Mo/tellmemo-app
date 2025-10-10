@@ -12,6 +12,7 @@ from rq import get_current_job
 
 from services.core.content_service import ContentService
 from utils.logger import sanitize_for_log
+from utils.rq_utils import check_cancellation
 from queue_config import queue_config
 
 logger = logging.getLogger(__name__)
@@ -125,6 +126,7 @@ def process_content_task(
         raise
 
 
+@check_cancellation()
 async def _process_content_async(
     content_id: uuid.UUID,
     tracking_job_id: Optional[str],
@@ -171,6 +173,20 @@ async def _process_content_async(
                 "content_id": str(content_id),
                 "status": "completed"
             }
+
+        except asyncio.CancelledError:
+            logger.info(f"Content processing job cancelled for content {content_id}")
+            if rq_job:
+                rq_job.meta['status'] = 'cancelled'
+                rq_job.meta['error'] = 'Job was cancelled by user'
+                rq_job.save_meta()
+
+                # Publish via Redis
+                queue_config.publish_job_update(rq_job.id, {
+                    'status': 'cancelled',
+                    'error': 'Job was cancelled by user'
+                })
+            raise
 
         except Exception as e:
             logger.error(f"Content processing failed for {content_id}: {e}", exc_info=True)

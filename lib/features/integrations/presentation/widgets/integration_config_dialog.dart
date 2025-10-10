@@ -5,6 +5,7 @@ import '../providers/integrations_provider.dart';
 import 'transcription_connection_dialog.dart';
 import 'ai_brain_config_dialog.dart';
 import 'fireflies_config_dialog.dart';
+import '../../../../core/services/notification_service.dart';
 
 class IntegrationConfigDialog extends ConsumerStatefulWidget {
   final Integration integration;
@@ -799,30 +800,12 @@ class _IntegrationConfigDialogState extends ConsumerState<IntegrationConfigDialo
       ref.read(integrationsProvider.notifier).updateIntegration(updatedIntegration);
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${widget.integration.name} configured successfully'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess('${widget.integration.name} configured successfully');
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to configure: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Failed to configure: $e');
       }
     } finally {
       if (mounted) {

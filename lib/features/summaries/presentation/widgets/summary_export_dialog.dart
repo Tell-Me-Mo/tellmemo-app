@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../data/models/summary_model.dart';
 import '../../domain/services/summary_export_service.dart';
 
 enum ExportFormat { pdf, docx, json, markdown }
 
-class SummaryExportDialog extends StatefulWidget {
+class SummaryExportDialog extends ConsumerStatefulWidget {
   final SummaryModel summary;
 
   const SummaryExportDialog({
@@ -13,10 +15,10 @@ class SummaryExportDialog extends StatefulWidget {
   });
 
   @override
-  State<SummaryExportDialog> createState() => _SummaryExportDialogState();
+  ConsumerState<SummaryExportDialog> createState() => _SummaryExportDialogState();
 }
 
-class _SummaryExportDialogState extends State<SummaryExportDialog> {
+class _SummaryExportDialogState extends ConsumerState<SummaryExportDialog> {
   ExportFormat _selectedFormat = ExportFormat.pdf;
   bool _isExporting = false;
 
@@ -226,29 +228,23 @@ class _SummaryExportDialogState extends State<SummaryExportDialog> {
     try {
       switch (_selectedFormat) {
         case ExportFormat.pdf:
-          await SummaryExportService.exportToPdf(context, widget.summary);
+          await SummaryExportService.exportToPdf(context, widget.summary, ref);
           break;
         case ExportFormat.docx:
-          await SummaryExportService.exportToDocx(context, widget.summary);
+          await SummaryExportService.exportToDocx(context, widget.summary, ref);
           break;
         case ExportFormat.json:
-          await SummaryExportService.exportToJson(context, widget.summary);
+          await SummaryExportService.exportToJson(context, widget.summary, ref);
           break;
         case ExportFormat.markdown:
-          await SummaryExportService.exportToMarkdown(context, widget.summary);
+          await SummaryExportService.exportToMarkdown(context, widget.summary, ref);
           break;
       }
 
       if (mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Summary exported as ${_getFormatName(_selectedFormat)} successfully',
-            ),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
-          ),
+        ref.read(notificationServiceProvider.notifier).showSuccess(
+          'Summary exported as ${_getFormatName(_selectedFormat)} successfully',
         );
       }
     } catch (e) {
@@ -256,12 +252,8 @@ class _SummaryExportDialogState extends State<SummaryExportDialog> {
         setState(() {
           _isExporting = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Export failed: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
+        ref.read(notificationServiceProvider.notifier).showError(
+          'Export failed: ${e.toString()}',
         );
       }
     }

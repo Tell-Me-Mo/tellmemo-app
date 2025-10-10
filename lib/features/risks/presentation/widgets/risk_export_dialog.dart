@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/services/notification_service.dart';
 
 class RiskExportDialog extends ConsumerStatefulWidget {
   final String format;
@@ -252,19 +253,7 @@ class _RiskExportDialogState extends ConsumerState<RiskExportDialog> {
 
     if (mounted) {
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Export completed successfully'),
-          backgroundColor: Colors.green,
-          action: SnackBarAction(
-            label: 'Open',
-            textColor: Colors.white,
-            onPressed: () {
-              // Open exported file
-            },
-          ),
-        ),
-      );
+      ref.read(notificationServiceProvider.notifier).showSuccess('Export completed successfully');
     }
   }
 }

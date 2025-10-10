@@ -8,6 +8,7 @@ import '../widgets/organization_list.dart';
 import '../../domain/entities/user_profile.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../organizations/presentation/widgets/organization_settings_dialog.dart';
+import '../../../../core/services/notification_service.dart';
 
 class UserProfileScreen extends ConsumerStatefulWidget {
   const UserProfileScreen({super.key});
@@ -88,21 +89,11 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
       _setEditMode(false);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profile updated successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess('Profile updated successfully');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error updating profile: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Error updating profile: $e');
       }
     }
   }
@@ -1102,11 +1093,7 @@ Widget _buildNotificationSettingsSection(ThemeData theme) {
             onPressed: () {
               Navigator.of(context).pop();
               // TODO: Implement account deletion
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Account deletion not implemented yet'),
-                ),
-              );
+              ref.read(notificationServiceProvider.notifier).showInfo('Account deletion not implemented yet');
             },
             style: TextButton.styleFrom(
               foregroundColor: Theme.of(context).colorScheme.error,
@@ -1169,12 +1156,7 @@ Widget _buildNotificationSettingsSection(ThemeData theme) {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error signing out: $e'),
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-          );
+          ref.read(notificationServiceProvider.notifier).showError('Error signing out: $e');
         }
       }
     }

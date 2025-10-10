@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../projects/domain/entities/project.dart';
 import '../../../projects/presentation/providers/projects_provider.dart';
 
@@ -78,11 +79,8 @@ class _EditProjectDialogState extends ConsumerState<EditProjectDialog> {
 
       if (mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Project "${_nameController.text}" updated successfully'),
-            backgroundColor: Colors.green,
-          ),
+        ref.read(notificationServiceProvider.notifier).showSuccess(
+          'Project "${_nameController.text}" updated successfully',
         );
       }
     } catch (e) {

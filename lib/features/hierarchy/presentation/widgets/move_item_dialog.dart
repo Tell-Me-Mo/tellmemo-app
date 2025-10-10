@@ -5,6 +5,7 @@ import '../../domain/entities/hierarchy_item.dart';
 import '../../../../core/constants/layout_constants.dart';
 import '../../../../core/constants/ui_constants.dart';
 import '../../../../core/utils/animation_utils.dart';
+import '../../../../core/services/notification_service.dart';
 
 class MoveItemDialog extends ConsumerStatefulWidget {
   final String itemId;
@@ -384,24 +385,14 @@ class _MoveItemDialogState extends ConsumerState<MoveItemDialog>
       
       if (mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${widget.itemName} moved successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess('${widget.itemName} moved successfully');
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to move item: ${e.toString()}'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Failed to move item: ${e.toString()}');
       }
     }
   }

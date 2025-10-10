@@ -24,6 +24,7 @@ from services.intelligence.project_matcher_service import project_matcher_servic
 from models.content import ContentType
 from models.integration import IntegrationType
 from utils.logger import sanitize_for_log
+from utils.rq_utils import check_cancellation, CancellationCheckpoint
 from queue_config import queue_config
 
 logger = logging.getLogger(__name__)
@@ -163,6 +164,7 @@ def process_audio_transcription_task(
             logger.warning(f"Failed to delete temp file: {sanitize_for_log(str(e))}")
 
 
+@check_cancellation()
 async def _process_transcription_async(
     temp_file_path: str,
     project_id: str,
@@ -182,6 +184,9 @@ async def _process_transcription_async(
     """
     from db.database import db_manager
 
+    # Create checkpoint for manual checks throughout processing
+    checkpoint = CancellationCheckpoint(rq_job)
+
     async with db_manager.sessionmaker() as db:
         # Update RQ job meta
         if rq_job:
@@ -197,10 +202,8 @@ async def _process_transcription_async(
                 'step': 'Loading AI model'
             })
 
-        # Check if job was cancelled (via RQ)
-        if rq_job and rq_job.is_canceled:
-            logger.info(f"Job {tracking_job_id} was cancelled before transcription started")
-            raise asyncio.CancelledError("Job cancelled by user")
+        # Check for cancellation before starting transcription
+        checkpoint.check("before transcription")
 
         # Get settings
         settings = get_settings()
@@ -243,11 +246,10 @@ async def _process_transcription_async(
                     'api_key': settings.replicate_api_key
                 }
 
-        # Progress callback
+        # Progress callback with cancellation checking
         async def transcription_progress(progress: float, description: str):
-            # Check if job was cancelled (via RQ)
-            if rq_job and rq_job.is_canceled:
-                raise asyncio.CancelledError("Job was cancelled by user")
+            # Check for cancellation during transcription
+            checkpoint.check(f"during transcription at {progress:.1%}")
 
             job_progress = 10.0 + (progress * 0.55)  # 10% to 65%
 
@@ -357,10 +359,8 @@ async def _process_transcription_async(
 
         logger.info(f"Transcription completed: {len(transcription_text)} characters")
 
-        # Check cancellation (via RQ)
-        if rq_job and rq_job.is_canceled:
-            logger.info(f"Job {tracking_job_id} cancelled after transcription")
-            raise asyncio.CancelledError("Job cancelled by user")
+        # Check for cancellation after transcription
+        checkpoint.check("after transcription completed")
 
         # Update RQ job meta
         if rq_job:

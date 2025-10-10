@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
+import '../../../../core/services/notification_service.dart';
 import '../providers/aggregated_tasks_provider.dart';
 
-class TaskExportDialog extends StatefulWidget {
+class TaskExportDialog extends ConsumerStatefulWidget {
   final List<TaskWithProject> tasks;
 
   const TaskExportDialog({
@@ -13,10 +15,10 @@ class TaskExportDialog extends StatefulWidget {
   });
 
   @override
-  State<TaskExportDialog> createState() => _TaskExportDialogState();
+  ConsumerState<TaskExportDialog> createState() => _TaskExportDialogState();
 }
 
-class _TaskExportDialogState extends State<TaskExportDialog> {
+class _TaskExportDialogState extends ConsumerState<TaskExportDialog> {
   String _selectedFormat = 'csv';
   bool _includeCompleted = true;
   bool _includeCancelled = false;
@@ -151,9 +153,7 @@ class _TaskExportDialogState extends State<TaskExportDialog> {
 
   void _copyToClipboard(String content) {
     Clipboard.setData(ClipboardData(text: content));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Copied to clipboard!')),
-    );
+    ref.read(notificationServiceProvider.notifier).showSuccess('Copied to clipboard!');
     Navigator.of(context).pop();
   }
 

@@ -8,6 +8,7 @@ import 'package:pm_master_v2/features/projects/domain/entities/project.dart';
 import 'package:pm_master_v2/features/jobs/domain/models/job_model.dart';
 import 'package:pm_master_v2/features/jobs/domain/services/job_websocket_service.dart';
 import 'package:pm_master_v2/features/jobs/presentation/providers/job_websocket_provider.dart';
+import '../../../../helpers/test_helpers.dart';
 
 // Mock job websocket service
 class MockJobWebSocketService extends Mock implements JobWebSocketService {
@@ -64,31 +65,28 @@ void main() {
     required String jobId,
     String? contentId,
   }) {
-    return ProviderScope(
+    return createTestApp(
       overrides: [
         jobWebSocketServiceProvider.overrideWithValue(mockJobService),
       ],
-      child: MaterialApp(
-        home: Scaffold(
-          body: Builder(
-            builder: (context) {
-              return ElevatedButton(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (_) => ContentProcessingDialog(
-                      project: testProject,
-                      jobId: jobId,
-                      contentId: contentId,
-                    ),
-                  );
-                },
-                child: const Text('Show Dialog'),
+      child: Builder(
+        builder: (context) {
+          return ElevatedButton(
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (_) => ContentProcessingDialog(
+                  project: testProject,
+                  jobId: jobId,
+                  contentId: contentId,
+                ),
               );
             },
-          ),
-        ),
+            child: const Text('Show Dialog'),
+          );
+        },
       ),
+      wrapInScaffold: true,
     );
   }
 

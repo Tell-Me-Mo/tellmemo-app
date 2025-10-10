@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:csv/csv.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../projects/domain/entities/risk.dart';
 import '../../../projects/presentation/widgets/risk_view_dialog.dart';
 import '../../../projects/presentation/providers/projects_provider.dart';
@@ -3559,12 +3560,7 @@ class _CreateRiskDialogState extends ConsumerState<CreateRiskDialog> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error creating risk: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Error creating risk: $e');
       }
     } finally {
       if (mounted) {

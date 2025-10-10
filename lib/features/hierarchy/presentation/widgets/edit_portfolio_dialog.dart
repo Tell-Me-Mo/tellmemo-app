@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/hierarchy_providers.dart';
 import '../../domain/entities/portfolio.dart';
+import '../../../../core/services/notification_service.dart';
 
 // Dialog constants matching create dialog
 class _DialogConstants {
@@ -83,9 +84,7 @@ class _EditPortfolioDialogState extends ConsumerState<EditPortfolioDialog> {
         ref.invalidate(hierarchyStateProvider);
 
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Portfolio updated successfully')),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess('Portfolio updated successfully');
       }
     } catch (e) {
       if (mounted) {

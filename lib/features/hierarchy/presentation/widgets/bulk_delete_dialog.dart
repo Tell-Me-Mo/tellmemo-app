@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/hierarchy_item.dart';
 import '../providers/hierarchy_providers.dart';
 import '../../../../core/constants/layout_constants.dart';
+import '../../../../core/services/notification_service.dart';
 
 class BulkDeleteDialog extends ConsumerStatefulWidget {
   final List<HierarchyItem> itemsToDelete;
@@ -396,13 +397,8 @@ class _BulkDeleteDialogState extends ConsumerState<BulkDeleteDialog> {
       
       if (mounted) {
         Navigator.of(context).pop(true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Successfully deleted ${result['deleted_count']} item(s)',
-            ),
-            backgroundColor: Colors.green,
-          ),
+        ref.read(notificationServiceProvider.notifier).showSuccess(
+          'Successfully deleted ${result['deleted_count']} item(s)',
         );
       }
     } catch (e) {
@@ -410,12 +406,7 @@ class _BulkDeleteDialogState extends ConsumerState<BulkDeleteDialog> {
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to delete items: ${e.toString()}'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Failed to delete items: ${e.toString()}');
       }
     }
   }

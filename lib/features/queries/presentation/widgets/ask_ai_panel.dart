@@ -8,6 +8,7 @@ import '../../../../core/utils/screen_info.dart';
 import '../providers/query_provider.dart' show queryProvider, QueryState, ConversationItem, generateFollowUpSuggestions;
 import 'query_suggestions.dart';
 import 'typing_indicator.dart';
+import '../../../../core/services/notification_service.dart';
 
 class AskAIPanel extends ConsumerStatefulWidget {
   final String projectId;
@@ -683,14 +684,7 @@ class _AskAIPanelState extends ConsumerState<AskAIPanel> with TickerProviderStat
                             tooltip: 'Copy',
                             onPressed: () {
                               Clipboard.setData(ClipboardData(text: item.answer));
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: const Text('Copied to clipboard'),
-                                  duration: const Duration(seconds: 2),
-                                  behavior: SnackBarBehavior.floating,
-                                  width: 200,
-                                ),
-                              );
+                              ref.read(notificationServiceProvider.notifier).showSuccess('Copied to clipboard');
                             },
                           ),
                       ],

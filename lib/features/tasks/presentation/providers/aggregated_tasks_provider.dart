@@ -27,22 +27,11 @@ class TaskLoadError {
   });
 }
 
-// Cache for loaded tasks
-final _tasksCache = <String, List<Task>>{};
-DateTime? _lastCacheUpdate;
-
-// Function to clear cache (to be called when tasks are updated)
-void clearTasksCache() {
-  _tasksCache.clear();
-  _lastCacheUpdate = null;
-}
-
 // Provider for task loading errors
 final taskLoadErrorsProvider = StateProvider<List<TaskLoadError>>((ref) => []);
 
-// Main aggregated tasks provider with error handling and caching
+// Main aggregated tasks provider - simplified without manual caching
 final aggregatedTasksProvider = FutureProvider<List<TaskWithProject>>((ref) async {
-  print('🔄 aggregatedTasksProvider rebuilding');
   final projects = await ref.watch(projectsListProvider.future);
   final errors = <TaskLoadError>[];
 
@@ -52,22 +41,10 @@ final aggregatedTasksProvider = FutureProvider<List<TaskWithProject>>((ref) asyn
 
   final List<TaskWithProject> allTasks = [];
 
-  // Check if we should use cache (cache is valid for 5 minutes)
-  final shouldUseCache = _lastCacheUpdate != null &&
-      DateTime.now().difference(_lastCacheUpdate!).inMinutes < 5;
-
   for (final project in projects) {
     try {
-      List<Task> tasks;
-
-      if (shouldUseCache && _tasksCache.containsKey(project.id)) {
-        // Use cached tasks
-        tasks = _tasksCache[project.id]!;
-      } else {
-        // Load fresh tasks - use read instead of watch to avoid caching issues
-        tasks = await ref.read(projectTasksProvider(project.id).future);
-        _tasksCache[project.id] = tasks;
-      }
+      // Always fetch fresh - let Riverpod handle caching naturally
+      final tasks = await ref.watch(projectTasksProvider(project.id).future);
 
       for (final task in tasks) {
         allTasks.add(TaskWithProject(
@@ -87,27 +64,16 @@ final aggregatedTasksProvider = FutureProvider<List<TaskWithProject>>((ref) asyn
     }
   }
 
-  // Update last cache time
-  if (!shouldUseCache) {
-    _lastCacheUpdate = DateTime.now();
-  }
-
   // Store errors for display
   ref.read(taskLoadErrorsProvider.notifier).state = errors;
-
-  // Don't sort here - let filteredTasksProvider handle sorting to avoid unnecessary rebuilds
-  // Sorting will be applied in filteredTasksProvider which already watches the filter
-  print('📊 aggregatedTasksProvider: returning ${allTasks.length} unsorted tasks');
 
   return allTasks;
 });
 
 // Filtered tasks provider
 final filteredTasksProvider = Provider<List<TaskWithProject>>((ref) {
-  print('🔍 filteredTasksProvider rebuilding');
   final tasksAsync = ref.watch(aggregatedTasksProvider);
   final filter = ref.watch(tasksFilterProvider);
-  print('🔍 filteredTasksProvider: filter = searchQuery: "${filter.searchQuery}", activeFilters: ${filter.activeFilterCount}');
   final currentUser = 'current_user'; // TODO: Get from auth provider
 
   return tasksAsync.maybeWhen(
@@ -169,7 +135,6 @@ final filteredTasksProvider = Provider<List<TaskWithProject>>((ref) {
 
       // Apply sorting based on filter settings
       _sortTasks(filtered, filter.sortBy, filter.sortOrder);
-      print('🎯 filteredTasksProvider: applied sorting - ${filter.sortBy}');
 
       return filtered;
     },
@@ -236,18 +201,14 @@ void _sortTasks(List<TaskWithProject> tasks, TaskSortBy sortBy, TaskSortOrder so
   });
 }
 
-// Force refresh provider
+// Force refresh provider - using refresh instead of invalidate
 final forceRefreshTasksProvider = Provider((ref) {
-  return () {
-    // Clear the cache
-    _tasksCache.clear();
-    _lastCacheUpdate = null;
-
-    // Invalidate all project tasks providers to force fresh data
+  return () async {
+    // Invalidate all project task providers first
     ref.invalidate(projectTasksProvider);
 
-    // Then invalidate the aggregated provider
-    ref.invalidate(aggregatedTasksProvider);
+    // Refresh (not invalidate) - this waits for fresh data before returning
+    await ref.refresh(aggregatedTasksProvider.future);
   };
 });
 

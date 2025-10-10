@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../domain/models/job_model.dart';
 import '../providers/job_websocket_provider.dart';
 import '../../../content/presentation/providers/processing_jobs_provider.dart';
+import '../../../../core/services/notification_service.dart';
 
 class UploadProgressIndicator extends ConsumerWidget {
   final String? jobId;
@@ -324,13 +325,7 @@ class UploadProgressIndicator extends ConsumerWidget {
                           } catch (e) {
                             // Show error if cancellation fails
                             if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Failed to cancel job: ${e.toString()}'),
-                                  backgroundColor: Colors.red,
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
+                              ref.read(notificationServiceProvider.notifier).showError('Failed to cancel job: ${e.toString()}');
                             }
                           }
                         }

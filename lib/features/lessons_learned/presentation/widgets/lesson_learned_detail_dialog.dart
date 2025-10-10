@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../projects/domain/entities/lesson_learned.dart';
 import '../../../projects/domain/entities/project.dart';
 import '../../../projects/presentation/widgets/lesson_learned_dialog.dart';
@@ -497,12 +498,7 @@ ${_buildLessonContext(lesson)}''';
         }
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to delete lesson: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          ref.read(notificationServiceProvider.notifier).showError('Failed to delete lesson: $e');
         }
       }
     }

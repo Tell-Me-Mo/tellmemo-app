@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../projects/domain/entities/risk.dart';
 import '../../../projects/presentation/providers/risks_tasks_provider.dart';
 import '../providers/aggregated_risks_provider.dart';
@@ -93,15 +94,10 @@ class _RiskKanbanBoardViewState extends ConsumerState<RiskKanbanBoardView> {
       // Use global sync to refresh all risk providers
       ref.read(globalRisksSyncProvider.notifier).invalidateAllRiskProviders();
 
-      // No success snackbar needed - UI will update automatically
+      // No success notification needed - UI will update automatically
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update risk: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Failed to update risk: $e');
       }
     }
   }

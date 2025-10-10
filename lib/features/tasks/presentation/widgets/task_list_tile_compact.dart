@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../projects/domain/entities/task.dart';
 import '../../../projects/presentation/providers/risks_tasks_provider.dart';
 import '../providers/aggregated_tasks_provider.dart';
@@ -35,18 +36,11 @@ class TaskListTileCompact extends ConsumerWidget {
       ref.read(forceRefreshTasksProvider)();
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_getStatusUpdateMessage(newStatus)),
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess(_getStatusUpdateMessage(newStatus));
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating task: $e')),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Error updating task: $e');
       }
     }
   }

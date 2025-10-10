@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../projects/presentation/providers/projects_provider.dart';
 import '../providers/hierarchy_providers.dart';
+import '../../../../core/services/notification_service.dart';
 
 // Dialog constants matching create dialog
 class _DialogConstants {
@@ -76,9 +77,7 @@ class _EditProjectFromHierarchyDialogState extends ConsumerState<EditProjectFrom
         ref.invalidate(hierarchyStateProvider);
 
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Project updated successfully')),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess('Project updated successfully');
       }
     } catch (e) {
       if (mounted) {

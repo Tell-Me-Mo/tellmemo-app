@@ -61,9 +61,8 @@ class BulkTaskOperations {
       await _repository.updateTask(taskId, updatedTask);
     }
 
-    // Clear cache and refresh the tasks
-    clearTasksCache();
-    _ref.invalidate(aggregatedTasksProvider);
+    // Use the force refresh provider to ensure UI updates
+    await _ref.read(forceRefreshTasksProvider)();
   }
 
   Future<void> updatePriority(Set<String> taskIds, TaskPriority newPriority) async {
@@ -80,9 +79,8 @@ class BulkTaskOperations {
       await _repository.updateTask(taskId, updatedTask);
     }
 
-    // Clear cache and refresh the tasks
-    clearTasksCache();
-    _ref.invalidate(aggregatedTasksProvider);
+    // Use the force refresh provider to ensure UI updates
+    await _ref.read(forceRefreshTasksProvider)();
   }
 
   Future<void> deleteTasks(Set<String> taskIds) async {
@@ -90,9 +88,8 @@ class BulkTaskOperations {
       await _repository.deleteTask(taskId);
     }
 
-    // Clear cache and refresh the tasks
-    clearTasksCache();
-    _ref.invalidate(aggregatedTasksProvider);
+    // Use the force refresh provider to ensure UI updates
+    await _ref.read(forceRefreshTasksProvider)();
   }
 
   Future<void> assignTasks(Set<String> taskIds, String assignee) async {
@@ -109,9 +106,8 @@ class BulkTaskOperations {
       await _repository.updateTask(taskId, updatedTask);
     }
 
-    // Clear cache and refresh the tasks
-    clearTasksCache();
-    _ref.invalidate(aggregatedTasksProvider);
+    // Use the force refresh provider to ensure UI updates
+    await _ref.read(forceRefreshTasksProvider)();
   }
 }
 

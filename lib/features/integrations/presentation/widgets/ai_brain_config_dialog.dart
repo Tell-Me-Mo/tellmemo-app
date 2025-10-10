@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/dio_client.dart';
 import '../providers/integrations_provider.dart';
+import '../../../../core/services/notification_service.dart';
 
 class AIBrainConfigDialog extends ConsumerStatefulWidget {
   const AIBrainConfigDialog({super.key});
@@ -64,30 +65,13 @@ class _AIBrainConfigDialogState extends ConsumerState<AIBrainConfigDialog> {
       if (mounted) {
         final data = response.data as Map<String, dynamic>;
         if (data['success'] == true) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(data['message'] ?? 'Configuration test successful'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          ref.read(notificationServiceProvider.notifier).showSuccess(data['message'] ?? 'Configuration test successful');
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(data['error'] ?? 'Configuration test failed'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          ref.read(notificationServiceProvider.notifier).showError(data['error'] ?? 'Configuration test failed');
         }
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Test failed: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      ref.read(notificationServiceProvider.notifier).showError('Test failed: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -123,22 +107,10 @@ class _AIBrainConfigDialogState extends ConsumerState<AIBrainConfigDialog> {
 
       if (mounted) {
         Navigator.of(context).pop(true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('AI Brain configuration saved successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess('AI Brain configuration saved successfully');
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to save configuration: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      ref.read(notificationServiceProvider.notifier).showError('Failed to save configuration: $e');
     } finally {
       if (mounted) {
         setState(() {

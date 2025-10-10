@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pm_master_v2/features/queries/presentation/providers/query_provider.dart';
 import 'package:pm_master_v2/features/queries/presentation/widgets/query_response_card.dart';
+import 'package:pm_master_v2/core/services/notification_service.dart';
+import '../../../../helpers/test_helpers.dart';
 
 void main() {
   group('QueryResponseCard', () {
     late ConversationItem testResponse;
+    late MockNotificationService mockNotificationService;
 
     setUp(() {
       testResponse = ConversationItem(
@@ -16,16 +20,28 @@ void main() {
         confidence: 0.85,
         timestamp: DateTime(2024, 1, 15, 10, 30),
       );
+      mockNotificationService = createMockNotificationService();
     });
+
+    Widget createTestWidget(Widget child) {
+      return ProviderScope(
+        overrides: [
+          notificationServiceProvider.overrideWith((ref) => mockNotificationService),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: child,
+          ),
+        ),
+      );
+    }
 
     testWidgets('displays query question', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: QueryResponseCard(
-              response: testResponse,
-              query: testResponse.question,
-            ),
+        createTestWidget(
+          QueryResponseCard(
+            response: testResponse,
+            query: testResponse.question,
           ),
         ),
       );
@@ -63,14 +79,12 @@ void main() {
       expect(find.widgetWithIcon(IconButton, Icons.copy), findsOneWidget);
     });
 
-    testWidgets('copy button shows snackbar when tapped', (tester) async {
+    testWidgets('copy button shows notification when tapped', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: QueryResponseCard(
-              response: testResponse,
-              query: testResponse.question,
-            ),
+        createTestWidget(
+          QueryResponseCard(
+            response: testResponse,
+            query: testResponse.question,
           ),
         ),
       );
@@ -79,8 +93,8 @@ void main() {
       await tester.tap(find.byIcon(Icons.copy));
       await tester.pump();
 
-      // Verify snackbar is shown
-      expect(find.text('Response copied to clipboard'), findsOneWidget);
+      // Verify notification is shown
+      expect(mockNotificationService.infoCalls, contains('Response copied to clipboard'));
     });
 
     testWidgets('displays confidence indicator', (tester) async {

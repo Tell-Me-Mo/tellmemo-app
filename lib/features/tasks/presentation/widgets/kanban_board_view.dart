@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../projects/domain/entities/task.dart';
 import '../../../projects/presentation/providers/risks_tasks_provider.dart';
 import '../providers/aggregated_tasks_provider.dart';
@@ -236,21 +237,15 @@ class _KanbanBoardViewState extends ConsumerState<KanbanBoardView> {
       // Force refresh the tasks (clear cache and invalidate)
       ref.read(forceRefreshTasksProvider)();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Task moved to ${_getStatusLabel(newStatus)}',
-          ),
-          backgroundColor: TaskUIHelpers.getStatusColor(newStatus, Theme.of(context).colorScheme),
-        ),
-      );
+      if (mounted) {
+        ref.read(notificationServiceProvider.notifier).showSuccess(
+          'Task moved to ${_getStatusLabel(newStatus)}',
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error updating task: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ref.read(notificationServiceProvider.notifier).showError('Error updating task: $e');
+      }
     }
   }
 

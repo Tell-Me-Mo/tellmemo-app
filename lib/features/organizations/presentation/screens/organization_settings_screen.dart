@@ -6,6 +6,7 @@ import '../providers/organization_settings_provider.dart';
 import '../../domain/entities/organization.dart';
 import '../../../projects/presentation/providers/projects_provider.dart';
 import '../../../documents/presentation/providers/documents_provider.dart';
+import '../../../../core/services/notification_service.dart';
 
 class OrganizationSettingsScreen extends ConsumerStatefulWidget {
   const OrganizationSettingsScreen({super.key});
@@ -101,12 +102,7 @@ class _OrganizationSettingsScreenState extends ConsumerState<OrganizationSetting
     _setEditMode(false);
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Organization settings updated successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      ref.read(notificationServiceProvider.notifier).showSuccess('Organization settings updated successfully');
     }
   }
 

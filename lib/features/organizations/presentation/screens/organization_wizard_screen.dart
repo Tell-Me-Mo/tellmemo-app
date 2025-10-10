@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/organization_provider.dart';
 import '../../../../core/services/firebase_analytics_service.dart';
+import '../../../../core/services/notification_service.dart';
 
 class OrganizationWizardScreen extends ConsumerStatefulWidget {
   const OrganizationWizardScreen({super.key});
@@ -80,16 +81,7 @@ class _OrganizationWizardScreenState extends ConsumerState<OrganizationWizardScr
 
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to create organization: $error'),
-            backgroundColor: Colors.red.shade600,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Failed to create organization: $error');
       }
     }
   }

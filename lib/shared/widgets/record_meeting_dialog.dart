@@ -7,6 +7,7 @@ import '../../features/meetings/presentation/providers/upload_provider.dart';
 import '../../features/audio_recording/presentation/providers/recording_provider.dart';
 import '../../features/audio_recording/presentation/widgets/recording_button.dart';
 import '../../features/content/presentation/providers/processing_jobs_provider.dart';
+import '../../core/services/notification_service.dart';
 
 enum ProjectSelectionMode { automatic, manual, specific }
 
@@ -79,12 +80,7 @@ class _RecordMeetingDialogState extends ConsumerState<RecordMeetingDialog> {
       useAiMatching = true;
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please select a project or choose automatic matching'),
-            backgroundColor: Colors.orange,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showWarning('Please select a project or choose automatic matching');
       }
       return;
     }
@@ -137,12 +133,7 @@ class _RecordMeetingDialogState extends ConsumerState<RecordMeetingDialog> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to upload recording: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Failed to upload recording: $e');
       }
     }
   }

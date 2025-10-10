@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/recording_provider.dart';
+import '../../../../core/services/notification_service.dart';
 
 class TranscriptionDisplay extends ConsumerWidget {
   final bool showFullTranscript;
@@ -106,7 +107,7 @@ class TranscriptionDisplay extends ConsumerWidget {
                         icon: const Icon(Icons.copy, size: 18),
                         onPressed: () {
                           // Copy to clipboard
-                          _copyToClipboard(context, recordingState.transcriptionText);
+                          _copyToClipboard(context, ref, recordingState.transcriptionText);
                         },
                         tooltip: 'Copy to clipboard',
                         style: IconButton.styleFrom(
@@ -204,15 +205,10 @@ class TranscriptionDisplay extends ConsumerWidget {
     return 'Duration: ${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
   
-  void _copyToClipboard(BuildContext context, String text) {
+  void _copyToClipboard(BuildContext context, WidgetRef ref, String text) {
     // Import required for clipboard
     // Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Transcription copied to clipboard'),
-        duration: Duration(seconds: 2),
-      ),
-    );
+    ref.read(notificationServiceProvider.notifier).showInfo('Transcription copied to clipboard');
   }
   
   Widget _buildProcessingCard(BuildContext context, ThemeData theme, ColorScheme colorScheme) {

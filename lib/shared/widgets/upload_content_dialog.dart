@@ -12,6 +12,7 @@ import '../../features/meetings/presentation/providers/meetings_provider.dart';
 import '../../features/content/presentation/providers/processing_jobs_provider.dart';
 import '../../features/meetings/domain/models/multi_file_upload_state.dart';
 import 'multi_file_upload_list.dart';
+import '../../core/services/notification_service.dart';
 
 enum ProjectSelectionMode { automatic, manual, specific }
 
@@ -123,12 +124,7 @@ class _UploadContentDialogState extends ConsumerState<UploadContentDialog> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error picking file: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Error picking file: $e');
       }
     }
   }
@@ -198,12 +194,7 @@ class _UploadContentDialogState extends ConsumerState<UploadContentDialog> {
       (_selectedFilePath != null || _selectedFileBytes != null);
 
     if (!hasContent || _titleController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please provide content and enter a title'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      ref.read(notificationServiceProvider.notifier).showWarning('Please provide content and enter a title');
       return;
     }
 
@@ -312,23 +303,7 @@ class _UploadContentDialogState extends ConsumerState<UploadContentDialog> {
           errorMessage = 'Upload failed: ${e.toString().replaceAll('Exception:', '').trim()}';
         }
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error_outline, color: Colors.white),
-                const SizedBox(width: 12),
-                Expanded(child: Text(errorMessage)),
-              ],
-            ),
-            backgroundColor: Colors.red,
-            action: SnackBarAction(
-              label: 'Retry',
-              textColor: Colors.white,
-              onPressed: _uploadContent,
-            ),
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showError(errorMessage);
       }
     } finally {
       _progressTimer?.cancel();
@@ -345,12 +320,7 @@ class _UploadContentDialogState extends ConsumerState<UploadContentDialog> {
     final multiFileState = ref.read(multiFileUploadProvider);
 
     if (multiFileState.files.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select files to upload'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      ref.read(notificationServiceProvider.notifier).showWarning('Please select files to upload');
       return;
     }
 
@@ -384,15 +354,13 @@ class _UploadContentDialogState extends ConsumerState<UploadContentDialog> {
       final finalState = ref.read(multiFileUploadProvider);
       if (finalState.completedCount > 0) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                '${finalState.completedCount} of ${finalState.totalFiles} files uploaded successfully'
-                '${finalState.failedCount > 0 ? ' (${finalState.failedCount} failed)' : ''}',
-              ),
-              backgroundColor: finalState.hasErrors ? Colors.orange : Colors.green,
-            ),
-          );
+          final message = '${finalState.completedCount} of ${finalState.totalFiles} files uploaded successfully'
+              '${finalState.failedCount > 0 ? ' (${finalState.failedCount} failed)' : ''}';
+          if (finalState.hasErrors) {
+            ref.read(notificationServiceProvider.notifier).showWarning(message);
+          } else {
+            ref.read(notificationServiceProvider.notifier).showSuccess(message);
+          }
         }
       }
 
@@ -408,18 +376,7 @@ class _UploadContentDialogState extends ConsumerState<UploadContentDialog> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error_outline, color: Colors.white),
-                const SizedBox(width: 12),
-                Expanded(child: Text('Upload failed: ${e.toString()}')),
-              ],
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Upload failed: ${e.toString()}');
       }
     } finally {
       if (mounted) {
@@ -1071,7 +1028,7 @@ class _ContentInputSection extends StatelessWidget {
 }
 
 // Unified Upload Area with integrated paste option
-class _UnifiedUploadArea extends StatefulWidget {
+class _UnifiedUploadArea extends ConsumerStatefulWidget {
   final String? selectedFileName;
   final bool hasFile;
   final VoidCallback onPickFile;
@@ -1091,10 +1048,10 @@ class _UnifiedUploadArea extends StatefulWidget {
   });
 
   @override
-  State<_UnifiedUploadArea> createState() => _UnifiedUploadAreaState();
+  ConsumerState<_UnifiedUploadArea> createState() => _UnifiedUploadAreaState();
 }
 
-class _UnifiedUploadAreaState extends State<_UnifiedUploadArea> {
+class _UnifiedUploadAreaState extends ConsumerState<_UnifiedUploadArea> {
   bool _isDragging = false;
 
   void _setDragging(bool value) {
@@ -1128,9 +1085,6 @@ class _UnifiedUploadAreaState extends State<_UnifiedUploadArea> {
       onDragDone: (details) async {
         _setDragging(false);
 
-        // Capture context before async operations
-        final scaffoldMessenger = ScaffoldMessenger.of(context);
-
         // Filter files by extension
         final allowedExtensions = _DialogConstants.allExtensions;
         final validFiles = <PlatformFile>[];
@@ -1158,12 +1112,7 @@ class _UnifiedUploadAreaState extends State<_UnifiedUploadArea> {
         } else {
           // Show error if no valid files
           if (mounted) {
-            scaffoldMessenger.showSnackBar(
-              SnackBar(
-                content: Text('Please drop files with valid extensions: ${allowedExtensions.join(', ')}'),
-                backgroundColor: Colors.orange,
-              ),
-            );
+            ref.read(notificationServiceProvider.notifier).showWarning('Please drop files with valid extensions: ${allowedExtensions.join(', ')}');
           }
         }
       },

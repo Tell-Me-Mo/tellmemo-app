@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../domain/models/integration.dart';
 import '../providers/integrations_provider.dart';
+import '../../../../core/services/notification_service.dart';
 
 class FirefliesConfigDialog extends ConsumerStatefulWidget {
   final Integration integration;
@@ -52,12 +53,7 @@ class _FirefliesConfigDialogState extends ConsumerState<FirefliesConfigDialog> {
 
   Future<void> _testConnection() async {
     if (_apiKeyController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter an API key'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      ref.read(notificationServiceProvider.notifier).showWarning('Please enter an API key');
       return;
     }
 
@@ -84,29 +80,14 @@ class _FirefliesConfigDialogState extends ConsumerState<FirefliesConfigDialog> {
       if (mounted) {
         final data = response.data as Map<String, dynamic>;
         if (data['success'] == true) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(data['message'] ?? 'Connection successful!'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          ref.read(notificationServiceProvider.notifier).showSuccess(data['message'] ?? 'Connection successful!');
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(data['error'] ?? 'Connection failed'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          ref.read(notificationServiceProvider.notifier).showError(data['error'] ?? 'Connection failed');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Connection test failed: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Connection test failed: ${e.toString()}');
       }
     } finally {
       if (mounted) {
@@ -138,22 +119,10 @@ class _FirefliesConfigDialogState extends ConsumerState<FirefliesConfigDialog> {
 
         if (mounted) {
           Navigator.of(context).pop(true);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Fireflies.ai connected successfully!'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          ref.read(notificationServiceProvider.notifier).showSuccess('Fireflies.ai connected successfully!');
         }
       } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to save configuration: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        ref.read(notificationServiceProvider.notifier).showError('Failed to save configuration: $e');
       } finally {
         if (mounted) {
           setState(() {

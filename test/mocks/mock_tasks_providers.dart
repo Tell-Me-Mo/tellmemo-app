@@ -77,12 +77,13 @@ Override createRisksTasksRepositoryOverride({
 /// Helper function to create force refresh provider override
 Override createForceRefreshTasksOverride({VoidCallback? onRefresh}) {
   return forceRefreshTasksProvider.overrideWith((ref) {
-    return () {
+    return () async {
       if (onRefresh != null) {
         onRefresh();
       }
-      // Clear cache
-      clearTasksCache();
+      // Invalidate providers
+      ref.invalidate(projectTasksProvider);
+      await ref.refresh(aggregatedTasksProvider.future);
     };
   });
 }

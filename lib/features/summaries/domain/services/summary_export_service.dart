@@ -11,6 +11,8 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../data/models/summary_model.dart';
 import 'web_download_stub.dart' if (dart.library.js_interop) 'web_download_web.dart' as web_download;
 
@@ -317,7 +319,7 @@ class SummaryExportService {
   }
 
   // Export to DOCX file
-  static Future<void> exportToDocx(BuildContext context, SummaryModel summary) async {
+  static Future<void> exportToDocx(BuildContext context, SummaryModel summary, WidgetRef ref) async {
     try {
       // Generate HTML content that can be opened in Word
       final htmlContent = _generateHtmlForDocx(summary);
@@ -343,31 +345,23 @@ class SummaryExportService {
           await file.writeAsBytes(bytes);
 
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Document saved successfully'),
-                backgroundColor: Colors.green,
-                duration: Duration(seconds: 2),
-              ),
+            ref.read(notificationServiceProvider.notifier).showSuccess(
+              'Document saved successfully',
             );
           }
         }
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to export document: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: Duration(seconds: 3),
-          ),
+        ref.read(notificationServiceProvider.notifier).showError(
+          'Failed to export document: ${e.toString()}',
         );
       }
     }
   }
 
   // Export to JSON file
-  static Future<void> exportToJson(BuildContext context, SummaryModel summary) async {
+  static Future<void> exportToJson(BuildContext context, SummaryModel summary, WidgetRef ref) async {
     try {
       final jsonData = summary.toJson();
       final prettyJson = const JsonEncoder.withIndent('  ').convert(jsonData);
@@ -393,31 +387,23 @@ class SummaryExportService {
           await file.writeAsBytes(bytes);
 
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('JSON file saved successfully'),
-                backgroundColor: Colors.green,
-                duration: Duration(seconds: 2),
-              ),
+            ref.read(notificationServiceProvider.notifier).showSuccess(
+              'JSON file saved successfully',
             );
           }
         }
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to export JSON: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: Duration(seconds: 3),
-          ),
+        ref.read(notificationServiceProvider.notifier).showError(
+          'Failed to export JSON: ${e.toString()}',
         );
       }
     }
   }
 
   // Export to Markdown file
-  static Future<void> exportToMarkdown(BuildContext context, SummaryModel summary) async {
+  static Future<void> exportToMarkdown(BuildContext context, SummaryModel summary, WidgetRef ref) async {
     try {
       final markdownContent = _generateMarkdown(summary);
       final bytes = utf8.encode(markdownContent);
@@ -442,31 +428,23 @@ class SummaryExportService {
           await file.writeAsBytes(bytes);
 
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Markdown file saved successfully'),
-                backgroundColor: Colors.green,
-                duration: Duration(seconds: 2),
-              ),
+            ref.read(notificationServiceProvider.notifier).showSuccess(
+              'Markdown file saved successfully',
             );
           }
         }
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to export Markdown: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: Duration(seconds: 3),
-          ),
+        ref.read(notificationServiceProvider.notifier).showError(
+          'Failed to export Markdown: ${e.toString()}',
         );
       }
     }
   }
 
   // Export to PDF file
-  static Future<void> exportToPdf(BuildContext context, SummaryModel summary) async {
+  static Future<void> exportToPdf(BuildContext context, SummaryModel summary, WidgetRef ref) async {
     try {
       final pdfBytes = await generatePdf(summary);
       final dateFormat = DateFormat('yyyy-MM-dd');
@@ -489,32 +467,24 @@ class SummaryExportService {
           await file.writeAsBytes(pdfBytes);
 
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('PDF saved successfully'),
-                backgroundColor: Colors.green,
-                duration: Duration(seconds: 2),
-              ),
+            ref.read(notificationServiceProvider.notifier).showSuccess(
+              'PDF saved successfully',
             );
           }
         }
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to export PDF: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
+        ref.read(notificationServiceProvider.notifier).showError(
+          'Failed to export PDF: ${e.toString()}',
         );
       }
     }
   }
 
   // Share functionality
-  static Future<void> shareSummary(BuildContext context, SummaryModel summary) async {
-    try {
+  static Future<void> shareSummary(BuildContext context, SummaryModel summary, WidgetRef ref) async {
+    try{
       // Generate a text version for sharing
       final buffer = StringBuffer();
       final dateFormat = DateFormat('MMM dd, yyyy');
@@ -583,21 +553,14 @@ class SummaryExportService {
       }
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Summary shared successfully'),
-            duration: Duration(seconds: 2),
-          ),
+        ref.read(notificationServiceProvider.notifier).showSuccess(
+          'Summary shared successfully',
         );
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to share summary: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
+        ref.read(notificationServiceProvider.notifier).showError(
+          'Failed to share summary: $e',
         );
       }
     }

@@ -6,6 +6,7 @@ import '../../domain/entities/project.dart';
 import '../providers/risks_tasks_provider.dart';
 import '../../../queries/presentation/widgets/ask_ai_panel.dart';
 import '../../../queries/presentation/providers/query_provider.dart';
+import '../../../../core/services/notification_service.dart';
 
 class BlockerDetailDialog extends ConsumerStatefulWidget {
   final String projectId;
@@ -76,9 +77,7 @@ class _BlockerDetailDialogState extends ConsumerState<BlockerDetailDialog> {
 
   Future<void> _saveChanges() async {
     if (_titleController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Title cannot be empty')),
-      );
+      ref.read(notificationServiceProvider.notifier).showError('Title cannot be empty');
       return;
     }
 
@@ -114,15 +113,11 @@ class _BlockerDetailDialogState extends ConsumerState<BlockerDetailDialog> {
           _editedBlocker = updatedBlocker;
           _isEditing = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Blocker updated successfully')),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess('Blocker updated successfully');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating blocker: $e')),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Error updating blocker: $e');
       }
     } finally {
       if (mounted) {
@@ -164,15 +159,11 @@ class _BlockerDetailDialogState extends ConsumerState<BlockerDetailDialog> {
 
       if (mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Blocker deleted successfully')),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess('Blocker deleted successfully');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error deleting blocker: $e')),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Error deleting blocker: $e');
       }
     } finally {
       if (mounted) {
@@ -363,15 +354,11 @@ class _BlockerDetailDialogState extends ConsumerState<BlockerDetailDialog> {
           _editedBlocker = updatedBlocker;
           _resolutionController.text = resolution;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Blocker marked as resolved')),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess('Blocker marked as resolved');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating blocker: $e')),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Error updating blocker: $e');
       }
     } finally {
       if (mounted) {

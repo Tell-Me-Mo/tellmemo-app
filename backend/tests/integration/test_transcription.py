@@ -34,7 +34,7 @@ def cleanup_temp_audio():
     yield
 
     # Teardown: clean up temp_audio directory
-    temp_dir = Path("backend/temp_audio")
+    temp_dir = Path("uploads/temp_audio")
     if temp_dir.exists():
         try:
             shutil.rmtree(temp_dir)
@@ -641,7 +641,7 @@ class TestTempFileCleanup:
         audio_file = mock_audio_file(size_mb=0.1)
 
         # Count existing temp files before test
-        temp_dir = Path("backend/temp_audio")
+        temp_dir = Path("uploads/temp_audio")
         files_before = set(temp_dir.glob('*')) if temp_dir.exists() else set()
 
         files = {
@@ -676,7 +676,7 @@ class TestTempFileCleanup:
     ):
         """Test that temp file is cleaned up when empty file validation fails."""
         # Count existing temp files before test
-        temp_dir = Path("backend/temp_audio")
+        temp_dir = Path("uploads/temp_audio")
         files_before = set(temp_dir.glob('*')) if temp_dir.exists() else set()
 
         empty_file = io.BytesIO(b'')
@@ -710,7 +710,7 @@ class TestTempFileCleanup:
     ):
         """Test that temp file is cleaned up when project validation fails."""
         # Count existing temp files before test
-        temp_dir = Path("backend/temp_audio")
+        temp_dir = Path("uploads/temp_audio")
         files_before = set(temp_dir.glob('*')) if temp_dir.exists() else set()
 
         audio_file = mock_audio_file(size_mb=1.0)
@@ -744,7 +744,7 @@ class TestTempFileCleanup:
     ):
         """Test that temp file is cleaned up when project_id format is invalid."""
         # Count existing temp files before test
-        temp_dir = Path("backend/temp_audio")
+        temp_dir = Path("uploads/temp_audio")
         files_before = set(temp_dir.glob('*')) if temp_dir.exists() else set()
 
         audio_file = mock_audio_file(size_mb=1.0)
@@ -782,7 +782,7 @@ class TestTempFileCleanup:
         The background task is responsible for cleanup in success case.
         """
         # Count existing temp files before test
-        temp_dir = Path("backend/temp_audio")
+        temp_dir = Path("uploads/temp_audio")
         files_before = set(temp_dir.glob('*')) if temp_dir.exists() else set()
 
         audio_file = mock_audio_file(size_mb=1.0)

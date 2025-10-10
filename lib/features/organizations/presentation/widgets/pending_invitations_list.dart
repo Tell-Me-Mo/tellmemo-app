@@ -6,6 +6,7 @@ import 'package:pm_master_v2/core/widgets/dialogs/enhanced_confirmation_dialog.d
 import 'package:pm_master_v2/features/organizations/data/models/organization_member.dart';
 import 'package:pm_master_v2/features/organizations/presentation/providers/members_provider.dart';
 import 'package:intl/intl.dart';
+import 'package:pm_master_v2/core/services/notification_service.dart';
 
 class PendingInvitationsListWidget extends ConsumerStatefulWidget {
   final String organizationId;
@@ -42,30 +43,11 @@ class _PendingInvitationsListWidgetState extends ConsumerState<PendingInvitation
           .resendInvitation(member.userEmail);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Invitation resent to ${member.userEmail}'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            action: SnackBarAction(
-              label: 'UNDO',
-              textColor: Colors.white,
-              onPressed: () {
-                // Undo functionality could be implemented here
-              },
-            ),
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess('Invitation resent to ${member.userEmail}');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to resend invitation: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Failed to resend invitation: ${e.toString()}');
       }
     } finally {
       if (mounted) {
@@ -107,24 +89,12 @@ class _PendingInvitationsListWidgetState extends ConsumerState<PendingInvitation
             .removeMember(member.userId);
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Invitation canceled for ${member.userEmail}'),
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          ref.read(notificationServiceProvider.notifier).showInfo('Invitation canceled for ${member.userEmail}');
           widget.onInvitationsCanceled?.call();
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to cancel invitation: ${e.toString()}'),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          ref.read(notificationServiceProvider.notifier).showError('Failed to cancel invitation: ${e.toString()}');
         }
       } finally {
         if (mounted) {
@@ -140,13 +110,7 @@ class _PendingInvitationsListWidgetState extends ConsumerState<PendingInvitation
     // This would typically generate or retrieve the invitation link
     // For now, we'll copy the email as a placeholder
     Clipboard.setData(ClipboardData(text: email));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Email copied to clipboard'),
-        duration: Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    ref.read(notificationServiceProvider.notifier).showInfo('Email copied to clipboard');
   }
 
   String _formatInvitationDate(DateTime? date) {

@@ -5,6 +5,7 @@ import '../../../jobs/domain/models/job_model.dart';
 import '../../../jobs/domain/services/job_websocket_service.dart';
 import '../../../jobs/presentation/providers/job_websocket_provider.dart';
 import '../../domain/entities/project.dart';
+import '../../../../core/services/notification_service.dart';
 
 class ContentProcessingDialog extends ConsumerStatefulWidget {
   final Project project;
@@ -76,24 +77,7 @@ class _ContentProcessingDialogState extends ConsumerState<ContentProcessingDialo
       Future.delayed(const Duration(milliseconds: 1500), () {
         if (mounted) {
           Navigator.of(context).pop();
-
-          // Show success message
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  Icon(Icons.check_circle, color: Colors.white, size: 20),
-                  SizedBox(width: 12),
-                  Text('Content processed successfully'),
-                ],
-              ),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          );
+          ref.read(notificationServiceProvider.notifier).showSuccess('Content processed successfully');
         }
       });
     } else if (job.status == JobStatus.failed) {
@@ -101,12 +85,7 @@ class _ContentProcessingDialogState extends ConsumerState<ContentProcessingDialo
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
           Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Processing failed: ${job.errorMessage}'),
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-          );
+          ref.read(notificationServiceProvider.notifier).showError('Processing failed: ${job.errorMessage}');
         }
       });
     }

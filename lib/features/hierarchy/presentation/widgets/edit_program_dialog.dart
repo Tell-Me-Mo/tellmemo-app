@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/hierarchy_providers.dart';
+import '../../../../core/services/notification_service.dart';
 
 // Dialog constants matching create dialog
 class _DialogConstants {
@@ -71,9 +72,7 @@ class _EditProgramDialogState extends ConsumerState<EditProgramDialog> {
         ref.invalidate(hierarchyStateProvider);
 
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Program updated successfully')),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess('Program updated successfully');
       }
     } catch (e) {
       if (mounted) {

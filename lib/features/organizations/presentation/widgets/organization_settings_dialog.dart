@@ -6,6 +6,7 @@ import '../providers/organization_settings_provider.dart';
 import '../../domain/entities/organization.dart';
 import '../../../projects/presentation/providers/projects_provider.dart';
 import '../../../documents/presentation/providers/documents_provider.dart';
+import '../../../../core/services/notification_service.dart';
 
 class OrganizationSettingsDialog extends ConsumerStatefulWidget {
   const OrganizationSettingsDialog({super.key});
@@ -99,23 +100,12 @@ class _OrganizationSettingsDialogState extends ConsumerState<OrganizationSetting
       ).future);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Settings updated'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess('Settings updated');
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to save: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Failed to save: ${e.toString()}');
       }
     } finally {
       if (mounted) {

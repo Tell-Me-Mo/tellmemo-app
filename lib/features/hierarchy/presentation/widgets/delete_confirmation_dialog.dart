@@ -5,6 +5,7 @@ import '../../domain/entities/hierarchy_item.dart';
 import '../../domain/entities/portfolio.dart';
 import '../../domain/entities/program.dart';
 import '../../../../core/constants/layout_constants.dart';
+import '../../../../core/services/notification_service.dart';
 
 class DeleteConfirmationDialog extends ConsumerStatefulWidget {
   final String itemId;
@@ -238,12 +239,7 @@ class _DeleteConfirmationDialogState extends ConsumerState<DeleteConfirmationDia
       
       if (mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${_getItemTypeName()} deleted successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess('${_getItemTypeName()} deleted successfully');
         
         // Refresh hierarchy
         ref.invalidate(hierarchyStateProvider());
@@ -253,12 +249,7 @@ class _DeleteConfirmationDialogState extends ConsumerState<DeleteConfirmationDia
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to delete ${_getItemTypeName()}: ${e.toString()}'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Failed to delete ${_getItemTypeName()}: ${e.toString()}');
       }
     }
   }

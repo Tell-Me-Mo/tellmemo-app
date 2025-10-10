@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import '../../domain/entities/portfolio.dart';
 import '../../domain/entities/program.dart';
 import '../../domain/entities/hierarchy_item.dart';
@@ -11,8 +12,39 @@ import '../../../../core/utils/logger.dart';
 
 class HierarchyRepositoryImpl implements HierarchyRepository {
   final HierarchyApiService _apiService;
-  
+
   HierarchyRepositoryImpl(this._apiService);
+
+  /// Extract error message from DioException or generic exception
+  String _extractErrorMessage(dynamic error, String defaultMessage) {
+    if (error is DioException) {
+      // Try to extract the detailed error message from the response
+      if (error.response?.data != null) {
+        final data = error.response!.data;
+        if (data is Map<String, dynamic>) {
+          // FastAPI returns errors in 'detail' field
+          if (data.containsKey('detail')) {
+            final detail = data['detail'];
+            if (detail is String) {
+              return detail;
+            } else if (detail is Map<String, dynamic> && detail.containsKey('message')) {
+              return detail['message'] as String;
+            }
+          }
+          // Some APIs return 'message' field
+          if (data.containsKey('message')) {
+            return data['message'] as String;
+          }
+        }
+      }
+      // Fallback to DioException message
+      if (error.message != null) {
+        return error.message!;
+      }
+    }
+    // Return the default message with original error
+    return '$defaultMessage: ${error.toString()}';
+  }
 
   @override
   Future<List<HierarchyItem>> getFullHierarchy({bool includeArchived = false}) async {
@@ -195,7 +227,8 @@ class HierarchyRepositoryImpl implements HierarchyRepository {
     } catch (e, stackTrace) {
       Logger.error('Failed to create portfolio', e);
       Logger.error('Stack trace:', stackTrace);
-      throw ServerException('Failed to create portfolio: ${e.toString()}');
+      final errorMessage = _extractErrorMessage(e, 'Failed to create portfolio');
+      throw ServerException(errorMessage);
     }
   }
 
@@ -299,7 +332,8 @@ class HierarchyRepositoryImpl implements HierarchyRepository {
       return model.toEntity();
     } catch (e) {
       Logger.error('Failed to create program', e);
-      throw ServerException('Failed to create program: ${e.toString()}');
+      final errorMessage = _extractErrorMessage(e, 'Failed to create program');
+      throw ServerException(errorMessage);
     }
   }
 

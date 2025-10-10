@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pm_master_v2/features/organizations/data/services/organization_api_service.dart';
 import 'package:pm_master_v2/features/organizations/presentation/providers/organization_provider.dart';
 import 'package:pm_master_v2/features/organizations/presentation/widgets/csv_bulk_invite_dialog.dart';
+import 'package:pm_master_v2/core/services/notification_service.dart';
 
 class InviteMembersDialog extends ConsumerStatefulWidget {
   final String organizationId;
@@ -59,26 +60,16 @@ class _InviteMembersDialogState extends ConsumerState<InviteMembersDialog> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              emails.length == 1
-                  ? 'Invitation sent successfully'
-                  : '${emails.length} invitations sent successfully',
-            ),
-            backgroundColor: Colors.green,
-          ),
+        ref.read(notificationServiceProvider.notifier).showSuccess(
+          emails.length == 1
+              ? 'Invitation sent successfully'
+              : '${emails.length} invitations sent successfully',
         );
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to send invitations: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Failed to send invitations: $e');
       }
     } finally {
       if (mounted) {

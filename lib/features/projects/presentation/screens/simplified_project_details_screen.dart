@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../../core/utils/datetime_utils.dart';
 import '../../../../app/router/routes.dart';
 import '../../domain/entities/project.dart';
@@ -48,16 +49,15 @@ import '../../../documents/presentation/widgets/document_detail_dialog.dart';
 class SimplifiedProjectDetailsScreen extends ConsumerStatefulWidget {
   final String projectId;
 
-  const SimplifiedProjectDetailsScreen({
-    super.key,
-    required this.projectId,
-  });
+  const SimplifiedProjectDetailsScreen({super.key, required this.projectId});
 
   @override
-  ConsumerState<SimplifiedProjectDetailsScreen> createState() => _SimplifiedProjectDetailsScreenState();
+  ConsumerState<SimplifiedProjectDetailsScreen> createState() =>
+      _SimplifiedProjectDetailsScreenState();
 }
 
-class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProjectDetailsScreen> {
+class _SimplifiedProjectDetailsScreenState
+    extends ConsumerState<SimplifiedProjectDetailsScreen> {
   ContentAvailability? _contentAvailability;
   bool _isCheckingAvailability = false;
   final ScrollController _scrollController = ScrollController();
@@ -80,11 +80,17 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
     // This ensures jobs are tracked even after page refresh
     Future.microtask(() async {
       try {
-        final jobTracker = ref.read(webSocketActiveJobsTrackerProvider.notifier);
+        final jobTracker = ref.read(
+          webSocketActiveJobsTrackerProvider.notifier,
+        );
         await jobTracker.subscribeToProject(widget.projectId);
-        debugPrint('[SimplifiedProjectDetailsScreen] Subscribed to project ${widget.projectId} for job updates');
+        debugPrint(
+          '[SimplifiedProjectDetailsScreen] Subscribed to project ${widget.projectId} for job updates',
+        );
       } catch (e) {
-        debugPrint('[SimplifiedProjectDetailsScreen] Failed to subscribe to project: $e');
+        debugPrint(
+          '[SimplifiedProjectDetailsScreen] Failed to subscribe to project: $e',
+        );
       }
     });
   }
@@ -153,9 +159,7 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
       },
       loading: () => Scaffold(
         backgroundColor: colorScheme.surface,
-        body: const Center(
-          child: CircularProgressIndicator(),
-        ),
+        body: const Center(child: CircularProgressIndicator()),
       ),
       error: (error, stack) => Scaffold(
         backgroundColor: colorScheme.surface,
@@ -178,615 +182,1366 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
     final summariesAsync = ref.watch(projectSummariesProvider(project.id));
 
     // Get counts for stats
-    final documentsCount = ref.watch(meetingsStatisticsProvider).when(
-      data: (stats) => stats['total'].toString(),
-      loading: () => '...',
-      error: (_, __) => '0',
-    );
+    final documentsCount = ref
+        .watch(meetingsStatisticsProvider)
+        .when(
+          data: (stats) => stats['total'].toString(),
+          loading: () => '...',
+          error: (_, __) => '0',
+        );
 
-    final summariesCount = ref.watch(projectSummariesProvider(project.id)).when(
-      data: (summaries) => summaries.length.toString(),
-      loading: () => '...',
-      error: (_, __) => '0',
-    );
+    final summariesCount = ref
+        .watch(projectSummariesProvider(project.id))
+        .when(
+          data: (summaries) => summaries.length.toString(),
+          loading: () => '...',
+          error: (_, __) => '0',
+        );
 
     return Scaffold(
-          backgroundColor: colorScheme.surface,
-          floatingActionButton: _buildFloatingActionButton(context, project, screenWidth, colorScheme),
-          body: Stack(
-            children: [
-              SafeArea(
+      backgroundColor: colorScheme.surface,
+      floatingActionButton: _buildFloatingActionButton(
+        context,
+        project,
+        screenWidth,
+        colorScheme,
+      ),
+      body: Stack(
+        children: [
+          SafeArea(
             child: Padding(
               padding: EdgeInsets.all(isDesktop ? 32 : 16),
               child: Center(
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: isDesktop ? 1400 : double.infinity),
+                  constraints: BoxConstraints(
+                    maxWidth: isDesktop ? 1400 : double.infinity,
+                  ),
                   child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Project Header - Mobile Optimized
-                    if (!isDesktop && !isTablet) ...[
-                      // Single row: Back button + Title + Metadata + Menu
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          IconButton(
-                            icon: Icon(
-                              Icons.arrow_back,
-                              size: 22,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                            onPressed: () => Navigator.of(context).pop(),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(
-                              minWidth: 40,
-                              minHeight: 40,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  project.name,
-                                  style: theme.textTheme.headlineSmall?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 8),
-                                Wrap(
-                                  spacing: 12,
-                                  runSpacing: 4,
-                                  children: [
-                                    Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.calendar_today_outlined, size: 12, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          _formatFullDate(project.createdAt),
-                                          style: textTheme.bodySmall?.copyWith(
-                                            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
-                                            fontSize: 11,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.access_time, size: 12, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          DateTimeUtils.formatTimeAgo(project.createdAt),
-                                          style: textTheme.bodySmall?.copyWith(
-                                            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
-                                            fontSize: 11,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          PopupMenuButton<String>(
-                            icon: Icon(Icons.more_horiz, color: colorScheme.onSurfaceVariant),
-                            onSelected: (value) => _handleMenuAction(context, value, project),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            itemBuilder: (context) => [
-                              PopupMenuItem(
-                                value: 'activities',
-                                height: 40,
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.timeline_outlined,
-                                      size: 18,
-                                      color: Colors.teal,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    const Text('View Activities'),
-                                  ],
-                                ),
-                              ),
-                              PopupMenuItem(
-                                value: 'documents',
-                                height: 40,
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.folder_outlined,
-                                      size: 18,
-                                      color: Colors.blue,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    const Text('View Documents'),
-                                  ],
-                                ),
-                              ),
-                              PopupMenuItem(
-                                value: 'lessons',
-                                height: 40,
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.lightbulb_outline,
-                                      size: 18,
-                                      color: Colors.amber,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    const Text('View Lessons'),
-                                  ],
-                                ),
-                              ),
-                              const PopupMenuDivider(),
-                              PopupMenuItem(
-                                value: 'edit',
-                                height: 40,
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.edit_outlined,
-                                      size: 18,
-                                      color: colorScheme.primary,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    const Text('Edit Project'),
-                                  ],
-                                ),
-                              ),
-                              PopupMenuItem(
-                                value: project.status == ProjectStatus.active ? 'archive' : 'activate',
-                                height: 40,
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      project.status == ProjectStatus.active ? Icons.archive_outlined : Icons.unarchive_outlined,
-                                      size: 18,
-                                      color: Colors.orange,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(project.status == ProjectStatus.active ? 'Archive' : 'Activate'),
-                                  ],
-                                ),
-                              ),
-                              const PopupMenuDivider(),
-                              PopupMenuItem(
-                                value: 'delete',
-                                height: 40,
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.delete_outline,
-                                      size: 18,
-                                      color: Colors.red,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    const Text('Delete', style: TextStyle(color: Colors.red)),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ] else ...[
-                      // Desktop/Tablet Header (original layout)
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          // Back button
-                          IconButton(
-                            icon: Icon(
-                              Icons.arrow_back,
-                              size: 22,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                            onPressed: () => Navigator.of(context).pop(),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(
-                              minWidth: 40,
-                              minHeight: 40,
-                            ),
-                          ),
-
-                          const SizedBox(width: 8),
-
-                          // PROJECT badge
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: Colors.purple.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: Colors.purple.withValues(alpha: 0.3),
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.folder_outlined,
-                                  size: 14,
-                                  color: Colors.purple[600],
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'PROJECT',
-                                  style: TextStyle(
-                                    color: Colors.purple[600],
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          const SizedBox(width: 12),
-
-                          // Project title
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    project.name,
-                                    style: theme.textTheme.headlineMedium?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                // Project status badge
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: project.status == ProjectStatus.active
-                                        ? Colors.green.withValues(alpha: 0.2)
-                                        : Colors.orange.withValues(alpha: 0.2),
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(
-                                      color: project.status == ProjectStatus.active
-                                          ? Colors.green.withValues(alpha: 0.4)
-                                          : Colors.orange.withValues(alpha: 0.4),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    project.status == ProjectStatus.active ? 'ACTIVE' : 'ARCHIVED',
-                                    style: TextStyle(
-                                      color: project.status == ProjectStatus.active
-                                          ? Colors.green[700]
-                                          : Colors.orange[700],
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          // Menu button
-                          PopupMenuButton<String>(
-                            icon: Icon(Icons.more_horiz, color: colorScheme.onSurfaceVariant),
-                            onSelected: (value) => _handleMenuAction(context, value, project),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            itemBuilder: (context) => [
-                              PopupMenuItem(
-                                value: 'activities',
-                                height: 40,
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.timeline_outlined,
-                                      size: 18,
-                                      color: Colors.teal,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    const Text('View Activities'),
-                                  ],
-                                ),
-                              ),
-                              const PopupMenuDivider(),
-                              PopupMenuItem(
-                                value: 'edit',
-                                height: 40,
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.edit_outlined,
-                                      size: 18,
-                                      color: colorScheme.primary,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    const Text('Edit Project'),
-                                  ],
-                                ),
-                              ),
-                              PopupMenuItem(
-                                value: project.status == ProjectStatus.active ? 'archive' : 'activate',
-                                height: 40,
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      project.status == ProjectStatus.active ? Icons.archive_outlined : Icons.unarchive_outlined,
-                                      size: 18,
-                                      color: Colors.orange,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(project.status == ProjectStatus.active ? 'Archive' : 'Activate'),
-                                  ],
-                                ),
-                              ),
-                              const PopupMenuDivider(),
-                              PopupMenuItem(
-                                value: 'delete',
-                                height: 40,
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.delete_outline,
-                                      size: 18,
-                                      color: Colors.red,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    const Text('Delete', style: TextStyle(color: Colors.red)),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 8),
-
-                      // Metadata row (date, time, user)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 56),
-                        child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Project Header - Mobile Optimized
+                      if (!isDesktop && !isTablet) ...[
+                        // Single row: Back button + Title + Metadata + Menu
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(Icons.calendar_today_outlined, size: 14, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
-                            const SizedBox(width: 4),
-                            Text(
-                              _formatFullDate(project.createdAt),
-                              style: textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                            IconButton(
+                              icon: Icon(
+                                Icons.arrow_back,
+                                size: 22,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                              onPressed: () => Navigator.of(context).pop(),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(
+                                minWidth: 40,
+                                minHeight: 40,
                               ),
                             ),
-                            const SizedBox(width: 16),
-                            Icon(Icons.access_time, size: 14, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
-                            const SizedBox(width: 4),
-                            Text(
-                              DateTimeUtils.formatTimeAgo(project.createdAt),
-                              style: textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Icon(Icons.person_outline, size: 14, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
-                            const SizedBox(width: 4),
-                            Text(
-                              'User',
-                              style: textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-
-                    // Divider after header
-                    const SizedBox(height: 20),
-                    Divider(
-                      color: colorScheme.outline.withValues(alpha: 0.08),
-                      thickness: 1,
-                      height: 1,
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Main content with right panel on desktop
-                    if (isDesktop) ...[
-                      Expanded(
-                        child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Main Content (left side) - Independently scrollable
-                          Expanded(
-                            child: SingleChildScrollView(
-                              controller: _scrollController,
+                            const SizedBox(width: 8),
+                            Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                // Description Section
-                                if (project.description?.isNotEmpty == true) ...[
-                                  _buildDescriptionSection(context, project),
-                                  const SizedBox(height: 24),
-                                ],
-
-                                // Tasks Section
-                                ProjectTasksWidget(
-                                  projectId: project.id,
-                                  limit: 5,
-                                ),
-
-                                const SizedBox(height: 24),
-
-                                // Risks Section
-                                ProjectRisksWidget(
-                                  projectId: project.id,
-                                  limit: 5,
-                                ),
-
-                                const SizedBox(height: 24),
-
-                                // Blockers Section
-                                ProjectBlockersWidget(
-                                  projectId: project.id,
-                                  limit: 5,
-                                  project: project,
-                                ),
-
-                              ],
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(width: 24),
-
-                          // Vertical separator
-                          Container(
-                            width: 1,
-                            height: 600,
-                            color: colorScheme.outline.withValues(alpha: 0.08),
-                          ),
-
-                          const SizedBox(width: 24),
-
-                          // Right Panel - Stats and Quick Actions
-                          SizedBox(
-                            width: 320,
-                            child: SingleChildScrollView(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                // Quick Actions section header
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 4, bottom: 12),
-                                  child: Text(
-                                    'QUICK ACTIONS',
-                                    style: textTheme.labelSmall?.copyWith(
-                                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 0.5,
-                                      fontSize: 10,
-                                    ),
+                                  Text(
+                                    project.name,
+                                    style: theme.textTheme.headlineSmall
+                                        ?.copyWith(fontWeight: FontWeight.w600),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                ),
-                                // Quick Action Cards - Each on its own line
-                                Column(
-                                  children: [
-                                    _buildCompactQuickActionCard(
-                                      context,
-                                      Icons.upload_file_outlined,
-                                      'Upload Transcript or Audio',
-                                      Colors.blue,
-                                      () => _showUploadDialog(context, project),
-                                      fullWidth: true,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    _buildCompactQuickActionCard(
-                                      context,
-                                      Icons.mic_none_outlined,
-                                      'Record Meeting',
-                                      Colors.red,
-                                      () => _showRecordingDialog(context, project),
-                                      fullWidth: true,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    _buildCompactQuickActionCard(
-                                      context,
-                                      Icons.auto_awesome_outlined,
-                                      'Generate Summary',
-                                      Colors.purple,
-                                      () => _showGenerateSummaryDialog(context, project),
-                                      fullWidth: true,
-                                    ),
-                                  ],
-                                ),
-
-                                // Summaries Section
-                                const SizedBox(height: 24),
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 4, bottom: 12),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 12,
+                                    runSpacing: 4,
                                     children: [
                                       Row(
+                                        mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Text(
-                                            'SUMMARIES',
-                                            style: textTheme.labelSmall?.copyWith(
-                                              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                                              fontWeight: FontWeight.w600,
-                                              letterSpacing: 0.5,
-                                              fontSize: 10,
-                                            ),
+                                          Icon(
+                                            Icons.calendar_today_outlined,
+                                            size: 12,
+                                            color: colorScheme.onSurfaceVariant
+                                                .withValues(alpha: 0.6),
                                           ),
-                                          summariesAsync.when(
-                                            data: (summaries) => summaries.isNotEmpty ? Container(
-                                              margin: const EdgeInsets.only(left: 6),
-                                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                              decoration: BoxDecoration(
-                                                color: colorScheme.primary.withValues(alpha: 0.1),
-                                                borderRadius: BorderRadius.circular(8),
-                                              ),
-                                              child: Text(
-                                                summaries.length.toString(),
-                                                style: textTheme.labelSmall?.copyWith(
-                                                  color: colorScheme.primary,
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 9,
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            _formatFullDate(project.createdAt),
+                                            style: textTheme.bodySmall
+                                                ?.copyWith(
+                                                  color: colorScheme
+                                                      .onSurfaceVariant
+                                                      .withValues(alpha: 0.8),
+                                                  fontSize: 11,
                                                 ),
-                                              ),
-                                            ) : const SizedBox.shrink(),
-                                            loading: () => const SizedBox.shrink(),
-                                            error: (_, __) => const SizedBox.shrink(),
                                           ),
                                         ],
                                       ),
-                                      InkWell(
-                                        onTap: () => _showSummariesDialog(context, project),
-                                        borderRadius: BorderRadius.circular(4),
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                                          child: Text(
-                                            'See all',
-                                            style: textTheme.labelSmall?.copyWith(
-                                              color: colorScheme.primary,
-                                              fontWeight: FontWeight.w500,
-                                              fontSize: 11,
-                                            ),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.access_time,
+                                            size: 12,
+                                            color: colorScheme.onSurfaceVariant
+                                                .withValues(alpha: 0.6),
                                           ),
-                                        ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            DateTimeUtils.formatTimeAgo(
+                                              project.createdAt,
+                                            ),
+                                            style: textTheme.bodySmall
+                                                ?.copyWith(
+                                                  color: colorScheme
+                                                      .onSurfaceVariant
+                                                      .withValues(alpha: 0.8),
+                                                  fontSize: 11,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            PopupMenuButton<String>(
+                              icon: Icon(
+                                Icons.more_horiz,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                              onSelected: (value) =>
+                                  _handleMenuAction(context, value, project),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              itemBuilder: (context) => [
+                                PopupMenuItem(
+                                  value: 'activities',
+                                  height: 40,
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.timeline_outlined,
+                                        size: 18,
+                                        color: Colors.teal,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      const Text('View Activities'),
+                                    ],
+                                  ),
+                                ),
+                                PopupMenuItem(
+                                  value: 'documents',
+                                  height: 40,
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.folder_outlined,
+                                        size: 18,
+                                        color: Colors.blue,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      const Text('View Documents'),
+                                    ],
+                                  ),
+                                ),
+                                PopupMenuItem(
+                                  value: 'lessons',
+                                  height: 40,
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.lightbulb_outline,
+                                        size: 18,
+                                        color: Colors.amber,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      const Text('View Lessons'),
+                                    ],
+                                  ),
+                                ),
+                                const PopupMenuDivider(),
+                                PopupMenuItem(
+                                  value: 'edit',
+                                  height: 40,
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.edit_outlined,
+                                        size: 18,
+                                        color: colorScheme.primary,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      const Text('Edit Project'),
+                                    ],
+                                  ),
+                                ),
+                                PopupMenuItem(
+                                  value: project.status == ProjectStatus.active
+                                      ? 'archive'
+                                      : 'activate',
+                                  height: 40,
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        project.status == ProjectStatus.active
+                                            ? Icons.archive_outlined
+                                            : Icons.unarchive_outlined,
+                                        size: 18,
+                                        color: Colors.orange,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        project.status == ProjectStatus.active
+                                            ? 'Archive'
+                                            : 'Activate',
                                       ),
                                     ],
                                   ),
                                 ),
+                                const PopupMenuDivider(),
+                                PopupMenuItem(
+                                  value: 'delete',
+                                  height: 40,
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.delete_outline,
+                                        size: 18,
+                                        color: Colors.red,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      const Text(
+                                        'Delete',
+                                        style: TextStyle(color: Colors.red),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ] else ...[
+                        // Desktop/Tablet Header (original layout)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // Back button
+                            IconButton(
+                              icon: Icon(
+                                Icons.arrow_back,
+                                size: 22,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                              onPressed: () => Navigator.of(context).pop(),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(
+                                minWidth: 40,
+                                minHeight: 40,
+                              ),
+                            ),
+
+                            const SizedBox(width: 8),
+
+                            // PROJECT badge
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.purple.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: Colors.purple.withValues(alpha: 0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.folder_outlined,
+                                    size: 14,
+                                    color: Colors.purple[600],
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'PROJECT',
+                                    style: TextStyle(
+                                      color: Colors.purple[600],
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(width: 12),
+
+                            // Project title
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      project.name,
+                                      style: theme.textTheme.headlineMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  // Project status badge
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          project.status == ProjectStatus.active
+                                          ? Colors.green.withValues(alpha: 0.2)
+                                          : Colors.orange.withValues(
+                                              alpha: 0.2,
+                                            ),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color:
+                                            project.status ==
+                                                ProjectStatus.active
+                                            ? Colors.green.withValues(
+                                                alpha: 0.4,
+                                              )
+                                            : Colors.orange.withValues(
+                                                alpha: 0.4,
+                                              ),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      project.status == ProjectStatus.active
+                                          ? 'ACTIVE'
+                                          : 'ARCHIVED',
+                                      style: TextStyle(
+                                        color:
+                                            project.status ==
+                                                ProjectStatus.active
+                                            ? Colors.green[700]
+                                            : Colors.orange[700],
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            // Menu button
+                            PopupMenuButton<String>(
+                              icon: Icon(
+                                Icons.more_horiz,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                              onSelected: (value) =>
+                                  _handleMenuAction(context, value, project),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              itemBuilder: (context) => [
+                                PopupMenuItem(
+                                  value: 'activities',
+                                  height: 40,
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.timeline_outlined,
+                                        size: 18,
+                                        color: Colors.teal,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      const Text('View Activities'),
+                                    ],
+                                  ),
+                                ),
+                                const PopupMenuDivider(),
+                                PopupMenuItem(
+                                  value: 'edit',
+                                  height: 40,
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.edit_outlined,
+                                        size: 18,
+                                        color: colorScheme.primary,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      const Text('Edit Project'),
+                                    ],
+                                  ),
+                                ),
+                                PopupMenuItem(
+                                  value: project.status == ProjectStatus.active
+                                      ? 'archive'
+                                      : 'activate',
+                                  height: 40,
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        project.status == ProjectStatus.active
+                                            ? Icons.archive_outlined
+                                            : Icons.unarchive_outlined,
+                                        size: 18,
+                                        color: Colors.orange,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        project.status == ProjectStatus.active
+                                            ? 'Archive'
+                                            : 'Activate',
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const PopupMenuDivider(),
+                                PopupMenuItem(
+                                  value: 'delete',
+                                  height: 40,
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.delete_outline,
+                                        size: 18,
+                                        color: Colors.red,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      const Text(
+                                        'Delete',
+                                        style: TextStyle(color: Colors.red),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 8),
+
+                        // Metadata row (date, time, user)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 56),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.calendar_today_outlined,
+                                size: 14,
+                                color: colorScheme.onSurfaceVariant.withValues(
+                                  alpha: 0.6,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                _formatFullDate(project.createdAt),
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.onSurfaceVariant
+                                      .withValues(alpha: 0.8),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Icon(
+                                Icons.access_time,
+                                size: 14,
+                                color: colorScheme.onSurfaceVariant.withValues(
+                                  alpha: 0.6,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                DateTimeUtils.formatTimeAgo(project.createdAt),
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.onSurfaceVariant
+                                      .withValues(alpha: 0.8),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Icon(
+                                Icons.person_outline,
+                                size: 14,
+                                color: colorScheme.onSurfaceVariant.withValues(
+                                  alpha: 0.6,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'User',
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.onSurfaceVariant
+                                      .withValues(alpha: 0.8),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      // Divider after header
+                      const SizedBox(height: 20),
+                      Divider(
+                        color: colorScheme.outline.withValues(alpha: 0.08),
+                        thickness: 1,
+                        height: 1,
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Main content with right panel on desktop
+                      if (isDesktop) ...[
+                        Expanded(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Main Content (left side) - Independently scrollable
+                              Expanded(
+                                child: SingleChildScrollView(
+                                  controller: _scrollController,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Description Section
+                                      if (project.description?.isNotEmpty ==
+                                          true) ...[
+                                        _buildDescriptionSection(
+                                          context,
+                                          project,
+                                        ),
+                                        const SizedBox(height: 24),
+                                      ],
+
+                                      // Tasks Section
+                                      ProjectTasksWidget(
+                                        projectId: project.id,
+                                        limit: 5,
+                                      ),
+
+                                      const SizedBox(height: 24),
+
+                                      // Risks Section
+                                      ProjectRisksWidget(
+                                        projectId: project.id,
+                                        limit: 5,
+                                      ),
+
+                                      const SizedBox(height: 24),
+
+                                      // Blockers Section
+                                      ProjectBlockersWidget(
+                                        projectId: project.id,
+                                        limit: 5,
+                                        project: project,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(width: 24),
+
+                              // Vertical separator
+                              Container(
+                                width: 1,
+                                height: 600,
+                                color: colorScheme.outline.withValues(
+                                  alpha: 0.08,
+                                ),
+                              ),
+
+                              const SizedBox(width: 24),
+
+                              // Right Panel - Stats and Quick Actions
+                              SizedBox(
+                                width: 320,
+                                child: SingleChildScrollView(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Quick Actions section header
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          left: 4,
+                                          bottom: 12,
+                                        ),
+                                        child: Text(
+                                          'QUICK ACTIONS',
+                                          style: textTheme.labelSmall?.copyWith(
+                                            color: colorScheme.onSurfaceVariant
+                                                .withValues(alpha: 0.5),
+                                            fontWeight: FontWeight.w600,
+                                            letterSpacing: 0.5,
+                                            fontSize: 10,
+                                          ),
+                                        ),
+                                      ),
+                                      // Quick Action Cards - Each on its own line
+                                      Column(
+                                        children: [
+                                          _buildCompactQuickActionCard(
+                                            context,
+                                            Icons.upload_file_outlined,
+                                            'Upload Transcript or Audio',
+                                            Colors.blue,
+                                            () => _showUploadDialog(
+                                              context,
+                                              project,
+                                            ),
+                                            fullWidth: true,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          _buildCompactQuickActionCard(
+                                            context,
+                                            Icons.mic_none_outlined,
+                                            'Record Meeting',
+                                            Colors.red,
+                                            () => _showRecordingDialog(
+                                              context,
+                                              project,
+                                            ),
+                                            fullWidth: true,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          _buildCompactQuickActionCard(
+                                            context,
+                                            Icons.auto_awesome_outlined,
+                                            'Generate Summary',
+                                            Colors.purple,
+                                            () => _showGenerateSummaryDialog(
+                                              context,
+                                              project,
+                                            ),
+                                            fullWidth: true,
+                                          ),
+                                        ],
+                                      ),
+
+                                      // Summaries Section
+                                      const SizedBox(height: 24),
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          left: 4,
+                                          bottom: 12,
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  'SUMMARIES',
+                                                  style: textTheme.labelSmall
+                                                      ?.copyWith(
+                                                        color: colorScheme
+                                                            .onSurfaceVariant
+                                                            .withValues(
+                                                              alpha: 0.5,
+                                                            ),
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        letterSpacing: 0.5,
+                                                        fontSize: 10,
+                                                      ),
+                                                ),
+                                                summariesAsync.when(
+                                                  data: (summaries) =>
+                                                      summaries.isNotEmpty
+                                                      ? Container(
+                                                          margin:
+                                                              const EdgeInsets.only(
+                                                                left: 6,
+                                                              ),
+                                                          padding:
+                                                              const EdgeInsets.symmetric(
+                                                                horizontal: 4,
+                                                                vertical: 1,
+                                                              ),
+                                                          decoration: BoxDecoration(
+                                                            color: colorScheme
+                                                                .primary
+                                                                .withValues(
+                                                                  alpha: 0.1,
+                                                                ),
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  8,
+                                                                ),
+                                                          ),
+                                                          child: Text(
+                                                            summaries.length
+                                                                .toString(),
+                                                            style: textTheme
+                                                                .labelSmall
+                                                                ?.copyWith(
+                                                                  color: colorScheme
+                                                                      .primary,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w600,
+                                                                  fontSize: 9,
+                                                                ),
+                                                          ),
+                                                        )
+                                                      : const SizedBox.shrink(),
+                                                  loading: () =>
+                                                      const SizedBox.shrink(),
+                                                  error: (_, __) =>
+                                                      const SizedBox.shrink(),
+                                                ),
+                                              ],
+                                            ),
+                                            InkWell(
+                                              onTap: () => _showSummariesDialog(
+                                                context,
+                                                project,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 4,
+                                                    ),
+                                                child: Text(
+                                                  'See all',
+                                                  style: textTheme.labelSmall
+                                                      ?.copyWith(
+                                                        color:
+                                                            colorScheme.primary,
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                        fontSize: 11,
+                                                      ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      summariesAsync.when(
+                                        data: (summaries) {
+                                          // Take only the last 3 summaries
+                                          final latestSummaries = summaries
+                                              .take(3)
+                                              .toList();
+
+                                          // Check if there are any processing jobs with summaries being generated
+                                          final activeJobs =
+                                              ref
+                                                  .watch(
+                                                    webSocketActiveJobsTrackerProvider,
+                                                  )
+                                                  .valueOrNull ??
+                                              [];
+                                          final hasProcessingSummary =
+                                              activeJobs.any(
+                                                (job) =>
+                                                    job.projectId ==
+                                                        project.id &&
+                                                    (job.status ==
+                                                            JobStatus.pending ||
+                                                        job.status ==
+                                                            JobStatus
+                                                                .processing) &&
+                                                    job.progress >=
+                                                        90.0, // Summary generation starts at 90%
+                                              );
+
+                                          // Build list including skeleton loaders for processing summaries
+                                          final widgets = <Widget>[];
+
+                                          // Add skeleton loader if summary is being generated
+                                          if (hasProcessingSummary) {
+                                            widgets.add(
+                                              Padding(
+                                                padding: const EdgeInsets.only(
+                                                  bottom: 8,
+                                                ),
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(
+                                                    12,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: colorScheme
+                                                        .surfaceContainerHighest
+                                                        .withValues(
+                                                          alpha: 0.08,
+                                                        ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          8,
+                                                        ),
+                                                    border: Border.all(
+                                                      color: colorScheme.outline
+                                                          .withValues(
+                                                            alpha: 0.05,
+                                                          ),
+                                                    ),
+                                                  ),
+                                                  child:
+                                                      const ProcessingSkeletonLoader(
+                                                        isDocument: false,
+                                                      ),
+                                                ),
+                                              ),
+                                            );
+                                          }
+
+                                          // Add actual summaries (limited to 3 items)
+                                          if (latestSummaries.isNotEmpty) {
+                                            widgets.addAll(
+                                              latestSummaries.map(
+                                                (summary) => Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                        bottom: 8,
+                                                      ),
+                                                  child:
+                                                      _buildCompactSummaryCardForSidebar(
+                                                        context,
+                                                        summary,
+                                                      ),
+                                                ),
+                                              ),
+                                            );
+                                          } else if (!hasProcessingSummary) {
+                                            widgets.add(
+                                              Container(
+                                                padding: const EdgeInsets.all(
+                                                  16,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: colorScheme
+                                                      .surfaceContainerHighest
+                                                      .withValues(alpha: 0.08),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                  border: Border.all(
+                                                    color: colorScheme.outline
+                                                        .withValues(
+                                                          alpha: 0.05,
+                                                        ),
+                                                  ),
+                                                ),
+                                                child: Center(
+                                                  child: Text(
+                                                    'No summaries yet',
+                                                    style: textTheme.bodySmall
+                                                        ?.copyWith(
+                                                          color: colorScheme
+                                                              .onSurfaceVariant
+                                                              .withValues(
+                                                                alpha: 0.5,
+                                                              ),
+                                                        ),
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          }
+
+                                          return Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.stretch,
+                                            children: widgets,
+                                          );
+                                        },
+                                        loading: () => const Padding(
+                                          padding: EdgeInsets.symmetric(
+                                            vertical: 12,
+                                          ),
+                                          child: LinearProgressIndicator(),
+                                        ),
+                                        error: (_, __) => Container(
+                                          padding: const EdgeInsets.all(16),
+                                          decoration: BoxDecoration(
+                                            color: colorScheme.errorContainer
+                                                .withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            border: Border.all(
+                                              color: colorScheme.error
+                                                  .withValues(alpha: 0.2),
+                                            ),
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              'Error loading summaries',
+                                              style: textTheme.bodySmall
+                                                  ?.copyWith(
+                                                    color: colorScheme.error,
+                                                  ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+
+                                      // Documents Section
+                                      const SizedBox(height: 24),
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          left: 4,
+                                          bottom: 12,
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  'DOCUMENTS',
+                                                  style: textTheme.labelSmall
+                                                      ?.copyWith(
+                                                        color: colorScheme
+                                                            .onSurfaceVariant
+                                                            .withValues(
+                                                              alpha: 0.5,
+                                                            ),
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        letterSpacing: 0.5,
+                                                        fontSize: 10,
+                                                      ),
+                                                ),
+                                                meetingsAsync.when(
+                                                  data: (documents) =>
+                                                      documents.isNotEmpty
+                                                      ? Container(
+                                                          margin:
+                                                              const EdgeInsets.only(
+                                                                left: 6,
+                                                              ),
+                                                          padding:
+                                                              const EdgeInsets.symmetric(
+                                                                horizontal: 4,
+                                                                vertical: 1,
+                                                              ),
+                                                          decoration: BoxDecoration(
+                                                            color: colorScheme
+                                                                .primary
+                                                                .withValues(
+                                                                  alpha: 0.1,
+                                                                ),
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  8,
+                                                                ),
+                                                          ),
+                                                          child: Text(
+                                                            documents.length
+                                                                .toString(),
+                                                            style: textTheme
+                                                                .labelSmall
+                                                                ?.copyWith(
+                                                                  color: colorScheme
+                                                                      .primary,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w600,
+                                                                  fontSize: 9,
+                                                                ),
+                                                          ),
+                                                        )
+                                                      : const SizedBox.shrink(),
+                                                  loading: () =>
+                                                      const SizedBox.shrink(),
+                                                  error: (_, __) =>
+                                                      const SizedBox.shrink(),
+                                                ),
+                                              ],
+                                            ),
+                                            InkWell(
+                                              onTap: () => _showDocumentsDialog(
+                                                context,
+                                                project,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 4,
+                                                    ),
+                                                child: Text(
+                                                  'See all',
+                                                  style: textTheme.labelSmall
+                                                      ?.copyWith(
+                                                        color:
+                                                            colorScheme.primary,
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                        fontSize: 11,
+                                                      ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      meetingsAsync.when(
+                                        data: (documents) {
+                                          // Take only the last 3 documents
+                                          final latestDocuments = documents
+                                              .take(3)
+                                              .toList();
+
+                                          // Check if there are any processing jobs for this project
+                                          final activeJobs =
+                                              ref
+                                                  .watch(
+                                                    webSocketActiveJobsTrackerProvider,
+                                                  )
+                                                  .valueOrNull ??
+                                              [];
+                                          final hasProcessing = activeJobs.any(
+                                            (job) =>
+                                                job.projectId == project.id &&
+                                                (job.status ==
+                                                        JobStatus.pending ||
+                                                    job.status ==
+                                                        JobStatus.processing) &&
+                                                job.progress <
+                                                    90.0, // Only show during document processing, not summary generation
+                                          );
+
+                                          // Build list including skeleton loaders for processing content
+                                          final widgets = <Widget>[];
+
+                                          // Add skeleton loader if content is being processed
+                                          if (hasProcessing) {
+                                            widgets.add(
+                                              Padding(
+                                                padding: const EdgeInsets.only(
+                                                  bottom: 8,
+                                                ),
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(
+                                                    12,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: colorScheme
+                                                        .surfaceContainerHighest
+                                                        .withValues(
+                                                          alpha: 0.08,
+                                                        ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          8,
+                                                        ),
+                                                    border: Border.all(
+                                                      color: colorScheme.outline
+                                                          .withValues(
+                                                            alpha: 0.05,
+                                                          ),
+                                                    ),
+                                                  ),
+                                                  child:
+                                                      const ProcessingSkeletonLoader(
+                                                        isDocument: true,
+                                                      ),
+                                                ),
+                                              ),
+                                            );
+                                          }
+
+                                          // Add actual documents (limited to 3 items)
+                                          if (latestDocuments.isNotEmpty) {
+                                            widgets.addAll(
+                                              latestDocuments.map(
+                                                (doc) => Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                        bottom: 8,
+                                                      ),
+                                                  child:
+                                                      _buildCompactDocumentCard(
+                                                        context,
+                                                        doc,
+                                                      ),
+                                                ),
+                                              ),
+                                            );
+                                          } else if (!hasProcessing) {
+                                            widgets.add(
+                                              Container(
+                                                padding: const EdgeInsets.all(
+                                                  16,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: colorScheme
+                                                      .surfaceContainerHighest
+                                                      .withValues(alpha: 0.08),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                  border: Border.all(
+                                                    color: colorScheme.outline
+                                                        .withValues(
+                                                          alpha: 0.05,
+                                                        ),
+                                                  ),
+                                                ),
+                                                child: Center(
+                                                  child: Text(
+                                                    'No documents yet',
+                                                    style: textTheme.bodySmall
+                                                        ?.copyWith(
+                                                          color: colorScheme
+                                                              .onSurfaceVariant
+                                                              .withValues(
+                                                                alpha: 0.5,
+                                                              ),
+                                                        ),
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          }
+
+                                          return Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.stretch,
+                                            children: widgets,
+                                          );
+                                        },
+                                        loading: () => const Padding(
+                                          padding: EdgeInsets.symmetric(
+                                            vertical: 12,
+                                          ),
+                                          child: LinearProgressIndicator(),
+                                        ),
+                                        error: (_, __) => Container(
+                                          padding: const EdgeInsets.all(16),
+                                          decoration: BoxDecoration(
+                                            color: colorScheme.errorContainer
+                                                .withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            border: Border.all(
+                                              color: colorScheme.error
+                                                  .withValues(alpha: 0.2),
+                                            ),
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              'Error loading documents',
+                                              style: textTheme.bodySmall
+                                                  ?.copyWith(
+                                                    color: colorScheme.error,
+                                                  ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+
+                                      // Lessons Learned Section
+                                      const SizedBox(height: 24),
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          left: 4,
+                                          bottom: 12,
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  'LESSONS LEARNED',
+                                                  style: textTheme.labelSmall
+                                                      ?.copyWith(
+                                                        color: colorScheme
+                                                            .onSurfaceVariant
+                                                            .withValues(
+                                                              alpha: 0.5,
+                                                            ),
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        letterSpacing: 0.5,
+                                                        fontSize: 10,
+                                                      ),
+                                                ),
+                                                Consumer(
+                                                  builder: (context, ref, child) {
+                                                    final lessonsAsync = ref.watch(
+                                                      lessonsLearnedNotifierProvider(
+                                                        project.id,
+                                                      ),
+                                                    );
+                                                    return lessonsAsync.when(
+                                                      data: (lessons) =>
+                                                          lessons.isNotEmpty
+                                                          ? Container(
+                                                              margin:
+                                                                  const EdgeInsets.only(
+                                                                    left: 6,
+                                                                  ),
+                                                              padding:
+                                                                  const EdgeInsets.symmetric(
+                                                                    horizontal:
+                                                                        4,
+                                                                    vertical: 1,
+                                                                  ),
+                                                              decoration: BoxDecoration(
+                                                                color: colorScheme
+                                                                    .primary
+                                                                    .withValues(
+                                                                      alpha:
+                                                                          0.1,
+                                                                    ),
+                                                                borderRadius:
+                                                                    BorderRadius.circular(
+                                                                      8,
+                                                                    ),
+                                                              ),
+                                                              child: Text(
+                                                                lessons.length
+                                                                    .toString(),
+                                                                style: textTheme
+                                                                    .labelSmall
+                                                                    ?.copyWith(
+                                                                      color: colorScheme
+                                                                          .primary,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .w600,
+                                                                      fontSize:
+                                                                          9,
+                                                                    ),
+                                                              ),
+                                                            )
+                                                          : const SizedBox.shrink(),
+                                                      loading: () =>
+                                                          const SizedBox.shrink(),
+                                                      error: (_, __) =>
+                                                          const SizedBox.shrink(),
+                                                    );
+                                                  },
+                                                ),
+                                              ],
+                                            ),
+                                            InkWell(
+                                              onTap: () => context.push(
+                                                '/lessons?project=${project.id}&from=project',
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 4,
+                                                    ),
+                                                child: Text(
+                                                  'See all',
+                                                  style: textTheme.labelSmall
+                                                      ?.copyWith(
+                                                        color:
+                                                            colorScheme.primary,
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                        fontSize: 11,
+                                                      ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      ProjectLessonsLearnedWidget(
+                                        projectId: project.id,
+                                        showHeader: false,
+                                        limit: 3,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ] else ...[
+                        // Mobile/Tablet Layout - Stack vertically
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Description Section
+                                if (project.description?.isNotEmpty ==
+                                    true) ...[
+                                  const SizedBox(height: 16),
+                                  _buildDescriptionSection(context, project),
+                                ],
+
+                                const SizedBox(height: 16),
+
+                                // Summaries Section
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Summaries',
+                                      style: theme.textTheme.titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => _showSummariesDialog(
+                                        context,
+                                        project,
+                                      ),
+                                      child: const Text('See all'),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
                                 summariesAsync.when(
                                   data: (summaries) {
-                                    // Take only the last 3 summaries
-                                    final latestSummaries = summaries.take(3).toList();
-
                                     // Check if there are any processing jobs with summaries being generated
-                                    final activeJobs = ref.watch(webSocketActiveJobsTrackerProvider).valueOrNull ?? [];
-                                    final hasProcessingSummary = activeJobs.any((job) =>
-                                      job.projectId == project.id &&
-                                      (job.status == JobStatus.pending || job.status == JobStatus.processing) &&
-                                      job.progress >= 90.0  // Summary generation starts at 90%
+                                    // Use WebSocket active jobs which persist across navigation
+                                    final activeJobs =
+                                        ref
+                                            .watch(
+                                              webSocketActiveJobsTrackerProvider,
+                                            )
+                                            .valueOrNull ??
+                                        [];
+                                    final hasProcessingSummary = activeJobs.any(
+                                      (job) =>
+                                          job.projectId == project.id &&
+                                          (job.status == JobStatus.pending ||
+                                              job.status ==
+                                                  JobStatus.processing) &&
+                                          job.progress >=
+                                              90.0, // Summary generation starts at 90%
                                     );
 
                                     // Build list including skeleton loaders for processing summaries
@@ -795,435 +1550,83 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                                     // Add skeleton loader if summary is being generated
                                     if (hasProcessingSummary) {
                                       widgets.add(
-                                        Padding(
-                                          padding: const EdgeInsets.only(bottom: 8),
-                                          child: Container(
-                                            padding: const EdgeInsets.all(12),
-                                            decoration: BoxDecoration(
-                                              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.08),
-                                              borderRadius: BorderRadius.circular(8),
-                                              border: Border.all(
-                                                color: colorScheme.outline.withValues(alpha: 0.05),
-                                              ),
-                                            ),
-                                            child: const ProcessingSkeletonLoader(
-                                              isDocument: false,
-                                            ),
+                                        const Padding(
+                                          padding: EdgeInsets.only(bottom: 6),
+                                          child: ProcessingSkeletonLoader(
+                                            isDocument: false, // For summary
                                           ),
                                         ),
                                       );
                                     }
 
-                                    // Add actual summaries (limited to 3 items)
-                                    if (latestSummaries.isNotEmpty) {
+                                    // Add actual summaries (show last 3)
+                                    if (summaries.isNotEmpty) {
                                       widgets.addAll(
-                                        latestSummaries.map((summary) =>
-                                          Padding(
-                                            padding: const EdgeInsets.only(bottom: 8),
-                                            child: _buildCompactSummaryCardForSidebar(context, summary),
-                                          ),
-                                        ),
-                                      );
-                                    } else if (!hasProcessingSummary) {
-                                      widgets.add(
-                                        Container(
-                                          padding: const EdgeInsets.all(16),
-                                          decoration: BoxDecoration(
-                                            color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.08),
-                                            borderRadius: BorderRadius.circular(8),
-                                            border: Border.all(
-                                              color: colorScheme.outline.withValues(alpha: 0.05),
-                                            ),
-                                          ),
-                                          child: Center(
-                                            child: Text(
-                                              'No summaries yet',
-                                              style: textTheme.bodySmall?.copyWith(
-                                                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    }
-
-                                    return Column(
-                                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                                      children: widgets,
-                                    );
-                                  },
-                                  loading: () => const Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 12),
-                                    child: LinearProgressIndicator(),
-                                  ),
-                                  error: (_, __) => Container(
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      color: colorScheme.errorContainer.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: colorScheme.error.withValues(alpha: 0.2),
-                                      ),
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        'Error loading summaries',
-                                        style: textTheme.bodySmall?.copyWith(
-                                          color: colorScheme.error,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                                // Documents Section
-                                const SizedBox(height: 24),
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 4, bottom: 12),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Text(
-                                            'DOCUMENTS',
-                                            style: textTheme.labelSmall?.copyWith(
-                                              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                                              fontWeight: FontWeight.w600,
-                                              letterSpacing: 0.5,
-                                              fontSize: 10,
-                                            ),
-                                          ),
-                                          meetingsAsync.when(
-                                            data: (documents) => documents.isNotEmpty ? Container(
-                                              margin: const EdgeInsets.only(left: 6),
-                                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                              decoration: BoxDecoration(
-                                                color: colorScheme.primary.withValues(alpha: 0.1),
-                                                borderRadius: BorderRadius.circular(8),
-                                              ),
-                                              child: Text(
-                                                documents.length.toString(),
-                                                style: textTheme.labelSmall?.copyWith(
-                                                  color: colorScheme.primary,
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 9,
+                                        summaries
+                                            .take(hasProcessingSummary ? 2 : 3)
+                                            .map(
+                                              (summary) => Padding(
+                                                padding: const EdgeInsets.only(
+                                                  bottom: 6,
+                                                ),
+                                                child: _buildSimpleSummaryCard(
+                                                  context,
+                                                  summary,
                                                 ),
                                               ),
-                                            ) : const SizedBox.shrink(),
-                                            loading: () => const SizedBox.shrink(),
-                                            error: (_, __) => const SizedBox.shrink(),
-                                          ),
-                                        ],
-                                      ),
-                                      InkWell(
-                                        onTap: () => _showDocumentsDialog(context, project),
-                                        borderRadius: BorderRadius.circular(4),
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                                          child: Text(
-                                            'See all',
-                                            style: textTheme.labelSmall?.copyWith(
-                                              color: colorScheme.primary,
-                                              fontWeight: FontWeight.w500,
-                                              fontSize: 11,
                                             ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                meetingsAsync.when(
-                                  data: (documents) {
-                                    // Take only the last 3 documents
-                                    final latestDocuments = documents.take(3).toList();
-
-                                    // Check if there are any processing jobs for this project
-                                    final activeJobs = ref.watch(webSocketActiveJobsTrackerProvider).valueOrNull ?? [];
-                                    final hasProcessing = activeJobs.any((job) =>
-                                      job.projectId == project.id &&
-                                      (job.status == JobStatus.pending || job.status == JobStatus.processing) &&
-                                      job.progress < 90.0  // Only show during document processing, not summary generation
-                                    );
-
-                                    // Build list including skeleton loaders for processing content
-                                    final widgets = <Widget>[];
-
-                                    // Add skeleton loader if content is being processed
-                                    if (hasProcessing) {
-                                      widgets.add(
-                                        Padding(
-                                          padding: const EdgeInsets.only(bottom: 8),
-                                          child: Container(
-                                            padding: const EdgeInsets.all(12),
-                                            decoration: BoxDecoration(
-                                              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.08),
-                                              borderRadius: BorderRadius.circular(8),
-                                              border: Border.all(
-                                                color: colorScheme.outline.withValues(alpha: 0.05),
-                                              ),
-                                            ),
-                                            child: const ProcessingSkeletonLoader(
-                                              isDocument: true,
-                                            ),
-                                          ),
-                                        ),
+                                      );
+                                    } else if (!hasProcessingSummary) {
+                                      return _buildEmptyCard(
+                                        'No summaries yet',
                                       );
                                     }
 
-                                    // Add actual documents (limited to 3 items)
-                                    if (latestDocuments.isNotEmpty) {
-                                      widgets.addAll(
-                                        latestDocuments.map((doc) =>
-                                          Padding(
-                                            padding: const EdgeInsets.only(bottom: 8),
-                                            child: _buildCompactDocumentCard(context, doc),
-                                          ),
-                                        ),
-                                      );
-                                    } else if (!hasProcessing) {
-                                      widgets.add(
-                                        Container(
-                                          padding: const EdgeInsets.all(16),
-                                          decoration: BoxDecoration(
-                                            color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.08),
-                                            borderRadius: BorderRadius.circular(8),
-                                            border: Border.all(
-                                              color: colorScheme.outline.withValues(alpha: 0.05),
-                                            ),
-                                          ),
-                                          child: Center(
-                                            child: Text(
-                                              'No documents yet',
-                                              style: textTheme.bodySmall?.copyWith(
-                                                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    }
-
-                                    return Column(
-                                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                                      children: widgets,
-                                    );
+                                    return Column(children: widgets);
                                   },
-                                  loading: () => const Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 12),
-                                    child: LinearProgressIndicator(),
-                                  ),
-                                  error: (_, __) => Container(
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      color: colorScheme.errorContainer.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: colorScheme.error.withValues(alpha: 0.2),
-                                      ),
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        'Error loading documents',
-                                        style: textTheme.bodySmall?.copyWith(
-                                          color: colorScheme.error,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
+                                  loading: () =>
+                                      const LinearProgressIndicator(),
+                                  error: (_, __) =>
+                                      _buildEmptyCard('Error loading'),
                                 ),
 
-                                // Lessons Learned Section
-                                const SizedBox(height: 24),
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 4, bottom: 12),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Text(
-                                            'LESSONS LEARNED',
-                                            style: textTheme.labelSmall?.copyWith(
-                                              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                                              fontWeight: FontWeight.w600,
-                                              letterSpacing: 0.5,
-                                              fontSize: 10,
-                                            ),
-                                          ),
-                                          Consumer(
-                                            builder: (context, ref, child) {
-                                              final lessonsAsync = ref.watch(lessonsLearnedNotifierProvider(project.id));
-                                              return lessonsAsync.when(
-                                                data: (lessons) => lessons.isNotEmpty ? Container(
-                                                  margin: const EdgeInsets.only(left: 6),
-                                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                                  decoration: BoxDecoration(
-                                                    color: colorScheme.primary.withValues(alpha: 0.1),
-                                                    borderRadius: BorderRadius.circular(8),
-                                                  ),
-                                                  child: Text(
-                                                    lessons.length.toString(),
-                                                    style: textTheme.labelSmall?.copyWith(
-                                                      color: colorScheme.primary,
-                                                      fontWeight: FontWeight.w600,
-                                                      fontSize: 9,
-                                                    ),
-                                                  ),
-                                                ) : const SizedBox.shrink(),
-                                                loading: () => const SizedBox.shrink(),
-                                                error: (_, __) => const SizedBox.shrink(),
-                                              );
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                      InkWell(
-                                        onTap: () => context.push('/lessons?project=${project.id}&from=project'),
-                                        borderRadius: BorderRadius.circular(4),
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                                          child: Text(
-                                            'See all',
-                                            style: textTheme.labelSmall?.copyWith(
-                                              color: colorScheme.primary,
-                                              fontWeight: FontWeight.w500,
-                                              fontSize: 11,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                ProjectLessonsLearnedWidget(
-                                  projectId: project.id,
-                                  showHeader: false,
-                                  limit: 3,
-                                ),
-                              ],
-                            ),
-                            ),
-                          ),
-                        ],
-                        ),
-                      ),
-                    ] else ...[
-                      // Mobile/Tablet Layout - Stack vertically
-                      Expanded(
-                        child: SingleChildScrollView(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Description Section
-                              if (project.description?.isNotEmpty == true) ...[
                                 const SizedBox(height: 16),
-                                _buildDescriptionSection(context, project),
+
+                                // Tasks Section
+                                ProjectTasksWidget(
+                                  projectId: project.id,
+                                  limit: 5,
+                                ),
+                                const SizedBox(height: 16),
+                                // Risks Section
+                                ProjectRisksWidget(
+                                  projectId: project.id,
+                                  limit: 5,
+                                ),
+                                const SizedBox(height: 16),
+                                // Blockers Section
+                                ProjectBlockersWidget(
+                                  projectId: project.id,
+                                  limit: 5,
+                                  project: project,
+                                ),
                               ],
-
-                              const SizedBox(height: 16),
-
-                              // Summaries Section
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Summaries',
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  TextButton(
-                                    onPressed: () => _showSummariesDialog(context, project),
-                                    child: const Text('See all'),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              summariesAsync.when(
-                                data: (summaries) {
-                                  // Check if there are any processing jobs with summaries being generated
-                                  // Use WebSocket active jobs which persist across navigation
-                                  final activeJobs = ref.watch(webSocketActiveJobsTrackerProvider).valueOrNull ?? [];
-                                  final hasProcessingSummary = activeJobs.any((job) =>
-                                    job.projectId == project.id &&
-                                    (job.status == JobStatus.pending || job.status == JobStatus.processing) &&
-                                    job.progress >= 90.0  // Summary generation starts at 90%
-                                  );
-
-                                  // Build list including skeleton loaders for processing summaries
-                                  final widgets = <Widget>[];
-
-                                  // Add skeleton loader if summary is being generated
-                                  if (hasProcessingSummary) {
-                                    widgets.add(
-                                      const Padding(
-                                        padding: EdgeInsets.only(bottom: 6),
-                                        child: ProcessingSkeletonLoader(
-                                          isDocument: false,  // For summary
-                                        ),
-                                      ),
-                                    );
-                                  }
-
-                                  // Add actual summaries (show last 3)
-                                  if (summaries.isNotEmpty) {
-                                    widgets.addAll(
-                                      summaries.take(hasProcessingSummary ? 2 : 3).map((summary) =>
-                                        Padding(
-                                          padding: const EdgeInsets.only(bottom: 6),
-                                          child: _buildSimpleSummaryCard(context, summary),
-                                        ),
-                                      ),
-                                    );
-                                  } else if (!hasProcessingSummary) {
-                                    return _buildEmptyCard('No summaries yet');
-                                  }
-
-                                  return Column(children: widgets);
-                                },
-                                loading: () => const LinearProgressIndicator(),
-                                error: (_, __) => _buildEmptyCard('Error loading'),
-                              ),
-
-                              const SizedBox(height: 16),
-
-                              // Tasks Section
-                              ProjectTasksWidget(
-                                projectId: project.id,
-                                limit: 5,
-                              ),
-                              const SizedBox(height: 16),
-                              // Risks Section
-                              ProjectRisksWidget(
-                                projectId: project.id,
-                                limit: 5,
-                              ),
-                              const SizedBox(height: 16),
-                              // Blockers Section
-                              ProjectBlockersWidget(
-                                projectId: project.id,
-                                limit: 5,
-                                project: project,
-                              ),
-                            ],
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-              // Speed dial overlay for mobile
-              if (_isActionMenuOpen && screenWidth < 600)
-                _buildSpeedDialOverlay(context, project),
-            ],
-          ),
-      );
+          // Speed dial overlay for mobile
+          if (_isActionMenuOpen && screenWidth < 600)
+            _buildSpeedDialOverlay(context, project),
+        ],
+      ),
+    );
   }
 
   Widget _buildClickableStatCard(
@@ -1273,7 +1676,9 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                   Text(
                     label,
                     style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                      color: colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.6,
+                      ),
                       fontSize: 10,
                     ),
                   ),
@@ -1346,7 +1751,9 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                         Text(
                           label,
                           style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                            color: colorScheme.onSurfaceVariant.withValues(
+                              alpha: 0.6,
+                            ),
                             fontSize: 11,
                             height: 1,
                           ),
@@ -1356,7 +1763,9 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                     Icon(
                       Icons.chevron_right,
                       size: 16,
-                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                      color: colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.3,
+                      ),
                     ),
                   ],
                 ),
@@ -1490,7 +1899,9 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                     Text(
                       subtitle,
                       style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                        color: colorScheme.onSurfaceVariant.withValues(
+                          alpha: 0.6,
+                        ),
                         fontSize: 11,
                       ),
                     ),
@@ -1523,9 +1934,7 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: colorScheme.outline.withValues(alpha: 0.05),
-        ),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.05)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1554,8 +1963,12 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
               color: colorScheme.onSurfaceVariant.withValues(alpha: 0.9),
               height: 1.5,
             ),
-            maxLines: isMobile && isLongDescription && !_isDescriptionExpanded ? 3 : null,
-            overflow: isMobile && isLongDescription && !_isDescriptionExpanded ? TextOverflow.ellipsis : null,
+            maxLines: isMobile && isLongDescription && !_isDescriptionExpanded
+                ? 3
+                : null,
+            overflow: isMobile && isLongDescription && !_isDescriptionExpanded
+                ? TextOverflow.ellipsis
+                : null,
           ),
           if (isMobile && isLongDescription) ...[
             const SizedBox(height: 8),
@@ -1584,11 +1997,29 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
   }
 
   String _formatFullDate(DateTime date) {
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
-  Widget? _buildFloatingActionButton(BuildContext context, Project project, double screenWidth, ColorScheme colorScheme) {
+  Widget? _buildFloatingActionButton(
+    BuildContext context,
+    Project project,
+    double screenWidth,
+    ColorScheme colorScheme,
+  ) {
     final isMobile = screenWidth < 600;
 
     // Mobile: Show "+" FAB that toggles speed dial menu
@@ -1685,10 +2116,7 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                       return Transform.scale(
                         scale: value,
                         alignment: Alignment.centerRight,
-                        child: Opacity(
-                          opacity: value,
-                          child: child,
-                        ),
+                        child: Opacity(opacity: value, child: child),
                       );
                     },
                     child: Padding(
@@ -1698,7 +2126,10 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                         children: [
                           // Label
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
                             decoration: BoxDecoration(
                               color: colorScheme.surface,
                               borderRadius: BorderRadius.circular(8),
@@ -1732,7 +2163,9 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.2),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.2,
+                                      ),
                                       blurRadius: 12,
                                       offset: const Offset(0, 4),
                                     ),
@@ -1798,19 +2231,19 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: colorScheme.outline.withValues(alpha: 0.08),
-        ),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.08)),
       ),
       child: Row(
-        children: actions.map((action) =>
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: _buildActionButton(context, action),
-            ),
-          ),
-        ).toList(),
+        children: actions
+            .map(
+              (action) => Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: _buildActionButton(context, action),
+                ),
+              ),
+            )
+            .toList(),
       ),
     );
   }
@@ -1833,11 +2266,7 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                 color: action.color.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(
-                action.icon,
-                color: action.color,
-                size: 22,
-              ),
+              child: Icon(action.icon, color: action.color, size: 22),
             ),
             const SizedBox(height: 6),
             Text(
@@ -1857,21 +2286,29 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
     );
   }
 
-  Widget _buildMinimalStats(BuildContext context, WidgetRef ref, Project project) {
+  Widget _buildMinimalStats(
+    BuildContext context,
+    WidgetRef ref,
+    Project project,
+  ) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    final documentsCount = ref.watch(meetingsStatisticsProvider).when(
-      data: (stats) => stats['total'].toString(),
-      loading: () => '...',
-      error: (_, __) => '0',
-    );
+    final documentsCount = ref
+        .watch(meetingsStatisticsProvider)
+        .when(
+          data: (stats) => stats['total'].toString(),
+          loading: () => '...',
+          error: (_, __) => '0',
+        );
 
-    final summariesCount = ref.watch(projectSummariesProvider(project.id)).when(
-      data: (summaries) => summaries.length.toString(),
-      loading: () => '...',
-      error: (_, __) => '0',
-    );
+    final summariesCount = ref
+        .watch(projectSummariesProvider(project.id))
+        .when(
+          data: (summaries) => summaries.length.toString(),
+          loading: () => '...',
+          error: (_, __) => '0',
+        );
 
     return Row(
       children: [
@@ -1899,7 +2336,12 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
     );
   }
 
-  Widget _buildStatChip(BuildContext context, IconData icon, String value, String label) {
+  Widget _buildStatChip(
+    BuildContext context,
+    IconData icon,
+    String value,
+    String label,
+  ) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
@@ -1913,9 +2355,7 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
         const SizedBox(width: 6),
         Text(
           value,
-          style: textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(width: 4),
         Text(
@@ -1939,14 +2379,18 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
         horizontal: isMobile ? 16 : 24,
       ),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.05),
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Center(
         child: Text(
           message,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
           ),
         ),
       ),
@@ -1966,9 +2410,9 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
       sourceIcon = Icons.mic_outlined;
       sourceColor = Colors.red;
     } else if (document.title.contains('.json') ||
-               document.title.contains('.txt') ||
-               document.title.contains('.pdf') ||
-               document.title.contains('.doc')) {
+        document.title.contains('.txt') ||
+        document.title.contains('.pdf') ||
+        document.title.contains('.doc')) {
       sourceIcon = Icons.upload_file_outlined;
       sourceColor = Colors.blue;
     } else if (document.contentType == ContentType.email) {
@@ -2031,7 +2475,9 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                   Text(
                     timeString,
                     style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                      color: colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.5,
+                      ),
                       fontSize: 10,
                     ),
                   ),
@@ -2055,7 +2501,8 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
 
     // Check if this is a new item
     final newItems = ref.watch(newItemsProvider);
-    final isNew = newItems.containsKey(document.id) && !newItems[document.id]!.isExpired;
+    final isNew =
+        newItems.containsKey(document.id) && !newItems[document.id]!.isExpired;
 
     // Determine content source type based on title patterns
     IconData sourceIcon;
@@ -2068,9 +2515,9 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
       sourceType = 'Audio';
       sourceColor = Colors.red;
     } else if (document.title.contains('.json') ||
-               document.title.contains('.txt') ||
-               document.title.contains('.pdf') ||
-               document.title.contains('.doc')) {
+        document.title.contains('.txt') ||
+        document.title.contains('.pdf') ||
+        document.title.contains('.doc')) {
       sourceIcon = Icons.upload_file_outlined;
       sourceType = 'File';
       sourceColor = Colors.blue;
@@ -2126,7 +2573,10 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                       // NEW badge at the beginning
                       if (isNew) ...[
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.green,
                             borderRadius: BorderRadius.circular(4),
@@ -2160,19 +2610,26 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                       Icon(
                         Icons.access_time,
                         size: 12,
-                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                        color: colorScheme.onSurfaceVariant.withValues(
+                          alpha: 0.4,
+                        ),
                       ),
                       const SizedBox(width: 4),
                       Text(
                         timeString,
                         style: textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                          color: colorScheme.onSurfaceVariant.withValues(
+                            alpha: 0.5,
+                          ),
                           fontSize: 11,
                         ),
                       ),
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 1,
+                        ),
                         decoration: BoxDecoration(
                           color: sourceColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
@@ -2207,33 +2664,50 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
     );
   }
 
-  Widget _buildCompactSummaryCardForSidebar(BuildContext context, SummaryModel summary) {
+  Widget _buildCompactSummaryCardForSidebar(
+    BuildContext context,
+    SummaryModel summary,
+  ) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
     // Check if this is a new item
     final newItems = ref.watch(newItemsProvider);
-    final isNew = newItems.containsKey(summary.id) && !newItems[summary.id]!.isExpired;
+    final isNew =
+        newItems.containsKey(summary.id) && !newItems[summary.id]!.isExpired;
 
     // Format time
     final timeString = DateTimeUtils.formatRelativeTime(summary.createdAt);
 
     // Determine summary type and get appropriate icon/color
-    final summaryType = summary.summaryType.toString().split('.').last.toUpperCase();
+    final summaryType = summary.summaryType
+        .toString()
+        .split('.')
+        .last
+        .toUpperCase();
     final isMeetingSummary = summaryType == 'MEETING';
-    final summaryIcon = isMeetingSummary ? Icons.groups_outlined : Icons.auto_awesome_outlined;
+    final summaryIcon = isMeetingSummary
+        ? Icons.groups_outlined
+        : Icons.auto_awesome_outlined;
     final summaryColor = isMeetingSummary ? Colors.blue : Colors.purple;
 
     // Format the format type properly (capitalize first letter)
     final formatType = summary.format;
-    final formattedFormat = formatType[0].toUpperCase() + formatType.substring(1);
+    final formattedFormat =
+        formatType[0].toUpperCase() + formatType.substring(1);
 
     // Format the subject with format type
     final displaySubject = summary.subject.contains('Project Summary')
-        ? summary.subject.replaceFirst('Project Summary', '${formattedFormat} Summary')
+        ? summary.subject.replaceFirst(
+            'Project Summary',
+            '${formattedFormat} Summary',
+          )
         : summary.subject.contains('Meeting Summary')
-            ? summary.subject.replaceFirst('Meeting Summary', '${formattedFormat} Meeting')
-            : '${formattedFormat} - ${summary.subject}';
+        ? summary.subject.replaceFirst(
+            'Meeting Summary',
+            '${formattedFormat} Meeting',
+          )
+        : '${formattedFormat} - ${summary.subject}';
 
     return InkWell(
       onTap: () => context.push('/summaries/${summary.id}'),
@@ -2273,7 +2747,10 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                       // NEW badge at the beginning
                       if (isNew) ...[
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.green,
                             borderRadius: BorderRadius.circular(4),
@@ -2307,7 +2784,9 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                   Text(
                     timeString,
                     style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                      color: colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.5,
+                      ),
                       fontSize: 10,
                     ),
                   ),
@@ -2345,24 +2824,38 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
 
     // Check if this is a new item
     final newItems = ref.watch(newItemsProvider);
-    final isNew = newItems.containsKey(summary.id) && !newItems[summary.id]!.isExpired;
+    final isNew =
+        newItems.containsKey(summary.id) && !newItems[summary.id]!.isExpired;
 
     // Determine summary type and get appropriate icon/color
-    final summaryType = summary.summaryType.toString().split('.').last.toUpperCase();
+    final summaryType = summary.summaryType
+        .toString()
+        .split('.')
+        .last
+        .toUpperCase();
     final isMeetingSummary = summaryType == 'MEETING';
-    final summaryIcon = isMeetingSummary ? Icons.groups_outlined : Icons.auto_awesome_outlined;
+    final summaryIcon = isMeetingSummary
+        ? Icons.groups_outlined
+        : Icons.auto_awesome_outlined;
     final summaryColor = isMeetingSummary ? Colors.blue : Colors.purple;
 
     // Format the format type properly (capitalize first letter)
     final formatType = summary.format;
-    final formattedFormat = formatType[0].toUpperCase() + formatType.substring(1);
+    final formattedFormat =
+        formatType[0].toUpperCase() + formatType.substring(1);
 
     // Format the subject with format type
     final displaySubject = summary.subject.contains('Project Summary')
-        ? summary.subject.replaceFirst('Project Summary', '${formattedFormat} Summary')
+        ? summary.subject.replaceFirst(
+            'Project Summary',
+            '${formattedFormat} Summary',
+          )
         : summary.subject.contains('Meeting Summary')
-            ? summary.subject.replaceFirst('Meeting Summary', '${formattedFormat} Meeting')
-            : '${formattedFormat} - ${summary.subject}';
+        ? summary.subject.replaceFirst(
+            'Meeting Summary',
+            '${formattedFormat} Meeting',
+          )
+        : '${formattedFormat} - ${summary.subject}';
 
     return InkWell(
       onTap: () => context.push('/summaries/${summary.id}'),
@@ -2391,7 +2884,10 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                       // NEW badge at the beginning
                       if (isNew) ...[
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.green,
                             borderRadius: BorderRadius.circular(4),
@@ -2423,14 +2919,18 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                       Text(
                         isMeetingSummary ? 'Meeting • ' : 'Project • ',
                         style: textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                          color: colorScheme.onSurfaceVariant.withValues(
+                            alpha: 0.7,
+                          ),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
                       Text(
                         DateTimeUtils.formatTimeAgo(summary.createdAt),
                         style: textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                          color: colorScheme.onSurfaceVariant.withValues(
+                            alpha: 0.5,
+                          ),
                         ),
                       ),
                     ],
@@ -2444,106 +2944,136 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
     );
   }
 
-  Widget _buildStatisticsGrid(BuildContext context, WidgetRef ref, Project project) {
+  Widget _buildStatisticsGrid(
+    BuildContext context,
+    WidgetRef ref,
+    Project project,
+  ) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    final documentsCount = ref.watch(meetingsStatisticsProvider).when(
-      data: (stats) => stats['total'].toString(),
-      loading: () => '...',
-      error: (_, __) => '0',
-    );
+    final documentsCount = ref
+        .watch(meetingsStatisticsProvider)
+        .when(
+          data: (stats) => stats['total'].toString(),
+          loading: () => '...',
+          error: (_, __) => '0',
+        );
 
-    final summariesCount = ref.watch(projectSummariesProvider(project.id)).when(
-      data: (summaries) => summaries.length.toString(),
-      loading: () => '...',
-      error: (_, __) => '0',
-    );
+    final summariesCount = ref
+        .watch(projectSummariesProvider(project.id))
+        .when(
+          data: (summaries) => summaries.length.toString(),
+          loading: () => '...',
+          error: (_, __) => '0',
+        );
 
     final stats = [
-      _StatItem(label: 'Documents', value: documentsCount, icon: Icons.folder_outlined),
-      _StatItem(label: 'Summaries', value: summariesCount, icon: Icons.summarize_outlined),
-      _StatItem(label: 'Last Activity', value: DateTimeUtils.formatTimeAgo(project.createdAt), icon: Icons.access_time),
+      _StatItem(
+        label: 'Documents',
+        value: documentsCount,
+        icon: Icons.folder_outlined,
+      ),
+      _StatItem(
+        label: 'Summaries',
+        value: summariesCount,
+        icon: Icons.summarize_outlined,
+      ),
+      _StatItem(
+        label: 'Last Activity',
+        value: DateTimeUtils.formatTimeAgo(project.createdAt),
+        icon: Icons.access_time,
+      ),
     ];
 
     return Row(
-      children: stats.map((stat) =>
-        Expanded(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: colorScheme.outline.withValues(alpha: 0.05),
-                width: 1,
+      children: stats
+          .map(
+            (stat) => Expanded(
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest.withValues(
+                    alpha: 0.2,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: colorScheme.outline.withValues(alpha: 0.05),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary.withValues(alpha: 0.08),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        stat.icon,
+                        color: colorScheme.primary.withValues(alpha: 0.8),
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            stat.value,
+                            style: textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            stat.label,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant.withValues(
+                                alpha: 0.7,
+                              ),
+                              fontSize: 10,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: colorScheme.primary.withValues(alpha: 0.08),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    stat.icon,
-                    color: colorScheme.primary.withValues(alpha: 0.8),
-                    size: 18,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        stat.value,
-                        style: textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        stat.label,
-                        style: textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                          fontSize: 10,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ).toList(),
+          )
+          .toList(),
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title, {VoidCallback? onViewAll}) {
+  Widget _buildSectionHeader(
+    BuildContext context,
+    String title, {
+    VoidCallback? onViewAll,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           title,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
         ),
         if (onViewAll != null)
-          TextButton(
-            onPressed: onViewAll,
-            child: const Text('View All'),
-          ),
+          TextButton(onPressed: onViewAll, child: const Text('View All')),
       ],
     );
   }
@@ -2559,12 +3089,14 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
     }
 
     return Column(
-      children: meetings.map((meeting) =>
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: _buildMeetingCard(context, meeting),
-        ),
-      ).toList(),
+      children: meetings
+          .map(
+            (meeting) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _buildMeetingCard(context, meeting),
+            ),
+          )
+          .toList(),
     );
   }
 
@@ -2589,7 +3121,9 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
-                  meeting.contentType == ContentType.meeting ? Icons.groups : Icons.email,
+                  meeting.contentType == ContentType.meeting
+                      ? Icons.groups
+                      : Icons.email,
                   color: colorScheme.primary,
                   size: 20,
                 ),
@@ -2619,7 +3153,10 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
               ),
               if (meeting.summaryGenerated)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.green.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
@@ -2627,7 +3164,11 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.check_circle, size: 14, color: Colors.green[700]),
+                      Icon(
+                        Icons.check_circle,
+                        size: 14,
+                        color: Colors.green[700],
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         'Summarized',
@@ -2663,12 +3204,14 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
     }
 
     return Column(
-      children: summaries.map((summary) =>
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: _buildSummaryCard(context, summary),
-        ),
-      ).toList(),
+      children: summaries
+          .map(
+            (summary) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _buildSummaryCard(context, summary),
+            ),
+          )
+          .toList(),
     );
   }
 
@@ -2756,9 +3299,7 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: colorScheme.outline.withValues(alpha: 0.08),
-        ),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.08)),
       ),
       child: Center(
         child: Row(
@@ -2831,7 +3372,9 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                     Text(
                       DateTimeUtils.formatTimeAgo(summary.createdAt),
                       style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                        color: colorScheme.onSurfaceVariant.withValues(
+                          alpha: 0.7,
+                        ),
                         fontSize: 11,
                       ),
                     ),
@@ -2866,7 +3409,12 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
     );
   }
 
-  Widget _buildEmptyState(BuildContext context, String title, String subtitle, IconData icon) {
+  Widget _buildEmptyState(
+    BuildContext context,
+    String title,
+    String subtitle,
+    IconData icon,
+  ) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
@@ -2885,10 +3433,7 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
               color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text(title, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Text(
               subtitle,
@@ -2934,7 +3479,6 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
     );
   }
 
-
   void _showProjectMenu(BuildContext context, Project project) {
     showModalBottomSheet(
       context: context,
@@ -2953,7 +3497,9 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                 height: 4,
                 margin: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -2971,16 +3517,29 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
                       ? Icons.archive_outlined
                       : Icons.unarchive_outlined,
                 ),
-                title: Text(project.status == ProjectStatus.active ? 'Archive Project' : 'Activate Project'),
+                title: Text(
+                  project.status == ProjectStatus.active
+                      ? 'Archive Project'
+                      : 'Activate Project',
+                ),
                 onTap: () {
                   Navigator.pop(context);
-                  _handleMenuAction(context, project.status == ProjectStatus.active ? 'archive' : 'activate', project);
+                  _handleMenuAction(
+                    context,
+                    project.status == ProjectStatus.active
+                        ? 'archive'
+                        : 'activate',
+                    project,
+                  );
                 },
               ),
               const Divider(),
               ListTile(
                 leading: const Icon(Icons.delete_outline, color: Colors.red),
-                title: const Text('Delete Project', style: TextStyle(color: Colors.red)),
+                title: const Text(
+                  'Delete Project',
+                  style: TextStyle(color: Colors.red),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   _showDeleteConfirmation(context, project);
@@ -3027,7 +3586,9 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Archive Project'),
-        content: Text('Are you sure you want to archive "${project.name}"? The project will be moved to archived status.'),
+        content: Text(
+          'Are you sure you want to archive "${project.name}"? The project will be moved to archived status.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
@@ -3036,14 +3597,16 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
           TextButton(
             onPressed: () async {
               Navigator.pop(dialogContext);
-              await ref.read(projectsListProvider.notifier).archiveProject(project.id);
+              await ref
+                  .read(projectsListProvider.notifier)
+                  .archiveProject(project.id);
               // Invalidate providers to refresh the UI
               ref.invalidate(projectDetailProvider(project.id));
               ref.invalidate(hierarchyStateProvider);
               if (outerContext.mounted) {
-                ScaffoldMessenger.of(outerContext).showSnackBar(
-                  const SnackBar(content: Text('Project archived')),
-                );
+                ref
+                    .read(notificationServiceProvider.notifier)
+                    .showSuccess('Project archived');
               }
             },
             child: const Text('Archive'),
@@ -3061,7 +3624,9 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Activate Project'),
-        content: Text('Are you sure you want to activate "${project.name}"? The project will be moved to active status.'),
+        content: Text(
+          'Are you sure you want to activate "${project.name}"? The project will be moved to active status.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
@@ -3070,14 +3635,16 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
           TextButton(
             onPressed: () async {
               Navigator.pop(dialogContext);
-              await ref.read(projectsListProvider.notifier).restoreProject(project.id);
+              await ref
+                  .read(projectsListProvider.notifier)
+                  .restoreProject(project.id);
               // Invalidate providers to refresh the UI
               ref.invalidate(projectDetailProvider(project.id));
               ref.invalidate(hierarchyStateProvider);
               if (outerContext.mounted) {
-                ScaffoldMessenger.of(outerContext).showSnackBar(
-                  const SnackBar(content: Text('Project activated')),
-                );
+                ref
+                    .read(notificationServiceProvider.notifier)
+                    .showSuccess('Project activated');
               }
             },
             child: const Text('Activate'),
@@ -3095,7 +3662,9 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Project'),
-        content: Text('Are you sure you want to delete "${project.name}"? This action cannot be undone.'),
+        content: Text(
+          'Are you sure you want to delete "${project.name}"? This action cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
@@ -3104,16 +3673,18 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
           TextButton(
             onPressed: () async {
               Navigator.pop(dialogContext);
-              await ref.read(projectsListProvider.notifier).deleteProject(project.id);
+              await ref
+                  .read(projectsListProvider.notifier)
+                  .deleteProject(project.id);
               // Invalidate all related providers to ensure fresh data
               ref.invalidate(projectDetailProvider(project.id));
               ref.invalidate(projectsListProvider);
               ref.invalidate(hierarchyStateProvider);
               if (outerContext.mounted) {
                 outerContext.go('/hierarchy');
-                ScaffoldMessenger.of(outerContext).showSnackBar(
-                  const SnackBar(content: Text('Project deleted')),
-                );
+                ref
+                    .read(notificationServiceProvider.notifier)
+                    .showSuccess('Project deleted');
               }
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -3136,43 +3707,45 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
         entityType: 'project',
         entityId: project.id,
         entityName: project.name,
-        onGenerate: ({
-          required String format,
-          required DateTime startDate,
-          required DateTime endDate,
-        }) async {
-          try {
-            await ref.read(summaryGenerationProvider.notifier).generateSummary(
-              projectId: project.id,
-              type: SummaryType.project,
-              startDate: startDate,
-              endDate: endDate,
-              useJob: false,
-              format: format,
-            );
+        onGenerate:
+            ({
+              required String format,
+              required DateTime startDate,
+              required DateTime endDate,
+            }) async {
+              try {
+                await ref
+                    .read(summaryGenerationProvider.notifier)
+                    .generateSummary(
+                      projectId: project.id,
+                      type: SummaryType.project,
+                      startDate: startDate,
+                      endDate: endDate,
+                      useJob: false,
+                      format: format,
+                    );
 
-            final generatedSummary = ref.read(summaryGenerationProvider).generatedSummary;
+                final generatedSummary = ref
+                    .read(summaryGenerationProvider)
+                    .generatedSummary;
 
-            if (generatedSummary != null && context.mounted) {
-              Navigator.of(dialogContext).pop();
-              context.push('/summaries/${generatedSummary.id}');
+                if (generatedSummary != null && context.mounted) {
+                  Navigator.of(dialogContext).pop();
+                  context.push('/summaries/${generatedSummary.id}');
 
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Summary generated successfully!'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            }
+                  ref
+                      .read(notificationServiceProvider.notifier)
+                      .showSuccess('Summary generated successfully!');
+                }
 
-            ref.invalidate(projectSummariesProvider(project.id));
-            _checkContentAvailability();
+                ref.invalidate(projectSummariesProvider(project.id));
+                _checkContentAvailability();
 
-            return generatedSummary!;
-          } catch (e) {
-            throw Exception('Failed to generate summary: $e');
-          }
-        },
+                return generatedSummary!;
+              } catch (e) {
+                throw Exception('Failed to generate summary: $e');
+              }
+            },
         onUploadContent: () {
           Navigator.of(dialogContext).pop();
           _showUploadDialog(context, project);
@@ -3186,15 +3759,14 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
       context: context,
       barrierDismissible: true,
       builder: (dialogContext) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Container(
           width: MediaQuery.of(context).size.width * 0.4,
           constraints: BoxConstraints(
             maxWidth: 500,
             minHeight: 400, // Minimum height for usability
-            maxHeight: MediaQuery.of(context).size.height * 0.6, // Reduced from 0.8
+            maxHeight:
+                MediaQuery.of(context).size.height * 0.6, // Reduced from 0.8
           ),
           child: UploadContentDialog(
             project: project,
@@ -3215,14 +3787,10 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: IntrinsicHeight(
           child: Container(
-            constraints: const BoxConstraints(
-              maxWidth: 600,
-            ),
+            constraints: const BoxConstraints(maxWidth: 600),
             child: RecordMeetingDialog(
               project: project,
               onRecordingComplete: () {
@@ -3285,10 +3853,8 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
     showDialog(
       context: context,
       barrierDismissible: true,
-      builder: (dialogContext) => _DocumentsDialog(
-        projectId: project.id,
-        projectName: project.name,
-      ),
+      builder: (dialogContext) =>
+          _DocumentsDialog(projectId: project.id, projectName: project.name),
     );
   }
 
@@ -3296,10 +3862,8 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
     showDialog(
       context: context,
       barrierDismissible: true,
-      builder: (dialogContext) => _SummariesDialog(
-        projectId: project.id,
-        projectName: project.name,
-      ),
+      builder: (dialogContext) =>
+          _SummariesDialog(projectId: project.id, projectName: project.name),
     );
   }
 
@@ -3359,11 +3923,7 @@ class _SimplifiedProjectDetailsScreenState extends ConsumerState<SimplifiedProje
             color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(
-            icon,
-            size: 16,
-            color: color.withValues(alpha: 0.8),
-          ),
+          child: Icon(icon, size: 16, color: color.withValues(alpha: 0.8)),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -3461,10 +4021,7 @@ class _ActivityDialogState extends ConsumerState<_ActivityDialog> {
       backgroundColor: Colors.transparent,
       elevation: 0,
       child: Container(
-        constraints: const BoxConstraints(
-          maxWidth: 500,
-          maxHeight: 600,
-        ),
+        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           color: Theme.of(context).colorScheme.surface,
@@ -3508,7 +4065,9 @@ class _ActivityDialogState extends ConsumerState<_ActivityDialog> {
             Divider(
               height: 1,
               thickness: 1,
-              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.08),
+              color: Theme.of(
+                context,
+              ).colorScheme.outline.withValues(alpha: 0.08),
             ),
 
             // Activity Feed
@@ -3520,48 +4079,60 @@ class _ActivityDialogState extends ConsumerState<_ActivityDialog> {
                     // Show loading indicator on first load
                     if (activityState.isLoading) {
                       return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const CircularProgressIndicator(),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Loading activities...',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const CircularProgressIndicator(),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Loading activities...',
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant
+                                        .withValues(alpha: 0.6),
+                                  ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
 
-                      if (activities.isEmpty && !activityState.isLoading) {
-                        return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.timeline_outlined,
-                                size: 48,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No activities yet',
-                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
+                    if (activities.isEmpty && !activityState.isLoading) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.timeline_outlined,
+                              size: 48,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant
+                                  .withValues(alpha: 0.3),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No activities yet',
+                              style: Theme.of(context).textTheme.bodyLarge
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant
+                                        .withValues(alpha: 0.6),
+                                  ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
 
                     return ListView.separated(
                       shrinkWrap: true,
                       itemCount: activities.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 12),
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         final activity = activities[index];
                         return _buildActivityItem(context, activity);
@@ -3571,10 +4142,10 @@ class _ActivityDialogState extends ConsumerState<_ActivityDialog> {
                 ),
               ),
             ),
-            ],
-          ),
+          ],
         ),
-      );
+      ),
+    );
   }
 
   Widget _buildActivityItem(BuildContext context, Activity activity) {
@@ -3689,11 +4260,7 @@ class _ActivityDialogState extends ConsumerState<_ActivityDialog> {
                           color: color.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Icon(
-                          icon,
-                          size: 16,
-                          color: color,
-                        ),
+                        child: Icon(icon, size: 16, color: color),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -3707,7 +4274,9 @@ class _ActivityDialogState extends ConsumerState<_ActivityDialog> {
                       Text(
                         _formatActivityTime(activity.timestamp),
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                          color: colorScheme.onSurfaceVariant.withValues(
+                            alpha: 0.5,
+                          ),
                           fontSize: 12,
                         ),
                       ),
@@ -3720,7 +4289,9 @@ class _ActivityDialogState extends ConsumerState<_ActivityDialog> {
                     child: Text(
                       activity.description,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                        color: colorScheme.onSurfaceVariant.withValues(
+                          alpha: 0.7,
+                        ),
                         height: 1.4,
                       ),
                     ),
@@ -3757,10 +4328,7 @@ class _DocumentsDialog extends ConsumerStatefulWidget {
   final String projectId;
   final String projectName;
 
-  const _DocumentsDialog({
-    required this.projectId,
-    required this.projectName,
-  });
+  const _DocumentsDialog({required this.projectId, required this.projectName});
 
   @override
   ConsumerState<_DocumentsDialog> createState() => _DocumentsDialogState();
@@ -3834,7 +4402,9 @@ class _DocumentsDialogState extends ConsumerState<_DocumentsDialog> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.05),
+                color: theme.colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.05,
+                ),
                 border: Border(
                   bottom: BorderSide(
                     color: theme.colorScheme.outline.withValues(alpha: 0.03),
@@ -3849,8 +4419,11 @@ class _DocumentsDialogState extends ConsumerState<_DocumentsDialog> {
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     decoration: BoxDecoration(
                       color: _filterBy != 'all'
-                          ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
-                          : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                          ? theme.colorScheme.primaryContainer.withValues(
+                              alpha: 0.3,
+                            )
+                          : theme.colorScheme.surfaceContainerHighest
+                                .withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: _filterBy != 'all'
@@ -3866,7 +4439,9 @@ class _DocumentsDialogState extends ConsumerState<_DocumentsDialog> {
                         icon: Icon(
                           Icons.expand_more,
                           size: 14,
-                          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                          color: theme.colorScheme.onSurfaceVariant.withValues(
+                            alpha: 0.7,
+                          ),
                         ),
                         style: theme.textTheme.bodySmall?.copyWith(
                           fontSize: 12,
@@ -3875,10 +4450,22 @@ class _DocumentsDialogState extends ConsumerState<_DocumentsDialog> {
                         ),
                         isDense: true,
                         items: const [
-                          DropdownMenuItem(value: 'all', child: Text('All Types')),
-                          DropdownMenuItem(value: 'meeting', child: Text('Meeting')),
-                          DropdownMenuItem(value: 'transcript', child: Text('Transcript')),
-                          DropdownMenuItem(value: 'upload', child: Text('Upload')),
+                          DropdownMenuItem(
+                            value: 'all',
+                            child: Text('All Types'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'meeting',
+                            child: Text('Meeting'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'transcript',
+                            child: Text('Transcript'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'upload',
+                            child: Text('Upload'),
+                          ),
                         ],
                         onChanged: (value) {
                           if (value != null) {
@@ -3897,7 +4484,8 @@ class _DocumentsDialogState extends ConsumerState<_DocumentsDialog> {
                     height: 32,
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                      color: theme.colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: theme.colorScheme.outline.withValues(alpha: 0.1),
@@ -3911,7 +4499,9 @@ class _DocumentsDialogState extends ConsumerState<_DocumentsDialog> {
                         icon: Icon(
                           Icons.expand_more,
                           size: 14,
-                          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                          color: theme.colorScheme.onSurfaceVariant.withValues(
+                            alpha: 0.7,
+                          ),
                         ),
                         style: theme.textTheme.bodySmall?.copyWith(
                           fontSize: 12,
@@ -3940,7 +4530,8 @@ class _DocumentsDialogState extends ConsumerState<_DocumentsDialog> {
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                      color: theme.colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: theme.colorScheme.outline.withValues(alpha: 0.1),
@@ -3958,9 +4549,12 @@ class _DocumentsDialogState extends ConsumerState<_DocumentsDialog> {
                         borderRadius: BorderRadius.circular(16),
                         child: Center(
                           child: Icon(
-                            _sortAscending ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                            _sortAscending
+                                ? Icons.keyboard_arrow_up
+                                : Icons.keyboard_arrow_down,
                             size: 16,
-                            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                            color: theme.colorScheme.onSurfaceVariant
+                                .withValues(alpha: 0.7),
                           ),
                         ),
                       ),
@@ -3973,12 +4567,9 @@ class _DocumentsDialogState extends ConsumerState<_DocumentsDialog> {
             // Content
             Expanded(
               child: meetingsAsync.when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(),
-                ),
-                error: (error, _) => Center(
-                  child: Text('Error loading documents: $error'),
-                ),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) =>
+                    Center(child: Text('Error loading documents: $error')),
                 data: (meetings) {
                   if (meetings.isEmpty) {
                     return Center(
@@ -3988,13 +4579,15 @@ class _DocumentsDialogState extends ConsumerState<_DocumentsDialog> {
                           Icon(
                             Icons.description_outlined,
                             size: 48,
-                            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                            color: theme.colorScheme.onSurfaceVariant
+                                .withValues(alpha: 0.3),
                           ),
                           const SizedBox(height: 16),
                           Text(
                             'No documents yet',
                             style: theme.textTheme.bodyLarge?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                              color: theme.colorScheme.onSurfaceVariant
+                                  .withValues(alpha: 0.6),
                             ),
                           ),
                         ],
@@ -4005,9 +4598,14 @@ class _DocumentsDialogState extends ConsumerState<_DocumentsDialog> {
                   // Apply filtering and sorting
                   var filteredDocuments = meetings.where((meeting) {
                     if (_filterBy == 'all') return true;
-                    if (_filterBy == 'meeting') return meeting.contentType == ContentType.meeting;
-                    if (_filterBy == 'transcript') return meeting.contentType == ContentType.email; // Using email as transcript for now
-                    if (_filterBy == 'upload') return true; // All are uploads in a sense
+                    if (_filterBy == 'meeting')
+                      return meeting.contentType == ContentType.meeting;
+                    if (_filterBy == 'transcript')
+                      return meeting.contentType ==
+                          ContentType
+                              .email; // Using email as transcript for now
+                    if (_filterBy == 'upload')
+                      return true; // All are uploads in a sense
                     return true;
                   }).toList();
 
@@ -4030,13 +4628,15 @@ class _DocumentsDialogState extends ConsumerState<_DocumentsDialog> {
                           Icon(
                             Icons.filter_list_off,
                             size: 48,
-                            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                            color: theme.colorScheme.onSurfaceVariant
+                                .withValues(alpha: 0.3),
                           ),
                           const SizedBox(height: 16),
                           Text(
                             'No documents found',
                             style: theme.textTheme.titleMedium?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                              color: theme.colorScheme.onSurfaceVariant
+                                  .withValues(alpha: 0.7),
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -4046,7 +4646,8 @@ class _DocumentsDialogState extends ConsumerState<_DocumentsDialog> {
                                 ? 'Try adjusting your search criteria'
                                 : 'No documents match the "${_getDocumentFilterDisplayName(_filterBy)}" filter',
                             style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                              color: theme.colorScheme.onSurfaceVariant
+                                  .withValues(alpha: 0.5),
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -4079,7 +4680,8 @@ class _DocumentsDialogState extends ConsumerState<_DocumentsDialog> {
                   return ListView.separated(
                     padding: const EdgeInsets.all(20),
                     itemCount: filteredDocuments.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 8),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 8),
                     itemBuilder: (context, index) {
                       final meeting = filteredDocuments[index];
                       return Material(
@@ -4093,10 +4695,13 @@ class _DocumentsDialogState extends ConsumerState<_DocumentsDialog> {
                           child: Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                              color: theme.colorScheme.surfaceContainerHighest
+                                  .withValues(alpha: 0.3),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: theme.colorScheme.outline.withValues(alpha: 0.1),
+                                color: theme.colorScheme.outline.withValues(
+                                  alpha: 0.1,
+                                ),
                               ),
                             ),
                             child: Row(
@@ -4116,30 +4721,43 @@ class _DocumentsDialogState extends ConsumerState<_DocumentsDialog> {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         children: [
                                           Expanded(
                                             child: Text(
                                               meeting.title,
-                                              style: theme.textTheme.bodyMedium?.copyWith(
-                                                fontWeight: FontWeight.w500,
-                                              ),
+                                              style: theme.textTheme.bodyMedium
+                                                  ?.copyWith(
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
                                             ),
                                           ),
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
                                             decoration: BoxDecoration(
-                                              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                                              borderRadius: BorderRadius.circular(4),
+                                              color: theme
+                                                  .colorScheme
+                                                  .surfaceContainerHighest
+                                                  .withValues(alpha: 0.5),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
                                             ),
                                             child: Text(
                                               meeting.typeLabel.toLowerCase(),
-                                              style: theme.textTheme.bodySmall?.copyWith(
-                                                fontSize: 10,
-                                                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
-                                              ),
+                                              style: theme.textTheme.bodySmall
+                                                  ?.copyWith(
+                                                    fontSize: 10,
+                                                    color: theme
+                                                        .colorScheme
+                                                        .onSurfaceVariant
+                                                        .withValues(alpha: 0.8),
+                                                  ),
                                             ),
                                           ),
                                         ],
@@ -4147,9 +4765,13 @@ class _DocumentsDialogState extends ConsumerState<_DocumentsDialog> {
                                       const SizedBox(height: 4),
                                       Text(
                                         _formatDocumentDate(meeting.uploadedAt),
-                                        style: theme.textTheme.bodySmall?.copyWith(
-                                          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                                        ),
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                              color: theme
+                                                  .colorScheme
+                                                  .onSurfaceVariant
+                                                  .withValues(alpha: 0.6),
+                                            ),
                                       ),
                                     ],
                                   ),
@@ -4157,7 +4779,8 @@ class _DocumentsDialogState extends ConsumerState<_DocumentsDialog> {
                                 Icon(
                                   Icons.arrow_forward_ios,
                                   size: 12,
-                                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                                  color: theme.colorScheme.onSurfaceVariant
+                                      .withValues(alpha: 0.4),
                                 ),
                               ],
                             ),
@@ -4211,10 +4834,7 @@ class _SummariesDialog extends ConsumerStatefulWidget {
   final String projectId;
   final String projectName;
 
-  const _SummariesDialog({
-    required this.projectId,
-    required this.projectName,
-  });
+  const _SummariesDialog({required this.projectId, required this.projectName});
 
   @override
   ConsumerState<_SummariesDialog> createState() => _SummariesDialogState();
@@ -4222,7 +4842,8 @@ class _SummariesDialog extends ConsumerStatefulWidget {
 
 class _SummariesDialogState extends ConsumerState<_SummariesDialog> {
   String _sortBy = 'date'; // 'date', 'name'
-  String _filterBy = 'all'; // 'all', 'meeting', 'project', 'executive', 'technical', 'stakeholder', 'general'
+  String _filterBy =
+      'all'; // 'all', 'meeting', 'project', 'executive', 'technical', 'stakeholder', 'general'
   bool _sortAscending = false;
 
   Color _getFormatColor(String format) {
@@ -4241,7 +4862,9 @@ class _SummariesDialogState extends ConsumerState<_SummariesDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final summariesAsync = ref.watch(projectSummariesProvider(widget.projectId));
+    final summariesAsync = ref.watch(
+      projectSummariesProvider(widget.projectId),
+    );
     final theme = Theme.of(context);
 
     return Dialog(
@@ -4302,7 +4925,9 @@ class _SummariesDialogState extends ConsumerState<_SummariesDialog> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.05),
+                color: theme.colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.05,
+                ),
                 border: Border(
                   bottom: BorderSide(
                     color: theme.colorScheme.outline.withValues(alpha: 0.03),
@@ -4317,8 +4942,11 @@ class _SummariesDialogState extends ConsumerState<_SummariesDialog> {
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     decoration: BoxDecoration(
                       color: _filterBy != 'all'
-                          ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
-                          : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                          ? theme.colorScheme.primaryContainer.withValues(
+                              alpha: 0.3,
+                            )
+                          : theme.colorScheme.surfaceContainerHighest
+                                .withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: _filterBy != 'all'
@@ -4334,7 +4962,9 @@ class _SummariesDialogState extends ConsumerState<_SummariesDialog> {
                         icon: Icon(
                           Icons.expand_more,
                           size: 14,
-                          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                          color: theme.colorScheme.onSurfaceVariant.withValues(
+                            alpha: 0.7,
+                          ),
                         ),
                         style: theme.textTheme.bodySmall?.copyWith(
                           fontSize: 12,
@@ -4343,13 +4973,34 @@ class _SummariesDialogState extends ConsumerState<_SummariesDialog> {
                         ),
                         isDense: true,
                         items: const [
-                          DropdownMenuItem(value: 'all', child: Text('All Types')),
-                          DropdownMenuItem(value: 'meeting', child: Text('Meeting Summaries')),
-                          DropdownMenuItem(value: 'project', child: Text('Project Summaries')),
-                          DropdownMenuItem(value: 'general', child: Text('General Format')),
-                          DropdownMenuItem(value: 'executive', child: Text('Executive Format')),
-                          DropdownMenuItem(value: 'technical', child: Text('Technical Format')),
-                          DropdownMenuItem(value: 'stakeholder', child: Text('Stakeholder Format')),
+                          DropdownMenuItem(
+                            value: 'all',
+                            child: Text('All Types'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'meeting',
+                            child: Text('Meeting Summaries'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'project',
+                            child: Text('Project Summaries'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'general',
+                            child: Text('General Format'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'executive',
+                            child: Text('Executive Format'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'technical',
+                            child: Text('Technical Format'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'stakeholder',
+                            child: Text('Stakeholder Format'),
+                          ),
                         ],
                         onChanged: (value) {
                           if (value != null) {
@@ -4368,7 +5019,8 @@ class _SummariesDialogState extends ConsumerState<_SummariesDialog> {
                     height: 32,
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                      color: theme.colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: theme.colorScheme.outline.withValues(alpha: 0.1),
@@ -4382,7 +5034,9 @@ class _SummariesDialogState extends ConsumerState<_SummariesDialog> {
                         icon: Icon(
                           Icons.expand_more,
                           size: 14,
-                          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                          color: theme.colorScheme.onSurfaceVariant.withValues(
+                            alpha: 0.7,
+                          ),
                         ),
                         style: theme.textTheme.bodySmall?.copyWith(
                           fontSize: 12,
@@ -4411,7 +5065,8 @@ class _SummariesDialogState extends ConsumerState<_SummariesDialog> {
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                      color: theme.colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: theme.colorScheme.outline.withValues(alpha: 0.1),
@@ -4429,9 +5084,12 @@ class _SummariesDialogState extends ConsumerState<_SummariesDialog> {
                         borderRadius: BorderRadius.circular(16),
                         child: Center(
                           child: Icon(
-                            _sortAscending ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                            _sortAscending
+                                ? Icons.keyboard_arrow_up
+                                : Icons.keyboard_arrow_down,
                             size: 16,
-                            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                            color: theme.colorScheme.onSurfaceVariant
+                                .withValues(alpha: 0.7),
                           ),
                         ),
                       ),
@@ -4444,12 +5102,9 @@ class _SummariesDialogState extends ConsumerState<_SummariesDialog> {
             // Content
             Expanded(
               child: summariesAsync.when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(),
-                ),
-                error: (error, _) => Center(
-                  child: Text('Error loading summaries: $error'),
-                ),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) =>
+                    Center(child: Text('Error loading summaries: $error')),
                 data: (summaries) {
                   if (summaries.isEmpty) {
                     return Center(
@@ -4459,13 +5114,15 @@ class _SummariesDialogState extends ConsumerState<_SummariesDialog> {
                           Icon(
                             Icons.auto_awesome_outlined,
                             size: 48,
-                            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                            color: theme.colorScheme.onSurfaceVariant
+                                .withValues(alpha: 0.3),
                           ),
                           const SizedBox(height: 16),
                           Text(
                             'No summaries yet',
                             style: theme.textTheme.bodyLarge?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                              color: theme.colorScheme.onSurfaceVariant
+                                  .withValues(alpha: 0.6),
                             ),
                           ),
                         ],
@@ -4477,13 +5134,19 @@ class _SummariesDialogState extends ConsumerState<_SummariesDialog> {
                   var filteredSummaries = summaries.where((summary) {
                     if (_filterBy == 'all') return true;
                     // Filter by summary type
-                    if (_filterBy == 'meeting') return summary.summaryType == SummaryType.meeting;
-                    if (_filterBy == 'project') return summary.summaryType == SummaryType.project;
+                    if (_filterBy == 'meeting')
+                      return summary.summaryType == SummaryType.meeting;
+                    if (_filterBy == 'project')
+                      return summary.summaryType == SummaryType.project;
                     // Filter by format type
-                    if (_filterBy == 'general') return summary.format == 'general';
-                    if (_filterBy == 'executive') return summary.format == 'executive';
-                    if (_filterBy == 'technical') return summary.format == 'technical';
-                    if (_filterBy == 'stakeholder') return summary.format == 'stakeholder';
+                    if (_filterBy == 'general')
+                      return summary.format == 'general';
+                    if (_filterBy == 'executive')
+                      return summary.format == 'executive';
+                    if (_filterBy == 'technical')
+                      return summary.format == 'technical';
+                    if (_filterBy == 'stakeholder')
+                      return summary.format == 'stakeholder';
                     return true;
                   }).toList();
 
@@ -4506,13 +5169,15 @@ class _SummariesDialogState extends ConsumerState<_SummariesDialog> {
                           Icon(
                             Icons.filter_list_off,
                             size: 48,
-                            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                            color: theme.colorScheme.onSurfaceVariant
+                                .withValues(alpha: 0.3),
                           ),
                           const SizedBox(height: 16),
                           Text(
                             'No summaries found',
                             style: theme.textTheme.titleMedium?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                              color: theme.colorScheme.onSurfaceVariant
+                                  .withValues(alpha: 0.7),
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -4522,7 +5187,8 @@ class _SummariesDialogState extends ConsumerState<_SummariesDialog> {
                                 ? 'Try adjusting your search criteria'
                                 : 'No summaries match the "${_getFilterDisplayName(_filterBy)}" filter',
                             style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                              color: theme.colorScheme.onSurfaceVariant
+                                  .withValues(alpha: 0.5),
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -4555,18 +5221,25 @@ class _SummariesDialogState extends ConsumerState<_SummariesDialog> {
                   return ListView.separated(
                     padding: const EdgeInsets.all(20),
                     itemCount: filteredSummaries.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 8),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 8),
                     itemBuilder: (context, index) {
                       final summary = filteredSummaries[index];
 
                       // Determine summary type and get appropriate icon/color
-                      final isMeetingSummary = summary.summaryType == SummaryType.meeting;
-                      final summaryIcon = isMeetingSummary ? Icons.groups_outlined : Icons.auto_awesome;
-                      final summaryColor = isMeetingSummary ? Colors.blue : Colors.purple;
+                      final isMeetingSummary =
+                          summary.summaryType == SummaryType.meeting;
+                      final summaryIcon = isMeetingSummary
+                          ? Icons.groups_outlined
+                          : Icons.auto_awesome;
+                      final summaryColor = isMeetingSummary
+                          ? Colors.blue
+                          : Colors.purple;
 
                       // Format the format type properly (capitalize first letter)
                       final formatType = summary.format;
-                      final formattedFormat = formatType[0].toUpperCase() + formatType.substring(1);
+                      final formattedFormat =
+                          formatType[0].toUpperCase() + formatType.substring(1);
 
                       return Material(
                         color: Colors.transparent,
@@ -4579,10 +5252,13 @@ class _SummariesDialogState extends ConsumerState<_SummariesDialog> {
                           child: Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                              color: theme.colorScheme.surfaceContainerHighest
+                                  .withValues(alpha: 0.3),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: theme.colorScheme.outline.withValues(alpha: 0.1),
+                                color: theme.colorScheme.outline.withValues(
+                                  alpha: 0.1,
+                                ),
                               ),
                             ),
                             child: Row(
@@ -4602,31 +5278,43 @@ class _SummariesDialogState extends ConsumerState<_SummariesDialog> {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         children: [
                                           Expanded(
                                             child: Text(
                                               summary.subject,
-                                              style: theme.textTheme.bodyMedium?.copyWith(
-                                                fontWeight: FontWeight.w500,
-                                              ),
+                                              style: theme.textTheme.bodyMedium
+                                                  ?.copyWith(
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
                                             ),
                                           ),
                                           // Summary type badge
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
                                             decoration: BoxDecoration(
-                                              color: summaryColor.withValues(alpha: 0.1),
-                                              borderRadius: BorderRadius.circular(4),
+                                              color: summaryColor.withValues(
+                                                alpha: 0.1,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
                                               border: Border.all(
-                                                color: summaryColor.withValues(alpha: 0.3),
+                                                color: summaryColor.withValues(
+                                                  alpha: 0.3,
+                                                ),
                                                 width: 1,
                                               ),
                                             ),
                                             child: Text(
-                                              isMeetingSummary ? 'Meeting' : 'Project',
+                                              isMeetingSummary
+                                                  ? 'Meeting'
+                                                  : 'Project',
                                               style: TextStyle(
                                                 fontSize: 10,
                                                 color: summaryColor,
@@ -4637,12 +5325,20 @@ class _SummariesDialogState extends ConsumerState<_SummariesDialog> {
                                           const SizedBox(width: 6),
                                           // Format badge
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
                                             decoration: BoxDecoration(
-                                              color: _getFormatColor(formatType).withValues(alpha: 0.1),
-                                              borderRadius: BorderRadius.circular(4),
+                                              color: _getFormatColor(
+                                                formatType,
+                                              ).withValues(alpha: 0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
                                               border: Border.all(
-                                                color: _getFormatColor(formatType).withValues(alpha: 0.3),
+                                                color: _getFormatColor(
+                                                  formatType,
+                                                ).withValues(alpha: 0.3),
                                                 width: 1,
                                               ),
                                             ),
@@ -4650,7 +5346,9 @@ class _SummariesDialogState extends ConsumerState<_SummariesDialog> {
                                               formattedFormat,
                                               style: TextStyle(
                                                 fontSize: 10,
-                                                color: _getFormatColor(formatType),
+                                                color: _getFormatColor(
+                                                  formatType,
+                                                ),
                                                 fontWeight: FontWeight.w500,
                                               ),
                                             ),
@@ -4660,9 +5358,13 @@ class _SummariesDialogState extends ConsumerState<_SummariesDialog> {
                                       const SizedBox(height: 4),
                                       Text(
                                         _formatSummaryDate(summary.createdAt),
-                                        style: theme.textTheme.bodySmall?.copyWith(
-                                          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                                        ),
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                              color: theme
+                                                  .colorScheme
+                                                  .onSurfaceVariant
+                                                  .withValues(alpha: 0.6),
+                                            ),
                                       ),
                                     ],
                                   ),
