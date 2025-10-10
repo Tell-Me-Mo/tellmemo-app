@@ -13,6 +13,7 @@ from models.project import Project
 from services.activity.activity_service import ActivityService
 from utils.logger import get_logger
 from utils.monitoring import monitor_operation, track_background_task
+from utils.rq_utils import CancellationCheckpoint
 from config import get_settings
 
 settings = get_settings()
@@ -225,6 +226,9 @@ class ContentService:
             content_id: UUID of content to process
             rq_job: Optional RQ job object for progress tracking (with Redis pub/sub)
         """
+        # Create checkpoint for cancellation checks
+        checkpoint = CancellationCheckpoint(rq_job)
+
         try:
             # Update job progress via RQ + Redis pub/sub
             if rq_job:
@@ -275,12 +279,15 @@ class ContentService:
                     logger.warning(f"Failed to parse meeting transcript, using raw content: {e}")
                     processed_content = content.content
             
+            # Check for cancellation before chunking
+            checkpoint.check("before chunking")
+
             # Update job: chunking
             _update_rq_job_progress(rq_job, 40.0, "Splitting into chunks", current_step=3)
-            
+
             # Chunk the processed text using the chunking service
             from services.rag.chunking_service import chunking_service
-            
+
             text_chunks = chunking_service.chunk_text(processed_content)
             
             # Convert TextChunk objects to dictionaries for compatibility
@@ -289,7 +296,10 @@ class ContentService:
             # Update chunk count
             content.chunk_count = len(chunks)
             content.processed_at = datetime.utcnow()
-            
+
+            # Check for cancellation before generating embeddings
+            checkpoint.check("before generating embeddings")
+
             # Update job: generating embeddings
             _update_rq_job_progress(rq_job, 60.0, "Generating embeddings", current_step=4)
             
@@ -352,7 +362,10 @@ class ContentService:
                     }
                 )
                 points.append(point)
-            
+
+            # Check for cancellation before storing in vector database
+            checkpoint.check("before storing vectors")
+
             # Update job: storing in vector database
             _update_rq_job_progress(rq_job, 80.0, "Storing in database", current_step=5)
             
@@ -378,6 +391,9 @@ class ContentService:
             
             # Track partial failures for AI features
             partial_failures = {}
+
+            # Check for cancellation before summary generation
+            checkpoint.check("before summary generation")
 
             # Auto-generate meeting summary if this is meeting content
             summary_id = None
@@ -414,7 +430,10 @@ class ContentService:
                     if 'overloaded' in error_msg.lower() or '529' in error_msg:
                         partial_failures['ai_overloaded'] = True
                     # Don't fail the entire process if summary generation fails
-            
+
+            # Check for cancellation before project description update
+            checkpoint.check("before project description update")
+
             # Process content for potential project description update
             try:
                 logger.info(f"Processing content {content_id} for project description update")
