@@ -87,6 +87,13 @@ async def transcribe_audio(
                 temp_file_path = temp_file.name
                 file_size = os.path.getsize(temp_file_path)
 
+                # Convert to container path for RQ worker
+                # Worker always sees /app/uploads due to bind mount
+                if not temp_file_path.startswith("/app/"):
+                    # Running on host - convert to container path
+                    temp_file_name = Path(temp_file_path).name
+                    temp_file_path = f"/app/uploads/temp_audio/{temp_file_name}"
+
             # Check file size
             if file_size > max_size_bytes:
                 raise HTTPException(
