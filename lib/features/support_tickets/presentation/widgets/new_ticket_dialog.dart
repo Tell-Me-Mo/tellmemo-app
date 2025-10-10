@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:pm_master_v2/features/support_tickets/models/support_ticket.dart';
 import 'package:pm_master_v2/features/support_tickets/providers/support_ticket_provider.dart';
+import '../../../../core/services/notification_service.dart';
 
 class NewTicketDialog extends ConsumerStatefulWidget {
   const NewTicketDialog({super.key});
@@ -669,12 +670,7 @@ class _NewTicketDialogState extends ConsumerState<NewTicketDialog> {
         for (final file in result.files) {
           if (file.size > 10 * 1024 * 1024) { // 10MB limit
             if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('File "${file.name}" exceeds 10MB limit'),
-                backgroundColor: Colors.orange,
-              ),
-            );
+            ref.read(notificationServiceProvider.notifier).showWarning('File "${file.name}" exceeds 10MB limit');
           } else {
             validFiles.add(file);
           }
@@ -688,12 +684,7 @@ class _NewTicketDialogState extends ConsumerState<NewTicketDialog> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error picking files: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      ref.read(notificationServiceProvider.notifier).showError('Error picking files: $e');
     }
   }
 

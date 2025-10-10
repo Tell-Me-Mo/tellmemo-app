@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../jobs/domain/models/job_model.dart';
 import '../../../jobs/domain/services/job_websocket_service.dart';
 import '../../../jobs/presentation/providers/job_websocket_provider.dart';
@@ -92,11 +93,8 @@ class _ProjectSummaryWebSocketDialogState
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
           Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to generate summary: ${job.errorMessage}'),
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
+          ref.read(notificationServiceProvider.notifier).showError(
+            'Failed to generate summary: ${job.errorMessage}',
           );
         }
       });

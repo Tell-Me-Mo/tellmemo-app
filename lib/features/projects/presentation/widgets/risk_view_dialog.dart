@@ -7,6 +7,7 @@ import '../providers/risks_tasks_provider.dart';
 import '../../../risks/presentation/screens/risks_aggregation_screen_v2.dart';
 import '../../../queries/presentation/widgets/ask_ai_panel.dart';
 import '../../../queries/presentation/providers/query_provider.dart';
+import '../../../../core/services/notification_service.dart';
 
 class RiskViewDialog extends ConsumerStatefulWidget {
   final String projectId;
@@ -57,15 +58,11 @@ class _RiskViewDialogState extends ConsumerState<RiskViewDialog> {
         setState(() {
           _risk = updatedRisk;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Risk marked as resolved')),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess('Risk marked as resolved');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update risk: $e')),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Failed to update risk: $e');
       }
     } finally {
       if (mounted) {
@@ -94,15 +91,11 @@ class _RiskViewDialogState extends ConsumerState<RiskViewDialog> {
         setState(() {
           _risk = updatedRisk;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Risk marked as mitigating')),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess('Risk marked as mitigating');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update risk: $e')),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Failed to update risk: $e');
       }
     } finally {
       if (mounted) {
@@ -131,15 +124,11 @@ class _RiskViewDialogState extends ConsumerState<RiskViewDialog> {
         setState(() {
           _risk = updatedRisk;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Risk marked as identified')),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess('Risk marked as identified');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update risk: $e')),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Failed to update risk: $e');
       }
     } finally {
       if (mounted) {
@@ -180,15 +169,11 @@ class _RiskViewDialogState extends ConsumerState<RiskViewDialog> {
 
       if (mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Risk deleted successfully')),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess('Risk deleted successfully');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete risk: $e')),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Failed to delete risk: $e');
       }
     } finally {
       if (mounted) {

@@ -5,6 +5,7 @@ import '../../../../core/network/api_client.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/utils/datetime_utils.dart';
 import '../../../../core/widgets/breadcrumb_navigation.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../data/models/summary_model.dart';
 
 class StakeholderSummaryViewer extends ConsumerStatefulWidget {
@@ -150,20 +151,14 @@ class _StakeholderSummaryViewerState extends ConsumerState<StakeholderSummaryVie
 
         // widget.onEdit?.call();
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${_getSectionName(section)} updated successfully'),
-            backgroundColor: Colors.green,
-          ),
+        ref.read(notificationServiceProvider.notifier).showSuccess(
+          '${_getSectionName(section)} updated successfully',
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update: $e'),
-            backgroundColor: Colors.red,
-          ),
+        ref.read(notificationServiceProvider.notifier).showError(
+          'Failed to update: $e',
         );
       }
     } finally {

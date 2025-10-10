@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pm_master_v2/features/organizations/presentation/providers/invitation_notifications_provider.dart';
+import 'package:pm_master_v2/core/services/notification_service.dart';
 import '../../../../mocks/organization_test_fixtures.dart';
 
 void main() {
@@ -414,7 +415,7 @@ void main() {
     });
 
     group('showNotificationSnackbar', () {
-      testWidgets('displays snackbar with notification details', (WidgetTester tester) async {
+      testWidgets('displays notification using notification service', (WidgetTester tester) async {
         // Arrange
         final notifier = container.read(invitationNotificationsProvider.notifier);
         final notification = InvitationNotification(
@@ -426,15 +427,18 @@ void main() {
         );
 
         await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: Builder(
-                builder: (context) {
-                  return ElevatedButton(
-                    onPressed: () {
-                      notifier.showNotificationSnackbar(context, notification);
-                    },
-                    child: const Text('Show Notification'),
+          ProviderScope(
+            parent: container,
+            child: MaterialApp(
+              home: Consumer(
+                builder: (context, ref, child) {
+                  return Scaffold(
+                    body: ElevatedButton(
+                      onPressed: () {
+                        notifier.showNotificationSnackbar(ref, notification);
+                      },
+                      child: const Text('Show Notification'),
+                    ),
                   );
                 },
               ),
@@ -444,13 +448,16 @@ void main() {
 
         // Act
         await tester.tap(find.byType(ElevatedButton));
-        await tester.pumpAndSettle();
+        await tester.pump(); // Pump once to trigger notification
 
-        // Assert
-        expect(find.text('John Doe joined your organization'), findsOneWidget);
-        expect(find.text('test@example.com'), findsOneWidget);
-        expect(find.byIcon(Icons.check_circle), findsOneWidget);
-        expect(find.text('VIEW'), findsOneWidget);
+        // Get the notification service to verify notification was added
+        final notificationService = container.read(notificationServiceProvider);
+
+        // Assert - Notification should be in active notifications
+        expect(notificationService.active.isNotEmpty, true);
+
+        // Complete any pending timers before finishing the test
+        await tester.pumpAndSettle(const Duration(seconds: 5));
       });
     });
 

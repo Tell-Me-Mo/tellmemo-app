@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../organizations/domain/entities/organization.dart';
 import '../../../organizations/presentation/providers/organization_provider.dart';
+import '../../../../core/services/notification_service.dart';
 
 class OrganizationList extends ConsumerStatefulWidget {
   const OrganizationList({super.key});
@@ -23,22 +24,11 @@ class _OrganizationListState extends ConsumerState<OrganizationList> {
       await ref.read(currentOrganizationProvider.notifier).switchOrganization(organizationId);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Organization switched successfully'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess('Organization switched successfully');
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to switch organization: ${error.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Failed to switch organization: ${error.toString()}');
       }
     } finally {
       if (mounted) {

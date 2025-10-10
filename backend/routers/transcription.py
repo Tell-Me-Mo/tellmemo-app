@@ -68,6 +68,7 @@ async def transcribe_audio(
         max_size_bytes = settings.max_audio_file_size_mb * 1024 * 1024
         file_size = 0
         temp_file_path = None
+        temp_file_path_for_cleanup = None  # Original path for cleanup
         task_queued = False  # Track if background task was successfully queued
 
         # Create temp directory inside uploads (container-accessible)
@@ -87,12 +88,15 @@ async def transcribe_audio(
                 temp_file_path = temp_file.name
                 file_size = os.path.getsize(temp_file_path)
 
-                # Convert to container path for RQ worker
-                # Worker always sees /app/uploads due to bind mount
-                if not temp_file_path.startswith("/app/"):
-                    # Running on host - convert to container path
-                    temp_file_name = Path(temp_file_path).name
-                    temp_file_path = f"/app/uploads/temp_audio/{temp_file_name}"
+            # Save original path for cleanup before converting to container path
+            temp_file_path_for_cleanup = temp_file_path
+
+            # Convert to container path for RQ worker
+            # Worker always sees /app/uploads due to bind mount
+            if not temp_file_path.startswith("/app/"):
+                # Running on host - convert to container path
+                temp_file_name = Path(temp_file_path).name
+                temp_file_path = f"/app/uploads/temp_audio/{temp_file_name}"
 
             # Check file size
             if file_size > max_size_bytes:
@@ -190,12 +194,12 @@ async def transcribe_audio(
         finally:
             # Clean up temp file if task was not successfully queued
             # If queued, the background task is responsible for cleanup
-            if not task_queued and temp_file_path and os.path.exists(temp_file_path):
+            if not task_queued and temp_file_path_for_cleanup and os.path.exists(temp_file_path_for_cleanup):
                 try:
-                    os.unlink(temp_file_path)
-                    logger.debug(f"Cleaned up temp file: {temp_file_path}")
+                    os.unlink(temp_file_path_for_cleanup)
+                    logger.debug(f"Cleaned up temp file: {temp_file_path_for_cleanup}")
                 except Exception as cleanup_error:
-                    logger.error(f"Failed to clean up temp file {temp_file_path}: {cleanup_error}")
+                    logger.error(f"Failed to clean up temp file {temp_file_path_for_cleanup}: {cleanup_error}")
 
     except HTTPException:
         # RQ job will be marked as failed automatically

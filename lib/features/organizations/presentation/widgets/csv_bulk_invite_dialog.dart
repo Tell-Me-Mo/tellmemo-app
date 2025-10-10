@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:pm_master_v2/core/constants/validation_constants.dart';
 import 'package:pm_master_v2/features/organizations/presentation/providers/organization_provider.dart';
+import 'package:pm_master_v2/core/services/notification_service.dart';
 import 'dart:io';
 
 class CsvBulkInviteDialog extends ConsumerStatefulWidget {
@@ -176,12 +177,8 @@ class _CsvBulkInviteDialogState extends ConsumerState<CsvBulkInviteDialog> {
       });
 
       if (_successCount > 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Successfully sent $_successCount invitation${_successCount == 1 ? '' : 's'}'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
+        ref.read(notificationServiceProvider.notifier).showSuccess(
+          'Successfully sent $_successCount invitation${_successCount == 1 ? '' : 's'}',
         );
       }
 
@@ -194,13 +191,7 @@ class _CsvBulkInviteDialogState extends ConsumerState<CsvBulkInviteDialog> {
   void _downloadTemplate() {
     const template = 'email,name,role\nexample@company.com,John Doe,member\nmanager@company.com,Jane Smith,admin\nviewer@company.com,Bob Johnson,viewer';
     Clipboard.setData(const ClipboardData(text: template));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('CSV template copied to clipboard'),
-        duration: Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    ref.read(notificationServiceProvider.notifier).showInfo('CSV template copied to clipboard');
   }
 
   @override

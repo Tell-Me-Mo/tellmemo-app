@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/layout_constants.dart';
 import '../../../../core/widgets/breadcrumb_navigation.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../data/models/summary_model.dart';
 import '../providers/summary_provider.dart';
 import '../widgets/format_aware_summary_viewer.dart';
@@ -359,11 +360,8 @@ Widget _buildErrorContent(String error) {
     if (summary == null) return;
 
     // Copy summary to clipboard logic would go here
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Summary copied to clipboard'),
-        duration: Duration(seconds: 2),
-      ),
+    ref.read(notificationServiceProvider.notifier).showSuccess(
+      'Summary copied to clipboard',
     );
   }
 

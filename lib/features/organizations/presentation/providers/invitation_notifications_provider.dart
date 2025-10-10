@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pm_master_v2/features/organizations/data/models/organization_member.dart';
+import 'package:pm_master_v2/core/services/notification_service.dart';
 
 /// Provider for managing invitation acceptance notifications
 ///
@@ -207,42 +208,9 @@ class InvitationNotificationsNotifier extends StateNotifier<InvitationNotificati
     );
   }
 
-  void showNotificationSnackbar(BuildContext context, InvitationNotification notification) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle, color: Colors.white),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${notification.userName} joined your organization',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    notification.userEmail,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.green,
-        duration: const Duration(seconds: 5),
-        behavior: SnackBarBehavior.floating,
-        action: SnackBarAction(
-          label: 'VIEW',
-          textColor: Colors.white,
-          onPressed: () {
-            // Navigate to members screen
-          },
-        ),
-      ),
+  void showNotificationSnackbar(WidgetRef ref, InvitationNotification notification) {
+    ref.read(notificationServiceProvider.notifier).showSuccess(
+      '${notification.userName} (${notification.userEmail}) joined your organization',
     );
   }
 

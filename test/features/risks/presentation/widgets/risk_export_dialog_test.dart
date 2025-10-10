@@ -2,9 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pm_master_v2/features/risks/presentation/widgets/risk_export_dialog.dart';
+import 'package:pm_master_v2/core/services/notification_service.dart';
 import '../../../../helpers/test_helpers.dart';
 
 void main() {
+  late MockNotificationService mockNotificationService;
+
+  setUp(() {
+    mockNotificationService = createMockNotificationService();
+  });
+
   Future<void> pumpTestWidget(
     WidgetTester tester, {
     String format = 'pdf',
@@ -30,6 +37,9 @@ void main() {
           );
         },
       ),
+      overrides: [
+        notificationServiceProvider.overrideWith((ref) => mockNotificationService),
+      ],
     );
   }
 
@@ -250,8 +260,8 @@ void main() {
       // Dialog should be closed
       expect(find.byType(RiskExportDialog), findsNothing);
 
-      // Success snackbar should be shown
-      expect(find.text('Export completed successfully'), findsOneWidget);
+      // Success notification should be shown
+      expect(mockNotificationService.successCalls, contains('Export completed successfully'));
     });
 
     testWidgets('shows loading state during export', (tester) async {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/task.dart';
 import '../providers/risks_tasks_provider.dart';
+import '../../../../core/services/notification_service.dart';
 
 class TaskDialog extends ConsumerStatefulWidget {
   final String projectId;
@@ -377,21 +378,13 @@ class _TaskDialogState extends ConsumerState<TaskDialog> {
 
       if (mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(widget.task == null ? 'Task added successfully' : 'Task updated successfully'),
-            backgroundColor: Colors.green,
-          ),
+        ref.read(notificationServiceProvider.notifier).showSuccess(
+          widget.task == null ? 'Task added successfully' : 'Task updated successfully'
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Error: $e');
       }
     } finally {
       if (mounted) {
@@ -433,21 +426,11 @@ class _TaskDialogState extends ConsumerState<TaskDialog> {
 
         if (mounted) {
           Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Task deleted successfully'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          ref.read(notificationServiceProvider.notifier).showSuccess('Task deleted successfully');
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error deleting task: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          ref.read(notificationServiceProvider.notifier).showError('Error deleting task: $e');
         }
       } finally {
         if (mounted) {

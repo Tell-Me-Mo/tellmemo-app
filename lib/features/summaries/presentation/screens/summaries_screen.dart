@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/constants/breakpoints.dart';
 import '../../../../core/constants/layout_constants.dart';
 import '../../../../core/network/api_service.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../projects/presentation/providers/projects_provider.dart';
 import '../../../projects/domain/entities/project.dart';
 import '../../data/models/summary_model.dart';
@@ -1419,13 +1420,13 @@ class _SummariesScreenState extends ConsumerState<SummariesScreen>
 
     projectsAsync.when(
       loading: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Loading projects...')),
+        ref.read(notificationServiceProvider.notifier).showInfo(
+          'Loading projects...',
         );
       },
       error: (error, _) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading projects: $error')),
+        ref.read(notificationServiceProvider.notifier).showError(
+          'Error loading projects: $error',
         );
       },
       data: (projects) {
@@ -1582,11 +1583,8 @@ class _SummariesScreenState extends ConsumerState<SummariesScreen>
               // Navigate to the summary detail page
               context.push('/summaries/${generatedSummary.id}');
 
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Summary generated successfully!'),
-                  backgroundColor: Colors.green,
-                ),
+              ref.read(notificationServiceProvider.notifier).showSuccess(
+                'Summary generated successfully!',
               );
 
               // Refresh summaries list
@@ -1597,11 +1595,8 @@ class _SummariesScreenState extends ConsumerState<SummariesScreen>
             return generatedSummary;
           } catch (e) {
             if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Failed to generate summary: ${e.toString()}'),
-                  backgroundColor: Colors.red,
-                ),
+              ref.read(notificationServiceProvider.notifier).showError(
+                'Failed to generate summary: ${e.toString()}',
               );
             }
             rethrow;

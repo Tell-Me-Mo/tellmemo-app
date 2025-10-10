@@ -18,6 +18,7 @@ import '../../../content/presentation/widgets/processing_skeleton_loader.dart';
 import '../../../organizations/presentation/providers/organization_provider.dart';
 import '../../../queries/presentation/widgets/ask_ai_panel.dart';
 import '../../../../core/services/firebase_analytics_service.dart';
+import '../../../../core/services/notification_service.dart';
 
 class DashboardScreenV2 extends ConsumerStatefulWidget {
   const DashboardScreenV2({super.key});
@@ -1753,14 +1754,10 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
 
     projectsAsync.when(
       loading: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Loading projects...')),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess('Loading projects...');
       },
       error: (error, _) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading projects: $error')),
-        );
+        ref.read(notificationServiceProvider.notifier).showInfo('Error loading projects: $error');
       },
       data: (projects) {
         final activeProjects = projects
@@ -1916,12 +1913,7 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
               // Navigate to the summary detail page
               context.push('/summaries/${generatedSummary.id}');
 
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Summary generated successfully!'),
-                  backgroundColor: Colors.green,
-                ),
-              );
+              ref.read(notificationServiceProvider.notifier).showSuccess('Summary generated successfully!');
 
               // Refresh summaries list
               ref.invalidate(projectSummariesProvider(project.id));
@@ -1930,12 +1922,7 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
             return generatedSummary;
           } catch (e) {
             if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Failed to generate summary: ${e.toString()}'),
-                  backgroundColor: Colors.red,
-                ),
-              );
+              ref.read(notificationServiceProvider.notifier).showError('Failed to generate summary: ${e.toString()}');
             }
             rethrow;
           }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/organizations/domain/entities/organization.dart';
 import '../../features/organizations/presentation/providers/organization_provider.dart';
+import '../../core/services/notification_service.dart';
 
 class OrganizationSwitcher extends ConsumerWidget {
   const OrganizationSwitcher({super.key});
@@ -71,22 +72,12 @@ class _OrganizationDropdownState extends ConsumerState<_OrganizationDropdown> {
 
       // Show success message
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Switched to ${widget.organizations.firstWhere((org) => org.id == organizationId).name}'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess('Switched to ${widget.organizations.firstWhere((org) => org.id == organizationId).name}');
       }
     } catch (error) {
       // Show error message
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to switch organization: ${error.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showError('Failed to switch organization: ${error.toString()}');
       }
     } finally {
       if (mounted) {
@@ -357,11 +348,11 @@ class _LoadingIndicator extends StatelessWidget {
   }
 }
 
-class _ErrorIndicator extends StatelessWidget {
+class _ErrorIndicator extends ConsumerWidget {
   const _ErrorIndicator();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Material(
@@ -373,12 +364,7 @@ class _ErrorIndicator extends StatelessWidget {
           size: 20,
         ),
         onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Failed to load organizations'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          ref.read(notificationServiceProvider.notifier).showError('Failed to load organizations');
         },
         tooltip: 'Failed to load organizations',
       ),

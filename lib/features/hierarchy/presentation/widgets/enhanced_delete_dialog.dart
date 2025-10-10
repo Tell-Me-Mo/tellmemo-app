@@ -5,6 +5,7 @@ import '../../domain/entities/hierarchy_item.dart';
 import '../../data/services/hierarchy_api_service_extensions.dart';
 import '../../../../core/constants/layout_constants.dart';
 import '../../../projects/presentation/providers/projects_provider.dart';
+import '../../../../core/services/notification_service.dart';
 
 class EnhancedDeleteDialog extends ConsumerStatefulWidget {
   final String itemId;
@@ -449,12 +450,7 @@ class _EnhancedDeleteDialogState
             ? '${_getItemTypeName()} and all related items deleted successfully'
             : '${_getItemTypeName()} deleted successfully';
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(message),
-            backgroundColor: Colors.green,
-          ),
-        );
+        ref.read(notificationServiceProvider.notifier).showSuccess(message);
 
         // Refresh hierarchy
         ref.invalidate(hierarchyStateProvider);
@@ -464,12 +460,8 @@ class _EnhancedDeleteDialogState
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                'Failed to delete ${_getItemTypeName()}: ${e.toString()}'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
+        ref.read(notificationServiceProvider.notifier).showError(
+          'Failed to delete ${_getItemTypeName()}: ${e.toString()}',
         );
       }
     }
