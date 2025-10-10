@@ -66,15 +66,19 @@ class AudioRecordingService {
         return false;
       }
       
-      // Check permission
-      print('[AudioRecordingService] Checking microphone permission...');
-      final hasPermission = await requestPermission();
-      if (!hasPermission) {
-        print('[AudioRecordingService] Microphone permission denied');
-        _updateState(RecordingState.error);
-        return false;
+      // Check permission (skip for web - browser will prompt when starting recording)
+      if (!kIsWeb) {
+        print('[AudioRecordingService] Checking microphone permission...');
+        final hasPermission = await requestPermission();
+        if (!hasPermission) {
+          print('[AudioRecordingService] Microphone permission denied');
+          _updateState(RecordingState.error);
+          return false;
+        }
+        print('[AudioRecordingService] Microphone permission granted');
+      } else {
+        print('[AudioRecordingService] Web platform - permission will be requested by browser');
       }
-      print('[AudioRecordingService] Microphone permission granted');
       
       // Generate file path for recording
       if (kIsWeb) {
