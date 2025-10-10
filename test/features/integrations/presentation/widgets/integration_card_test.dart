@@ -1,10 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pm_master_v2/features/integrations/domain/models/integration.dart';
 import 'package:pm_master_v2/features/integrations/presentation/widgets/integration_card.dart';
+import 'package:pm_master_v2/core/services/notification_service.dart';
+import '../../../../helpers/test_helpers.dart';
 
 void main() {
   group('IntegrationCard', () {
+    late MockNotificationService mockNotificationService;
+
+    setUp(() {
+      mockNotificationService = createMockNotificationService();
+    });
+
+    Widget createTestWidget(Widget child) {
+      return ProviderScope(
+        overrides: [
+          notificationServiceProvider.overrideWith((ref) => mockNotificationService),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: child,
+          ),
+        ),
+      );
+    }
     testWidgets('displays integration name and description', (tester) async {
       final integration = Integration(
         id: 'int-1',
@@ -521,7 +542,7 @@ void main() {
       expect(textWidget.overflow, TextOverflow.ellipsis);
     });
 
-    testWidgets('shows snackbar when "Sync Now" is tapped', (tester) async {
+    testWidgets('shows notification when "Sync Now" is tapped', (tester) async {
       final integration = Integration(
         id: 'int-21',
         type: IntegrationType.fireflies,
@@ -532,12 +553,10 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: IntegrationCard(
-              integration: integration,
-              onTap: () {},
-            ),
+        createTestWidget(
+          IntegrationCard(
+            integration: integration,
+            onTap: () {},
           ),
         ),
       );
@@ -550,7 +569,7 @@ void main() {
       await tester.tap(find.text('Sync Now'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Syncing Fireflies.ai...'), findsOneWidget);
+      expect(mockNotificationService.infoCalls, contains('Syncing Fireflies.ai...'));
     });
 
     testWidgets('shows disconnect dialog when "Disconnect" is tapped', (tester) async {
@@ -587,7 +606,7 @@ void main() {
       expect(find.text('Disconnect'), findsAtLeastNWidgets(1));
     });
 
-    testWidgets('shows snackbar when disconnect is confirmed', (tester) async {
+    testWidgets('shows notification when disconnect is confirmed', (tester) async {
       final integration = Integration(
         id: 'int-23',
         type: IntegrationType.teams,
@@ -598,12 +617,10 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: IntegrationCard(
-              integration: integration,
-              onTap: () {},
-            ),
+        createTestWidget(
+          IntegrationCard(
+            integration: integration,
+            onTap: () {},
           ),
         ),
       );
@@ -620,7 +637,7 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Disconnect'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Disconnected from Microsoft Teams'), findsOneWidget);
+      expect(mockNotificationService.successCalls, contains('Disconnected from Microsoft Teams'));
     });
 
     testWidgets('does not show options button for disconnected integration', (tester) async {
@@ -649,18 +666,29 @@ void main() {
   });
 
   group('IntegrationCard - Mobile Layout', () {
+    late MockNotificationService mockNotificationService;
+
+    setUp(() {
+      mockNotificationService = createMockNotificationService();
+    });
+
     Widget createMobileTestWidget(Integration integration) {
-      return MediaQuery(
-        data: const MediaQueryData(
-          size: Size(375, 812), // iPhone X dimensions
-        ),
-        child: MaterialApp(
-          home: Scaffold(
-            body: SizedBox(
-              height: 200,
-              child: IntegrationCard(
-                integration: integration,
-                onTap: () {},
+      return ProviderScope(
+        overrides: [
+          notificationServiceProvider.overrideWith((ref) => mockNotificationService),
+        ],
+        child: MediaQuery(
+          data: const MediaQueryData(
+            size: Size(375, 812), // iPhone X dimensions
+          ),
+          child: MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                height: 200,
+                child: IntegrationCard(
+                  integration: integration,
+                  onTap: () {},
+                ),
               ),
             ),
           ),
@@ -669,17 +697,22 @@ void main() {
     }
 
     Widget createDesktopTestWidget(Integration integration) {
-      return MediaQuery(
-        data: const MediaQueryData(
-          size: Size(1920, 1080),
-        ),
-        child: MaterialApp(
-          home: Scaffold(
-            body: SizedBox(
-              height: 200,
-              child: IntegrationCard(
-                integration: integration,
-                onTap: () {},
+      return ProviderScope(
+        overrides: [
+          notificationServiceProvider.overrideWith((ref) => mockNotificationService),
+        ],
+        child: MediaQuery(
+          data: const MediaQueryData(
+            size: Size(1920, 1080),
+          ),
+          child: MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                height: 200,
+                child: IntegrationCard(
+                  integration: integration,
+                  onTap: () {},
+                ),
               ),
             ),
           ),
@@ -819,15 +852,20 @@ void main() {
 
       // Test on very small mobile (320px)
       await tester.pumpWidget(
-        MediaQuery(
-          data: const MediaQueryData(size: Size(320, 568)),
-          child: MaterialApp(
-            home: Scaffold(
-              body: SizedBox(
-                height: 200,
-                child: IntegrationCard(
-                  integration: integration,
-                  onTap: () {},
+        ProviderScope(
+          overrides: [
+            notificationServiceProvider.overrideWith((ref) => mockNotificationService),
+          ],
+          child: MediaQuery(
+            data: const MediaQueryData(size: Size(320, 568)),
+            child: MaterialApp(
+              home: Scaffold(
+                body: SizedBox(
+                  height: 200,
+                  child: IntegrationCard(
+                    integration: integration,
+                    onTap: () {},
+                  ),
                 ),
               ),
             ),
@@ -839,15 +877,20 @@ void main() {
 
       // Test on tablet (768px)
       await tester.pumpWidget(
-        MediaQuery(
-          data: const MediaQueryData(size: Size(768, 1024)),
-          child: MaterialApp(
-            home: Scaffold(
-              body: SizedBox(
-                height: 200,
-                child: IntegrationCard(
-                  integration: integration,
-                  onTap: () {},
+        ProviderScope(
+          overrides: [
+            notificationServiceProvider.overrideWith((ref) => mockNotificationService),
+          ],
+          child: MediaQuery(
+            data: const MediaQueryData(size: Size(768, 1024)),
+            child: MaterialApp(
+              home: Scaffold(
+                body: SizedBox(
+                  height: 200,
+                  child: IntegrationCard(
+                    integration: integration,
+                    onTap: () {},
+                  ),
                 ),
               ),
             ),
@@ -929,21 +972,26 @@ void main() {
       ];
 
       await tester.pumpWidget(
-        MediaQuery(
-          data: const MediaQueryData(size: Size(375, 812)),
-          child: MaterialApp(
-            home: Scaffold(
-              body: SingleChildScrollView(
-                child: Column(
-                  children: integrations
-                      .map((integration) => SizedBox(
-                            height: 200,
-                            child: IntegrationCard(
-                              integration: integration,
-                              onTap: () {},
-                            ),
-                          ))
-                      .toList(),
+        ProviderScope(
+          overrides: [
+            notificationServiceProvider.overrideWith((ref) => mockNotificationService),
+          ],
+          child: MediaQuery(
+            data: const MediaQueryData(size: Size(375, 812)),
+            child: MaterialApp(
+              home: Scaffold(
+                body: SingleChildScrollView(
+                  child: Column(
+                    children: integrations
+                        .map((integration) => SizedBox(
+                              height: 200,
+                              child: IntegrationCard(
+                                integration: integration,
+                                onTap: () {},
+                              ),
+                            ))
+                        .toList(),
+                  ),
                 ),
               ),
             ),

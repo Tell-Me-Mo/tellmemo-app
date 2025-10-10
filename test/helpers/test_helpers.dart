@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pm_master_v2/app/theme/app_theme.dart';
+import 'package:pm_master_v2/core/services/notification_service.dart';
+import 'package:pm_master_v2/core/models/notification_model.dart';
 
 /// Creates a test app with necessary providers and routing
 /// Wraps a widget with MaterialApp and ProviderScope for testing
@@ -96,4 +98,105 @@ class TimeoutException implements Exception {
 
   @override
   String toString() => 'TimeoutException: $message (timeout: $timeout)';
+}
+
+/// Mock NotificationService for testing
+/// Tracks all notifications that are shown during tests
+class MockNotificationService extends NotificationService {
+  final List<Map<String, dynamic>> showCalls = [];
+  final List<String> errorCalls = [];
+  final List<String> successCalls = [];
+  final List<String> warningCalls = [];
+  final List<String> infoCalls = [];
+
+  @override
+  String show({
+    required String title,
+    String? message,
+    NotificationType type = NotificationType.info,
+    NotificationPriority priority = NotificationPriority.normal,
+    NotificationPosition position = NotificationPosition.topRight,
+    int? durationMs,
+    bool persistent = false,
+    String? actionLabel,
+    VoidCallback? onAction,
+    VoidCallback? onDismiss,
+    IconData? icon,
+    String? avatarUrl,
+    String? imageUrl,
+    Map<String, dynamic>? metadata,
+    bool showInCenter = true,
+    bool showAsToast = true,
+  }) {
+    showCalls.add({
+      'title': title,
+      'message': message,
+      'type': type,
+      'priority': priority,
+    });
+    return 'mock-id-${showCalls.length}';
+  }
+
+  @override
+  void showError(String message, {String? title, VoidCallback? onAction}) {
+    errorCalls.add(message);
+    show(
+      title: title ?? 'Error',
+      message: message,
+      type: NotificationType.error,
+    );
+  }
+
+  @override
+  void showSuccess(String message, {String? title}) {
+    successCalls.add(message);
+    show(
+      title: title ?? 'Success',
+      message: message,
+      type: NotificationType.success,
+    );
+  }
+
+  @override
+  void showWarning(String message, {String? title}) {
+    warningCalls.add(message);
+    show(
+      title: title ?? 'Warning',
+      message: message,
+      type: NotificationType.warning,
+    );
+  }
+
+  @override
+  void showInfo(String message, {String? title}) {
+    infoCalls.add(message);
+    show(
+      title: title ?? 'Info',
+      message: message,
+      type: NotificationType.info,
+    );
+  }
+
+  void reset() {
+    showCalls.clear();
+    errorCalls.clear();
+    successCalls.clear();
+    warningCalls.clear();
+    infoCalls.clear();
+  }
+
+  bool hasNotification(String message) {
+    return showCalls.any((call) =>
+      call['message'] == message ||
+      infoCalls.contains(message) ||
+      successCalls.contains(message) ||
+      errorCalls.contains(message) ||
+      warningCalls.contains(message)
+    );
+  }
+}
+
+/// Creates an override for the notification service provider with a mock
+MockNotificationService createMockNotificationService() {
+  return MockNotificationService();
 }

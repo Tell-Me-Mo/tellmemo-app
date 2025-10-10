@@ -4,9 +4,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pm_master_v2/features/audio_recording/presentation/widgets/transcription_display.dart';
 import 'package:pm_master_v2/features/audio_recording/presentation/providers/recording_provider.dart';
 import 'package:pm_master_v2/features/audio_recording/domain/services/audio_recording_service.dart';
+import 'package:pm_master_v2/core/services/notification_service.dart';
+import '../../../../helpers/test_helpers.dart';
 
 void main() {
   group('TranscriptionDisplay', () {
+    late MockNotificationService mockNotificationService;
+
+    setUp(() {
+      mockNotificationService = createMockNotificationService();
+    });
+
     Widget createTestWidget({
       required RecordingStateModel state,
       bool showFullTranscript = true,
@@ -19,6 +27,7 @@ void main() {
           recordingNotifierProvider.overrideWith(
             () => _MockRecordingNotifier(state),
           ),
+          notificationServiceProvider.overrideWith((ref) => mockNotificationService),
         ],
         child: MaterialApp(
           home: Scaffold(
@@ -121,7 +130,7 @@ void main() {
       expect(find.byTooltip('Copy to clipboard'), findsOneWidget);
     });
 
-    testWidgets('copy button shows snackbar when tapped', (tester) async {
+    testWidgets('copy button shows notification when tapped', (tester) async {
       final state = RecordingStateModel(
         transcriptionText: 'Test transcription',
         isProcessing: false,
@@ -133,7 +142,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.copy));
       await tester.pumpAndSettle();
 
-      expect(find.text('Transcription copied to clipboard'), findsOneWidget);
+      expect(mockNotificationService.infoCalls, contains('Transcription copied to clipboard'));
     });
 
     testWidgets('displays clear button when onClear callback provided',
