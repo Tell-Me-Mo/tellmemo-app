@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
@@ -99,17 +99,34 @@ class AudioRecordingService {
       // Configure recording based on platform
       RecordConfig config;
       if (kIsWeb) {
-        // Web-specific configuration - use WebM format
-        config = const RecordConfig(
-          encoder: AudioEncoder.opus, // Web supports opus in WebM container
-          sampleRate: 48000, // Standard web audio sample rate
-          numChannels: 1, // Mono for speech
-          bitRate: 128000,
-          autoGain: true,
-          echoCancel: true,
-          noiseSuppress: true,
-        );
-        print('[AudioRecordingService] Using web audio configuration: opus/48kHz');
+        // Check if running on iOS web (all iOS browsers use WebKit and require AAC)
+        final isIOSWeb = defaultTargetPlatform == TargetPlatform.iOS;
+
+        if (isIOSWeb) {
+          // iOS web browsers (Safari, Chrome, etc.) all use WebKit and prefer AAC
+          config = const RecordConfig(
+            encoder: AudioEncoder.aacLc, // AAC-LC is natively supported on iOS
+            sampleRate: 44100, // Standard sample rate for AAC
+            numChannels: 1, // Mono for speech
+            bitRate: 128000,
+            autoGain: true,
+            echoCancel: true,
+            noiseSuppress: true,
+          );
+          print('[AudioRecordingService] Using iOS web audio configuration: aac-lc/44.1kHz');
+        } else {
+          // Other web browsers (Chrome, Firefox on desktop/Android) - use Opus
+          config = const RecordConfig(
+            encoder: AudioEncoder.opus, // Opus in WebM container for non-iOS browsers
+            sampleRate: 48000, // Standard web audio sample rate
+            numChannels: 1, // Mono for speech
+            bitRate: 128000,
+            autoGain: true,
+            echoCancel: true,
+            noiseSuppress: true,
+          );
+          print('[AudioRecordingService] Using web audio configuration: opus/48kHz');
+        }
       } else {
         // Native platform configuration
         config = const RecordConfig(
