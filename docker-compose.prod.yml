@@ -10,7 +10,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-pm_master_db}
       POSTGRES_PORT: ${POSTGRES_PORT:-5432}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"  # Localhost only - not exposed to internet
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/db/init:/docker-entrypoint-initdb.d
@@ -43,8 +43,8 @@ services:
       # Optimize for accuracy - using higher memory threshold
       QDRANT__STORAGE__OPTIMIZERS__MEMMAP_THRESHOLD: 50000
     ports:
-      - "6333:6333"  # HTTP API & Web UI
-      - "6334:6334"  # gRPC API
+      - "127.0.0.1:6333:6333"  # HTTP API & Web UI (localhost only)
+      - "127.0.0.1:6334:6334"  # gRPC API (localhost only)
     volumes:
       - qdrant_data:/qdrant/storage
       - qdrant_snapshots:/qdrant/snapshots
@@ -71,7 +71,7 @@ services:
       --requirepass ${REDIS_PASSWORD:-redispassword123}
       --appendonly yes
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"  # Localhost only - not exposed to internet
     volumes:
       - redis_data:/data
     healthcheck:
@@ -144,10 +144,10 @@ services:
       LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY}
       LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY}
 
-      # Supabase
-      SUPABASE_URL: ${SUPABASE_URL}
-      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      # Supabase (Optional - only needed if AUTH_PROVIDER=supabase)
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
 
       # Anthropic
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
@@ -190,8 +190,8 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
     ports:
-      - "9000:9000"  # API
-      - "9001:9001"  # Console
+      - "127.0.0.1:9000:9000"  # API (localhost only)
+      - "127.0.0.1:9001:9001"  # Console (localhost only)
     volumes:
       - minio_data:/data
     healthcheck:
@@ -253,7 +253,7 @@ services:
       ZOO_SERVERS: server.1=zookeeper:2888:3888;2181
       ZOO_4LW_COMMANDS_WHITELIST: mntr,conf,ruok
     ports:
-      - "2181:2181"
+      - "127.0.0.1:2181:2181"  # Localhost only - not exposed to internet
     volumes:
       - zookeeper_data:/data
       - zookeeper_logs:/datalog
@@ -284,9 +284,9 @@ services:
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhousepass123}
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
     ports:
-      - "8123:8123"  # HTTP interface
-      - "9009:9000"  # Native protocol (changed from 9000 to avoid conflict)
-      - "9010:9009"  # Interserver HTTP port
+      - "127.0.0.1:8123:8123"  # HTTP interface (localhost only)
+      - "127.0.0.1:9009:9000"  # Native protocol (localhost only)
+      - "127.0.0.1:9010:9009"  # Interserver HTTP port (localhost only)
     volumes:
       - clickhouse_data:/var/lib/clickhouse
       - ./backend/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml:ro
@@ -475,8 +475,8 @@ services:
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
     ports:
-      - "9200:9200"  # REST API
-      - "9300:9300"  # Node communication
+      - "127.0.0.1:9200:9200"  # REST API (localhost only)
+      - "127.0.0.1:9300:9300"  # Node communication (localhost only)
     networks:
       - pm_network
     logging:
@@ -578,4 +578,9 @@ volumes:
   elasticsearch_data:
     driver: local
   logstash_data:
+    driver: local
+  # Backend volumes
+  backend_uploads:
+    driver: local
+  backend_logs:
     driver: local
