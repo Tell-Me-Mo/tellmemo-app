@@ -329,15 +329,15 @@ class DigestService:
                         {
                             'title': t.title,
                             'due_date': t.due_date,
-                            'status': t.status
+                            'status': t.status.value if t.status else None
                         }
                         for t in tasks
                     ],
                     'risks': [
                         {
                             'title': r.title,
-                            'severity': r.severity,
-                            'status': r.status
+                            'severity': r.severity.value if r.severity else None,
+                            'status': r.status.value if r.status else None
                         }
                         for r in risks
                     ],
@@ -345,8 +345,8 @@ class DigestService:
                         {
                             'title': b.title,
                             'description': b.description,
-                            'impact': b.impact,
-                            'status': b.status,
+                            'impact': b.impact.value if b.impact else None,
+                            'status': b.status.value if b.status else None,
                             'owner': b.owner
                         }
                         for b in blockers
