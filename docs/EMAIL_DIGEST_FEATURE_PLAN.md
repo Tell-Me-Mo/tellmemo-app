@@ -12,11 +12,12 @@
 2. [Current Infrastructure Analysis](#current-infrastructure-analysis)
 3. [Architecture Design](#architecture-design)
 4. [Database Schema Changes](#database-schema-changes)
-5. [Backend Implementation](#backend-implementation)
-6. [Frontend Implementation](#frontend-implementation)
+5. [Error Handling & Monitoring Strategy](#error-handling--monitoring-strategy)
+6. [Backend Implementation](#backend-implementation)
 7. [Email Templates](#email-templates)
-8. [Testing Strategy](#testing-strategy)
-9. [Implementation Roadmap](#implementation-roadmap)
+8. [Frontend Implementation](#frontend-implementation)
+9. [Testing Strategy](#testing-strategy)
+10. [Implementation Roadmap](#implementation-roadmap)
 
 ---
 
@@ -70,6 +71,32 @@
 - ❌ Multiple email provider support (only SendGrid for MVP)
 - ❌ Complex drip email campaigns
 - ❌ Re-engagement sequences for long-term inactive users
+- ❌ Per-organization or per-project email filtering (MVP includes all)
+
+### Data Privacy & Content Policy
+
+**What's Included in Digests:**
+- All projects user has access to across all organizations
+- All summaries, tasks, risks, and activities user can view
+- No filtering by organization or sensitivity level in MVP
+
+**Privacy Considerations:**
+- Email digests contain potentially sensitive project information
+- Users should be informed that digest emails include all accessible projects
+- Emails sent over TLS/SSL (SendGrid handles encryption in transit)
+- Email content stored temporarily in SendGrid for delivery tracking
+- Users can unsubscribe at any time via email footer link
+
+**Future Enhancements:**
+- Organization-level filtering (e.g., only include "Acme Corp" projects)
+- Project sensitivity labels (exclude "confidential" projects from emails)
+- Per-project opt-in/opt-out for digest inclusion
+
+**Multi-Organization Support:**
+- MVP: Digest includes all organizations user has access to
+- No organization filtering in initial release
+- Projects grouped by organization in email template
+- If user is in 5 organizations, digest shows all 5
 
 ---
 
@@ -133,10 +160,11 @@
                          ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                    SCHEDULED JOB SCHEDULER                      │
-│  - APScheduler (or similar) runs periodic jobs                  │
-│  - Daily: 8 AM user's timezone                                  │
-│  - Weekly: Monday 8 AM                                          │
-│  - Monthly: 1st of month 8 AM                                   │
+│  - APScheduler runs periodic jobs in UTC                        │
+│  - Daily: 8 AM UTC                                              │
+│  - Weekly: Monday 8 AM UTC                                      │
+│  - Monthly: 1st of month 8 AM UTC                               │
+│  - Note: All times stored and processed in UTC                  │
 └────────────────────────┬────────────────────────────────────────┘
                          │
                          ▼
@@ -172,7 +200,7 @@
 ### Data Flow: Daily Digest
 
 ```
-08:00 AM (User Timezone)
+08:00 AM UTC
      │
      ▼
 [APScheduler Trigger] → daily_digest_job()
@@ -180,8 +208,8 @@
      ▼
 Query Users:
   SELECT * FROM users
-  WHERE preferences->>'digest_frequency' = 'daily'
-  AND preferences->>'digest_enabled' = true
+  WHERE preferences->'email_digest'->>'frequency' = 'daily'
+  AND preferences->'email_digest'->>'enabled' = 'true'
      │
      ▼
 For each user:
@@ -243,13 +271,16 @@ Enqueue Email Job:
 **Example preferences structure:**
 - `email_digest.enabled`: boolean
 - `email_digest.frequency`: "daily" | "weekly" | "monthly" | "never"
-- `email_digest.timezone`: User's timezone for scheduling
-- `email_digest.send_time`: Preferred time (e.g., "08:00")
 - `email_digest.content_types`: Array of content to include (summaries, activities, tasks_assigned, risks_critical, decisions)
-- `email_digest.project_filter`: Object defining which projects to include
-- `email_digest.portfolio_filter`: Object defining portfolio selection
+- `email_digest.project_filter`: Object defining which projects to include (default: all projects)
 - `email_digest.include_portfolio_rollup`: boolean
-- `email_digest.last_sent_at`: ISO timestamp
+- `email_digest.last_sent_at`: ISO timestamp (UTC)
+
+**Timezone Handling:**
+- All times stored and processed in UTC
+- Scheduler runs at 8 AM UTC for all users
+- Email templates display times in UTC
+- Future enhancement: Add user timezone preference for display purposes only
 
 ### 2. Email Delivery Tracking
 
@@ -274,6 +305,29 @@ Track user engagement by monitoring:
 - `user_id` - Activity owner
 - Query last activity date to determine if user is inactive (no activities in last 7 days)
 
+**What Constitutes "Activity"?**
+
+Only **creation actions** count as user activity (not read/view actions):
+- ✅ Upload meeting audio
+- ✅ Create project
+- ✅ Create task
+- ✅ Add comment
+- ✅ Create risk
+- ✅ Update project settings
+- ✅ Invite team member
+
+**NOT considered activity:**
+- ❌ Viewing a project
+- ❌ Opening the app
+- ❌ Reading a summary
+- ❌ Clicking notifications
+- ❌ Viewing dashboard
+
+**Rationale:**
+- Creation actions indicate real engagement
+- Read-only actions could give false positives
+- User who only views content may still need onboarding reminder
+
 ### 4. Migration Script
 
 **Alembic Migration:** `add_email_digest_preferences.py`
@@ -286,6 +340,108 @@ The migration will:
 - Include default content types: summaries, tasks_assigned, risks_critical
 
 **Note:** New users will have `email_digest.enabled: true` set during registration to receive onboarding emails
+
+### 5. Database Indexes for Performance
+
+**Create indexes to optimize digest queries:**
+
+**Alembic Migration:** `add_email_digest_indexes.py`
+
+```sql
+-- Index on users preferences for digest queries
+CREATE INDEX idx_users_preferences_digest
+ON users USING GIN (preferences);
+
+-- Composite index for activity queries (inactive user detection)
+CREATE INDEX idx_activities_user_created
+ON activities (user_id, created_at DESC);
+
+-- Composite index for notification queries (check if email sent)
+CREATE INDEX idx_notifications_user_category
+ON notifications (user_id, category, created_at DESC);
+
+-- Index for summaries by project and date (digest content)
+CREATE INDEX idx_summaries_project_created
+ON summaries (project_id, created_at DESC);
+
+-- Index for tasks by user and due date (digest content)
+CREATE INDEX idx_tasks_assignee_due
+ON tasks (assigned_to, due_date);
+```
+
+**Performance Benefits:**
+- Faster digest frequency lookups (GIN index on JSONB)
+- Optimized inactive user detection (composite index avoids table scan)
+- Quick notification history checks (check if reminder already sent)
+- Fast digest content aggregation (summaries and tasks by date)
+
+**Estimated Query Speed Improvement:**
+- Digest user queries: 50-100x faster for 10,000+ users
+- Inactive user detection: 100x faster
+- Notification history: 20x faster
+
+---
+
+## Error Handling & Monitoring Strategy
+
+### Error Handling
+
+**Retry Strategy:**
+- Use exponential backoff for transient failures (network errors, 5xx responses)
+- Maximum 3 retry attempts per email
+- Delay: 1 minute, 5 minutes, 15 minutes between retries
+- After 3 failures, move to dead letter queue
+
+**Failed Email Storage:**
+- Log all failed emails to `failed_email_deliveries` table (or file log)
+- Store: user_id, email_type, error_message, timestamp, retry_count
+- Keep failed emails for 30 days for debugging
+
+**Partial Batch Failures:**
+- Continue processing remaining emails in batch even if some fail
+- Log each failure individually
+- Don't abort entire batch on single failure
+
+**SendGrid API Downtime:**
+- Catch SendGrid API errors and log them
+- Queue emails for retry (up to 3 attempts)
+- After max retries, mark as failed and alert admin
+
+**Quota Exceeded:**
+- Track daily email count in Redis
+- Stop sending when approaching 95% of daily limit (95 emails for free tier)
+- Log warning when 80% quota reached
+- Resume next day automatically
+
+### Monitoring & Logging
+
+**Logging Strategy:**
+- Use Python `logging` module with structured logging
+- Log levels:
+  - `INFO`: Email sent successfully, scheduler triggered, job started
+  - `WARNING`: Retry attempt, approaching quota, empty digest skipped
+  - `ERROR`: SendGrid API error, failed after retries, invalid user data
+  - `CRITICAL`: Scheduler crashed, database connection failed
+
+**Key Metrics to Log:**
+- Total emails sent per day/hour
+- Delivery success rate (%)
+- Average send time per email
+- Failed email count by error type
+- Quota usage (% of daily limit)
+- Scheduler job execution time
+
+**Alert Triggers:**
+- Email delivery rate drops below 90%
+- Failed email count exceeds 10 in 1 hour
+- SendGrid quota at 80% or 95%
+- Scheduler hasn't run in 25 hours (daily job missed)
+- Critical errors in logs
+
+**Log Storage:**
+- Store logs in rotating files (max 10 files, 100MB each)
+- Send ERROR and CRITICAL logs to monitoring service (if available)
+- Keep logs for 7 days for debugging
 
 ---
 
@@ -344,6 +500,7 @@ Add all environment variables to Settings class with proper types and defaults.
 - Enqueue email jobs in Redis Queue
 - Send onboarding welcome emails
 - Send inactive user reminder emails
+- Skip users with empty digest content (no spam)
 
 **Methods:**
 - `generate_daily_digests()`: Create daily digest jobs
@@ -361,6 +518,49 @@ Add all environment variables to Settings class with proper types and defaults.
 - `_format_period()`: Format time period for display
 - `_get_user_last_activity()`: Get timestamp of user's last activity
 - `_has_sent_inactive_reminder()`: Check if inactive reminder already sent
+- `_has_digest_content()`: Check if digest has any content to send
+
+**Empty Digest Handling:**
+- Check if digest has zero summaries, tasks, risks, and activities
+- If empty, skip user and log "Empty digest skipped for user {user_id}"
+- Do NOT send email if there's no content
+- Update `last_sent_at` timestamp even when skipped (to track attempt)
+
+**Digest Content Ordering:**
+
+Sort digest content for better readability:
+
+**Projects:**
+- Order by most recent activity (newest first)
+- Query: `ORDER BY last_activity_at DESC`
+- Shows most active projects at top of email
+
+**Summaries (within each project):**
+- Order by creation date (newest first)
+- Query: `ORDER BY created_at DESC`
+- Most recent summaries appear first
+
+**Tasks (within each project):**
+- Order by due date (soonest due first)
+- Query: `ORDER BY due_date ASC NULLS LAST`
+- Urgent tasks appear at top
+- Tasks without due date appear last
+
+**Risks (within each project):**
+- Order by severity (critical/high first)
+- Query: `ORDER BY severity DESC, created_at DESC`
+- Critical risks appear first
+- Within same severity, newest first
+
+**Activities (within each project):**
+- Order by timestamp (newest first)
+- Query: `ORDER BY created_at DESC`
+- Recent activities appear first
+
+**Organizations:**
+- Order alphabetically by organization name
+- Query: `ORDER BY organization.name ASC`
+- Consistent ordering for multi-org users
 
 ### 5. Email Task (Redis Queue)
 
@@ -443,6 +643,36 @@ Add all environment variables to Settings class with proper types and defaults.
 - Monthly Digests: 1st of each month at 8 AM UTC
 - Inactive User Check: Once per day at 9 AM UTC (runs after digests)
 
+**FastAPI Integration:**
+
+Update `backend/main.py` to integrate scheduler lifecycle:
+
+```python
+from services.scheduler.digest_scheduler import DigestScheduler
+
+# Global scheduler instance
+scheduler = DigestScheduler()
+
+@app.on_event("startup")
+async def startup_event():
+    """Start digest scheduler on application startup"""
+    logger.info("Starting digest scheduler...")
+    scheduler.start()
+    logger.info("Digest scheduler started successfully")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Gracefully shutdown digest scheduler"""
+    logger.info("Shutting down digest scheduler...")
+    scheduler.stop()
+    logger.info("Digest scheduler stopped successfully")
+```
+
+**Notes:**
+- Scheduler starts automatically when FastAPI app starts
+- Graceful shutdown prevents jobs from being interrupted
+- Scheduler runs in background thread (APScheduler handles threading)
+
 ### 8. API Endpoints
 
 **Create:** `backend/routers/email_preferences.py`
@@ -467,6 +697,74 @@ Add all environment variables to Settings class with proper types and defaults.
 - Send test digest email immediately to current user
 - Enqueues job in high-priority queue
 - Returns job ID and status
+
+**GET `/api/email-preferences/unsubscribe?token={jwt_token}`**
+- Unsubscribe user from email digests using signed JWT token
+- Decodes token to get user_id
+- Sets `email_digest.enabled = false` in user preferences
+- Returns success message or renders unsubscribe confirmation page
+
+**Admin-Only Testing Endpoints:**
+
+**POST `/api/admin/email/trigger-daily-digest`**
+- Manually trigger daily digest job (for testing without waiting 24 hours)
+- Requires admin authentication
+- Immediately runs digest generation for all daily users
+- Returns: job count and status
+
+**POST `/api/admin/email/trigger-weekly-digest`**
+- Manually trigger weekly digest job
+- Requires admin authentication
+- Immediately runs digest generation for all weekly users
+- Returns: job count and status
+
+**POST `/api/admin/email/trigger-monthly-digest`**
+- Manually trigger monthly digest job
+- Requires admin authentication
+- Immediately runs digest generation for all monthly users
+- Returns: job count and status
+
+**POST `/api/admin/email/trigger-inactive-check`**
+- Manually trigger inactive user check job
+- Requires admin authentication
+- Immediately checks for inactive users and sends reminders
+- Returns: inactive user count and reminder count
+
+**POST `/api/admin/email/send-digest/{user_id}`**
+- Send digest email to specific user immediately (bypass schedule)
+- Requires admin authentication
+- Useful for debugging specific user issues
+- Query param: `digest_type` (daily/weekly/monthly)
+- Returns: job ID and email content preview
+
+### 9. Unsubscribe Token Strategy
+
+**Token Generation:**
+- Use JWT (JSON Web Token) with HS256 signature
+- Embed `user_id` in token payload
+- Set expiration to 90 days (long enough for unsubscribe links)
+- Sign with secret key from environment variable `JWT_SECRET_KEY`
+
+**Token Payload:**
+```json
+{
+  "user_id": "uuid-string",
+  "purpose": "unsubscribe",
+  "exp": 1234567890  // Unix timestamp (90 days from generation)
+}
+```
+
+**Token Usage:**
+- Include unsubscribe link in every email footer
+- Format: `https://tellmemo.io/api/email-preferences/unsubscribe?token={signed_jwt}`
+- On click, decode token and disable digest for user
+- No database storage needed (stateless JWT verification)
+
+**Security:**
+- Tokens are signed, not encrypted (user_id is not sensitive)
+- Validate signature before trusting user_id
+- Check expiration date
+- Prevent token reuse attacks by checking current state
 
 ---
 
@@ -515,6 +813,18 @@ backend/
 
 **File:** `backend/templates/email/digest_email.html`
 
+**Email Subject Lines:**
+- Daily Digest: `Your Daily TellMeMo Digest - {date}`
+  - Example: "Your Daily TellMeMo Digest - Jan 15, 2025"
+- Weekly Digest: `Weekly Summary - {start_date} to {end_date}`
+  - Example: "Weekly Summary - Jan 8-14, 2025"
+- Monthly Digest: `Monthly Summary - {month_year}`
+  - Example: "Monthly Summary - January 2025"
+
+**Personalization (Future Enhancement):**
+- Include key stats in subject: `3 new updates in Project Alpha`
+- Include urgency indicator: `⚠️ 2 critical risks in your projects`
+
 **Sections:**
 1. **Greeting**: Personalized user greeting
 2. **Summary Statistics**: 4-column stats display
@@ -540,6 +850,11 @@ backend/
 
 **File:** `backend/templates/email/onboarding_email.html`
 
+**Email Subject Line:**
+- `Welcome to TellMeMo! 🎉`
+  - Simple, friendly, welcoming tone
+  - Emoji adds personality (optional)
+
 **Sections:**
 1. **Welcome Greeting**: Personalized welcome message
 2. **Getting Started Guide**: 3-step quick start
@@ -554,6 +869,12 @@ backend/
 ### Inactive Reminder Email Template
 
 **File:** `backend/templates/email/inactive_reminder.html`
+
+**Email Subject Line:**
+- `Ready to get started with TellMeMo?`
+  - Encouraging, non-pushy tone
+  - Question format invites action
+  - No emojis (keep professional)
 
 **Sections:**
 1. **Friendly Reminder**: We noticed you haven't recorded any meetings yet
