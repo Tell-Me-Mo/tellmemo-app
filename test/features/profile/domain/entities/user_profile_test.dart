@@ -289,7 +289,6 @@ void main() {
         final json = {
           'timezone': 'America/New_York',
           'locale': 'en_US',
-          'email_notifications': true,
           'push_notifications': false,
           'weekly_digest': true,
           'theme': 'dark',
@@ -300,7 +299,6 @@ void main() {
 
         expect(prefs.timezone, 'America/New_York');
         expect(prefs.locale, 'en_US');
-        expect(prefs.emailNotifications, true);
         expect(prefs.pushNotifications, false);
         expect(prefs.weeklyDigest, true);
         expect(prefs.theme, 'dark');
@@ -314,7 +312,6 @@ void main() {
 
         expect(prefs.timezone, null);
         expect(prefs.locale, null);
-        expect(prefs.emailNotifications, true); // default
         expect(prefs.pushNotifications, false); // default
         expect(prefs.weeklyDigest, false); // default
         expect(prefs.theme, 'light'); // default
@@ -323,16 +320,15 @@ void main() {
 
       test('handles partial JSON', () {
         final json = {
-          'email_notifications': false,
           'theme': 'dark',
+          'weekly_digest': true,
         };
 
         final prefs = UserPreferences.fromJson(json);
 
-        expect(prefs.emailNotifications, false);
         expect(prefs.theme, 'dark');
+        expect(prefs.weeklyDigest, true);
         expect(prefs.pushNotifications, false); // default
-        expect(prefs.weeklyDigest, false); // default
       });
     });
 
@@ -341,7 +337,6 @@ void main() {
         final prefs = UserPreferences(
           timezone: 'Europe/London',
           locale: 'en_GB',
-          emailNotifications: false,
           pushNotifications: true,
           weeklyDigest: true,
           theme: 'dark',
@@ -352,7 +347,6 @@ void main() {
 
         expect(json['timezone'], 'Europe/London');
         expect(json['locale'], 'en_GB');
-        expect(json['email_notifications'], false);
         expect(json['push_notifications'], true);
         expect(json['weekly_digest'], true);
         expect(json['theme'], 'dark');
@@ -366,7 +360,6 @@ void main() {
 
         expect(json['timezone'], null);
         expect(json['locale'], null);
-        expect(json['email_notifications'], true); // default
         expect(json['push_notifications'], false); // default
         expect(json['weekly_digest'], false); // default
         expect(json['theme'], 'light'); // default
@@ -377,7 +370,6 @@ void main() {
       final original = UserPreferences(
         timezone: 'America/New_York',
         locale: 'en_US',
-        emailNotifications: true,
         pushNotifications: false,
         weeklyDigest: true,
         theme: 'dark',
@@ -390,9 +382,9 @@ void main() {
         expect(copy.locale, original.locale);
       });
 
-      test('creates copy with updated emailNotifications', () {
-        final copy = original.copyWith(emailNotifications: false);
-        expect(copy.emailNotifications, false);
+      test('creates copy with updated pushNotifications', () {
+        final copy = original.copyWith(pushNotifications: true);
+        expect(copy.pushNotifications, true);
         expect(copy.timezone, original.timezone);
       });
 
@@ -406,7 +398,7 @@ void main() {
         final copy = original.copyWith();
         expect(copy.timezone, original.timezone);
         expect(copy.locale, original.locale);
-        expect(copy.emailNotifications, original.emailNotifications);
+        expect(copy.pushNotifications, original.pushNotifications);
         expect(copy.theme, original.theme);
       });
     });
@@ -416,7 +408,6 @@ void main() {
         final original = UserPreferences(
           timezone: 'Asia/Tokyo',
           locale: 'ja_JP',
-          emailNotifications: false,
           pushNotifications: true,
           weeklyDigest: false,
           theme: 'dark',
@@ -428,7 +419,6 @@ void main() {
 
         expect(decoded.timezone, original.timezone);
         expect(decoded.locale, original.locale);
-        expect(decoded.emailNotifications, original.emailNotifications);
         expect(decoded.pushNotifications, original.pushNotifications);
         expect(decoded.weeklyDigest, original.weeklyDigest);
         expect(decoded.theme, original.theme);
@@ -459,18 +449,15 @@ void main() {
 
       test('handles boolean toggling', () {
         final prefs = UserPreferences(
-          emailNotifications: true,
           pushNotifications: false,
           weeklyDigest: true,
         );
 
         final toggled = prefs.copyWith(
-          emailNotifications: !prefs.emailNotifications,
           pushNotifications: !prefs.pushNotifications,
           weeklyDigest: !prefs.weeklyDigest,
         );
 
-        expect(toggled.emailNotifications, false);
         expect(toggled.pushNotifications, true);
         expect(toggled.weeklyDigest, false);
       });

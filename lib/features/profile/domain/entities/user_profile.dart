@@ -77,7 +77,6 @@ class UserProfile {
 class UserPreferences {
   final String? timezone;
   final String? locale;
-  final bool emailNotifications;
   final bool pushNotifications;
   final bool weeklyDigest;
   final String theme;
@@ -86,7 +85,6 @@ class UserPreferences {
   const UserPreferences({
     this.timezone,
     this.locale,
-    this.emailNotifications = true,
     this.pushNotifications = false,
     this.weeklyDigest = false,
     this.theme = 'light',
@@ -97,7 +95,6 @@ class UserPreferences {
     return UserPreferences(
       timezone: json['timezone'] as String?,
       locale: json['locale'] as String?,
-      emailNotifications: json['email_notifications'] as bool? ?? true,
       pushNotifications: json['push_notifications'] as bool? ?? false,
       weeklyDigest: json['weekly_digest'] as bool? ?? false,
       theme: json['theme'] as String? ?? 'light',
@@ -109,7 +106,6 @@ class UserPreferences {
     return {
       'timezone': timezone,
       'locale': locale,
-      'email_notifications': emailNotifications,
       'push_notifications': pushNotifications,
       'weekly_digest': weeklyDigest,
       'theme': theme,
@@ -120,7 +116,6 @@ class UserPreferences {
   UserPreferences copyWith({
     String? timezone,
     String? locale,
-    bool? emailNotifications,
     bool? pushNotifications,
     bool? weeklyDigest,
     String? theme,
@@ -129,7 +124,6 @@ class UserPreferences {
     return UserPreferences(
       timezone: timezone ?? this.timezone,
       locale: locale ?? this.locale,
-      emailNotifications: emailNotifications ?? this.emailNotifications,
       pushNotifications: pushNotifications ?? this.pushNotifications,
       weeklyDigest: weeklyDigest ?? this.weeklyDigest,
       theme: theme ?? this.theme,
