@@ -5,6 +5,7 @@ import '../providers/user_profile_provider.dart';
 import '../widgets/user_avatar.dart';
 import '../widgets/organization_card.dart';
 import '../widgets/organization_list.dart';
+import '../widgets/change_password_dialog.dart';
 import '../../domain/entities/user_profile.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../organizations/presentation/widgets/organization_settings_dialog.dart';
@@ -22,7 +23,6 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
   late TextEditingController _nameController;
   late TextEditingController _bioController;
   String? _avatarUrl;
-  bool _emailNotifications = true;
   bool _weeklyDigest = false;
   bool _isEditMode = false;
   bool _hasChanges = false;
@@ -46,7 +46,6 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
     _nameController.text = profile.name ?? '';
     _bioController.text = profile.bio ?? '';
     _avatarUrl = profile.avatarUrl;
-    _emailNotifications = preferences.emailNotifications;
     _weeklyDigest = preferences.weeklyDigest;
   }
 
@@ -80,7 +79,6 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
 
       // Update preferences
       final newPreferences = UserPreferences(
-        emailNotifications: _emailNotifications,
         weeklyDigest: _weeklyDigest,
       );
 
@@ -546,7 +544,7 @@ Widget _buildOrganizationActionsGrid(BuildContext context) {
       {
         'icon': Icons.lock,
         'label': 'Change Password',
-        'onTap': () => context.go('/profile/change-password'),
+        'onTap': () => ChangePasswordDialog.show(context),
       },
       {
         'icon': Icons.security,
@@ -828,28 +826,6 @@ Widget _buildNotificationSettingsSection(ThemeData theme) {
             ),
             child: Column(
               children: [
-                SwitchListTile(
-                  title: const Text('Email Notifications'),
-                  subtitle: const Text('Receive important updates via email'),
-                  value: _emailNotifications,
-                  onChanged: _isEditMode
-                      ? (value) {
-                          setState(() {
-                            _emailNotifications = value;
-                          });
-                          _markChanged();
-                        }
-                      : null,
-                  secondary: Icon(
-                    Icons.email_outlined,
-                    color: colorScheme.primary.withValues(alpha: 0.6),
-                    size: 20,
-                  ),
-                ),
-                Divider(
-                  height: 1,
-                  color: colorScheme.outline.withValues(alpha: 0.1),
-                ),
                 Material(
                   color: Colors.transparent,
                   child: InkWell(
@@ -946,7 +922,7 @@ Widget _buildNotificationSettingsSection(ThemeData theme) {
                 Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: () => context.go('/profile/change-password'),
+                    onTap: () => ChangePasswordDialog.show(context),
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(12),
                       topRight: Radius.circular(12),
