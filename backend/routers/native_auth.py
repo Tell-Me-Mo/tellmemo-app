@@ -137,6 +137,15 @@ async def sign_up(
             user_id=str(user.id)
         )
 
+        # Send onboarding welcome email (async, non-blocking)
+        try:
+            from services.email.digest_service import digest_service
+            await digest_service.send_onboarding_email(str(user.id), db)
+            logger.info(f"Onboarding email queued for user {user.id}")
+        except Exception as email_error:
+            # Don't fail registration if email fails
+            logger.error(f"Failed to queue onboarding email for user {user.id}: {email_error}")
+
         return AuthResponse(
             access_token=access_token,
             refresh_token=refresh_token,

@@ -62,6 +62,15 @@ class Settings(BaseSettings):
     # Application Configuration
     frontend_url: str = Field(default="http://localhost:8100", env="FRONTEND_URL")
 
+    # SendGrid Email Configuration
+    sendgrid_api_key: str = Field(default="", env="SENDGRID_API_KEY")
+    email_from_address: str = Field(default="noreply@tellmemo.io", env="EMAIL_FROM_ADDRESS")
+    email_from_name: str = Field(default="TellMeMo", env="EMAIL_FROM_NAME")
+    email_digest_enabled: bool = Field(default=True, env="EMAIL_DIGEST_ENABLED")
+    email_digest_batch_size: int = Field(default=50, env="EMAIL_DIGEST_BATCH_SIZE")
+    email_digest_rate_limit: int = Field(default=100, env="EMAIL_DIGEST_RATE_LIMIT")
+    digest_send_hour_utc: int = Field(default=8, env="DIGEST_SEND_HOUR_UTC")  # UTC hour (0-23) when to send digests
+
     # Security
     api_key: str = Field(default="development_api_key_change_in_production", env="API_KEY")
     cors_origins: str = Field(default="http://localhost:3001,http://localhost:8080", env="CORS_ORIGINS")

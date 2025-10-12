@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Ready to get started with TellMeMo?{% endblock %}
+{% block header_subtitle %}We're Here to Help{% endblock %}
+
+{% block content %}
+<h2 style="color: #1f2937; margin-top: 0;">Ready to get started, {{ user_name }}?</h2>
+
+<p style="font-size: 16px; line-height: 1.6; color: #4b5563;">
+    We noticed you haven't recorded any meetings yet. No worries – we're here to help you get the most out of TellMeMo!
+</p>
+
+<div style="background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 20px; border-radius: 4px; margin: 24px 0;">
+    <h3 style="margin-top: 0; color: #065f46;">Recording your first meeting is easy:</h3>
+    <ol style="line-height: 1.8; color: #064e3b;">
+        <li>Click <strong>"Create Project"</strong> or select an existing project</li>
+        <li>Click <strong>"Upload Audio"</strong> or use the recording feature</li>
+        <li>Let TellMeMo do the rest – summaries are generated automatically!</li>
+    </ol>
+</div>
+
+<h3 style="color: #1f2937;">What You'll Get:</h3>
+<ul style="line-height: 1.8; color: #4b5563;">
+    <li><strong>Instant Transcripts:</strong> Accurate meeting transcriptions</li>
+    <li><strong>Smart Summaries:</strong> Key points, decisions, and action items</li>
+    <li><strong>Task Tracking:</strong> Automatically extracted to-dos</li>
+    <li><strong>Risk Identification:</strong> Spot potential issues early</li>
+</ul>
+
+<div style="text-align: center; margin: 32px 0;">
+    <a href="{{ dashboard_url }}" class="button">Record Your First Meeting</a>
+</div>
+
+<div style="background-color: #fef3c7; padding: 16px; border-radius: 8px; margin-top: 24px;">
+    <p style="margin: 0; font-size: 14px; color: #92400e;">
+        <strong>💡 Tip:</strong> You can upload existing meeting recordings in MP3, WAV, or M4A format. No need to wait for your next meeting!
+    </p>
+</div>
+
+<p style="font-size: 14px; color: #6b7280; margin-top: 32px;">
+    Need assistance? Our support team is ready to help at <a href="mailto:nick@tellmemo.io" style="color: #667eea;">nick@tellmemo.io</a>
+</p>
+{% endblock %}

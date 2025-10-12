@@ -11,13 +11,14 @@ from fastapi.responses import JSONResponse
 import sentry_sdk
 
 from config import get_settings, configure_logging
-from routers import health, projects, content, queries, admin, scheduler, activities, transcription, jobs, websocket_jobs, integrations, upload, portfolios, programs, hierarchy, hierarchy_summaries, content_availability, unified_summaries, risks_tasks, lessons_learned, auth, native_auth, organizations, invitations, websocket_notifications, support_tickets, websocket_tickets, conversations, notifications
+from routers import health, projects, content, queries, admin, scheduler, activities, transcription, jobs, websocket_jobs, integrations, upload, portfolios, programs, hierarchy, hierarchy_summaries, content_availability, unified_summaries, risks_tasks, lessons_learned, auth, native_auth, organizations, invitations, websocket_notifications, support_tickets, websocket_tickets, conversations, notifications, email_preferences, email_admin
 from utils.logger import get_logger
 from db.database import init_database, close_database
 from db.multi_tenant_vector_store import multi_tenant_vector_store
 from services.rag.embedding_service import init_embedding_service
 from services.scheduling.scheduler_service import scheduler_service
 from services.observability.langfuse_service import langfuse_service
+from services.scheduler.digest_scheduler import digest_scheduler
 from services.llm.multi_llm_client import get_multi_llm_client
 from middleware.langfuse_middleware import add_langfuse_middleware
 from middleware.auth_middleware import AuthMiddleware
@@ -143,6 +144,22 @@ async def lifespan(app: FastAPI):
     # Note: Scheduler service provides manual triggers only
     # Automated scheduling has been moved to Redis Queue (RQ)
     logger.info("Scheduler service initialized (manual weekly report triggers available)")
+
+    # Validate email digest configuration before starting scheduler
+    if settings.email_digest_enabled and not settings.sendgrid_api_key.strip():
+        logger.warning("⚠️ EMAIL DIGEST CONFIGURATION WARNING:")
+        logger.warning("   Email digest is enabled (EMAIL_DIGEST_ENABLED=true)")
+        logger.warning("   but SendGrid API key is missing (SENDGRID_API_KEY is empty)")
+        logger.warning("   Email notifications will not be sent until API key is configured")
+        logger.warning("   To disable email digest, set EMAIL_DIGEST_ENABLED=false in .env")
+
+    # Start email digest scheduler
+    try:
+        digest_scheduler.start()
+        logger.info("Email digest scheduler started successfully")
+    except Exception as e:
+        logger.error(f"Failed to start email digest scheduler: {e}")
+        # Continue running - digest scheduler is optional
     
     # Pre-load Whisper model at startup (only if using Whisper as default service)
     # This improves first transcription speed but consumes ~1-2GB RAM
@@ -166,14 +183,21 @@ async def lifespan(app: FastAPI):
     yield
 
     logger.info("Shutting down PM Master V2 Backend...")
-    
+
+    # Shutdown email digest scheduler
+    try:
+        digest_scheduler.stop()
+        logger.info("Email digest scheduler shutdown complete")
+    except Exception as e:
+        logger.error(f"Error shutting down digest scheduler: {e}")
+
     # Shutdown Langfuse
     try:
         langfuse_service.shutdown()
         logger.info("Langfuse service shutdown complete")
     except Exception as e:
         logger.error(f"Error shutting down Langfuse: {e}")
-    
+
     await close_database()
     await multi_tenant_vector_store.close()
 
@@ -253,9 +277,11 @@ app.include_router(notifications.router)
 app.include_router(websocket_notifications.router, tags=["websocket"])
 app.include_router(support_tickets.router)
 app.include_router(websocket_tickets.router, tags=["websocket"])
+app.include_router(email_preferences.router)
 
 if settings.enable_reset_endpoint and settings.is_development:
     app.include_router(admin.router, prefix="/api/v1/admin", tags=["admin"])
+    app.include_router(email_admin.router, tags=["admin-email"])
     logger.warning("Database reset endpoint is enabled (DEVELOPMENT MODE)")
 
 

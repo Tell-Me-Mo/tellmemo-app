@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}TellMeMo{% endblock %}</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f7fa;
+            color: #374151;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 32px 24px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            color: #ffffff;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        .header-subtitle {
+            margin: 8px 0 0 0;
+            color: #e0e7ff;
+            font-size: 14px;
+        }
+        .content {
+            padding: 32px 24px;
+        }
+        .footer {
+            padding: 24px;
+            text-align: center;
+            background-color: #f9fafb;
+            border-top: 1px solid #e5e7eb;
+        }
+        .footer p {
+            margin: 4px 0;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #667eea;
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            margin: 16px 0;
+        }
+        .button:hover {
+            background-color: #5568d3;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>TellMeMo</h1>
+            <p class="header-subtitle">{% block header_subtitle %}Meeting Intelligence Platform{% endblock %}</p>
+        </div>
+
+        <div class="content">
+            {% block content %}{% endblock %}
+        </div>
+
+        <div class="footer">
+            <p>&copy; {{ current_year }} TellMeMo. All rights reserved.</p>
+            <p>
+                <a href="https://app.tellmemo.io/#/profile/email-preferences">Email Preferences</a> |
+                <a href="{{ unsubscribe_url }}">Unsubscribe</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

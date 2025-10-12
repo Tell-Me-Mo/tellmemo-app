@@ -36,6 +36,9 @@ class NotificationCategory(enum.Enum):
     INVITATION_ACCEPTED = "invitation_accepted"
     CONTENT_PROCESSED = "content_processed"
     INTEGRATION_STATUS = "integration_status"
+    EMAIL_DIGEST_SENT = "email_digest_sent"
+    EMAIL_ONBOARDING_SENT = "email_onboarding_sent"
+    EMAIL_INACTIVE_REMINDER_SENT = "email_inactive_reminder_sent"
     OTHER = "other"
 
 
@@ -49,11 +52,11 @@ class Notification(Base):
     # Core notification data
     title = Column(String(255), nullable=False)
     message = Column(Text)
-    type = Column(Enum(NotificationType), nullable=False)
-    priority = Column(Enum(NotificationPriority), default=NotificationPriority.NORMAL)
+    type = Column(Enum(NotificationType, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
+    priority = Column(Enum(NotificationPriority, values_callable=lambda obj: [e.value for e in obj]), default=NotificationPriority.NORMAL)
 
     # Metadata
-    category = Column(Enum(NotificationCategory), default=NotificationCategory.OTHER)
+    category = Column(Enum(NotificationCategory, values_callable=lambda obj: [e.value for e in obj]), default=NotificationCategory.OTHER)
     entity_type = Column(String(50))  # 'project', 'task', 'risk', 'summary', etc
     entity_id = Column(UUID(as_uuid=True))  # Reference to related entity
 

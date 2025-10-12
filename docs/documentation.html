@@ -137,6 +137,7 @@
                             <a href="#uploading-content">Uploading Content</a>
                             <a href="#querying">Querying with RAG</a>
                             <a href="#summaries">Generating Summaries</a>
+                            <a href="#email-digests">Email Digests</a>
                         </div>
                         <div class="docs-nav-section">
                             <h4>Reference</h4>
@@ -609,6 +610,31 @@ TOP_K_CHUNKS=5</code></pre>
 DETECT_LANGUAGE=true</code></pre>
                         </div>
 
+                        <h4>Email Digest Configuration</h4>
+                        <div class="code-block">
+                            <pre><code># SendGrid Configuration (required for email digests)
+SENDGRID_API_KEY=SG.your-sendgrid-api-key-here
+EMAIL_FROM_ADDRESS=noreply@tellmemo.io  # Must be verified in SendGrid
+EMAIL_FROM_NAME=TellMeMo
+
+# Email Digest Settings
+EMAIL_DIGEST_ENABLED=true
+EMAIL_DIGEST_BATCH_SIZE=50
+EMAIL_DIGEST_RATE_LIMIT=100  # Free tier: 100 emails/day</code></pre>
+                        </div>
+
+                        <div class="info-box">
+                            <h4>📧 Setting Up SendGrid</h4>
+                            <ol>
+                                <li>Sign up for free at <a href="https://signup.sendgrid.com/" target="_blank" rel="noopener">SendGrid</a> (100 emails/day free)</li>
+                                <li>Verify your sender email address in SendGrid dashboard</li>
+                                <li>Create an API key with "Mail Send" permissions</li>
+                                <li>Add the API key to your <code>.env</code> file</li>
+                                <li>Restart the backend: <code>docker compose restart backend</code></li>
+                            </ol>
+                            <p><strong>Without SendGrid:</strong> Email digests will be disabled but all other features work normally.</p>
+                        </div>
+
                         <div class="info-box">
                             <h4>💡 Full Configuration Reference</h4>
                             <p>For all available configuration options, see the <code>.env.example</code> file in the repository.</p>
@@ -861,6 +887,169 @@ DETECT_LANGUAGE=true</code></pre>
                             <li>AI generates summary based on all content</li>
                             <li>Export as PDF, CSV, or share with team</li>
                         </ol>
+                    </article>
+
+                    <!-- Email Digests -->
+                    <article id="email-digests" class="docs-article">
+                        <h2>Email Digests</h2>
+                        <p>Stay informed without logging in. TellMeMo can send automated email digests with project updates, summaries, tasks, and risks directly to your inbox.</p>
+
+                        <div class="info-box">
+                            <h4>✨ What are Email Digests?</h4>
+                            <p>Email digests are automated, personalized summaries of your project activity delivered on a schedule you choose. They include:</p>
+                            <ul>
+                                <li>Summary statistics (active projects, new summaries, pending tasks, critical risks)</li>
+                                <li>Per-project breakdowns with recent updates</li>
+                                <li>Direct links to view full content in TellMeMo</li>
+                                <li>Beautiful HTML design optimized for all email clients</li>
+                            </ul>
+                        </div>
+
+                        <h3>Email Types</h3>
+
+                        <h4>1. Welcome Email</h4>
+                        <p>Automatically sent when you create an account:</p>
+                        <ul>
+                            <li>Getting started guide with quick tips</li>
+                            <li>Links to key platform features</li>
+                            <li>Next steps for setting up your first project</li>
+                        </ul>
+
+                        <h4>2. Digest Emails</h4>
+                        <p>Scheduled delivery based on your preferences:</p>
+                        <ul>
+                            <li><strong>Daily:</strong> Every day at 8 AM UTC</li>
+                            <li><strong>Weekly:</strong> Every Monday at 8 AM UTC</li>
+                            <li><strong>Monthly:</strong> 1st of each month at 8 AM UTC</li>
+                        </ul>
+                        <p>Content includes summaries, tasks, risks, and activities from all your projects.</p>
+
+                        <h4>3. Inactive User Reminders</h4>
+                        <p>If you haven't uploaded content in 7 days:</p>
+                        <ul>
+                            <li>Friendly reminder to get started</li>
+                            <li>Simple instructions for recording your first meeting</li>
+                            <li>Sent only once (no repeated reminders)</li>
+                        </ul>
+
+                        <h3>Managing Email Preferences</h3>
+
+                        <p><strong>How to access:</strong></p>
+                        <ol>
+                            <li>Navigate to your Profile screen in the app</li>
+                            <li>Click "Notification Settings"</li>
+                            <li>Select "Email Digest Preferences"</li>
+                        </ol>
+
+                        <p><strong>Configuration options:</strong></p>
+                        <ul>
+                            <li><strong>Enable/Disable:</strong> Turn email digests on or off with a toggle</li>
+                            <li><strong>Frequency:</strong> Choose daily, weekly, or monthly delivery</li>
+                            <li><strong>Content Types:</strong> Select what to include:
+                                <ul>
+                                    <li>Meeting summaries</li>
+                                    <li>Tasks assigned to you</li>
+                                    <li>Critical risks</li>
+                                    <li>Project activities</li>
+                                    <li>Decisions and action items</li>
+                                </ul>
+                            </li>
+                            <li><strong>Portfolio Rollup:</strong> Include high-level portfolio insights</li>
+                        </ul>
+
+                        <h3>Testing Your Digests</h3>
+
+                        <p><strong>Preview Before Sending:</strong></p>
+                        <ol>
+                            <li>Go to Email Digest Preferences</li>
+                            <li>Click "Preview Digest"</li>
+                            <li>See exactly what your email will look like</li>
+                            <li>No email sent - just a preview</li>
+                        </ol>
+
+                        <p><strong>Send Test Email:</strong></p>
+                        <ol>
+                            <li>Go to Email Digest Preferences</li>
+                            <li>Click "Send Test Email"</li>
+                            <li>Receive a digest immediately to verify your settings</li>
+                            <li>Check your inbox to review formatting and content</li>
+                        </ol>
+
+                        <h3>Privacy & Data</h3>
+
+                        <div class="warning-box">
+                            <h4>⚠️ What's Included in Digests</h4>
+                            <p><strong>All projects across all organizations:</strong> Email digests include content from all projects you have access to, regardless of organization. There is no filtering by organization or project in the initial release.</p>
+                            <p><strong>Privacy considerations:</strong></p>
+                            <ul>
+                                <li>Email content may contain sensitive project information</li>
+                                <li>Emails are sent securely via SendGrid with TLS encryption</li>
+                                <li>Email delivery tracking data stored temporarily in SendGrid</li>
+                                <li>No permanent storage of email content on TellMeMo servers</li>
+                            </ul>
+                        </div>
+
+                        <h3>Unsubscribing</h3>
+
+                        <p>You can unsubscribe from email digests at any time:</p>
+
+                        <p><strong>Via Email:</strong></p>
+                        <ol>
+                            <li>Open any digest email</li>
+                            <li>Scroll to the footer</li>
+                            <li>Click "Unsubscribe from email digests"</li>
+                            <li>Instant opt-out (no login required)</li>
+                        </ol>
+
+                        <p><strong>Via Settings:</strong></p>
+                        <ol>
+                            <li>Go to Email Digest Preferences in the app</li>
+                            <li>Toggle "Enable email digests" to off</li>
+                            <li>Click "Save Changes"</li>
+                        </ol>
+
+                        <h3>Smart Features</h3>
+
+                        <div class="success-box">
+                            <h4>✅ No Spam Guarantee</h4>
+                            <p><strong>Empty digest prevention:</strong> TellMeMo automatically skips sending digests if there's no new content to report. You'll only receive emails when there's something useful to share.</p>
+                        </div>
+
+                        <div class="info-box">
+                            <h4>📊 Rate Limiting</h4>
+                            <p>TellMeMo respects SendGrid's free tier limits (100 emails/day). If you have a large team, consider upgrading to SendGrid's paid tier or implementing email batching strategies.</p>
+                        </div>
+
+                        <h3>Technical Details</h3>
+
+                        <p><strong>Delivery Infrastructure:</strong></p>
+                        <ul>
+                            <li><strong>Email Provider:</strong> SendGrid (free tier: 100 emails/day)</li>
+                            <li><strong>Scheduler:</strong> APScheduler (runs in background)</li>
+                            <li><strong>Templates:</strong> Responsive HTML with plain text fallback</li>
+                            <li><strong>Authentication:</strong> JWT-based unsubscribe tokens (90-day expiration)</li>
+                        </ul>
+
+                        <p><strong>Delivery Times (UTC):</strong></p>
+                        <ul>
+                            <li>Daily: 8:00 AM UTC every day</li>
+                            <li>Weekly: 8:00 AM UTC every Monday</li>
+                            <li>Monthly: 8:00 AM UTC on the 1st of each month</li>
+                            <li>Inactive check: 9:00 AM UTC daily</li>
+                        </ul>
+
+                        <div class="info-box">
+                            <h4>🔧 Admin Testing Endpoints</h4>
+                            <p>For administrators and developers, TellMeMo includes API endpoints to manually trigger digest jobs:</p>
+                            <ul>
+                                <li><code>POST /api/v1/admin/email/trigger-daily-digest</code></li>
+                                <li><code>POST /api/v1/admin/email/trigger-weekly-digest</code></li>
+                                <li><code>POST /api/v1/admin/email/trigger-monthly-digest</code></li>
+                                <li><code>POST /api/v1/admin/email/trigger-inactive-check</code></li>
+                                <li><code>POST /api/v1/admin/email/send-digest/{user_id}</code></li>
+                            </ul>
+                            <p>See the full API documentation at <code>http://localhost:8000/docs</code> for details.</p>
+                        </div>
                     </article>
 
                     <!-- Troubleshooting -->

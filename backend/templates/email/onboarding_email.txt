@@ -1,0 +1,25 @@
+Welcome to TellMeMo, {{ user_name }}!
+
+Thank you for joining TellMeMo! We're excited to help you transform your meetings into actionable insights.
+
+Get Started in 3 Easy Steps:
+
+1. Create your first project to organize your meetings
+2. Record or upload meeting audio from your next meeting
+3. View AI-generated summaries with key decisions and action items
+
+Key Features:
+
+- Automatic Transcription: Convert audio to text instantly
+- Smart Summaries: AI-powered meeting insights
+- Action Tracking: Never miss a follow-up task
+- Risk Management: Identify and track project risks
+
+Get Started: https://app.tellmemo.io
+
+Need assistance? Our support team is ready to help at nick@tellmemo.io
+
+---
+© {{ current_year }} TellMeMo. All rights reserved.
+Email Preferences: https://app.tellmemo.io/#/profile/email-preferences
+Unsubscribe: {{ unsubscribe_url }}

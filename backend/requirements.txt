@@ -69,6 +69,10 @@ python-jose[cryptography]==3.5.0
 # Scheduling
 apscheduler==3.11.0
 
+# Email Services
+sendgrid==6.12.5  # SendGrid for transactional emails
+jinja2==3.1.6  # HTML email template rendering
+
 # Development & Testing
 pytest==8.4.2
 pytest-asyncio==0.25.0

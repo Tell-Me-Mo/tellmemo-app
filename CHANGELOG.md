@@ -30,6 +30,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documentation website (tellmemo.io)
 - Comprehensive user documentation
 - API documentation
+- **Email Digest System** (2025-10-12) ✨ NEW
+  - SendGrid integration for automated email delivery
+  - User email preferences management (digest frequency, content types)
+  - Daily, weekly, and monthly digest generation with APScheduler
+  - Onboarding welcome emails for new users
+  - Inactive user reminder emails (7-day inactivity detection)
+  - Beautiful HTML email templates with responsive design
+  - JWT-based unsubscribe functionality
+  - Admin endpoints for testing and manual triggers
+  - Rate limiting for SendGrid free tier (100 emails/day)
+  - Empty digest prevention (no spam)
+  - Email preferences UI in Flutter app
+  - Preview digest functionality before sending
+  - Send test email capability
 
 ### Changed
 - Migrated from multi-service architecture to simplified 4-service core
@@ -110,12 +124,17 @@ See [GitHub Issues](https://github.com/Tell-Me-Mo/tellmemo-app/issues) for plann
 - Integration with Zoom, Google Meet, Microsoft Teams
 - Calendar integration
 - Slack notifications
-- Email digest reports
 - Mobile app improvements
 - Performance optimizations
 - Multi-language support
 - Advanced analytics dashboard
 - Team collaboration features
+- Email digest enhancements:
+  - Organization-level email filtering
+  - Per-project opt-in/opt-out for digest inclusion
+  - Email analytics tracking (open rates, clicks)
+  - SendGrid webhook for bounce/spam handling
+  - A/B testing for email content
 
 ## Migration Guide
 
