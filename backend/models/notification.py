@@ -36,6 +36,9 @@ class NotificationCategory(enum.Enum):
     INVITATION_ACCEPTED = "invitation_accepted"
     CONTENT_PROCESSED = "content_processed"
     INTEGRATION_STATUS = "integration_status"
+    EMAIL_DIGEST_SENT = "email_digest_sent"
+    EMAIL_ONBOARDING_SENT = "email_onboarding_sent"
+    EMAIL_INACTIVE_REMINDER_SENT = "email_inactive_reminder_sent"
     OTHER = "other"
 
 

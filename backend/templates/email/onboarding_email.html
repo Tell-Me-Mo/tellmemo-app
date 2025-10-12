@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome to TellMeMo!{% endblock %}
+{% block header_subtitle %}Welcome Aboard{% endblock %}
+
+{% block content %}
+<h2 style="color: #1f2937; margin-top: 0;">Welcome to TellMeMo, {{ user_name }}!</h2>
+
+<p style="font-size: 16px; line-height: 1.6; color: #4b5563;">
+    Thank you for joining TellMeMo! We're excited to help you transform your meetings into actionable insights.
+</p>
+
+<div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 24px 0;">
+    <h3 style="margin-top: 0; color: #1f2937;">Get Started in 3 Easy Steps:</h3>
+    <ol style="line-height: 1.8; color: #4b5563;">
+        <li><strong>Create your first project</strong> to organize your meetings</li>
+        <li><strong>Record or upload meeting audio</strong> from your next meeting</li>
+        <li><strong>View AI-generated summaries</strong> with key decisions and action items</li>
+    </ol>
+</div>
+
+<h3 style="color: #1f2937;">Key Features:</h3>
+<ul style="line-height: 1.8; color: #4b5563;">
+    <li><strong>Automatic Transcription:</strong> Convert audio to text instantly</li>
+    <li><strong>Smart Summaries:</strong> AI-powered meeting insights</li>
+    <li><strong>Action Tracking:</strong> Never miss a follow-up task</li>
+    <li><strong>Risk Management:</strong> Identify and track project risks</li>
+</ul>
+
+<div style="text-align: center; margin: 32px 0;">
+    <a href="{{ dashboard_url }}" class="button">Get Started</a>
+</div>
+
+<p style="font-size: 14px; color: #6b7280; margin-top: 32px;">
+    Need help? Check out our <a href="{{ frontend_url }}/docs" style="color: #667eea;">documentation</a> or contact support.
+</p>
+{% endblock %}

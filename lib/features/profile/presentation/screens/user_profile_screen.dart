@@ -850,22 +850,46 @@ Widget _buildNotificationSettingsSection(ThemeData theme) {
                   height: 1,
                   color: colorScheme.outline.withValues(alpha: 0.1),
                 ),
-                SwitchListTile(
-                  title: const Text('Weekly Digest'),
-                  subtitle: const Text('Receive weekly summary emails'),
-                  value: _weeklyDigest,
-                  onChanged: _isEditMode
-                      ? (value) {
-                          setState(() {
-                            _weeklyDigest = value;
-                          });
-                          _markChanged();
-                        }
-                      : null,
-                  secondary: Icon(
-                    Icons.summarize_outlined,
-                    color: colorScheme.secondary.withValues(alpha: 0.6),
-                    size: 20,
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => context.push('/profile/email-preferences'),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.email_outlined,
+                            color: colorScheme.secondary.withValues(alpha: 0.6),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Email Digest Preferences',
+                                  style: theme.textTheme.bodyLarge,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Configure automated email digest settings',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            Icons.arrow_forward_ios,
+                            size: 16,
+                            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ],

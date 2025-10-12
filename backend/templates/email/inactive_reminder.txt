@@ -1,0 +1,27 @@
+Ready to get started, {{ user_name }}?
+
+We noticed you haven't recorded any meetings yet. No worries – we're here to help you get the most out of TellMeMo!
+
+Recording your first meeting is easy:
+
+1. Click "Create Project" or select an existing project
+2. Click "Upload Audio" or use the recording feature
+3. Let TellMeMo do the rest – summaries are generated automatically!
+
+What You'll Get:
+
+- Instant Transcripts: Accurate meeting transcriptions
+- Smart Summaries: Key points, decisions, and action items
+- Task Tracking: Automatically extracted to-dos
+- Risk Identification: Spot potential issues early
+
+Record Your First Meeting: {{ dashboard_url }}
+
+💡 Tip: You can upload existing meeting recordings in MP3, WAV, or M4A format. No need to wait for your next meeting!
+
+Need assistance? Our support team is ready to help at support@tellmemo.io
+
+---
+© {{ current_year }} TellMeMo. All rights reserved.
+Email Preferences: {{ frontend_url }}/settings/email-preferences
+Unsubscribe: {{ unsubscribe_url }}

@@ -26,6 +26,7 @@ import '../../features/organizations/presentation/screens/organization_settings_
 import '../../features/organizations/presentation/screens/member_management_screen.dart';
 import '../../features/profile/presentation/screens/user_profile_screen.dart';
 import '../../features/profile/presentation/screens/change_password_screen.dart';
+import '../../features/email_preferences/presentation/screens/email_digest_preferences_screen.dart';
 import '../../features/risks/presentation/screens/risks_aggregation_screen_v2.dart';
 import '../../features/tasks/presentation/screens/tasks_screen_v2.dart';
 import '../../features/lessons_learned/presentation/screens/lessons_learned_screen_v2.dart';
@@ -340,6 +341,11 @@ GoRouter goRouter(Ref ref) {
                 path: 'change-password',
                 name: AppRoutes.changePasswordName,
                 builder: (context, state) => const ChangePasswordScreen(),
+              ),
+              GoRoute(
+                path: 'email-preferences',
+                name: AppRoutes.emailPreferencesName,
+                builder: (context, state) => const EmailDigestPreferencesScreen(),
               ),
             ],
           ),

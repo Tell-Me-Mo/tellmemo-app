@@ -1,0 +1,61 @@
+Your {{ digest_type|title }} TellMeMo Digest
+{{ digest_period }}
+
+Hi {{ user_name }},
+
+Here's your {{ digest_type }} digest for {{ digest_period }}.
+
+=== SUMMARY STATISTICS ===
+
+Active Projects: {{ summary_stats.projects_active }}
+New Summaries: {{ summary_stats.new_summaries }}
+Pending Tasks: {{ summary_stats.pending_tasks }}
+Critical Risks: {{ summary_stats.critical_risks }}
+
+{% if projects and projects|length > 0 %}
+=== PROJECT UPDATES ===
+
+{% for project in projects %}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{{ project.name }}
+{% if project.organization_name %}Organization: {{ project.organization_name }}{% endif %}
+
+{% if project.summaries and project.summaries|length > 0 %}
+📝 Recent Summaries ({{ project.summaries|length }}):
+{% for summary in project.summaries[:3] %}
+  • {{ summary.title }}
+    {{ summary.created_at|format_datetime }}
+    {% if summary.key_points %}{{ summary.key_points|truncate_text(150) }}{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if project.tasks and project.tasks|length > 0 %}
+✅ Your Tasks ({{ project.tasks|length }}):
+{% for task in project.tasks[:5] %}
+  • {{ task.title }}{% if task.due_date %} (Due: {{ task.due_date|format_date }}){% endif %}
+{% endfor %}
+{% endif %}
+
+{% if project.risks and project.risks|length > 0 %}
+⚠️ Critical Risks ({{ project.risks|length }}):
+{% for risk in project.risks[:3] %}
+  • [{{ risk.severity|upper }}] {{ risk.title }}
+{% endfor %}
+{% endif %}
+
+View Project: {{ frontend_url }}/projects/{{ project.id }}
+
+{% endfor %}
+{% else %}
+No activity in this period. Start by recording a meeting or creating a summary!
+{% endif %}
+
+Open TellMeMo Dashboard: {{ dashboard_url }}
+
+You're receiving this digest because you've enabled {{ digest_type }} email notifications.
+Manage your email preferences: {{ frontend_url }}/settings/email-preferences
+
+---
+© {{ current_year }} TellMeMo. All rights reserved.
+Email Preferences: {{ frontend_url }}/settings/email-preferences
+Unsubscribe: {{ unsubscribe_url }}

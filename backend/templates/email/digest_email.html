@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Your {{ digest_type|title }} TellMeMo Digest{% endblock %}
+{% block header_subtitle %}{{ digest_period }}{% endblock %}
+
+{% block content %}
+<h2 style="color: #1f2937; margin-top: 0;">Hi {{ user_name }},</h2>
+
+<p style="font-size: 16px; line-height: 1.6; color: #4b5563;">
+    Here's your {{ digest_type }} digest for {{ digest_period }}.
+</p>
+
+<!-- Summary Statistics -->
+<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 24px 0;">
+    <div style="background-color: #eff6ff; padding: 16px; border-radius: 8px; text-align: center;">
+        <div style="font-size: 28px; font-weight: 600; color: #1e40af;">{{ summary_stats.projects_active }}</div>
+        <div style="font-size: 12px; color: #3b82f6; margin-top: 4px;">Active Projects</div>
+    </div>
+    <div style="background-color: #f0fdf4; padding: 16px; border-radius: 8px; text-align: center;">
+        <div style="font-size: 28px; font-weight: 600; color: #15803d;">{{ summary_stats.new_summaries }}</div>
+        <div style="font-size: 12px; color: #16a34a; margin-top: 4px;">New Summaries</div>
+    </div>
+    <div style="background-color: #fef3c7; padding: 16px; border-radius: 8px; text-align: center;">
+        <div style="font-size: 28px; font-weight: 600; color: #b45309;">{{ summary_stats.pending_tasks }}</div>
+        <div style="font-size: 12px; color: #d97706; margin-top: 4px;">Pending Tasks</div>
+    </div>
+    <div style="background-color: #fee2e2; padding: 16px; border-radius: 8px; text-align: center;">
+        <div style="font-size: 28px; font-weight: 600; color: #b91c1c;">{{ summary_stats.critical_risks }}</div>
+        <div style="font-size: 12px; color: #dc2626; margin-top: 4px;">Critical Risks</div>
+    </div>
+</div>
+
+{% if projects and projects|length > 0 %}
+<!-- Project Details -->
+<h3 style="color: #1f2937; margin-top: 32px;">Project Updates</h3>
+
+{% for project in projects %}
+<div style="background-color: #f9fafb; border-left: 4px solid #667eea; padding: 20px; border-radius: 4px; margin: 16px 0;">
+    <h4 style="margin: 0 0 12px 0; color: #1f2937;">{{ project.name }}</h4>
+
+    {% if project.organization_name %}
+    <p style="margin: 0 0 8px 0; font-size: 13px; color: #6b7280;">
+        <strong>Organization:</strong> {{ project.organization_name }}
+    </p>
+    {% endif %}
+
+    <!-- Recent Summaries -->
+    {% if project.summaries and project.summaries|length > 0 %}
+    <div style="margin-top: 16px;">
+        <strong style="color: #374151; font-size: 14px;">📝 Recent Summaries ({{ project.summaries|length }})</strong>
+        {% for summary in project.summaries[:3] %}
+        <div style="margin: 8px 0 8px 16px; padding: 8px; background-color: #ffffff; border-radius: 4px;">
+            <div style="font-size: 13px; color: #1f2937; font-weight: 500;">{{ summary.title }}</div>
+            <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">{{ summary.created_at|format_datetime }}</div>
+            {% if summary.key_points %}
+            <div style="font-size: 13px; color: #4b5563; margin-top: 4px;">{{ summary.key_points|truncate_text(150) }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Your Tasks -->
+    {% if project.tasks and project.tasks|length > 0 %}
+    <div style="margin-top: 16px;">
+        <strong style="color: #374151; font-size: 14px;">✅ Your Tasks ({{ project.tasks|length }})</strong>
+        {% for task in project.tasks[:5] %}
+        <div style="margin: 8px 0 8px 16px; padding: 8px; background-color: #ffffff; border-radius: 4px;">
+            <div style="font-size: 13px; color: #1f2937;">{{ task.title }}</div>
+            {% if task.due_date %}
+            <div style="font-size: 12px; color: #d97706; margin-top: 4px;">Due: {{ task.due_date|format_date }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Critical Risks -->
+    {% if project.risks and project.risks|length > 0 %}
+    <div style="margin-top: 16px;">
+        <strong style="color: #dc2626; font-size: 14px;">⚠️ Critical Risks ({{ project.risks|length }})</strong>
+        {% for risk in project.risks[:3] %}
+        <div style="margin: 8px 0 8px 16px; padding: 8px; background-color: #fff1f2; border-left: 3px solid #dc2626; border-radius: 4px;">
+            <div style="font-size: 13px; color: #1f2937; font-weight: 500;">{{ risk.title }}</div>
+            <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">
+                <span style="background-color: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500;">
+                    {{ risk.severity|upper }}
+                </span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div style="margin-top: 16px;">
+        <a href="{{ frontend_url }}/projects/{{ project.id }}" style="color: #667eea; text-decoration: none; font-size: 14px; font-weight: 500;">
+            View Project →
+        </a>
+    </div>
+</div>
+{% endfor %}
+
+{% else %}
+<div style="background-color: #f3f4f6; padding: 24px; border-radius: 8px; text-align: center; margin: 24px 0;">
+    <p style="color: #6b7280; margin: 0;">No activity in this period. Start by recording a meeting or creating a summary!</p>
+</div>
+{% endif %}
+
+<!-- Call to Action -->
+<div style="text-align: center; margin: 32px 0;">
+    <a href="{{ dashboard_url }}" class="button">Open TellMeMo Dashboard</a>
+</div>
+
+<p style="font-size: 13px; color: #6b7280; margin-top: 24px; text-align: center;">
+    You're receiving this digest because you've enabled {{ digest_type }} email notifications.<br>
+    <a href="{{ frontend_url }}/settings/email-preferences" style="color: #667eea;">Manage your email preferences</a>
+</p>
+{% endblock %}

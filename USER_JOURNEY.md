@@ -470,6 +470,78 @@ TellMeMo generates summaries at multiple levels:
 - Delete notifications
 - Bulk mark all as read
 
+### Email Digest System
+
+**Overview:**
+TellMeMo can send automated email digests to keep you informed without requiring login. Configure your email preferences to receive daily, weekly, or monthly summaries of your project activity.
+
+**Email Types:**
+
+**1. Welcome Email**
+- Sent immediately upon registration
+- Getting started guide with quick tips
+- Links to key platform features
+
+**2. Digest Emails**
+- Scheduled delivery (daily, weekly, or monthly)
+- Includes project summaries, tasks, risks, and activities
+- Respects your content preferences
+- Beautiful HTML design with responsive layout
+
+**3. Inactive User Reminders**
+- Sent after 7 days of no activity
+- Encouraging message to get started
+- Simple instructions for recording first meeting
+- Sent only once per user
+
+**Managing Email Preferences:**
+
+**Access Settings:**
+1. Navigate to Profile screen
+2. Click "Notification Settings"
+3. Select "Email Digest Preferences"
+
+**Configuration Options:**
+- **Enable/Disable**: Turn email digests on or off
+- **Frequency**: Choose daily, weekly, or monthly delivery
+- **Content Types**: Select what to include:
+  - Meeting summaries
+  - Tasks assigned to you
+  - Critical risks
+  - Project activities
+  - Decisions and action items
+- **Portfolio Rollup**: Include high-level portfolio insights
+
+**Testing:**
+- **Preview Digest**: See what your email will look like before sending
+- **Send Test Email**: Receive a test digest immediately to verify settings
+
+**Digest Content:**
+- Summary statistics (active projects, new summaries, pending tasks, critical risks)
+- Per-project breakdown with recent updates
+- Direct links to view content in TellMeMo
+- Unsubscribe link in email footer
+
+**Privacy & Data:**
+- Digest includes all projects you have access to across all organizations
+- Email content sent securely via SendGrid with TLS encryption
+- Unsubscribe anytime via link in email footer
+- No email content stored permanently (delivery tracking only)
+
+**Delivery Schedule:**
+- Daily: Every day at 8 AM UTC
+- Weekly: Every Monday at 8 AM UTC
+- Monthly: 1st of each month at 8 AM UTC
+
+**Empty Digest Prevention:**
+- System automatically skips sending if there's no new content
+- No spam - you only receive emails when there's something to report
+
+**Unsubscribe Process:**
+- Click unsubscribe link in any email footer
+- JWT-based secure unsubscribe (no login required)
+- Instant opt-out with confirmation message
+
 ### Support Ticket System
 
 **Features:**
