@@ -50,7 +50,7 @@
 ### Feature Scope
 
 **In Scope:**
-- ✅ SMTP integration with popular providers
+- ✅ SendGrid integration for email delivery
 - ✅ User email preferences (digest frequency, content types)
 - ✅ Daily/weekly/monthly digest generation
 - ✅ Project-level digests (activities, summaries, tasks, risks)
@@ -66,6 +66,7 @@
 - ❌ Email reply processing
 - ❌ Custom email template builder UI
 - ❌ A/B testing for email content
+- ❌ Multiple email provider support (only SendGrid for MVP)
 
 ---
 
@@ -105,7 +106,7 @@
 - **Activity Model:** Tracks all user/project activities
 
 #### ❌ Missing Components
-- **No SMTP configuration** in environment variables
+- **No SendGrid configuration** in environment variables
 - **No email digest preferences** schema/table
 - **No scheduled job system** for digest generation
 - **No HTML email templates**
@@ -158,7 +159,7 @@
 ┌─────────────────────────────────────────────────────────────────┐
 │                    EMAIL SENDING SERVICE                        │
 │  1. Render HTML template with digest data                       │
-│  2. Send via SMTP (SendGrid/AWS SES/Mailgun)                    │
+│  2. Send via SendGrid API                                       │
 │  3. Track delivery status                                       │
 │  4. Update notification record (email_sent_at timestamp)        │
 │  5. Log errors for failed deliveries                            │
@@ -223,7 +224,7 @@ Enqueue Email Job:
 [RQ Worker] Process email_digest_task:
      │
      ├─ Render HTML template
-     ├─ Send via SMTP
+     ├─ Send via SendGrid API
      ├─ Update notification record
      └─ Log delivery status
 ```
@@ -278,56 +279,43 @@ The migration will:
 
 **Add to `.env.example` and `.env`:**
 
-Required configuration variables:
-- `EMAIL_PROVIDER`: smtp | sendgrid | aws_ses | mailgun
-- `EMAIL_FROM_ADDRESS`: Sender email address
-- `EMAIL_FROM_NAME`: Sender display name
-
-**For SMTP:**
-- `SMTP_HOST`: SMTP server hostname
-- `SMTP_PORT`: SMTP port (usually 587)
-- `SMTP_USERNAME`: SMTP username
-- `SMTP_PASSWORD`: SMTP password
-- `SMTP_USE_TLS`: Enable TLS (true/false)
-
-**For SendGrid:**
-- `SENDGRID_API_KEY`: API key
-
-**For AWS SES:**
-- `AWS_SES_ACCESS_KEY_ID`: Access key
-- `AWS_SES_SECRET_ACCESS_KEY`: Secret key
-- `AWS_SES_REGION`: AWS region
-
-**For Mailgun:**
-- `MAILGUN_API_KEY`: API key
-- `MAILGUN_DOMAIN`: Configured domain
+**SendGrid Configuration:**
+- `SENDGRID_API_KEY`: Your SendGrid API key (get from sendgrid.com dashboard)
+- `EMAIL_FROM_ADDRESS`: Verified sender email address (e.g., noreply@tellmemo.io)
+- `EMAIL_FROM_NAME`: Sender display name (e.g., "TellMeMo")
 
 **Digest Configuration:**
-- `EMAIL_DIGEST_ENABLED`: Enable/disable feature
+- `EMAIL_DIGEST_ENABLED`: Enable/disable feature (default: true)
 - `EMAIL_DIGEST_BATCH_SIZE`: Max emails per batch (default: 50)
-- `EMAIL_DIGEST_RATE_LIMIT`: Max emails per hour (default: 100)
+- `EMAIL_DIGEST_RATE_LIMIT`: Max emails per hour within SendGrid free tier (default: 100)
+
+**Note:** SendGrid free tier allows 100 emails/day (3,000/month). Adjust rate limits accordingly.
 
 ### 2. Update `config.py`
 
 Add all environment variables to Settings class with proper types and defaults.
 
-### 3. SMTP Service Implementation
+### 3. SendGrid Email Service Implementation
 
-**Create:** `backend/services/email/smtp_service.py`
+**Create:** `backend/services/email/sendgrid_service.py`
 
 **Key responsibilities:**
-- Unified interface for multiple email providers
-- Support SMTP, SendGrid, AWS SES, Mailgun
+- Send emails via SendGrid API
 - Handle email sending with HTML and plain text versions
+- Track delivery status and errors
 - Error handling and logging
 - Return success/failure status
 
 **Methods:**
-- `send_email()`: Main method to send email via configured provider
-- `_send_via_smtp()`: Standard SMTP implementation
-- `_send_via_sendgrid()`: SendGrid API implementation
-- `_send_via_ses()`: AWS SES implementation
-- `_send_via_mailgun()`: Mailgun API implementation
+- `send_email()`: Send email via SendGrid API with retry logic
+- `_build_sendgrid_message()`: Construct SendGrid Mail object
+- `_handle_sendgrid_response()`: Process API response and errors
+
+**Features:**
+- Automatic retry on transient failures
+- Rate limiting to stay within SendGrid free tier (100/day)
+- Delivery status tracking
+- Detailed error logging for debugging
 
 ### 4. Email Digest Service
 
@@ -371,7 +359,7 @@ Add all environment variables to Settings class with proper types and defaults.
 2. Calculate time period based on digest type
 3. Aggregate digest data via DigestService
 4. Render email templates via TemplateService
-5. Send email via SMTPService
+5. Send email via SendGridService
 6. Create notification record
 7. Update user preferences with last_sent_at timestamp
 
@@ -566,13 +554,14 @@ Add email preferences screen to settings menu with appropriate routing.
 ### 2. Integration Tests
 
 - End-to-end digest generation flow
-- SMTP provider integration (SendGrid, AWS SES, etc.)
+- SendGrid API integration
 - Scheduler trigger verification
 - Database preference updates
+- Rate limiting and batch processing
 
 ### 3. Manual Testing Checklist
 
-- [ ] Configure SMTP credentials
+- [ ] Configure SendGrid API key and verified sender
 - [ ] Enable email digests for test user
 - [ ] Trigger manual digest send
 - [ ] Verify email received with correct content
@@ -580,8 +569,10 @@ Add email preferences screen to settings menu with appropriate routing.
 - [ ] Test different frequencies (daily, weekly, monthly)
 - [ ] Test different content type combinations
 - [ ] Test email preview in UI
-- [ ] Test HTML rendering in different email clients
+- [ ] Test HTML rendering in different email clients (Gmail, Outlook, Apple Mail)
 - [ ] Test plain text fallback
+- [ ] Verify SendGrid dashboard shows delivery statistics
+- [ ] Test rate limiting (don't exceed 100 emails/day on free tier)
 
 ---
 
@@ -590,8 +581,10 @@ Add email preferences screen to settings menu with appropriate routing.
 ### Phase 1: Foundation (Week 1)
 
 **Backend:**
-- [ ] Add SMTP configuration to `.env` and `config.py`
-- [ ] Implement `SMTPService` with SMTP provider (start with one, e.g., SMTP)
+- [ ] Sign up for SendGrid account and get API key
+- [ ] Verify sender domain/email in SendGrid dashboard
+- [ ] Add SendGrid configuration to `.env` and `config.py`
+- [ ] Implement `SendGridService` with email sending capability
 - [ ] Create database migration for email preferences
 - [ ] Update `User` model with default email preferences
 - [ ] Create `email_preferences` API endpoints (GET, PUT)
@@ -602,9 +595,10 @@ Add email preferences screen to settings menu with appropriate routing.
 - [ ] Add navigation to settings
 
 **Testing:**
-- [ ] Unit test SMTP service with mock
+- [ ] Unit test SendGrid service with mock
 - [ ] Test API endpoints
 - [ ] Test UI interactions
+- [ ] Send test email via SendGrid to verify integration
 
 ### Phase 2: Digest Generation (Week 2)
 
@@ -638,11 +632,12 @@ Add email preferences screen to settings menu with appropriate routing.
 ### Phase 4: Polish & Features (Week 4)
 
 **Backend:**
-- [ ] Add additional SMTP providers (SendGrid, AWS SES, Mailgun)
-- [ ] Implement unsubscribe functionality
+- [ ] Implement unsubscribe functionality with SendGrid suppression groups
 - [ ] Add digest preview endpoint
 - [ ] Add send test email endpoint
 - [ ] Optimize database queries for performance
+- [ ] Add SendGrid webhook for bounce/spam handling (optional)
+- [ ] Implement email analytics tracking (open rates, clicks)
 
 **Frontend:**
 - [ ] Implement digest preview dialog
@@ -659,11 +654,14 @@ Add email preferences screen to settings menu with appropriate routing.
 ### Phase 5: Deployment & Monitoring
 
 - [ ] Deploy to production
-- [ ] Configure production SMTP credentials
+- [ ] Configure production SendGrid API key
+- [ ] Verify production sender domain in SendGrid
 - [ ] Set up monitoring/alerts for failed emails
-- [ ] Monitor email delivery rates
+- [ ] Monitor SendGrid dashboard for delivery rates and bounce rates
+- [ ] Set up alerts for approaching SendGrid rate limits
 - [ ] Gather user feedback
 - [ ] Iterate based on analytics
+- [ ] Consider upgrading SendGrid plan if exceeding free tier
 
 ---
 
@@ -687,10 +685,12 @@ Add email preferences screen to settings menu with appropriate routing.
 
 ### Monitoring & Alerts
 
-- **Failed Email Alerts:** Trigger alert if >5% emails fail
+- **Failed Email Alerts:** Trigger alert if >5% emails fail (monitor SendGrid API errors)
 - **Scheduler Health:** Alert if scheduler stops running
 - **Queue Backlog:** Alert if queue exceeds 1000 pending jobs
-- **SMTP Rate Limits:** Monitor and alert on approaching limits
+- **SendGrid Rate Limits:** Alert when approaching 100 emails/day (free tier) or 80% of current plan limit
+- **SendGrid Reputation:** Monitor sender reputation score in SendGrid dashboard
+- **Bounce Rate:** Alert if bounce rate exceeds 5%
 
 ---
 
@@ -732,60 +732,97 @@ Add email preferences screen to settings menu with appropriate routing.
 **Backend:**
 - `apscheduler==3.10.4` - Job scheduling
 - `jinja2==3.1.2` - Template rendering
-- `sendgrid==6.10.0` - SendGrid provider (optional)
-- `boto3==1.28.85` - AWS SES provider (optional)
+- `sendgrid==6.11.0` - SendGrid Python library (required)
 
 **Frontend:**
 - `intl: ^0.18.0` - Timezone handling
 
-### Configuration Examples
+### SendGrid Setup Guide
 
-**Gmail SMTP:**
-- EMAIL_PROVIDER=smtp
-- SMTP_HOST=smtp.gmail.com
-- SMTP_PORT=587
-- SMTP_USERNAME=your-email@gmail.com
-- SMTP_PASSWORD=your-app-password
-- SMTP_USE_TLS=true
+**Step 1: Create SendGrid Account**
+1. Go to https://signup.sendgrid.com/
+2. Sign up for free tier (100 emails/day, no credit card required)
+3. Verify your email address
 
-**SendGrid:**
-- EMAIL_PROVIDER=sendgrid
-- SENDGRID_API_KEY=SG.xxx
+**Step 2: Create API Key**
+1. Go to Settings → API Keys in SendGrid dashboard
+2. Click "Create API Key"
+3. Name it "TellMeMo Production" (or similar)
+4. Select "Full Access" or "Restricted Access" with Mail Send permissions
+5. Copy the API key (you'll only see it once!)
 
-**AWS SES:**
-- EMAIL_PROVIDER=aws_ses
-- AWS_SES_ACCESS_KEY_ID=AKIA...
-- AWS_SES_SECRET_ACCESS_KEY=xxx
-- AWS_SES_REGION=us-east-1
+**Step 3: Verify Sender Identity**
+1. Go to Settings → Sender Authentication
+2. Option A: Verify a single sender email (easier, good for testing)
+   - Add your email (e.g., noreply@tellmemo.io)
+   - Check your email for verification link
+3. Option B: Authenticate your domain (better for production)
+   - Add DNS records (SPF, DKIM, DMARC) to your domain
+   - Wait for verification (can take up to 48 hours)
+
+**Step 4: Configure Environment**
+```bash
+# .env
+SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+EMAIL_FROM_ADDRESS=noreply@tellmemo.io  # Must match verified sender
+EMAIL_FROM_NAME=TellMeMo
+EMAIL_DIGEST_ENABLED=true
+EMAIL_DIGEST_BATCH_SIZE=50
+EMAIL_DIGEST_RATE_LIMIT=100
+```
+
+**Step 5: Test Integration**
+- Run test email send via API
+- Check SendGrid dashboard Activity Feed for delivery status
+- Verify email received in inbox (check spam folder if not in inbox)
 
 ---
 
 ## Questions & Decisions
 
-**Q: Which SMTP provider should we use?**
-A: Start with generic SMTP (supports Gmail, Outlook) for MVP. Add SendGrid/AWS SES for production scale.
+**Q: Why SendGrid?**
+A: SendGrid offers the best combination of:
+- Generous free tier (100 emails/day forever)
+- Excellent deliverability and reputation management
+- Rich analytics and webhook support
+- Simple API and good Python library
+- Easy to scale as we grow
 
 **Q: How to handle email bounces?**
-A: Phase 2 - implement webhook handlers for bounce/complaint notifications.
+A: Use SendGrid's Event Webhook to receive real-time notifications for bounces, spam reports, and unsubscribes. Update user preferences accordingly.
 
 **Q: Should we use HTML or plain text?**
-A: Both! HTML for rich formatting, plain text as fallback.
+A: Both! HTML for rich formatting, plain text as fallback for email clients that don't support HTML.
 
 **Q: How to handle timezone conversion?**
-A: Store user timezone in preferences, convert all times to user's local timezone in templates.
+A: Store user timezone in preferences, schedule jobs in UTC, convert display times to user's local timezone in email templates.
 
-**Q: Rate limiting strategy?**
-A: Batch process 50 emails at a time with 1-second delay between batches.
+**Q: Rate limiting strategy for free tier?**
+A: Batch process 50 emails at a time with delays between batches. Monitor daily usage and stop at 95 emails/day to stay within 100/day limit.
+
+**Q: What if we exceed free tier?**
+A: Upgrade to SendGrid Essentials plan ($19.95/month for 50,000 emails) or implement intelligent digest grouping to reduce email volume.
 
 ---
 
 ## Resources
 
-- [SendGrid Email API Docs](https://docs.sendgrid.com/)
-- [AWS SES Developer Guide](https://docs.aws.amazon.com/ses/)
+**SendGrid:**
+- [SendGrid Email API Documentation](https://docs.sendgrid.com/api-reference/mail-send/mail-send)
+- [SendGrid Python Library](https://github.com/sendgrid/sendgrid-python)
+- [SendGrid Event Webhook](https://docs.sendgrid.com/for-developers/tracking-events/event)
+- [SendGrid Deliverability Best Practices](https://docs.sendgrid.com/ui/sending-email/deliverability)
+
+**Email Design:**
 - [Email Design Best Practices](https://www.campaignmonitor.com/resources/guides/email-design-best-practices/)
+- [Litmus Email Testing](https://www.litmus.com/) - Test emails across clients
+
+**Implementation:**
 - [APScheduler Documentation](https://apscheduler.readthedocs.io/)
 - [Jinja2 Template Designer Docs](https://jinja.palletsprojects.com/)
+
+**Monitoring:**
+- [SendGrid Activity Feed](https://app.sendgrid.com/email_activity) - Real-time email delivery tracking
 
 ---
 
