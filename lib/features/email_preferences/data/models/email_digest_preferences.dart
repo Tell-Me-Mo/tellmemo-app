@@ -30,11 +30,11 @@ class EmailDigestPreferences {
   /// Create from JSON response
   factory EmailDigestPreferences.fromJson(Map<String, dynamic> json) {
     return EmailDigestPreferences(
-      enabled: json['enabled'] as bool? ?? false,
+      enabled: json['enabled'] as bool? ?? true,
       frequency: json['frequency'] as String? ?? 'weekly',
       contentTypes: (json['content_types'] as List<dynamic>?)
           ?.map((e) => e as String)
-          .toList() ?? [],
+          .toList() ?? ['blockers', 'tasks_assigned', 'risks_critical'],
       includePortfolioRollup: json['include_portfolio_rollup'] as bool? ?? true,
       lastSentAt: json['last_sent_at'] as String?,
     );
@@ -70,7 +70,7 @@ class EmailDigestPreferences {
   /// Default preferences for new users
   factory EmailDigestPreferences.defaults() {
     return const EmailDigestPreferences(
-      enabled: false,
+      enabled: true,
       frequency: 'weekly',
       contentTypes: ['blockers', 'tasks_assigned', 'risks_critical'],
       includePortfolioRollup: true,

@@ -32,7 +32,7 @@ void main() {
 
         expect(preferences.enabled, false);
         expect(preferences.frequency, 'never');
-        expect(preferences.contentTypes, isEmpty);
+        expect(preferences.contentTypes, ['blockers', 'tasks_assigned', 'risks_critical']); // Default content types
         expect(preferences.includePortfolioRollup, true); // Default is true
         expect(preferences.lastSentAt, isNull);
       });
@@ -42,9 +42,9 @@ void main() {
 
         final preferences = EmailDigestPreferences.fromJson(json);
 
-        expect(preferences.enabled, false);
+        expect(preferences.enabled, true); // Now defaults to true
         expect(preferences.frequency, 'weekly');
-        expect(preferences.contentTypes, isEmpty);
+        expect(preferences.contentTypes, ['blockers', 'tasks_assigned', 'risks_critical']); // Default content types
         expect(preferences.includePortfolioRollup, true); // Default is true
         expect(preferences.lastSentAt, isNull);
       });

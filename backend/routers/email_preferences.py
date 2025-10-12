@@ -49,7 +49,7 @@ class ContentType(str, Enum):
 
 class EmailDigestPreferences(BaseModel):
     """Model for email digest preferences."""
-    enabled: bool = Field(default=False, description="Enable/disable email digests")
+    enabled: bool = Field(default=True, description="Enable/disable email digests")
     frequency: DigestFrequency = Field(default=DigestFrequency.weekly, description="Digest frequency: daily, weekly, monthly, never")
     content_types: List[ContentType] = Field(
         default=[ContentType.blockers, ContentType.tasks_assigned, ContentType.risks_critical],
@@ -109,7 +109,7 @@ async def get_digest_preferences(
     # Extract email_digest preferences or use defaults
     preferences = user.preferences or {}
     email_digest = preferences.get('email_digest', {
-        'enabled': False,
+        'enabled': True,
         'frequency': 'weekly',
         'content_types': ['blockers', 'tasks_assigned', 'risks_critical'],
         'project_filter': 'all',

@@ -41,7 +41,7 @@ async def user_with_digest_enabled(db_session: AsyncSession) -> User:
             "email_digest": {
                 "enabled": True,
                 "frequency": "weekly",
-                "content_types": ["summaries", "tasks_assigned", "risks_critical"],
+                "content_types": ["blockers", "tasks_assigned", "risks_critical"],
                 "include_portfolio_rollup": True,
                 "last_sent_at": None
             }
@@ -105,7 +105,7 @@ async def inactive_digest_user(db_session: AsyncSession) -> User:
             "email_digest": {
                 "enabled": True,
                 "frequency": "weekly",
-                "content_types": ["summaries"],
+                "content_types": ["blockers"],
                 "last_sent_at": None
             }
         }
@@ -216,7 +216,7 @@ class TestEmailPreferencesAPI:
         # Verify custom preferences
         assert data["enabled"] is True
         assert data["frequency"] == "weekly"
-        assert "summaries" in data["content_types"]
+        assert "blockers" in data["content_types"]
 
     @pytest.mark.integration
     async def test_update_digest_preferences(
@@ -229,7 +229,7 @@ class TestEmailPreferencesAPI:
         update_data = {
             "enabled": True,
             "frequency": "daily",
-            "content_types": ["summaries", "risks_critical"]
+            "content_types": ["blockers", "risks_critical"]
         }
 
         response = await authenticated_client.put(
@@ -368,9 +368,12 @@ class TestSendTestDigest:
         assert response.status_code == 200
         data = response.json()
 
-        # Verify job was queued
-        assert "job_id" in data
+        # Verify jobs were queued
+        assert "jobs" in data
         assert "message" in data
+        assert "total_emails" in data
+        assert data["total_emails"] == 5  # Should send all 5 test email types
+        assert len(data["jobs"]) == 5
         assert "queued" in data["message"].lower()
 
     @pytest.mark.integration
