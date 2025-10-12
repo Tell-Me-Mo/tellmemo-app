@@ -73,6 +73,7 @@ def upgrade() -> None:
 
     # 3. Set default email preferences for existing users
     # New users will get these defaults during registration
+    # NOTE: Fixed in follow-up migration dc8704e627ee to use 'blockers' instead of 'summaries'
     op.execute("""
         UPDATE users
         SET preferences = (
@@ -81,7 +82,7 @@ def upgrade() -> None:
                 'email_digest', jsonb_build_object(
                     'enabled', false,
                     'frequency', 'weekly',
-                    'content_types', ARRAY['summaries', 'tasks_assigned', 'risks_critical']::text[],
+                    'content_types', ARRAY['blockers', 'tasks_assigned', 'risks_critical']::text[],
                     'project_filter', 'all',
                     'include_portfolio_rollup', true,
                     'last_sent_at', NULL
