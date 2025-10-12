@@ -76,44 +76,6 @@ class _EmailDigestPreferencesScreenState
     }
   }
 
-  Future<void> _sendTestEmail() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Send Test Email?'),
-        content: const Text(
-          'This will send a test digest email to your registered email address.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Send'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true && mounted) {
-      try {
-        await ref.read(sendTestDigestProvider.future);
-        if (mounted) {
-          ref
-              .read(notificationServiceProvider.notifier)
-              .showSuccess('Test email queued successfully!');
-        }
-      } catch (e) {
-        if (mounted) {
-          ref
-              .read(notificationServiceProvider.notifier)
-              .showError('Failed to send test email: $e');
-        }
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -268,25 +230,17 @@ class _EmailDigestPreferencesScreenState
           ],
         ),
         const Spacer(),
-        if (isDesktop) ...[
-          if (hasUnsavedChanges) ...[
-            OutlinedButton(
-              onPressed: _discardChanges,
-              child: const Text('Discard'),
-            ),
-            const SizedBox(width: 12),
-            FilledButton.icon(
-              onPressed: _saveChanges,
-              icon: const Icon(Icons.save_outlined, size: 16),
-              label: const Text('Save Changes'),
-            ),
-          ] else ...[
-            OutlinedButton.icon(
-              onPressed: _sendTestEmail,
-              icon: const Icon(Icons.send_outlined, size: 16),
-              label: const Text('Send Test Email'),
-            ),
-          ],
+        if (isDesktop && hasUnsavedChanges) ...[
+          OutlinedButton(
+            onPressed: _discardChanges,
+            child: const Text('Discard'),
+          ),
+          const SizedBox(width: 12),
+          FilledButton.icon(
+            onPressed: _saveChanges,
+            icon: const Icon(Icons.save_outlined, size: 16),
+            label: const Text('Save Changes'),
+          ),
         ],
       ],
     );
