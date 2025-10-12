@@ -103,12 +103,12 @@ async def _send_digest_email_async(
     5. Create notification record
     6. Update user preferences with last_sent_at
     """
-    from db.database import db_manager
+    from db.database import get_db_context
     from models.user import User
     from models.notification import Notification, NotificationType, NotificationPriority
     from sqlalchemy import select, update
 
-    async with db_manager.get_session() as session:
+    async with get_db_context() as session:
         try:
             # 1. Fetch user
             if rq_job:
@@ -310,12 +310,12 @@ def send_onboarding_email_task(user_id: str):
 
 async def _send_onboarding_email_async(user_id: str, rq_job) -> dict:
     """Async implementation of onboarding email sending."""
-    from db.database import db_manager
+    from db.database import get_db_context
     from models.user import User
     from models.notification import Notification, NotificationType, NotificationPriority
     from sqlalchemy import select
 
-    async with db_manager.get_session() as session:
+    async with get_db_context() as session:
         try:
             # Fetch user
             result = await session.execute(
@@ -436,12 +436,12 @@ def send_inactive_reminder_task(user_id: str):
 
 async def _send_inactive_reminder_async(user_id: str, rq_job) -> dict:
     """Async implementation of inactive reminder email sending."""
-    from db.database import db_manager
+    from db.database import get_db_context
     from models.user import User
     from models.notification import Notification, NotificationType, NotificationPriority
     from sqlalchemy import select
 
-    async with db_manager.get_session() as session:
+    async with get_db_context() as session:
         try:
             # Fetch user
             result = await session.execute(
@@ -466,7 +466,7 @@ async def _send_inactive_reminder_async(user_id: str, rq_job) -> dict:
             # Prepare context
             context = {
                 'user_name': user.name or user.email.split('@')[0],
-                'dashboard_url': f"{settings.frontend_url}/dashboard",
+                'dashboard_url': 'https://app.tellmemo.io/#/dashboard',
                 'frontend_url': settings.frontend_url,
                 'unsubscribe_url': f"{settings.frontend_url}/api/v1/email-preferences/unsubscribe?token={unsubscribe_token}",
                 'current_year': datetime.utcnow().year

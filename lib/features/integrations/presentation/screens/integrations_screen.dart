@@ -606,6 +606,12 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
 
   List<Integration> _filterIntegrations(List<Integration> integrations) {
     return integrations.where((integration) {
+      // Hide AI Brain and Transcription Service cards (temporarily)
+      if (integration.type == IntegrationType.aiBrain ||
+          integration.type == IntegrationType.transcription) {
+        return false;
+      }
+
       final matchesSearch = _searchQuery.isEmpty ||
           integration.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           integration.description.toLowerCase().contains(_searchQuery.toLowerCase());

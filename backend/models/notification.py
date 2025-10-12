@@ -52,11 +52,11 @@ class Notification(Base):
     # Core notification data
     title = Column(String(255), nullable=False)
     message = Column(Text)
-    type = Column(Enum(NotificationType), nullable=False)
-    priority = Column(Enum(NotificationPriority), default=NotificationPriority.NORMAL)
+    type = Column(Enum(NotificationType, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
+    priority = Column(Enum(NotificationPriority, values_callable=lambda obj: [e.value for e in obj]), default=NotificationPriority.NORMAL)
 
     # Metadata
-    category = Column(Enum(NotificationCategory), default=NotificationCategory.OTHER)
+    category = Column(Enum(NotificationCategory, values_callable=lambda obj: [e.value for e in obj]), default=NotificationCategory.OTHER)
     entity_type = Column(String(50))  # 'project', 'task', 'risk', 'summary', etc
     entity_id = Column(UUID(as_uuid=True))  # Reference to related entity
 

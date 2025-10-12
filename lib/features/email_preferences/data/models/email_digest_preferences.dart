@@ -72,7 +72,7 @@ class EmailDigestPreferences {
     return const EmailDigestPreferences(
       enabled: false,
       frequency: 'weekly',
-      contentTypes: ['summaries', 'tasks_assigned', 'risks_critical'],
+      contentTypes: ['blockers', 'tasks_assigned', 'risks_critical'],
       includePortfolioRollup: true,
     );
   }
@@ -125,14 +125,14 @@ class DigestFrequency {
 
 /// Available content types for digest
 class DigestContentType {
-  static const String summaries = 'summaries';
+  static const String blockers = 'blockers';
   static const String tasksAssigned = 'tasks_assigned';
   static const String risksCritical = 'risks_critical';
   static const String activities = 'activities';
   static const String decisions = 'decisions';
 
   static const List<String> all = [
-    summaries,
+    blockers,
     tasksAssigned,
     risksCritical,
     activities,
@@ -141,8 +141,8 @@ class DigestContentType {
 
   static String displayName(String type) {
     switch (type) {
-      case summaries:
-        return 'Meeting Summaries';
+      case blockers:
+        return 'Active Blockers';
       case tasksAssigned:
         return 'Tasks Assigned to Me';
       case risksCritical:
@@ -158,8 +158,8 @@ class DigestContentType {
 
   static String description(String type) {
     switch (type) {
-      case summaries:
-        return 'Include AI-generated meeting summaries';
+      case blockers:
+        return 'Include active and escalated project blockers';
       case tasksAssigned:
         return 'Include tasks that are assigned to you';
       case risksCritical:

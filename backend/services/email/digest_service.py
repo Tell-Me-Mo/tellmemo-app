@@ -238,9 +238,9 @@ class DigestService:
             Digest data dictionary
         """
         from models.project import Project
-        from models.summary import Summary
-        from models.task import Task
-        from models.risk import Risk
+        from models.task import Task, TaskStatus
+        from models.risk import Risk, RiskStatus, RiskSeverity
+        from models.blocker import Blocker, BlockerStatus, BlockerImpact
         from models.organization import Organization
 
         # Get user info
@@ -271,7 +271,7 @@ class DigestService:
 
         # Aggregate data per project
         project_data = []
-        total_summaries = 0
+        total_blockers = 0
         total_tasks = 0
         total_risks = 0
 
@@ -282,27 +282,14 @@ class DigestService:
             )
             org = org_result.scalar_one_or_none()
 
-            # Get summaries for this project in the time period
-            summary_result = await db.execute(
-                select(Summary).where(
-                    and_(
-                        Summary.project_id == project.id,
-                        Summary.created_at >= start_date,
-                        Summary.created_at <= end_date
-                    )
-                ).order_by(desc(Summary.created_at))
-            )
-            summaries = summary_result.scalars().all()
-
-            # Get tasks assigned to user in this project
+            # Get pending/in-progress tasks for this project
             task_result = await db.execute(
                 select(Task).where(
                     and_(
                         Task.project_id == project.id,
-                        Task.assigned_to == uuid.UUID(user_id),
                         or_(
-                            Task.status == 'pending',
-                            Task.status == 'in_progress'
+                            Task.status == TaskStatus.TODO,
+                            Task.status == TaskStatus.IN_PROGRESS
                         )
                     )
                 ).order_by(Task.due_date.asc().nullslast())
@@ -314,27 +301,30 @@ class DigestService:
                 select(Risk).where(
                     and_(
                         Risk.project_id == project.id,
-                        Risk.severity.in_(['high', 'critical']),
-                        Risk.status != 'resolved'
+                        Risk.severity.in_([RiskSeverity.HIGH, RiskSeverity.CRITICAL]),
+                        Risk.status != RiskStatus.RESOLVED
                     )
-                ).order_by(desc(Risk.severity), desc(Risk.created_at))
+                ).order_by(desc(Risk.severity), desc(Risk.identified_date))
             )
             risks = risk_result.scalars().all()
 
+            # Get active blockers for this project
+            blocker_result = await db.execute(
+                select(Blocker).where(
+                    and_(
+                        Blocker.project_id == project.id,
+                        Blocker.status.in_([BlockerStatus.ACTIVE, BlockerStatus.ESCALATED])
+                    )
+                ).order_by(desc(Blocker.impact), desc(Blocker.identified_date))
+            )
+            blockers = blocker_result.scalars().all()
+
             # Only include projects with activity
-            if summaries or tasks or risks:
+            if tasks or risks or blockers:
                 project_data.append({
                     'id': str(project.id),
                     'name': project.name,
                     'organization_name': org.name if org else None,
-                    'summaries': [
-                        {
-                            'title': s.title or 'Summary',
-                            'created_at': s.created_at,
-                            'key_points': s.executive_summary or s.key_topics
-                        }
-                        for s in summaries
-                    ],
                     'tasks': [
                         {
                             'title': t.title,
@@ -350,17 +340,27 @@ class DigestService:
                             'status': r.status
                         }
                         for r in risks
+                    ],
+                    'blockers': [
+                        {
+                            'title': b.title,
+                            'description': b.description,
+                            'impact': b.impact,
+                            'status': b.status,
+                            'owner': b.owner
+                        }
+                        for b in blockers
                     ]
                 })
 
-                total_summaries += len(summaries)
+                total_blockers += len(blockers)
                 total_tasks += len(tasks)
                 total_risks += len(risks)
 
         # Calculate summary statistics
         summary_stats = {
             'projects_active': len(project_data),
-            'new_summaries': total_summaries,
+            'active_blockers': total_blockers,
             'pending_tasks': total_tasks,
             'critical_risks': total_risks
         }
@@ -498,9 +498,9 @@ class DigestService:
             True if user has any content in the period, False otherwise
         """
         from models.project import Project
-        from models.summary import Summary
-        from models.task import Task
-        from models.risk import Risk
+        from models.task import Task, TaskStatus
+        from models.risk import Risk, RiskStatus, RiskSeverity
+        from models.blocker import Blocker, BlockerStatus
 
         # Get user's organizations
         org_result = await db.execute(
@@ -524,30 +524,14 @@ class DigestService:
         if not project_ids:
             return False
 
-        # Check for summaries in time period
-        summary_count_result = await db.execute(
-            select(func.count(Summary.id)).where(
-                and_(
-                    Summary.project_id.in_(project_ids),
-                    Summary.created_at >= start_date,
-                    Summary.created_at <= end_date
-                )
-            )
-        )
-        summary_count = summary_count_result.scalar()
-
-        if summary_count > 0:
-            return True
-
-        # Check for pending tasks assigned to user
+        # Check for pending/in-progress tasks in user's projects
         task_count_result = await db.execute(
             select(func.count(Task.id)).where(
                 and_(
                     Task.project_id.in_(project_ids),
-                    Task.assigned_to == uuid.UUID(user_id),
                     or_(
-                        Task.status == 'pending',
-                        Task.status == 'in_progress'
+                        Task.status == TaskStatus.TODO,
+                        Task.status == TaskStatus.IN_PROGRESS
                     )
                 )
             )
@@ -562,14 +546,28 @@ class DigestService:
             select(func.count(Risk.id)).where(
                 and_(
                     Risk.project_id.in_(project_ids),
-                    Risk.severity.in_(['high', 'critical']),
-                    Risk.status != 'resolved'
+                    Risk.severity.in_([RiskSeverity.HIGH, RiskSeverity.CRITICAL]),
+                    Risk.status != RiskStatus.RESOLVED
                 )
             )
         )
         risk_count = risk_count_result.scalar()
 
-        return risk_count > 0
+        if risk_count > 0:
+            return True
+
+        # Check for active blockers
+        blocker_count_result = await db.execute(
+            select(func.count(Blocker.id)).where(
+                and_(
+                    Blocker.project_id.in_(project_ids),
+                    Blocker.status.in_([BlockerStatus.ACTIVE, BlockerStatus.ESCALATED])
+                )
+            )
+        )
+        blocker_count = blocker_count_result.scalar()
+
+        return blocker_count > 0
 
     def _has_digest_content(self, digest_data: Dict[str, Any]) -> bool:
         """
@@ -586,7 +584,7 @@ class DigestService:
         # Check if any counters are non-zero
         has_content = (
             stats.get('projects_active', 0) > 0 or
-            stats.get('new_summaries', 0) > 0 or
+            stats.get('active_blockers', 0) > 0 or
             stats.get('pending_tasks', 0) > 0 or
             stats.get('critical_risks', 0) > 0
         )

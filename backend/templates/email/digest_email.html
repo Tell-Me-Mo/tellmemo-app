@@ -11,24 +11,57 @@
 </p>
 
 <!-- Summary Statistics -->
-<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 24px 0;">
-    <div style="background-color: #eff6ff; padding: 16px; border-radius: 8px; text-align: center;">
-        <div style="font-size: 28px; font-weight: 600; color: #1e40af;">{{ summary_stats.projects_active }}</div>
-        <div style="font-size: 12px; color: #3b82f6; margin-top: 4px;">Active Projects</div>
-    </div>
-    <div style="background-color: #f0fdf4; padding: 16px; border-radius: 8px; text-align: center;">
-        <div style="font-size: 28px; font-weight: 600; color: #15803d;">{{ summary_stats.new_summaries }}</div>
-        <div style="font-size: 12px; color: #16a34a; margin-top: 4px;">New Summaries</div>
-    </div>
-    <div style="background-color: #fef3c7; padding: 16px; border-radius: 8px; text-align: center;">
-        <div style="font-size: 28px; font-weight: 600; color: #b45309;">{{ summary_stats.pending_tasks }}</div>
-        <div style="font-size: 12px; color: #d97706; margin-top: 4px;">Pending Tasks</div>
-    </div>
-    <div style="background-color: #fee2e2; padding: 16px; border-radius: 8px; text-align: center;">
-        <div style="font-size: 28px; font-weight: 600; color: #b91c1c;">{{ summary_stats.critical_risks }}</div>
-        <div style="font-size: 12px; color: #dc2626; margin-top: 4px;">Critical Risks</div>
-    </div>
-</div>
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 24px 0;">
+    <tr>
+        <!-- Active Projects Card -->
+        <td style="width: 25%; padding: 0 4px;">
+            <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #eff6ff; border-radius: 8px;">
+                <tr>
+                    <td style="padding: 12px; text-align: center;">
+                        <div style="font-size: 24px; font-weight: 700; color: #1e40af; line-height: 1;">{{ summary_stats.projects_active }}</div>
+                        <div style="font-size: 11px; color: #3b82f6; margin-top: 4px; font-weight: 500;">Active Projects</div>
+                    </td>
+                </tr>
+            </table>
+        </td>
+
+        <!-- Active Blockers Card -->
+        <td style="width: 25%; padding: 0 4px;">
+            <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #fef3c7; border-radius: 8px;">
+                <tr>
+                    <td style="padding: 12px; text-align: center;">
+                        <div style="font-size: 24px; font-weight: 700; color: #b45309; line-height: 1;">{{ summary_stats.active_blockers }}</div>
+                        <div style="font-size: 11px; color: #d97706; margin-top: 4px; font-weight: 500;">Active Blockers</div>
+                    </td>
+                </tr>
+            </table>
+        </td>
+
+        <!-- Pending Tasks Card -->
+        <td style="width: 25%; padding: 0 4px;">
+            <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f0fdf4; border-radius: 8px;">
+                <tr>
+                    <td style="padding: 12px; text-align: center;">
+                        <div style="font-size: 24px; font-weight: 700; color: #15803d; line-height: 1;">{{ summary_stats.pending_tasks }}</div>
+                        <div style="font-size: 11px; color: #16a34a; margin-top: 4px; font-weight: 500;">Pending Tasks</div>
+                    </td>
+                </tr>
+            </table>
+        </td>
+
+        <!-- Critical Risks Card -->
+        <td style="width: 25%; padding: 0 4px;">
+            <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #fee2e2; border-radius: 8px;">
+                <tr>
+                    <td style="padding: 12px; text-align: center;">
+                        <div style="font-size: 24px; font-weight: 700; color: #b91c1c; line-height: 1;">{{ summary_stats.critical_risks }}</div>
+                        <div style="font-size: 11px; color: #dc2626; margin-top: 4px; font-weight: 500;">Critical Risks</div>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
 
 {% if projects and projects|length > 0 %}
 <!-- Project Details -->
@@ -42,22 +75,6 @@
     <p style="margin: 0 0 8px 0; font-size: 13px; color: #6b7280;">
         <strong>Organization:</strong> {{ project.organization_name }}
     </p>
-    {% endif %}
-
-    <!-- Recent Summaries -->
-    {% if project.summaries and project.summaries|length > 0 %}
-    <div style="margin-top: 16px;">
-        <strong style="color: #374151; font-size: 14px;">📝 Recent Summaries ({{ project.summaries|length }})</strong>
-        {% for summary in project.summaries[:3] %}
-        <div style="margin: 8px 0 8px 16px; padding: 8px; background-color: #ffffff; border-radius: 4px;">
-            <div style="font-size: 13px; color: #1f2937; font-weight: 500;">{{ summary.title }}</div>
-            <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">{{ summary.created_at|format_datetime }}</div>
-            {% if summary.key_points %}
-            <div style="font-size: 13px; color: #4b5563; margin-top: 4px;">{{ summary.key_points|truncate_text(150) }}</div>
-            {% endif %}
-        </div>
-        {% endfor %}
-    </div>
     {% endif %}
 
     <!-- Your Tasks -->
@@ -92,6 +109,27 @@
     </div>
     {% endif %}
 
+    <!-- Active Blockers -->
+    {% if project.blockers and project.blockers|length > 0 %}
+    <div style="margin-top: 16px;">
+        <strong style="color: #b45309; font-size: 14px;">🚧 Active Blockers ({{ project.blockers|length }})</strong>
+        {% for blocker in project.blockers[:3] %}
+        <div style="margin: 8px 0 8px 16px; padding: 8px; background-color: #fffbeb; border-left: 3px solid #d97706; border-radius: 4px;">
+            <div style="font-size: 13px; color: #1f2937; font-weight: 500;">{{ blocker.title }}</div>
+            <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">{{ blocker.description|truncate(100, True) }}</div>
+            <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">
+                <span style="background-color: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500;">
+                    {{ blocker.impact|upper }}
+                </span>
+                {% if blocker.owner %}
+                <span style="margin-left: 8px;">Owner: {{ blocker.owner }}</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <div style="margin-top: 16px;">
         <a href="{{ frontend_url }}/projects/{{ project.id }}" style="color: #667eea; text-decoration: none; font-size: 14px; font-weight: 500;">
             View Project →
@@ -108,11 +146,11 @@
 
 <!-- Call to Action -->
 <div style="text-align: center; margin: 32px 0;">
-    <a href="{{ dashboard_url }}" class="button">Open TellMeMo Dashboard</a>
+    <a href="https://app.tellmemo.io/#/dashboard" class="button">Open TellMeMo Dashboard</a>
 </div>
 
 <p style="font-size: 13px; color: #6b7280; margin-top: 24px; text-align: center;">
     You're receiving this digest because you've enabled {{ digest_type }} email notifications.<br>
-    <a href="{{ frontend_url }}/settings/email-preferences" style="color: #667eea;">Manage your email preferences</a>
+    <a href="https://app.tellmemo.io/#/profile/email-preferences" style="color: #667eea;">Manage your email preferences</a>
 </p>
 {% endblock %}

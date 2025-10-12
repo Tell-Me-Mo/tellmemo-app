@@ -37,7 +37,7 @@ class DigestFrequency(str, Enum):
 
 class ContentType(str, Enum):
     """Valid content types for digest."""
-    summaries = "summaries"
+    blockers = "blockers"
     activities = "activities"
     tasks_assigned = "tasks_assigned"
     risks_critical = "risks_critical"
@@ -52,7 +52,7 @@ class EmailDigestPreferences(BaseModel):
     enabled: bool = Field(default=False, description="Enable/disable email digests")
     frequency: DigestFrequency = Field(default=DigestFrequency.weekly, description="Digest frequency: daily, weekly, monthly, never")
     content_types: List[ContentType] = Field(
-        default=[ContentType.summaries, ContentType.tasks_assigned, ContentType.risks_critical],
+        default=[ContentType.blockers, ContentType.tasks_assigned, ContentType.risks_critical],
         description="Content to include in digest"
     )
     project_filter: str = Field(default="all", description="Project filter: all or specific project IDs")
@@ -111,7 +111,7 @@ async def get_digest_preferences(
     email_digest = preferences.get('email_digest', {
         'enabled': False,
         'frequency': 'weekly',
-        'content_types': ['summaries', 'tasks_assigned', 'risks_critical'],
+        'content_types': ['blockers', 'tasks_assigned', 'risks_critical'],
         'project_filter': 'all',
         'include_portfolio_rollup': True,
         'last_sent_at': None
@@ -238,37 +238,105 @@ async def send_test_digest(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Send a test digest email to the current user immediately.
+    Send ALL test emails to the current user immediately.
+
+    This will send:
+    - Daily digest
+    - Weekly digest
+    - Monthly digest
+    - Onboarding welcome email
+    - Inactive reminder email
 
     Args:
         current_user: Current authenticated user
         db: Database session
 
     Returns:
-        Job ID and status
+        Job IDs and status for all queued emails
     """
     from queue_config import queue_config
     from datetime import timedelta
 
-    # Calculate time period (last 7 days for test)
     now = datetime.utcnow()
-    start_date = now - timedelta(weeks=1)
+    jobs = []
 
-    # Enqueue test digest email job
-    job = queue_config.high_queue.enqueue(
+    # 1. Daily digest (last 24 hours)
+    daily_start = now - timedelta(days=1)
+    daily_job = queue_config.high_queue.enqueue(
         'tasks.email_tasks.send_digest_email_task',
         user_id=str(current_user.id),
-        digest_type='weekly',
-        start_date=start_date.isoformat(),
+        digest_type='daily',
+        start_date=daily_start.isoformat(),
         end_date=now.isoformat(),
         job_timeout='5m'
     )
+    jobs.append({
+        "email_type": "daily_digest",
+        "job_id": daily_job.id,
+        "status": daily_job.get_status()
+    })
+
+    # 2. Weekly digest (last 7 days)
+    weekly_start = now - timedelta(weeks=1)
+    weekly_job = queue_config.high_queue.enqueue(
+        'tasks.email_tasks.send_digest_email_task',
+        user_id=str(current_user.id),
+        digest_type='weekly',
+        start_date=weekly_start.isoformat(),
+        end_date=now.isoformat(),
+        job_timeout='5m'
+    )
+    jobs.append({
+        "email_type": "weekly_digest",
+        "job_id": weekly_job.id,
+        "status": weekly_job.get_status()
+    })
+
+    # 3. Monthly digest (last 30 days)
+    monthly_start = now - timedelta(days=30)
+    monthly_job = queue_config.high_queue.enqueue(
+        'tasks.email_tasks.send_digest_email_task',
+        user_id=str(current_user.id),
+        digest_type='monthly',
+        start_date=monthly_start.isoformat(),
+        end_date=now.isoformat(),
+        job_timeout='5m'
+    )
+    jobs.append({
+        "email_type": "monthly_digest",
+        "job_id": monthly_job.id,
+        "status": monthly_job.get_status()
+    })
+
+    # 4. Onboarding welcome email
+    onboarding_job = queue_config.high_queue.enqueue(
+        'tasks.email_tasks.send_onboarding_email_task',
+        user_id=str(current_user.id),
+        job_timeout='5m'
+    )
+    jobs.append({
+        "email_type": "onboarding_welcome",
+        "job_id": onboarding_job.id,
+        "status": onboarding_job.get_status()
+    })
+
+    # 5. Inactive user reminder email
+    inactive_job = queue_config.high_queue.enqueue(
+        'tasks.email_tasks.send_inactive_reminder_task',
+        user_id=str(current_user.id),
+        job_timeout='5m'
+    )
+    jobs.append({
+        "email_type": "inactive_reminder",
+        "job_id": inactive_job.id,
+        "status": inactive_job.get_status()
+    })
 
     return {
         "success": True,
-        "message": "Test digest email queued for sending",
-        "job_id": job.id,
-        "status": job.get_status()
+        "message": f"All {len(jobs)} test emails queued for sending",
+        "total_emails": len(jobs),
+        "jobs": jobs
     }
 
 

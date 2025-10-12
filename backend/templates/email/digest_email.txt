@@ -8,7 +8,7 @@ Here's your {{ digest_type }} digest for {{ digest_period }}.
 === SUMMARY STATISTICS ===
 
 Active Projects: {{ summary_stats.projects_active }}
-New Summaries: {{ summary_stats.new_summaries }}
+Active Blockers: {{ summary_stats.active_blockers }}
 Pending Tasks: {{ summary_stats.pending_tasks }}
 Critical Risks: {{ summary_stats.critical_risks }}
 
@@ -19,15 +19,6 @@ Critical Risks: {{ summary_stats.critical_risks }}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 {{ project.name }}
 {% if project.organization_name %}Organization: {{ project.organization_name }}{% endif %}
-
-{% if project.summaries and project.summaries|length > 0 %}
-📝 Recent Summaries ({{ project.summaries|length }}):
-{% for summary in project.summaries[:3] %}
-  • {{ summary.title }}
-    {{ summary.created_at|format_datetime }}
-    {% if summary.key_points %}{{ summary.key_points|truncate_text(150) }}{% endif %}
-{% endfor %}
-{% endif %}
 
 {% if project.tasks and project.tasks|length > 0 %}
 ✅ Your Tasks ({{ project.tasks|length }}):
@@ -43,6 +34,14 @@ Critical Risks: {{ summary_stats.critical_risks }}
 {% endfor %}
 {% endif %}
 
+{% if project.blockers and project.blockers|length > 0 %}
+🚧 Active Blockers ({{ project.blockers|length }}):
+{% for blocker in project.blockers[:3] %}
+  • [{{ blocker.impact|upper }}] {{ blocker.title }}
+    {{ blocker.description|truncate(100, True) }}{% if blocker.owner %} (Owner: {{ blocker.owner }}){% endif %}
+{% endfor %}
+{% endif %}
+
 View Project: {{ frontend_url }}/projects/{{ project.id }}
 
 {% endfor %}
@@ -50,12 +49,12 @@ View Project: {{ frontend_url }}/projects/{{ project.id }}
 No activity in this period. Start by recording a meeting or creating a summary!
 {% endif %}
 
-Open TellMeMo Dashboard: {{ dashboard_url }}
+Open TellMeMo Dashboard: https://app.tellmemo.io/#/dashboard
 
 You're receiving this digest because you've enabled {{ digest_type }} email notifications.
-Manage your email preferences: {{ frontend_url }}/settings/email-preferences
+Manage your email preferences: https://app.tellmemo.io/#/profile/email-preferences
 
 ---
 © {{ current_year }} TellMeMo. All rights reserved.
-Email Preferences: {{ frontend_url }}/settings/email-preferences
+Email Preferences: https://app.tellmemo.io/#/profile/email-preferences
 Unsubscribe: {{ unsubscribe_url }}
