@@ -58,6 +58,8 @@
 - ✅ Scheduled job system for automated sending
 - ✅ Email unsubscribe functionality
 - ✅ Digest preview in UI before sending
+- ✅ Onboarding welcome email (triggered on registration)
+- ✅ Inactive user reminder emails (for users with no activity after 7 days)
 
 **Out of Scope (Future Enhancements):**
 - ❌ Real-time email notifications (instant alerts)
@@ -66,6 +68,8 @@
 - ❌ Custom email template builder UI
 - ❌ A/B testing for email content
 - ❌ Multiple email provider support (only SendGrid for MVP)
+- ❌ Complex drip email campaigns
+- ❌ Re-engagement sequences for long-term inactive users
 
 ---
 
@@ -256,19 +260,32 @@ The `Notification` model already has:
 - `email_sent_at` - Timestamp when email was sent
 - `extra_data` (metadata) - Can store digest info
 
-**Create new notification category:**
+**Create new notification categories:**
 - Add `EMAIL_DIGEST_SENT` to `NotificationCategory` enum
+- Add `EMAIL_ONBOARDING_SENT` to `NotificationCategory` enum
+- Add `EMAIL_INACTIVE_REMINDER_SENT` to `NotificationCategory` enum
 
-### 3. Migration Script
+### 3. User Activity Tracking
+
+**Use existing `activities` table!**
+
+Track user engagement by monitoring:
+- `created_at` - When activity was created
+- `user_id` - Activity owner
+- Query last activity date to determine if user is inactive (no activities in last 7 days)
+
+### 4. Migration Script
 
 **Alembic Migration:** `add_email_digest_preferences.py`
 
 The migration will:
 - Update existing users with default `email_digest` preferences in JSON field
-- Set `enabled: false` by default
+- Set `enabled: false` by default (to avoid spamming existing users)
 - Set default frequency to "weekly"
 - Set default timezone to "UTC"
 - Include default content types: summaries, tasks_assigned, risks_critical
+
+**Note:** New users will have `email_digest.enabled: true` set during registration to receive onboarding emails
 
 ---
 
@@ -325,12 +342,16 @@ Add all environment variables to Settings class with proper types and defaults.
 - Aggregate digest data from database
 - Query users based on preferences
 - Enqueue email jobs in Redis Queue
+- Send onboarding welcome emails
+- Send inactive user reminder emails
 
 **Methods:**
 - `generate_daily_digests()`: Create daily digest jobs
 - `generate_weekly_digests()`: Create weekly digest jobs
 - `generate_monthly_digests()`: Create monthly digest jobs
 - `aggregate_digest_data()`: Collect all data for a user's digest
+- `send_onboarding_email()`: Triggered on user registration
+- `check_inactive_users()`: Find users with no activity in 7 days and send reminder
 - `_get_user_projects()`: Fetch projects based on user preferences
 - `_get_project_summaries()`: Get summaries in time period
 - `_get_project_activities()`: Get activities in time period
@@ -338,6 +359,8 @@ Add all environment variables to Settings class with proper types and defaults.
 - `_get_critical_risks()`: Get high/critical risks
 - `_calculate_stats()`: Calculate summary statistics
 - `_format_period()`: Format time period for display
+- `_get_user_last_activity()`: Get timestamp of user's last activity
+- `_has_sent_inactive_reminder()`: Check if inactive reminder already sent
 
 ### 5. Email Task (Redis Queue)
 
@@ -350,10 +373,12 @@ Add all environment variables to Settings class with proper types and defaults.
 - Error handling and retry logic
 
 **Functions:**
-- `send_digest_email_task()`: RQ task entry point
+- `send_digest_email_task()`: RQ task entry point for digest emails
+- `send_onboarding_email_task()`: RQ task for onboarding welcome email
+- `send_inactive_reminder_task()`: RQ task for inactive user reminders
 - `_send_digest_async()`: Async implementation
 
-**Process:**
+**Process for Digest Emails:**
 1. Fetch user from database
 2. Calculate time period based on digest type
 3. Aggregate digest data via DigestService
@@ -361,6 +386,18 @@ Add all environment variables to Settings class with proper types and defaults.
 5. Send email via SendGridService
 6. Create notification record
 7. Update user preferences with last_sent_at timestamp
+
+**Process for Onboarding Email:**
+1. Trigger on user registration (hook in auth/registration endpoint)
+2. Send welcome email with getting started guide
+3. Create notification record with EMAIL_ONBOARDING_SENT category
+
+**Process for Inactive Reminder:**
+1. Check user's last activity timestamp (from activities table)
+2. If no activity in 7 days AND no reminder sent, queue reminder email
+3. Send email with tips to record first meeting
+4. Create notification record with EMAIL_INACTIVE_REMINDER_SENT category
+5. Only send once per user (check notification history)
 
 ### 6. Email Template Service
 
@@ -375,6 +412,10 @@ Add all environment variables to Settings class with proper types and defaults.
 **Methods:**
 - `render_digest_email()`: Render HTML digest template
 - `render_digest_email_text()`: Render plain text version
+- `render_onboarding_email()`: Render welcome email template
+- `render_onboarding_email_text()`: Render welcome plain text
+- `render_inactive_reminder_email()`: Render inactive user reminder template
+- `render_inactive_reminder_email_text()`: Render inactive reminder plain text
 - `_fallback_html()`: Simple HTML fallback
 - `_fallback_text()`: Simple text fallback
 
@@ -386,6 +427,7 @@ Add all environment variables to Settings class with proper types and defaults.
 - Initialize APScheduler
 - Configure cron triggers for digest jobs
 - Run scheduled digest generation
+- Check for inactive users periodically
 
 **Methods:**
 - `start()`: Start scheduler and register jobs
@@ -393,11 +435,13 @@ Add all environment variables to Settings class with proper types and defaults.
 - `_run_daily_digests()`: Execute daily digest generation
 - `_run_weekly_digests()`: Execute weekly digest generation
 - `_run_monthly_digests()`: Execute monthly digest generation
+- `_check_inactive_users()`: Check for users inactive for 7+ days
 
 **Schedule:**
-- Daily: Every day at 8 AM UTC
-- Weekly: Every Monday at 8 AM UTC
-- Monthly: 1st of each month at 8 AM UTC
+- Daily Digests: Every day at 8 AM UTC
+- Weekly Digests: Every Monday at 8 AM UTC
+- Monthly Digests: 1st of each month at 8 AM UTC
+- Inactive User Check: Once per day at 9 AM UTC (runs after digests)
 
 ### 8. API Endpoints
 
@@ -437,6 +481,10 @@ backend/
         ├── base.html                   # Base template with header/footer
         ├── digest_email.html           # HTML digest template
         ├── digest_email.txt            # Plain text digest template
+        ├── onboarding_email.html       # Welcome email for new users
+        ├── onboarding_email.txt        # Plain text welcome email
+        ├── inactive_reminder.html      # Reminder email for inactive users
+        ├── inactive_reminder.txt       # Plain text inactive reminder
         ├── components/
         │   ├── summary_card.html       # Summary component
         │   ├── task_list.html          # Task list component
@@ -487,6 +535,36 @@ backend/
 - Styled cards for each project
 - Color-coded risk alerts (red)
 - Responsive button styling
+
+### Onboarding Email Template
+
+**File:** `backend/templates/email/onboarding_email.html`
+
+**Sections:**
+1. **Welcome Greeting**: Personalized welcome message
+2. **Getting Started Guide**: 3-step quick start
+   - Step 1: Create your first project
+   - Step 2: Record or upload meeting audio
+   - Step 3: View AI-generated summaries
+3. **Feature Highlights**: Key platform capabilities
+4. **Call to Action**: Get Started button linking to dashboard
+
+**Trigger:** Sent immediately after user registration (via registration endpoint hook)
+
+### Inactive Reminder Email Template
+
+**File:** `backend/templates/email/inactive_reminder.html`
+
+**Sections:**
+1. **Friendly Reminder**: We noticed you haven't recorded any meetings yet
+2. **Simple Instructions**: How to record your first meeting (3 easy steps)
+3. **Benefits Reminder**: Why meeting summaries save time
+4. **Help Resources**: Link to documentation/support
+5. **Call to Action**: Record Your First Meeting button
+
+**Trigger:** Sent once if user has no activities for 7 days after registration
+
+**Note:** Keep tone encouraging, not pushy. Only send once per user.
 
 ---
 
@@ -560,6 +638,7 @@ Add email preferences screen to settings menu with appropriate routing.
 
 ### 3. Manual Testing Checklist
 
+**Digest Emails:**
 - [ ] Configure SendGrid API key and verified sender
 - [ ] Enable email digests for test user
 - [ ] Trigger manual digest send
@@ -572,6 +651,16 @@ Add email preferences screen to settings menu with appropriate routing.
 - [ ] Test plain text fallback
 - [ ] Verify SendGrid dashboard shows delivery statistics
 - [ ] Test rate limiting (don't exceed 100 emails/day on free tier)
+
+**Onboarding & Inactive Reminders:**
+- [ ] Register new test user and verify welcome email sent immediately
+- [ ] Check welcome email content and formatting
+- [ ] Create test user with no activities for 7+ days
+- [ ] Wait for scheduled job to run (or trigger manually)
+- [ ] Verify inactive reminder email sent once
+- [ ] Verify reminder not sent again for same user
+- [ ] Test that users with recent activities don't receive reminders
+- [ ] Verify notification records created for both email types
 
 ---
 
@@ -586,7 +675,10 @@ Add email preferences screen to settings menu with appropriate routing.
 - [ ] Implement `SendGridService` with email sending capability
 - [ ] Create database migration for email preferences
 - [ ] Update `User` model with default email preferences
+- [ ] Add EMAIL_ONBOARDING_SENT, EMAIL_INACTIVE_REMINDER_SENT to NotificationCategory enum
 - [ ] Create `email_preferences` API endpoints (GET, PUT)
+- [ ] Implement onboarding email template (HTML + text)
+- [ ] Hook onboarding email into user registration endpoint
 
 **Frontend:**
 - [ ] Create Email Preferences screen UI
@@ -598,6 +690,7 @@ Add email preferences screen to settings menu with appropriate routing.
 - [ ] Test API endpoints
 - [ ] Test UI interactions
 - [ ] Send test email via SendGrid to verify integration
+- [ ] Test onboarding email on new user registration
 
 ### Phase 2: Digest Generation (Week 2)
 
@@ -621,12 +714,16 @@ Add email preferences screen to settings menu with appropriate routing.
 - [ ] Add scheduler initialization to FastAPI startup
 - [ ] Configure cron triggers for daily/weekly/monthly
 - [ ] Implement batch processing for rate limiting
+- [ ] Implement inactive user reminder template (HTML + text)
+- [ ] Add `check_inactive_users()` scheduled job (runs daily at 9 AM UTC)
+- [ ] Implement logic to check last activity and send reminder once per user
 
 **Testing:**
 - [ ] Test scheduler triggers
 - [ ] Test batch processing
 - [ ] Test rate limiting
 - [ ] Monitor logs for scheduled runs
+- [ ] Test inactive user detection and reminder sending
 
 ### Phase 4: Polish & Features (Week 4)
 
