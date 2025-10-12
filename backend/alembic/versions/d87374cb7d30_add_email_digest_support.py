@@ -43,13 +43,13 @@ def upgrade() -> None:
     # Index on users preferences for digest queries (GIN index for JSONB)
     op.execute("""
         CREATE INDEX IF NOT EXISTS idx_users_preferences_digest
-        ON users USING GIN (preferences);
+        ON users USING GIN ((preferences::jsonb) jsonb_path_ops);
     """)
 
     # Composite index for activity queries (inactive user detection)
     op.execute("""
         CREATE INDEX IF NOT EXISTS idx_activities_user_created
-        ON activities (user_id, created_at DESC);
+        ON activities (user_id, timestamp DESC);
     """)
 
     # Composite index for notification queries (check if email sent)
@@ -65,16 +65,18 @@ def upgrade() -> None:
     """)
 
     # Index for tasks by assignee and due date (digest content)
-    op.execute("""
-        CREATE INDEX IF NOT EXISTS idx_tasks_assignee_due
-        ON tasks (assigned_to, due_date) WHERE assigned_to IS NOT NULL;
-    """)
+    # Note: Commented out as tasks table schema may not have these columns yet
+    # op.execute("""
+    #     CREATE INDEX IF NOT EXISTS idx_tasks_assignee_due
+    #     ON tasks (assigned_to, due_date) WHERE assigned_to IS NOT NULL;
+    # """)
 
     # 3. Set default email preferences for existing users
     # New users will get these defaults during registration
     op.execute("""
         UPDATE users
-        SET preferences = COALESCE(preferences, '{}'::jsonb) ||
+        SET preferences = (
+            COALESCE(preferences::jsonb, '{}'::jsonb) ||
             jsonb_build_object(
                 'email_digest', jsonb_build_object(
                     'enabled', false,
@@ -85,8 +87,9 @@ def upgrade() -> None:
                     'last_sent_at', NULL
                 )
             )
+        )::json
         WHERE preferences IS NULL
-           OR NOT preferences ? 'email_digest';
+           OR NOT (preferences::jsonb ? 'email_digest');
     """)
 
 
@@ -94,7 +97,7 @@ def downgrade() -> None:
     """Remove email digest support."""
 
     # Drop indexes
-    op.execute("DROP INDEX IF EXISTS idx_tasks_assignee_due;")
+    # op.execute("DROP INDEX IF EXISTS idx_tasks_assignee_due;")  # Index was not created
     op.execute("DROP INDEX IF EXISTS idx_summaries_project_created;")
     op.execute("DROP INDEX IF EXISTS idx_notifications_user_category;")
     op.execute("DROP INDEX IF EXISTS idx_activities_user_created;")
@@ -103,8 +106,8 @@ def downgrade() -> None:
     # Remove email_digest preferences from users
     op.execute("""
         UPDATE users
-        SET preferences = preferences - 'email_digest'
-        WHERE preferences ? 'email_digest';
+        SET preferences = (preferences::jsonb - 'email_digest')::json
+        WHERE preferences::jsonb ? 'email_digest';
     """)
 
     # Note: PostgreSQL doesn't support removing enum values

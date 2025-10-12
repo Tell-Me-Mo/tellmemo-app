@@ -69,6 +69,7 @@ class Settings(BaseSettings):
     email_digest_enabled: bool = Field(default=True, env="EMAIL_DIGEST_ENABLED")
     email_digest_batch_size: int = Field(default=50, env="EMAIL_DIGEST_BATCH_SIZE")
     email_digest_rate_limit: int = Field(default=100, env="EMAIL_DIGEST_RATE_LIMIT")
+    digest_send_hour_utc: int = Field(default=8, env="DIGEST_SEND_HOUR_UTC")  # UTC hour (0-23) when to send digests
 
     # Security
     api_key: str = Field(default="development_api_key_change_in_production", env="API_KEY")

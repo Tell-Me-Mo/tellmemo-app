@@ -2,10 +2,10 @@
 Digest Scheduler Service using APScheduler
 
 This service manages scheduled email digest jobs:
-- Daily digests: Every day at 8 AM UTC
-- Weekly digests: Every Monday at 8 AM UTC
-- Monthly digests: 1st of each month at 8 AM UTC
-- Inactive user check: Once per day at 9 AM UTC
+- Daily digests: Every day at configured hour UTC (default 8 AM)
+- Weekly digests: Every Monday at configured hour UTC (default 8 AM)
+- Monthly digests: 1st of each month at configured hour UTC (default 8 AM)
+- Inactive user check: Once per day at (configured hour + 1) UTC
 """
 
 import logging
@@ -46,49 +46,53 @@ class DigestScheduler:
 
             logger.info("Starting digest scheduler...")
 
-            # Register daily digest job (8 AM UTC every day)
+            # Get configurable digest send hour
+            digest_hour = settings.digest_send_hour_utc
+            inactive_check_hour = (digest_hour + 1) % 24  # 1 hour after digest send
+
+            # Register daily digest job (configurable hour UTC every day)
             self.scheduler.add_job(
                 self._run_daily_digests,
-                trigger=CronTrigger(hour=8, minute=0, timezone='UTC'),
+                trigger=CronTrigger(hour=digest_hour, minute=0, timezone='UTC'),
                 id='daily_digest_job',
                 name='Daily Digest Generation',
                 replace_existing=True,
                 misfire_grace_time=3600  # Allow 1 hour grace period
             )
-            logger.info("✅ Scheduled daily digest job: Every day at 8 AM UTC")
+            logger.info(f"✅ Scheduled daily digest job: Every day at {digest_hour}:00 UTC")
 
-            # Register weekly digest job (Monday 8 AM UTC)
+            # Register weekly digest job (Monday at configurable hour UTC)
             self.scheduler.add_job(
                 self._run_weekly_digests,
-                trigger=CronTrigger(day_of_week='mon', hour=8, minute=0, timezone='UTC'),
+                trigger=CronTrigger(day_of_week='mon', hour=digest_hour, minute=0, timezone='UTC'),
                 id='weekly_digest_job',
                 name='Weekly Digest Generation',
                 replace_existing=True,
                 misfire_grace_time=3600
             )
-            logger.info("✅ Scheduled weekly digest job: Every Monday at 8 AM UTC")
+            logger.info(f"✅ Scheduled weekly digest job: Every Monday at {digest_hour}:00 UTC")
 
-            # Register monthly digest job (1st of month 8 AM UTC)
+            # Register monthly digest job (1st of month at configurable hour UTC)
             self.scheduler.add_job(
                 self._run_monthly_digests,
-                trigger=CronTrigger(day=1, hour=8, minute=0, timezone='UTC'),
+                trigger=CronTrigger(day=1, hour=digest_hour, minute=0, timezone='UTC'),
                 id='monthly_digest_job',
                 name='Monthly Digest Generation',
                 replace_existing=True,
                 misfire_grace_time=3600
             )
-            logger.info("✅ Scheduled monthly digest job: 1st of each month at 8 AM UTC")
+            logger.info(f"✅ Scheduled monthly digest job: 1st of each month at {digest_hour}:00 UTC")
 
-            # Register inactive user check job (9 AM UTC every day)
+            # Register inactive user check job (1 hour after digest send)
             self.scheduler.add_job(
                 self._check_inactive_users,
-                trigger=CronTrigger(hour=9, minute=0, timezone='UTC'),
+                trigger=CronTrigger(hour=inactive_check_hour, minute=0, timezone='UTC'),
                 id='inactive_user_check_job',
                 name='Inactive User Check',
                 replace_existing=True,
                 misfire_grace_time=3600
             )
-            logger.info("✅ Scheduled inactive user check job: Every day at 9 AM UTC")
+            logger.info(f"✅ Scheduled inactive user check job: Every day at {inactive_check_hour}:00 UTC")
 
             # Start the scheduler
             self.scheduler.start()
@@ -127,7 +131,7 @@ class DigestScheduler:
         """
         Execute daily digest generation.
 
-        This is called by APScheduler at 8 AM UTC every day.
+        This is called by APScheduler at the configured digest send hour UTC.
         """
         logger.info("🔄 Starting daily digest generation job...")
         start_time = datetime.utcnow()
@@ -156,7 +160,7 @@ class DigestScheduler:
         """
         Execute weekly digest generation.
 
-        This is called by APScheduler at 8 AM UTC every Monday.
+        This is called by APScheduler at the configured digest send hour UTC every Monday.
         """
         logger.info("🔄 Starting weekly digest generation job...")
         start_time = datetime.utcnow()
@@ -185,7 +189,7 @@ class DigestScheduler:
         """
         Execute monthly digest generation.
 
-        This is called by APScheduler at 8 AM UTC on the 1st of each month.
+        This is called by APScheduler at the configured digest send hour UTC on the 1st of each month.
         """
         logger.info("🔄 Starting monthly digest generation job...")
         start_time = datetime.utcnow()
@@ -214,7 +218,7 @@ class DigestScheduler:
         """
         Check for inactive users and send reminder emails.
 
-        This is called by APScheduler at 9 AM UTC every day.
+        This is called by APScheduler 1 hour after the digest send time every day.
         """
         logger.info("🔄 Starting inactive user check job...")
         start_time = datetime.utcnow()

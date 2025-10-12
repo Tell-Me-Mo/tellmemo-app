@@ -42,8 +42,8 @@ class EmailPreferencesResponse(BaseModel):
 
 class DigestPreviewResponse(BaseModel):
     """Model for digest preview response."""
-    html_content: str
-    text_content: str
+    html_preview: str
+    text_preview: Optional[str] = None
     digest_data: Dict[str, Any]
 
 
@@ -51,7 +51,7 @@ class DigestPreviewResponse(BaseModel):
 router = APIRouter(prefix="/api/v1/email-preferences", tags=["email-preferences"])
 
 
-@router.get("/digest", response_model=EmailPreferencesResponse)
+@router.get("/digest", response_model=EmailDigestPreferences)
 async def get_digest_preferences(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -86,12 +86,10 @@ async def get_digest_preferences(
         'last_sent_at': None
     })
 
-    return EmailPreferencesResponse(
-        email_digest=EmailDigestPreferences(**email_digest)
-    )
+    return EmailDigestPreferences(**email_digest)
 
 
-@router.put("/digest", response_model=EmailPreferencesResponse)
+@router.put("/digest", response_model=EmailDigestPreferences)
 async def update_digest_preferences(
     preferences: EmailDigestPreferences,
     current_user: User = Depends(get_current_user),
@@ -112,7 +110,7 @@ async def update_digest_preferences(
     valid_frequencies = ['daily', 'weekly', 'monthly', 'never']
     if preferences.frequency not in valid_frequencies:
         raise HTTPException(
-            status_code=400,
+            status_code=422,
             detail=f"Invalid frequency. Must be one of: {', '.join(valid_frequencies)}"
         )
 
@@ -121,7 +119,7 @@ async def update_digest_preferences(
     for content_type in preferences.content_types:
         if content_type not in valid_content_types:
             raise HTTPException(
-                status_code=400,
+                status_code=422,
                 detail=f"Invalid content type '{content_type}'. Must be one of: {', '.join(valid_content_types)}"
             )
 
@@ -146,7 +144,7 @@ async def update_digest_preferences(
     )
     await db.commit()
 
-    return EmailPreferencesResponse(email_digest=preferences)
+    return preferences
 
 
 @router.post("/digest/preview", response_model=DigestPreviewResponse)
@@ -217,8 +215,8 @@ async def preview_digest(
     text_content = template_service.render_digest_email_text(context)
 
     return DigestPreviewResponse(
-        html_content=html_content,
-        text_content=text_content,
+        html_preview=html_content,
+        text_preview=text_content,
         digest_data=digest_data
     )
 
