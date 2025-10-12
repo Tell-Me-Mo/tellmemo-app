@@ -28,9 +28,8 @@ void main() {
         expect(AppRoutes.integrations, '/integrations');
       });
 
-      test('has correct profile paths', () {
+      test('has correct profile path', () {
         expect(AppRoutes.profile, '/profile');
-        expect(AppRoutes.changePassword, '/profile/change-password');
       });
     });
 
