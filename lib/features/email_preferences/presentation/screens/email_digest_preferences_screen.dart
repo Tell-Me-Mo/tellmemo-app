@@ -26,8 +26,13 @@ class _EmailDigestPreferencesScreenState
   void initState() {
     super.initState();
     // Load preferences on init
-    Future.microtask(() {
-      ref.read(emailPreferencesControllerProvider.notifier).loadPreferences();
+    Future.microtask(() async {
+      try {
+        await ref.read(emailPreferencesControllerProvider.notifier).loadPreferences();
+      } catch (e) {
+        // Error will be in state, but good to log
+        debugPrint('Failed to load preferences: $e');
+      }
     });
   }
 
@@ -114,7 +119,19 @@ class _EmailDigestPreferencesScreenState
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final state = ref.watch(emailPreferencesControllerProvider);
+    // Use selective watching for better performance
+    final preferences = ref.watch(
+      emailPreferencesControllerProvider.select((state) => state.preferences),
+    );
+    final isLoading = ref.watch(
+      emailPreferencesControllerProvider.select((state) => state.isLoading),
+    );
+    final error = ref.watch(
+      emailPreferencesControllerProvider.select((state) => state.error),
+    );
+    final hasUnsavedChanges = ref.watch(
+      emailPreferencesControllerProvider.select((state) => state.hasUnsavedChanges),
+    );
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 1200;
     final isMobile = screenWidth <= 768;
@@ -141,24 +158,24 @@ class _EmailDigestPreferencesScreenState
                   horizontal: isDesktop ? 24 : 16,
                   vertical: isMobile ? 12 : 16,
                 ),
-                child: _buildHeader(context, state),
+                child: _buildHeader(context),
               ),
             ),
           ),
 
           // Content
           Expanded(
-            child: state.isLoading
+            child: isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : state.error != null
-                    ? _buildErrorState(state.error!)
-                    : state.preferences == null
+                : error != null
+                    ? _buildErrorState(error)
+                    : preferences == null
                         ? const Center(child: Text('No preferences available'))
-                        : _buildContent(context, state.preferences!),
+                        : _buildContent(context, preferences),
           ),
         ],
       ),
-      floatingActionButton: isMobile && state.hasUnsavedChanges
+      floatingActionButton: isMobile && hasUnsavedChanges
           ? FloatingActionButton.extended(
               onPressed: _saveChanges,
               backgroundColor: theme.colorScheme.primary,
@@ -169,12 +186,17 @@ class _EmailDigestPreferencesScreenState
     );
   }
 
-  Widget _buildHeader(BuildContext context, EmailPreferencesState state) {
+  Widget _buildHeader(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 1200;
     final isMobile = screenWidth <= 768;
+
+    // Use selective watching for hasUnsavedChanges
+    final hasUnsavedChanges = ref.watch(
+      emailPreferencesControllerProvider.select((state) => state.hasUnsavedChanges),
+    );
 
     if (isMobile) {
       return Row(
@@ -247,7 +269,7 @@ class _EmailDigestPreferencesScreenState
         ),
         const Spacer(),
         if (isDesktop) ...[
-          if (state.hasUnsavedChanges) ...[
+          if (hasUnsavedChanges) ...[
             OutlinedButton(
               onPressed: _discardChanges,
               child: const Text('Discard'),

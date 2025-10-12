@@ -11,7 +11,7 @@ import asyncio
 import logging
 import uuid
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from rq import get_current_job
 
 from services.email.sendgrid_service import sendgrid_service
@@ -108,7 +108,7 @@ async def _send_digest_email_async(
     from models.notification import Notification, NotificationType, NotificationPriority
     from sqlalchemy import select, update
 
-    async for session in db_manager.get_session():
+    async with db_manager.get_session() as session:
         try:
             # 1. Fetch user
             if rq_job:
@@ -153,7 +153,7 @@ async def _send_digest_email_async(
                 {
                     'user_id': user_id,
                     'purpose': 'unsubscribe',
-                    'exp': datetime.utcnow().timestamp() + (90 * 24 * 60 * 60)  # 90 days
+                    'exp': int((datetime.utcnow() + timedelta(days=90)).timestamp())  # 90 days
                 },
                 settings.jwt_secret,
                 algorithm='HS256'
@@ -265,9 +265,6 @@ async def _send_digest_email_async(
             await session.rollback()
             raise
 
-        finally:
-            break
-
 
 def send_onboarding_email_task(user_id: str):
     """
@@ -318,7 +315,7 @@ async def _send_onboarding_email_async(user_id: str, rq_job) -> dict:
     from models.notification import Notification, NotificationType, NotificationPriority
     from sqlalchemy import select
 
-    async for session in db_manager.get_session():
+    async with db_manager.get_session() as session:
         try:
             # Fetch user
             result = await session.execute(
@@ -334,7 +331,7 @@ async def _send_onboarding_email_async(user_id: str, rq_job) -> dict:
                 {
                     'user_id': user_id,
                     'purpose': 'unsubscribe',
-                    'exp': datetime.utcnow().timestamp() + (90 * 24 * 60 * 60)
+                    'exp': int((datetime.utcnow() + timedelta(days=90)).timestamp())
                 },
                 settings.jwt_secret,
                 algorithm='HS256'
@@ -394,9 +391,6 @@ async def _send_onboarding_email_async(user_id: str, rq_job) -> dict:
             await session.rollback()
             raise
 
-        finally:
-            break
-
 
 def send_inactive_reminder_task(user_id: str):
     """
@@ -447,7 +441,7 @@ async def _send_inactive_reminder_async(user_id: str, rq_job) -> dict:
     from models.notification import Notification, NotificationType, NotificationPriority
     from sqlalchemy import select
 
-    async for session in db_manager.get_session():
+    async with db_manager.get_session() as session:
         try:
             # Fetch user
             result = await session.execute(
@@ -463,7 +457,7 @@ async def _send_inactive_reminder_async(user_id: str, rq_job) -> dict:
                 {
                     'user_id': user_id,
                     'purpose': 'unsubscribe',
-                    'exp': datetime.utcnow().timestamp() + (90 * 24 * 60 * 60)
+                    'exp': int((datetime.utcnow() + timedelta(days=90)).timestamp())
                 },
                 settings.jwt_secret,
                 algorithm='HS256'
@@ -522,6 +516,3 @@ async def _send_inactive_reminder_async(user_id: str, rq_job) -> dict:
             logger.error(f"Failed to send inactive reminder: {e}", exc_info=True)
             await session.rollback()
             raise
-
-        finally:
-            break

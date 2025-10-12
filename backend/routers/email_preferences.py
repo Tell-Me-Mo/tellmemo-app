@@ -1,6 +1,7 @@
 """API endpoints for email digest preferences."""
 
 from typing import List, Optional, Dict, Any
+from enum import Enum
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
@@ -16,20 +17,50 @@ from config import get_settings
 
 settings = get_settings()
 
+# Enums for validation
+
+
+class DigestType(str, Enum):
+    """Valid digest types."""
+    daily = "daily"
+    weekly = "weekly"
+    monthly = "monthly"
+
+
+class DigestFrequency(str, Enum):
+    """Valid digest frequencies."""
+    daily = "daily"
+    weekly = "weekly"
+    monthly = "monthly"
+    never = "never"
+
+
+class ContentType(str, Enum):
+    """Valid content types for digest."""
+    summaries = "summaries"
+    activities = "activities"
+    tasks_assigned = "tasks_assigned"
+    risks_critical = "risks_critical"
+    decisions = "decisions"
+
+
 # Pydantic models for request/response
 
 
 class EmailDigestPreferences(BaseModel):
     """Model for email digest preferences."""
     enabled: bool = Field(default=False, description="Enable/disable email digests")
-    frequency: str = Field(default="weekly", description="Digest frequency: daily, weekly, monthly, never")
-    content_types: List[str] = Field(
-        default=["summaries", "tasks_assigned", "risks_critical"],
+    frequency: DigestFrequency = Field(default=DigestFrequency.weekly, description="Digest frequency: daily, weekly, monthly, never")
+    content_types: List[ContentType] = Field(
+        default=[ContentType.summaries, ContentType.tasks_assigned, ContentType.risks_critical],
         description="Content to include in digest"
     )
     project_filter: str = Field(default="all", description="Project filter: all or specific project IDs")
     include_portfolio_rollup: bool = Field(default=True, description="Include portfolio-level summaries")
     last_sent_at: Optional[datetime] = Field(default=None, description="Last digest send timestamp")
+
+    class Config:
+        use_enum_values = True  # Automatically convert enums to their values when serializing
 
 
 class EmailPreferencesResponse(BaseModel):
@@ -106,22 +137,8 @@ async def update_digest_preferences(
     Returns:
         Updated email digest preferences
     """
-    # Validate frequency
-    valid_frequencies = ['daily', 'weekly', 'monthly', 'never']
-    if preferences.frequency not in valid_frequencies:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Invalid frequency. Must be one of: {', '.join(valid_frequencies)}"
-        )
-
-    # Validate content types
-    valid_content_types = ['summaries', 'activities', 'tasks_assigned', 'risks_critical', 'decisions']
-    for content_type in preferences.content_types:
-        if content_type not in valid_content_types:
-            raise HTTPException(
-                status_code=422,
-                detail=f"Invalid content type '{content_type}'. Must be one of: {', '.join(valid_content_types)}"
-            )
+    # Validation happens in Pydantic model via Field validators
+    # (frequency and content_types are validated when EmailDigestPreferences is instantiated)
 
     # Get current preferences
     result = await db.execute(
@@ -149,7 +166,7 @@ async def update_digest_preferences(
 
 @router.post("/digest/preview", response_model=DigestPreviewResponse)
 async def preview_digest(
-    digest_type: str = Query(default="weekly", description="Digest type: daily, weekly, monthly"),
+    digest_type: DigestType = Query(default=DigestType.weekly, description="Digest type: daily, weekly, monthly"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -164,13 +181,7 @@ async def preview_digest(
     Returns:
         Preview of HTML and text email content
     """
-    # Validate digest type
-    valid_types = ['daily', 'weekly', 'monthly']
-    if digest_type not in valid_types:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid digest type. Must be one of: {', '.join(valid_types)}"
-        )
+    # Validation is automatic via Enum
 
     # Import services
     from services.email.digest_service import digest_service
@@ -179,10 +190,10 @@ async def preview_digest(
     # Calculate time period based on digest type
     from datetime import timedelta
     now = datetime.utcnow()
-    if digest_type == 'daily':
+    if digest_type == DigestType.daily:
         start_date = now - timedelta(days=1)
         period_text = "Last 24 hours"
-    elif digest_type == 'weekly':
+    elif digest_type == DigestType.weekly:
         start_date = now - timedelta(weeks=1)
         period_text = "Last 7 days"
     else:  # monthly
@@ -200,7 +211,7 @@ async def preview_digest(
     # Prepare template context
     context = {
         'user_name': current_user.name or current_user.email.split('@')[0],
-        'digest_type': digest_type,
+        'digest_type': digest_type.value,
         'digest_period': period_text,
         'summary_stats': digest_data.get('summary_stats', {}),
         'projects': digest_data.get('projects', []),
