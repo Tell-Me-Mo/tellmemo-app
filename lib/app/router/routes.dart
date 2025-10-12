@@ -19,7 +19,6 @@ class AppRoutes {
   static const String integrationDetail = '/integrations/:id';
   static const String settings = '/settings';
   static const String profile = '/profile';
-  static const String changePassword = '/profile/change-password';
   static const String emailPreferences = '/profile/email-preferences';
 
   // Route names
@@ -39,7 +38,6 @@ class AppRoutes {
   static const String integrationDetailName = 'integration-detail';
   static const String settingsName = 'settings';
   static const String profileName = 'profile';
-  static const String changePasswordName = 'change-password';
   static const String emailPreferencesName = 'email-preferences';
 
   // Helper methods for parameterized routes
