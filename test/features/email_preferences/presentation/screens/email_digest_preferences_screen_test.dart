@@ -25,7 +25,7 @@ class MockEmailPreferencesApiService extends EmailPreferencesApiService {
       enabled: true,
       frequency: DigestFrequency.weekly,
       contentTypes: const [
-        DigestContentType.summaries,
+        DigestContentType.blockers,
         DigestContentType.tasksAssigned,
       ],
       includePortfolioRollup: true,
@@ -115,7 +115,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Content to Include'), findsOneWidget);
-      expect(find.text('Meeting Summaries'), findsOneWidget);
+      expect(find.text('Active Blockers'), findsOneWidget);
       expect(find.text('Tasks Assigned to Me'), findsOneWidget);
       expect(find.text('Critical Risks'), findsOneWidget);
     });

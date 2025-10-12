@@ -8,7 +8,7 @@ void main() {
         final json = {
           'enabled': true,
           'frequency': 'weekly',
-          'content_types': ['summaries', 'tasks_assigned', 'risks_critical'],
+          'content_types': ['blockers', 'tasks_assigned', 'risks_critical'],
           'include_portfolio_rollup': true,
           'last_sent_at': '2024-01-15T10:30:00Z',
         };
@@ -17,7 +17,7 @@ void main() {
 
         expect(preferences.enabled, true);
         expect(preferences.frequency, 'weekly');
-        expect(preferences.contentTypes, ['summaries', 'tasks_assigned', 'risks_critical']);
+        expect(preferences.contentTypes, ['blockers', 'tasks_assigned', 'risks_critical']);
         expect(preferences.includePortfolioRollup, true);
         expect(preferences.lastSentAt, '2024-01-15T10:30:00Z');
       });
@@ -67,7 +67,7 @@ void main() {
         final preferences = EmailDigestPreferences(
           enabled: true,
           frequency: 'weekly',
-          contentTypes: const ['summaries', 'tasks_assigned'],
+          contentTypes: const ['blockers', 'tasks_assigned'],
           includePortfolioRollup: true,
           lastSentAt: '2024-01-15T10:30:00Z',
         );
@@ -76,7 +76,7 @@ void main() {
 
         expect(json['enabled'], true);
         expect(json['frequency'], 'weekly');
-        expect(json['content_types'], ['summaries', 'tasks_assigned']);
+        expect(json['content_types'], ['blockers', 'tasks_assigned']);
         expect(json['include_portfolio_rollup'], true);
         // lastSentAt should not be included in toJson (read-only field)
         expect(json.containsKey('last_sent_at'), false);
@@ -102,7 +102,7 @@ void main() {
         final preferences = EmailDigestPreferences(
           enabled: true,
           frequency: 'daily',
-          contentTypes: const ['summaries'],
+          contentTypes: const ['blockers'],
           includePortfolioRollup: false,
           lastSentAt: null,
         );
@@ -118,7 +118,7 @@ void main() {
         final original = EmailDigestPreferences(
           enabled: true,
           frequency: 'weekly',
-          contentTypes: const ['summaries'],
+          contentTypes: const ['blockers'],
           includePortfolioRollup: true,
         );
 
@@ -126,7 +126,7 @@ void main() {
 
         expect(updated.enabled, false);
         expect(updated.frequency, 'weekly');
-        expect(updated.contentTypes, ['summaries']);
+        expect(updated.contentTypes, ['blockers']);
         expect(updated.includePortfolioRollup, true);
       });
 
@@ -134,7 +134,7 @@ void main() {
         final original = EmailDigestPreferences(
           enabled: true,
           frequency: 'weekly',
-          contentTypes: const ['summaries'],
+          contentTypes: const ['blockers'],
           includePortfolioRollup: true,
         );
 
@@ -148,22 +148,22 @@ void main() {
         final original = EmailDigestPreferences(
           enabled: true,
           frequency: 'weekly',
-          contentTypes: const ['summaries'],
+          contentTypes: const ['blockers'],
           includePortfolioRollup: true,
         );
 
         final updated = original.copyWith(
-          contentTypes: ['summaries', 'tasks_assigned', 'risks_critical'],
+          contentTypes: ['blockers', 'tasks_assigned', 'risks_critical'],
         );
 
-        expect(updated.contentTypes, ['summaries', 'tasks_assigned', 'risks_critical']);
+        expect(updated.contentTypes, ['blockers', 'tasks_assigned', 'risks_critical']);
       });
 
       test('creates copy with all fields updated', () {
         final original = EmailDigestPreferences(
           enabled: true,
           frequency: 'weekly',
-          contentTypes: const ['summaries'],
+          contentTypes: const ['blockers'],
           includePortfolioRollup: true,
         );
 
@@ -186,7 +186,7 @@ void main() {
         final original = EmailDigestPreferences(
           enabled: true,
           frequency: 'weekly',
-          contentTypes: const ['summaries', 'tasks_assigned', 'risks_critical'],
+          contentTypes: const ['blockers', 'tasks_assigned', 'risks_critical'],
           includePortfolioRollup: true,
           lastSentAt: '2024-01-15T10:30:00Z',
         );
@@ -233,7 +233,7 @@ void main() {
 
   group('DigestContentType', () {
     test('has correct constants', () {
-      expect(DigestContentType.summaries, 'summaries');
+      expect(DigestContentType.blockers, 'blockers');
       expect(DigestContentType.tasksAssigned, 'tasks_assigned');
       expect(DigestContentType.risksCritical, 'risks_critical');
       expect(DigestContentType.activities, 'activities');
@@ -241,7 +241,7 @@ void main() {
     });
 
     test('displayName returns correct values', () {
-      expect(DigestContentType.displayName(DigestContentType.summaries), 'Meeting Summaries');
+      expect(DigestContentType.displayName(DigestContentType.blockers), 'Active Blockers');
       expect(DigestContentType.displayName(DigestContentType.tasksAssigned), 'Tasks Assigned to Me');
       expect(DigestContentType.displayName(DigestContentType.risksCritical), 'Critical Risks');
       expect(DigestContentType.displayName(DigestContentType.activities), 'Project Activities');
@@ -250,7 +250,7 @@ void main() {
 
     test('all list contains all content types', () {
       expect(DigestContentType.all, [
-        DigestContentType.summaries,
+        DigestContentType.blockers,
         DigestContentType.tasksAssigned,
         DigestContentType.risksCritical,
         DigestContentType.activities,
