@@ -234,41 +234,18 @@ Enqueue Email Job:
 
 ### 1. Add Email Digest Preferences to User
 
-**No new table needed!** Use existing `users.preferences` JSON field:
+**No new table needed!** Use existing `users.preferences` JSON field.
 
-```json
-{
-  "email_digest": {
-    "enabled": true,
-    "frequency": "daily",  // "daily", "weekly", "monthly", "never"
-    "timezone": "America/Los_Angeles",
-    "send_time": "08:00",  // Time to send digest
-    "content_types": [
-      "summaries",
-      "activities",
-      "tasks_assigned",
-      "risks_critical",
-      "decisions"
-    ],
-    "project_filter": {
-      "type": "all",  // "all", "selected", "favorites"
-      "project_ids": []  // If type="selected"
-    },
-    "portfolio_filter": {
-      "enabled": false,
-      "portfolio_ids": []
-    },
-    "include_portfolio_rollup": false,
-    "last_sent_at": "2025-10-12T08:00:00Z"
-  },
-  "email_notifications": {
-    "task_assigned": true,
-    "risk_created": true,
-    "summary_ready": false,
-    "meeting_processed": false
-  }
-}
-```
+**Example preferences structure:**
+- `email_digest.enabled`: boolean
+- `email_digest.frequency`: "daily" | "weekly" | "monthly" | "never"
+- `email_digest.timezone`: User's timezone for scheduling
+- `email_digest.send_time`: Preferred time (e.g., "08:00")
+- `email_digest.content_types`: Array of content to include (summaries, activities, tasks_assigned, risks_critical, decisions)
+- `email_digest.project_filter`: Object defining which projects to include
+- `email_digest.portfolio_filter`: Object defining portfolio selection
+- `email_digest.include_portfolio_rollup`: boolean
+- `email_digest.last_sent_at`: ISO timestamp
 
 ### 2. Email Delivery Tracking
 
@@ -280,52 +257,18 @@ The `Notification` model already has:
 - `extra_data` (metadata) - Can store digest info
 
 **Create new notification category:**
-```python
-class NotificationCategory(enum.Enum):
-    # ... existing categories ...
-    EMAIL_DIGEST_SENT = "email_digest_sent"
-```
+- Add `EMAIL_DIGEST_SENT` to `NotificationCategory` enum
 
 ### 3. Migration Script
 
 **Alembic Migration:** `add_email_digest_preferences.py`
 
-```python
-"""Add email digest feature support
-
-Revision ID: xxxxx
-Revises: xxxxx
-Create Date: 2025-10-12
-"""
-
-from alembic import op
-
-def upgrade():
-    # Update User preferences JSON schema (documentation only)
-    # Add default email_digest preferences for existing users
-    op.execute("""
-        UPDATE users
-        SET preferences = preferences ||
-        '{"email_digest": {
-            "enabled": false,
-            "frequency": "weekly",
-            "timezone": "UTC",
-            "send_time": "08:00",
-            "content_types": ["summaries", "tasks_assigned", "risks_critical"],
-            "project_filter": {"type": "all", "project_ids": []},
-            "portfolio_filter": {"enabled": false, "portfolio_ids": []},
-            "include_portfolio_rollup": false
-        }}'::jsonb
-        WHERE preferences->>'email_digest' IS NULL
-    """)
-
-def downgrade():
-    # Remove email_digest from preferences
-    op.execute("""
-        UPDATE users
-        SET preferences = preferences - 'email_digest'
-    """)
-```
+The migration will:
+- Update existing users with default `email_digest` preferences in JSON field
+- Set `enabled: false` by default
+- Set default frequency to "weekly"
+- Set default timezone to "UTC"
+- Include default content types: summaries, tasks_assigned, risks_critical
 
 ---
 
@@ -335,940 +278,164 @@ def downgrade():
 
 **Add to `.env.example` and `.env`:**
 
-```bash
-# ===== EMAIL/SMTP CONFIGURATION ===== (Required for email digests)
-# Choose SMTP provider: sendgrid, aws_ses, mailgun, smtp
-EMAIL_PROVIDER=smtp
-EMAIL_FROM_ADDRESS=noreply@tellmemo.io
-EMAIL_FROM_NAME=TellMeMo
+Required configuration variables:
+- `EMAIL_PROVIDER`: smtp | sendgrid | aws_ses | mailgun
+- `EMAIL_FROM_ADDRESS`: Sender email address
+- `EMAIL_FROM_NAME`: Sender display name
 
-# SMTP Configuration (if EMAIL_PROVIDER=smtp)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USERNAME=your-email@gmail.com
-SMTP_PASSWORD=your-app-password
-SMTP_USE_TLS=true
+**For SMTP:**
+- `SMTP_HOST`: SMTP server hostname
+- `SMTP_PORT`: SMTP port (usually 587)
+- `SMTP_USERNAME`: SMTP username
+- `SMTP_PASSWORD`: SMTP password
+- `SMTP_USE_TLS`: Enable TLS (true/false)
 
-# SendGrid (if EMAIL_PROVIDER=sendgrid)
-SENDGRID_API_KEY=your-sendgrid-api-key
+**For SendGrid:**
+- `SENDGRID_API_KEY`: API key
 
-# AWS SES (if EMAIL_PROVIDER=aws_ses)
-AWS_SES_ACCESS_KEY_ID=your-aws-access-key
-AWS_SES_SECRET_ACCESS_KEY=your-aws-secret-key
-AWS_SES_REGION=us-east-1
+**For AWS SES:**
+- `AWS_SES_ACCESS_KEY_ID`: Access key
+- `AWS_SES_SECRET_ACCESS_KEY`: Secret key
+- `AWS_SES_REGION`: AWS region
 
-# Mailgun (if EMAIL_PROVIDER=mailgun)
-MAILGUN_API_KEY=your-mailgun-api-key
-MAILGUN_DOMAIN=mg.tellmemo.io
+**For Mailgun:**
+- `MAILGUN_API_KEY`: API key
+- `MAILGUN_DOMAIN`: Configured domain
 
-# Email Digest Configuration
-EMAIL_DIGEST_ENABLED=true
-EMAIL_DIGEST_BATCH_SIZE=50  # Max emails per batch
-EMAIL_DIGEST_RATE_LIMIT=100  # Max emails per hour
-```
+**Digest Configuration:**
+- `EMAIL_DIGEST_ENABLED`: Enable/disable feature
+- `EMAIL_DIGEST_BATCH_SIZE`: Max emails per batch (default: 50)
+- `EMAIL_DIGEST_RATE_LIMIT`: Max emails per hour (default: 100)
 
 ### 2. Update `config.py`
 
-```python
-# backend/config.py
-
-class Settings(BaseSettings):
-    # ... existing settings ...
-
-    # Email/SMTP Configuration
-    email_provider: str = Field(default="smtp", env="EMAIL_PROVIDER")
-    email_from_address: str = Field(default="noreply@tellmemo.io", env="EMAIL_FROM_ADDRESS")
-    email_from_name: str = Field(default="TellMeMo", env="EMAIL_FROM_NAME")
-
-    # SMTP
-    smtp_host: str = Field(default="smtp.gmail.com", env="SMTP_HOST")
-    smtp_port: int = Field(default=587, env="SMTP_PORT")
-    smtp_username: str = Field(default="", env="SMTP_USERNAME")
-    smtp_password: str = Field(default="", env="SMTP_PASSWORD")
-    smtp_use_tls: bool = Field(default=True, env="SMTP_USE_TLS")
-
-    # SendGrid
-    sendgrid_api_key: str = Field(default="", env="SENDGRID_API_KEY")
-
-    # AWS SES
-    aws_ses_access_key_id: str = Field(default="", env="AWS_SES_ACCESS_KEY_ID")
-    aws_ses_secret_access_key: str = Field(default="", env="AWS_SES_SECRET_ACCESS_KEY")
-    aws_ses_region: str = Field(default="us-east-1", env="AWS_SES_REGION")
-
-    # Mailgun
-    mailgun_api_key: str = Field(default="", env="MAILGUN_API_KEY")
-    mailgun_domain: str = Field(default="", env="MAILGUN_DOMAIN")
-
-    # Digest Configuration
-    email_digest_enabled: bool = Field(default=True, env="EMAIL_DIGEST_ENABLED")
-    email_digest_batch_size: int = Field(default=50, env="EMAIL_DIGEST_BATCH_SIZE")
-    email_digest_rate_limit: int = Field(default=100, env="EMAIL_DIGEST_RATE_LIMIT")
-```
+Add all environment variables to Settings class with proper types and defaults.
 
 ### 3. SMTP Service Implementation
 
 **Create:** `backend/services/email/smtp_service.py`
 
-```python
-"""SMTP Service for sending emails via multiple providers"""
+**Key responsibilities:**
+- Unified interface for multiple email providers
+- Support SMTP, SendGrid, AWS SES, Mailgun
+- Handle email sending with HTML and plain text versions
+- Error handling and logging
+- Return success/failure status
 
-import logging
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from typing import List, Optional
-from config import get_settings
-
-logger = logging.getLogger(__name__)
-settings = get_settings()
-
-
-class SMTPService:
-    """Unified SMTP service supporting multiple providers"""
-
-    def __init__(self):
-        self.provider = settings.email_provider
-
-    async def send_email(
-        self,
-        to_email: str,
-        subject: str,
-        html_body: str,
-        text_body: Optional[str] = None,
-        cc: Optional[List[str]] = None,
-        bcc: Optional[List[str]] = None
-    ) -> bool:
-        """
-        Send email via configured provider.
-
-        Args:
-            to_email: Recipient email address
-            subject: Email subject
-            html_body: HTML email content
-            text_body: Plain text fallback
-            cc: CC recipients
-            bcc: BCC recipients
-
-        Returns:
-            True if sent successfully, False otherwise
-        """
-        try:
-            if self.provider == "smtp":
-                return await self._send_via_smtp(
-                    to_email, subject, html_body, text_body, cc, bcc
-                )
-            elif self.provider == "sendgrid":
-                return await self._send_via_sendgrid(
-                    to_email, subject, html_body, text_body, cc, bcc
-                )
-            elif self.provider == "aws_ses":
-                return await self._send_via_ses(
-                    to_email, subject, html_body, text_body, cc, bcc
-                )
-            elif self.provider == "mailgun":
-                return await self._send_via_mailgun(
-                    to_email, subject, html_body, text_body, cc, bcc
-                )
-            else:
-                logger.error(f"Unknown email provider: {self.provider}")
-                return False
-
-        except Exception as e:
-            logger.error(f"Failed to send email to {to_email}: {e}", exc_info=True)
-            return False
-
-    async def _send_via_smtp(
-        self, to_email, subject, html_body, text_body, cc, bcc
-    ) -> bool:
-        """Send email via standard SMTP"""
-        try:
-            msg = MIMEMultipart("alternative")
-            msg["From"] = f"{settings.email_from_name} <{settings.email_from_address}>"
-            msg["To"] = to_email
-            msg["Subject"] = subject
-
-            if cc:
-                msg["Cc"] = ", ".join(cc)
-
-            # Attach text and HTML parts
-            if text_body:
-                msg.attach(MIMEText(text_body, "plain"))
-            msg.attach(MIMEText(html_body, "html"))
-
-            # Connect and send
-            with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
-                if settings.smtp_use_tls:
-                    server.starttls()
-                if settings.smtp_username and settings.smtp_password:
-                    server.login(settings.smtp_username, settings.smtp_password)
-
-                recipients = [to_email]
-                if cc:
-                    recipients.extend(cc)
-                if bcc:
-                    recipients.extend(bcc)
-
-                server.sendmail(
-                    settings.email_from_address,
-                    recipients,
-                    msg.as_string()
-                )
-
-            logger.info(f"Email sent successfully to {to_email} via SMTP")
-            return True
-
-        except Exception as e:
-            logger.error(f"SMTP send failed: {e}", exc_info=True)
-            return False
-
-    async def _send_via_sendgrid(
-        self, to_email, subject, html_body, text_body, cc, bcc
-    ) -> bool:
-        """Send email via SendGrid API"""
-        try:
-            from sendgrid import SendGridAPIClient
-            from sendgrid.helpers.mail import Mail, Email, To, Content
-
-            message = Mail(
-                from_email=Email(settings.email_from_address, settings.email_from_name),
-                to_emails=To(to_email),
-                subject=subject,
-                html_content=Content("text/html", html_body)
-            )
-
-            if text_body:
-                message.add_content(Content("text/plain", text_body))
-
-            sg = SendGridAPIClient(settings.sendgrid_api_key)
-            response = sg.send(message)
-
-            logger.info(f"Email sent via SendGrid to {to_email}: {response.status_code}")
-            return response.status_code in [200, 201, 202]
-
-        except Exception as e:
-            logger.error(f"SendGrid send failed: {e}", exc_info=True)
-            return False
-
-    async def _send_via_ses(
-        self, to_email, subject, html_body, text_body, cc, bcc
-    ) -> bool:
-        """Send email via AWS SES"""
-        try:
-            import boto3
-
-            client = boto3.client(
-                'ses',
-                region_name=settings.aws_ses_region,
-                aws_access_key_id=settings.aws_ses_access_key_id,
-                aws_secret_access_key=settings.aws_ses_secret_access_key
-            )
-
-            body = {
-                'Html': {'Data': html_body, 'Charset': 'UTF-8'}
-            }
-            if text_body:
-                body['Text'] = {'Data': text_body, 'Charset': 'UTF-8'}
-
-            response = client.send_email(
-                Source=f"{settings.email_from_name} <{settings.email_from_address}>",
-                Destination={'ToAddresses': [to_email]},
-                Message={
-                    'Subject': {'Data': subject, 'Charset': 'UTF-8'},
-                    'Body': body
-                }
-            )
-
-            logger.info(f"Email sent via AWS SES to {to_email}: {response['MessageId']}")
-            return True
-
-        except Exception as e:
-            logger.error(f"AWS SES send failed: {e}", exc_info=True)
-            return False
-
-    async def _send_via_mailgun(
-        self, to_email, subject, html_body, text_body, cc, bcc
-    ) -> bool:
-        """Send email via Mailgun API"""
-        try:
-            import requests
-
-            response = requests.post(
-                f"https://api.mailgun.net/v3/{settings.mailgun_domain}/messages",
-                auth=("api", settings.mailgun_api_key),
-                data={
-                    "from": f"{settings.email_from_name} <{settings.email_from_address}>",
-                    "to": to_email,
-                    "subject": subject,
-                    "html": html_body,
-                    "text": text_body or ""
-                }
-            )
-
-            logger.info(f"Email sent via Mailgun to {to_email}: {response.status_code}")
-            return response.status_code == 200
-
-        except Exception as e:
-            logger.error(f"Mailgun send failed: {e}", exc_info=True)
-            return False
-
-
-# Singleton instance
-smtp_service = SMTPService()
-```
+**Methods:**
+- `send_email()`: Main method to send email via configured provider
+- `_send_via_smtp()`: Standard SMTP implementation
+- `_send_via_sendgrid()`: SendGrid API implementation
+- `_send_via_ses()`: AWS SES implementation
+- `_send_via_mailgun()`: Mailgun API implementation
 
 ### 4. Email Digest Service
 
 **Create:** `backend/services/email/digest_service.py`
 
-```python
-"""Email Digest Service for generating and sending periodic digests"""
+**Key responsibilities:**
+- Generate daily/weekly/monthly digests
+- Aggregate digest data from database
+- Query users based on preferences
+- Enqueue email jobs in Redis Queue
 
-import logging
-from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional
-from sqlalchemy import select, and_, or_
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from models.user import User
-from models.project import Project
-from models.summary import Summary
-from models.activity import Activity
-from models.task import Task
-from models.risk import Risk
-from models.notification import Notification, NotificationCategory, NotificationType
-from services.email.smtp_service import smtp_service
-from services.notifications.notification_service import NotificationService
-
-logger = logging.getLogger(__name__)
-
-
-class DigestService:
-    """Service for generating and sending email digests"""
-
-    @staticmethod
-    async def generate_daily_digests(db: AsyncSession) -> int:
-        """
-        Generate daily digests for all users with daily frequency.
-
-        Returns:
-            Number of digests queued
-        """
-        from queue_config import queue_config
-
-        # Query users with daily digest enabled
-        query = select(User).where(
-            and_(
-                User.is_active == True,
-                User.email_verified == True,
-                User.preferences['email_digest']['enabled'].as_boolean() == True,
-                User.preferences['email_digest']['frequency'].astext == 'daily'
-            )
-        )
-
-        result = await db.execute(query)
-        users = result.scalars().all()
-
-        digest_count = 0
-        for user in users:
-            try:
-                # Enqueue digest generation job (low priority)
-                queue_config.low_queue.enqueue(
-                    'tasks.email_tasks.send_digest_email_task',
-                    user_id=str(user.id),
-                    digest_type='daily'
-                )
-                digest_count += 1
-                logger.info(f"Queued daily digest for user {user.email}")
-
-            except Exception as e:
-                logger.error(f"Failed to queue digest for user {user.email}: {e}")
-
-        return digest_count
-
-    @staticmethod
-    async def generate_weekly_digests(db: AsyncSession) -> int:
-        """Generate weekly digests (runs on Mondays)"""
-        # Similar to daily_digests but for weekly frequency
-        pass
-
-    @staticmethod
-    async def generate_monthly_digests(db: AsyncSession) -> int:
-        """Generate monthly digests (runs on 1st of month)"""
-        pass
-
-    @staticmethod
-    async def aggregate_digest_data(
-        db: AsyncSession,
-        user: User,
-        period_start: datetime,
-        period_end: datetime
-    ) -> Dict[str, Any]:
-        """
-        Aggregate all digest data for a user.
-
-        Args:
-            db: Database session
-            user: User to generate digest for
-            period_start: Start of digest period
-            period_end: End of digest period
-
-        Returns:
-            Dictionary with all digest data
-        """
-        preferences = user.preferences.get('email_digest', {})
-        content_types = preferences.get('content_types', [])
-
-        # Get user's projects
-        projects = await DigestService._get_user_projects(db, user)
-
-        digest_data = {
-            "user_name": user.name or user.email.split('@')[0],
-            "user_email": user.email,
-            "period_start": period_start,
-            "period_end": period_end,
-            "digest_period": DigestService._format_period(period_start, period_end),
-            "projects": []
-        }
-
-        # Aggregate data for each project
-        for project in projects:
-            project_data = {
-                "id": str(project.id),
-                "name": project.name,
-                "description": project.description
-            }
-
-            if "summaries" in content_types:
-                project_data["summaries"] = await DigestService._get_project_summaries(
-                    db, project.id, period_start, period_end
-                )
-
-            if "activities" in content_types:
-                project_data["activities"] = await DigestService._get_project_activities(
-                    db, project.id, period_start, period_end
-                )
-
-            if "tasks_assigned" in content_types:
-                project_data["tasks"] = await DigestService._get_user_tasks(
-                    db, project.id, user.id, period_end
-                )
-
-            if "risks_critical" in content_types:
-                project_data["risks"] = await DigestService._get_critical_risks(
-                    db, project.id, period_end
-                )
-
-            digest_data["projects"].append(project_data)
-
-        # Calculate summary stats
-        digest_data["summary_stats"] = DigestService._calculate_stats(digest_data)
-
-        return digest_data
-
-    @staticmethod
-    async def _get_user_projects(db: AsyncSession, user: User) -> List[Project]:
-        """Get projects for user based on preferences"""
-        preferences = user.preferences.get('email_digest', {})
-        project_filter = preferences.get('project_filter', {})
-
-        if project_filter.get('type') == 'all':
-            # Get all projects from user's organizations
-            # (Implementation depends on organization membership)
-            pass
-        elif project_filter.get('type') == 'selected':
-            # Get specific projects
-            project_ids = project_filter.get('project_ids', [])
-            # Query projects by IDs
-            pass
-
-        return []  # TODO: Implement
-
-    @staticmethod
-    async def _get_project_summaries(
-        db: AsyncSession, project_id: str, start: datetime, end: datetime
-    ) -> List[Dict]:
-        """Get summaries created in period"""
-        query = select(Summary).where(
-            and_(
-                Summary.project_id == project_id,
-                Summary.created_at >= start,
-                Summary.created_at <= end
-            )
-        ).order_by(Summary.created_at.desc())
-
-        result = await db.execute(query)
-        summaries = result.scalars().all()
-
-        return [
-            {
-                "id": str(s.id),
-                "subject": s.subject,
-                "created_at": s.created_at.isoformat(),
-                "format": s.format
-            }
-            for s in summaries
-        ]
-
-    @staticmethod
-    def _format_period(start: datetime, end: datetime) -> str:
-        """Format period as human-readable string"""
-        if (end - start).days == 1:
-            return f"{start.strftime('%B %d, %Y')}"
-        elif (end - start).days == 7:
-            return f"Week of {start.strftime('%B %d, %Y')}"
-        else:
-            return f"{start.strftime('%b %d')} - {end.strftime('%b %d, %Y')}"
-
-    @staticmethod
-    def _calculate_stats(digest_data: Dict) -> Dict[str, int]:
-        """Calculate summary statistics"""
-        stats = {
-            "projects_active": len(digest_data["projects"]),
-            "new_summaries": 0,
-            "pending_tasks": 0,
-            "critical_risks": 0,
-            "activities_count": 0
-        }
-
-        for project in digest_data["projects"]:
-            stats["new_summaries"] += len(project.get("summaries", []))
-            stats["pending_tasks"] += len(project.get("tasks", []))
-            stats["critical_risks"] += len(project.get("risks", []))
-            stats["activities_count"] += len(project.get("activities", []))
-
-        return stats
-
-
-# Singleton instance
-digest_service = DigestService()
-```
+**Methods:**
+- `generate_daily_digests()`: Create daily digest jobs
+- `generate_weekly_digests()`: Create weekly digest jobs
+- `generate_monthly_digests()`: Create monthly digest jobs
+- `aggregate_digest_data()`: Collect all data for a user's digest
+- `_get_user_projects()`: Fetch projects based on user preferences
+- `_get_project_summaries()`: Get summaries in time period
+- `_get_project_activities()`: Get activities in time period
+- `_get_user_tasks()`: Get tasks assigned to user
+- `_get_critical_risks()`: Get high/critical risks
+- `_calculate_stats()`: Calculate summary statistics
+- `_format_period()`: Format time period for display
 
 ### 5. Email Task (Redis Queue)
 
 **Create:** `backend/tasks/email_tasks.py`
 
-```python
-"""RQ Tasks for Email Processing"""
+**Key responsibilities:**
+- RQ task wrapper for digest email sending
+- Async email sending implementation
+- Job progress tracking
+- Error handling and retry logic
 
-import asyncio
-import logging
-from datetime import datetime, timedelta
-from rq import get_current_job
+**Functions:**
+- `send_digest_email_task()`: RQ task entry point
+- `_send_digest_async()`: Async implementation
 
-from services.email.digest_service import DigestService
-from services.email.smtp_service import smtp_service
-from services.email.template_service import TemplateService
-from services.notifications.notification_service import NotificationService
-from models.notification import NotificationCategory, NotificationType
-from queue_config import queue_config
-
-logger = logging.getLogger(__name__)
-
-
-def send_digest_email_task(user_id: str, digest_type: str):
-    """
-    RQ Task: Send email digest to user.
-
-    Args:
-        user_id: User UUID as string
-        digest_type: 'daily', 'weekly', or 'monthly'
-    """
-    rq_job = get_current_job()
-
-    try:
-        # Set job metadata
-        if rq_job:
-            rq_job.meta['status'] = 'processing'
-            rq_job.meta['step'] = f'Generating {digest_type} digest'
-            rq_job.save_meta()
-
-        # Run async task
-        result = asyncio.run(_send_digest_async(user_id, digest_type, rq_job))
-
-        # Update job status
-        if rq_job:
-            rq_job.meta['status'] = 'completed'
-            rq_job.meta['result'] = result
-            rq_job.save_meta()
-
-        return result
-
-    except Exception as e:
-        logger.error(f"Digest email task failed for user {user_id}: {e}", exc_info=True)
-
-        if rq_job:
-            rq_job.meta['status'] = 'failed'
-            rq_job.meta['error'] = str(e)
-            rq_job.save_meta()
-
-        raise
-
-
-async def _send_digest_async(user_id: str, digest_type: str, rq_job):
-    """Async implementation of digest email sending"""
-    from db.database import db_manager
-    from models.user import User
-    import uuid
-
-    async for session in db_manager.get_session():
-        try:
-            # Fetch user
-            from sqlalchemy import select
-            result = await session.execute(
-                select(User).where(User.id == uuid.UUID(user_id))
-            )
-            user = result.scalar_one_or_none()
-
-            if not user:
-                raise ValueError(f"User {user_id} not found")
-
-            # Calculate period
-            end_time = datetime.utcnow()
-            if digest_type == 'daily':
-                start_time = end_time - timedelta(days=1)
-            elif digest_type == 'weekly':
-                start_time = end_time - timedelta(days=7)
-            elif digest_type == 'monthly':
-                start_time = end_time - timedelta(days=30)
-            else:
-                raise ValueError(f"Invalid digest type: {digest_type}")
-
-            # Aggregate digest data
-            digest_data = await DigestService.aggregate_digest_data(
-                db=session,
-                user=user,
-                period_start=start_time,
-                period_end=end_time
-            )
-
-            # Render email template
-            html_body = TemplateService.render_digest_email(digest_data)
-            text_body = TemplateService.render_digest_email_text(digest_data)
-
-            subject = f"Your {digest_type.capitalize()} TellMeMo Digest"
-
-            # Send email
-            sent = await smtp_service.send_email(
-                to_email=user.email,
-                subject=subject,
-                html_body=html_body,
-                text_body=text_body
-            )
-
-            if sent:
-                # Create notification record
-                notification_service = NotificationService(session)
-                await notification_service.create_notification(
-                    user_id=str(user.id),
-                    title=f"{digest_type.capitalize()} Digest Sent",
-                    message=f"Your {digest_type} digest has been emailed to {user.email}",
-                    type=NotificationType.INFO,
-                    category=NotificationCategory.EMAIL_DIGEST_SENT,
-                    metadata={"digest_type": digest_type, "period_start": start_time.isoformat()}
-                )
-
-                # Update last_sent_at in user preferences
-                user.preferences['email_digest']['last_sent_at'] = end_time.isoformat()
-                await session.commit()
-
-                logger.info(f"Digest email sent successfully to {user.email}")
-                return {"status": "sent", "user_email": user.email}
-            else:
-                logger.error(f"Failed to send digest email to {user.email}")
-                return {"status": "failed", "user_email": user.email}
-
-        except Exception as e:
-            logger.error(f"Error in digest email sending: {e}", exc_info=True)
-            raise
-
-        finally:
-            break  # Exit after first iteration
-```
+**Process:**
+1. Fetch user from database
+2. Calculate time period based on digest type
+3. Aggregate digest data via DigestService
+4. Render email templates via TemplateService
+5. Send email via SMTPService
+6. Create notification record
+7. Update user preferences with last_sent_at timestamp
 
 ### 6. Email Template Service
 
 **Create:** `backend/services/email/template_service.py`
 
-```python
-"""Email Template Service for rendering HTML emails"""
+**Key responsibilities:**
+- Render Jinja2 HTML email templates
+- Render plain text fallback versions
+- Handle template errors gracefully
+- Provide fallback content if templates fail
 
-import logging
-from typing import Dict, Any
-from jinja2 import Environment, FileSystemLoader, select_autoescape
-import os
-
-logger = logging.getLogger(__name__)
-
-
-class TemplateService:
-    """Service for rendering email templates"""
-
-    def __init__(self):
-        template_dir = os.path.join(os.path.dirname(__file__), '../../templates/email')
-        self.env = Environment(
-            loader=FileSystemLoader(template_dir),
-            autoescape=select_autoescape(['html', 'xml'])
-        )
-
-    def render_digest_email(self, data: Dict[str, Any]) -> str:
-        """
-        Render digest email HTML template.
-
-        Args:
-            data: Digest data dictionary
-
-        Returns:
-            Rendered HTML string
-        """
-        try:
-            template = self.env.get_template('digest_email.html')
-            return template.render(**data)
-        except Exception as e:
-            logger.error(f"Failed to render digest email template: {e}")
-            return self._fallback_html(data)
-
-    def render_digest_email_text(self, data: Dict[str, Any]) -> str:
-        """Render plain text version of digest email"""
-        try:
-            template = self.env.get_template('digest_email.txt')
-            return template.render(**data)
-        except Exception as e:
-            logger.error(f"Failed to render text template: {e}")
-            return self._fallback_text(data)
-
-    def _fallback_html(self, data: Dict) -> str:
-        """Simple fallback HTML if template fails"""
-        return f"""
-        <html>
-        <body>
-            <h2>Your TellMeMo Digest</h2>
-            <p>Hello {data.get('user_name', 'there')},</p>
-            <p>Here's your {data.get('digest_period', 'recent')} summary.</p>
-            <p>Visit <a href="https://tellmemo.io">TellMeMo</a> to view details.</p>
-        </body>
-        </html>
-        """
-
-    def _fallback_text(self, data: Dict) -> str:
-        """Simple fallback text"""
-        return f"""
-        Your TellMeMo Digest
-
-        Hello {data.get('user_name', 'there')},
-
-        Here's your {data.get('digest_period', 'recent')} summary.
-
-        Visit https://tellmemo.io to view details.
-        """
-
-
-# Singleton instance
-template_service = TemplateService()
-```
+**Methods:**
+- `render_digest_email()`: Render HTML digest template
+- `render_digest_email_text()`: Render plain text version
+- `_fallback_html()`: Simple HTML fallback
+- `_fallback_text()`: Simple text fallback
 
 ### 7. Scheduler Service
 
 **Create:** `backend/services/scheduler/digest_scheduler.py`
 
-```python
-"""APScheduler service for scheduling digest jobs"""
+**Key responsibilities:**
+- Initialize APScheduler
+- Configure cron triggers for digest jobs
+- Run scheduled digest generation
 
-import logging
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
-from datetime import datetime
+**Methods:**
+- `start()`: Start scheduler and register jobs
+- `stop()`: Shutdown scheduler
+- `_run_daily_digests()`: Execute daily digest generation
+- `_run_weekly_digests()`: Execute weekly digest generation
+- `_run_monthly_digests()`: Execute monthly digest generation
 
-logger = logging.getLogger(__name__)
-
-
-class DigestScheduler:
-    """Scheduler for periodic digest generation"""
-
-    def __init__(self):
-        self.scheduler = AsyncIOScheduler()
-
-    def start(self):
-        """Start the scheduler"""
-        # Daily digest: Every day at 8 AM UTC
-        self.scheduler.add_job(
-            self._run_daily_digests,
-            trigger=CronTrigger(hour=8, minute=0),
-            id='daily_digest',
-            name='Generate daily email digests',
-            replace_existing=True
-        )
-
-        # Weekly digest: Every Monday at 8 AM UTC
-        self.scheduler.add_job(
-            self._run_weekly_digests,
-            trigger=CronTrigger(day_of_week='mon', hour=8, minute=0),
-            id='weekly_digest',
-            name='Generate weekly email digests',
-            replace_existing=True
-        )
-
-        # Monthly digest: 1st of every month at 8 AM UTC
-        self.scheduler.add_job(
-            self._run_monthly_digests,
-            trigger=CronTrigger(day=1, hour=8, minute=0),
-            id='monthly_digest',
-            name='Generate monthly email digests',
-            replace_existing=True
-        )
-
-        self.scheduler.start()
-        logger.info("Digest scheduler started")
-
-    async def _run_daily_digests(self):
-        """Generate daily digests"""
-        from db.database import db_manager
-        from services.email.digest_service import DigestService
-
-        async for session in db_manager.get_session():
-            try:
-                count = await DigestService.generate_daily_digests(session)
-                logger.info(f"Queued {count} daily digests")
-            except Exception as e:
-                logger.error(f"Daily digest generation failed: {e}")
-            finally:
-                break
-
-    async def _run_weekly_digests(self):
-        """Generate weekly digests"""
-        # Similar to daily
-        pass
-
-    async def _run_monthly_digests(self):
-        """Generate monthly digests"""
-        # Similar to daily
-        pass
-
-    def stop(self):
-        """Stop the scheduler"""
-        self.scheduler.shutdown()
-        logger.info("Digest scheduler stopped")
-
-
-# Singleton instance
-digest_scheduler = DigestScheduler()
-```
+**Schedule:**
+- Daily: Every day at 8 AM UTC
+- Weekly: Every Monday at 8 AM UTC
+- Monthly: 1st of each month at 8 AM UTC
 
 ### 8. API Endpoints
 
 **Create:** `backend/routers/email_preferences.py`
 
-```python
-"""API endpoints for email digest preferences"""
+**Endpoints:**
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel
-from typing import List, Optional
+**GET `/api/email-preferences/digest`**
+- Get user's current email digest preferences
+- Returns preferences JSON object
 
-from db.database import db_manager
-from dependencies.auth import get_current_user
-from models.user import User
+**PUT `/api/email-preferences/digest`**
+- Update user's email digest preferences
+- Request body: EmailDigestPreferences model
+- Returns updated preferences
 
-router = APIRouter(prefix="/api/email-preferences", tags=["Email Preferences"])
+**POST `/api/email-preferences/digest/preview`**
+- Generate preview of digest email without sending
+- Query param: digest_type (daily/weekly/monthly)
+- Returns HTML preview and aggregated data
 
-
-class EmailDigestPreferences(BaseModel):
-    enabled: bool
-    frequency: str  # daily, weekly, monthly, never
-    timezone: str
-    send_time: str
-    content_types: List[str]
-    project_filter: dict
-    portfolio_filter: dict
-    include_portfolio_rollup: bool
-
-
-@router.get("/digest")
-async def get_digest_preferences(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(db_manager.get_session)
-):
-    """Get user's email digest preferences"""
-    prefs = current_user.preferences.get('email_digest', {})
-    return prefs
-
-
-@router.put("/digest")
-async def update_digest_preferences(
-    preferences: EmailDigestPreferences,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(db_manager.get_session)
-):
-    """Update user's email digest preferences"""
-    if not current_user.preferences:
-        current_user.preferences = {}
-
-    current_user.preferences['email_digest'] = preferences.dict()
-    await db.commit()
-
-    return {"status": "updated", "preferences": preferences.dict()}
-
-
-@router.post("/digest/preview")
-async def preview_digest(
-    digest_type: str,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(db_manager.get_session)
-):
-    """Generate a preview of the digest email (without sending)"""
-    from services.email.digest_service import DigestService
-    from services.email.template_service import TemplateService
-    from datetime import datetime, timedelta
-
-    # Calculate period based on digest type
-    end_time = datetime.utcnow()
-    if digest_type == 'daily':
-        start_time = end_time - timedelta(days=1)
-    elif digest_type == 'weekly':
-        start_time = end_time - timedelta(days=7)
-    else:
-        start_time = end_time - timedelta(days=30)
-
-    # Aggregate data
-    digest_data = await DigestService.aggregate_digest_data(
-        db=db,
-        user=current_user,
-        period_start=start_time,
-        period_end=end_time
-    )
-
-    # Render HTML
-    html_content = TemplateService().render_digest_email(digest_data)
-
-    return {
-        "digest_type": digest_type,
-        "period": f"{start_time.isoformat()} to {end_time.isoformat()}",
-        "html_preview": html_content,
-        "data": digest_data
-    }
-
-
-@router.post("/digest/send-test")
-async def send_test_digest(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(db_manager.get_session)
-):
-    """Send a test digest email immediately"""
-    from queue_config import queue_config
-
-    # Enqueue test digest (high priority for immediate delivery)
-    job = queue_config.high_queue.enqueue(
-        'tasks.email_tasks.send_digest_email_task',
-        user_id=str(current_user.id),
-        digest_type='daily'
-    )
-
-    return {
-        "status": "queued",
-        "job_id": job.id,
-        "message": "Test digest will be sent shortly"
-    }
-```
+**POST `/api/email-preferences/digest/send-test`**
+- Send test digest email immediately to current user
+- Enqueues job in high-priority queue
+- Returns job ID and status
 
 ---
 
@@ -1292,195 +459,47 @@ backend/
             └── email_styles.css        # Inline CSS for emails
 ```
 
-### Base Template
+### Base Template Design
 
 **File:** `backend/templates/email/base.html`
 
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}TellMeMo Digest{% endblock %}</title>
-    <style>
-        /* Inline CSS for email compatibility */
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f4;
-        }
-        .container {
-            max-width: 600px;
-            margin: 20px auto;
-            background: #ffffff;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-        .header h1 {
-            margin: 0;
-            font-size: 24px;
-        }
-        .content {
-            padding: 30px;
-        }
-        .footer {
-            background: #f8f9fa;
-            padding: 20px;
-            text-align: center;
-            font-size: 12px;
-            color: #6c757d;
-        }
-        .button {
-            display: inline-block;
-            padding: 12px 24px;
-            background: #667eea;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-            margin: 10px 0;
-        }
-        .stats {
-            display: flex;
-            justify-content: space-around;
-            margin: 20px 0;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 4px;
-        }
-        .stat {
-            text-align: center;
-        }
-        .stat-value {
-            font-size: 32px;
-            font-weight: bold;
-            color: #667eea;
-        }
-        .stat-label {
-            font-size: 12px;
-            color: #6c757d;
-            text-transform: uppercase;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>📊 TellMeMo</h1>
-            <p>{% block header_subtitle %}Your Project Intelligence Digest{% endblock %}</p>
-        </div>
+**Key features:**
+- Responsive design (max-width: 600px)
+- Inline CSS for email compatibility
+- Header with TellMeMo branding
+- Content block
+- Footer with preferences and unsubscribe links
+- Professional color scheme (purple gradient: #667eea to #764ba2)
 
-        <div class="content">
-            {% block content %}{% endblock %}
-        </div>
-
-        <div class="footer">
-            <p>
-                <a href="{{ frontend_url }}/settings/email-preferences">Email Preferences</a> |
-                <a href="{{ frontend_url }}/unsubscribe?token={{ unsubscribe_token }}">Unsubscribe</a>
-            </p>
-            <p>&copy; 2025 TellMeMo. All rights reserved.</p>
-        </div>
-    </div>
-</body>
-</html>
-```
+**Blocks:**
+- `title`: Page title
+- `header_subtitle`: Subtitle in header
+- `content`: Main email content
 
 ### Digest Email Template
 
 **File:** `backend/templates/email/digest_email.html`
 
-```html
-{% extends "base.html" %}
+**Sections:**
+1. **Greeting**: Personalized user greeting
+2. **Summary Statistics**: 4-column stats display
+   - Active Projects
+   - New Summaries
+   - Pending Tasks
+   - Critical Risks
+3. **Project Details**: Per-project breakdown
+   - Recent Summaries
+   - Your Tasks
+   - Critical Risks
+   - View Project button
+4. **Call to Action**: Open TellMeMo Dashboard button
 
-{% block title %}Your {{ digest_period }} Digest - TellMeMo{% endblock %}
-
-{% block header_subtitle %}{{ digest_period }}{% endblock %}
-
-{% block content %}
-<p>Hi {{ user_name }},</p>
-
-<p>Here's what happened across your projects:</p>
-
-<!-- Summary Statistics -->
-<div class="stats">
-    <div class="stat">
-        <div class="stat-value">{{ summary_stats.projects_active }}</div>
-        <div class="stat-label">Active Projects</div>
-    </div>
-    <div class="stat">
-        <div class="stat-value">{{ summary_stats.new_summaries }}</div>
-        <div class="stat-label">New Summaries</div>
-    </div>
-    <div class="stat">
-        <div class="stat-value">{{ summary_stats.pending_tasks }}</div>
-        <div class="stat-label">Pending Tasks</div>
-    </div>
-    <div class="stat">
-        <div class="stat-value">{{ summary_stats.critical_risks }}</div>
-        <div class="stat-label">Critical Risks</div>
-    </div>
-</div>
-
-<!-- Project Details -->
-{% for project in projects %}
-<div style="margin-bottom: 30px; padding: 20px; border: 1px solid #e0e0e0; border-radius: 4px;">
-    <h2 style="margin-top: 0; color: #667eea;">{{ project.name }}</h2>
-
-    {% if project.summaries %}
-    <h3>📝 Recent Summaries</h3>
-    <ul>
-        {% for summary in project.summaries %}
-        <li>
-            <strong>{{ summary.subject }}</strong><br>
-            <small>{{ summary.created_at }}</small>
-        </li>
-        {% endfor %}
-    </ul>
-    {% endif %}
-
-    {% if project.tasks %}
-    <h3>✅ Your Tasks</h3>
-    <ul>
-        {% for task in project.tasks %}
-        <li>
-            {{ task.title }}
-            {% if task.due_date %}<span style="color: #dc3545;">(Due: {{ task.due_date }})</span>{% endif %}
-        </li>
-        {% endfor %}
-    </ul>
-    {% endif %}
-
-    {% if project.risks %}
-    <h3>⚠️ Critical Risks</h3>
-    <ul>
-        {% for risk in project.risks %}
-        <li style="color: #dc3545;">
-            <strong>{{ risk.title }}</strong> - {{ risk.severity }}
-        </li>
-        {% endfor %}
-    </ul>
-    {% endif %}
-
-    <a href="{{ frontend_url }}/projects/{{ project.id }}" class="button">View Project</a>
-</div>
-{% endfor %}
-
-<p style="text-align: center; margin-top: 30px;">
-    <a href="{{ frontend_url }}/dashboard" class="button">Open TellMeMo Dashboard</a>
-</p>
-{% endblock %}
-```
+**Design Features:**
+- Uses Jinja2 template inheritance
+- Conditional rendering based on content availability
+- Styled cards for each project
+- Color-coded risk alerts (red)
+- Responsive button styling
 
 ---
 
@@ -1490,191 +509,43 @@ backend/
 
 **Create:** `lib/features/settings/presentation/screens/email_preferences_screen.dart`
 
-```dart
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+**UI Components:**
 
-class EmailPreferencesScreen extends ConsumerStatefulWidget {
-  const EmailPreferencesScreen({Key? key}) : super(key: key);
+**Enable/Disable Section:**
+- SwitchListTile for enabling email digests
 
-  @override
-  ConsumerState<EmailPreferencesScreen> createState() => _EmailPreferencesScreenState();
-}
+**Frequency Selection:**
+- Radio buttons for Daily, Weekly, Monthly
 
-class _EmailPreferencesScreenState extends ConsumerState<EmailPreferencesScreen> {
-  bool _digestEnabled = false;
-  String _frequency = 'weekly';
-  Set<String> _contentTypes = {'summaries', 'tasks_assigned', 'risks_critical'};
+**Content Type Selection:**
+- Checkboxes for:
+  - Meeting Summaries
+  - Tasks Assigned to Me
+  - Critical Risks
+  - Project Activities
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Email Digest Preferences'),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Enable/Disable Toggle
-          SwitchListTile(
-            title: const Text('Enable Email Digests'),
-            subtitle: const Text('Receive periodic email summaries'),
-            value: _digestEnabled,
-            onChanged: (value) {
-              setState(() {
-                _digestEnabled = value;
-              });
-            },
-          ),
+**Action Buttons:**
+- Save Preferences (primary button)
+- Preview Digest (outlined button)
+- Send Test Email (outlined button)
 
-          const Divider(),
+**State Management:**
+- Local state for form data
+- API integration for save/load preferences
+- Loading states and error handling
+- Success/error snackbars
 
-          // Frequency Selection
-          ListTile(
-            title: const Text('Digest Frequency'),
-            subtitle: Text(_frequency.toUpperCase()),
-          ),
-          RadioListTile<String>(
-            title: const Text('Daily'),
-            value: 'daily',
-            groupValue: _frequency,
-            onChanged: (value) {
-              setState(() {
-                _frequency = value!;
-              });
-            },
-          ),
-          RadioListTile<String>(
-            title: const Text('Weekly'),
-            value: 'weekly',
-            groupValue: _frequency,
-            onChanged: (value) {
-              setState(() {
-                _frequency = value!;
-              });
-            },
-          ),
-          RadioListTile<String>(
-            title: const Text('Monthly'),
-            value: 'monthly',
-            groupValue: _frequency,
-            onChanged: (value) {
-              setState(() {
-                _frequency = value!;
-              });
-            },
-          ),
+### 2. API Client Integration
 
-          const Divider(),
+**Required methods:**
+- `getDigestPreferences()`: Fetch current preferences
+- `updateDigestPreferences()`: Save preferences
+- `previewDigest()`: Get preview HTML
+- `sendTestDigest()`: Trigger test email
 
-          // Content Type Selection
-          const ListTile(
-            title: Text('Include in Digest'),
-          ),
-          CheckboxListTile(
-            title: const Text('Meeting Summaries'),
-            value: _contentTypes.contains('summaries'),
-            onChanged: (value) {
-              setState(() {
-                if (value!) {
-                  _contentTypes.add('summaries');
-                } else {
-                  _contentTypes.remove('summaries');
-                }
-              });
-            },
-          ),
-          CheckboxListTile(
-            title: const Text('Tasks Assigned to Me'),
-            value: _contentTypes.contains('tasks_assigned'),
-            onChanged: (value) {
-              setState(() {
-                if (value!) {
-                  _contentTypes.add('tasks_assigned');
-                } else {
-                  _contentTypes.remove('tasks_assigned');
-                }
-              });
-            },
-          ),
-          CheckboxListTile(
-            title: const Text('Critical Risks'),
-            value: _contentTypes.contains('risks_critical'),
-            onChanged: (value) {
-              setState(() {
-                if (value!) {
-                  _contentTypes.add('risks_critical');
-                } else {
-                  _contentTypes.remove('risks_critical');
-                }
-              });
-            },
-          ),
-          CheckboxListTile(
-            title: const Text('Project Activities'),
-            value: _contentTypes.contains('activities'),
-            onChanged: (value) {
-              setState(() {
-                if (value!) {
-                  _contentTypes.add('activities');
-                } else {
-                  _contentTypes.remove('activities');
-                }
-              });
-            },
-          ),
+### 3. Navigation
 
-          const SizedBox(height: 32),
-
-          // Save Button
-          ElevatedButton(
-            onPressed: _savePreferences,
-            child: const Text('Save Preferences'),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Preview Button
-          OutlinedButton(
-            onPressed: _previewDigest,
-            child: const Text('Preview Digest'),
-          ),
-
-          const SizedBox(height: 8),
-
-          // Send Test Email Button
-          OutlinedButton(
-            onPressed: _sendTestEmail,
-            child: const Text('Send Test Email'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _savePreferences() async {
-    // Call API to save preferences
-    // TODO: Implement API call
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Preferences saved successfully')),
-    );
-  }
-
-  Future<void> _previewDigest() async {
-    // Call API to get preview
-    // Show preview dialog
-    // TODO: Implement preview
-  }
-
-  Future<void> _sendTestEmail() async {
-    // Call API to send test email
-    // TODO: Implement test email
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Test email sent! Check your inbox.')),
-    );
-  }
-}
-```
+Add email preferences screen to settings menu with appropriate routing.
 
 ---
 
@@ -1859,46 +730,33 @@ class _EmailPreferencesScreenState extends ConsumerState<EmailPreferencesScreen>
 ### Dependencies to Add
 
 **Backend:**
-```txt
-# requirements.txt additions
-apscheduler==3.10.4  # Job scheduling
-jinja2==3.1.2  # Template rendering
-sendgrid==6.10.0  # SendGrid provider (optional)
-boto3==1.28.85  # AWS SES provider (optional)
-```
+- `apscheduler==3.10.4` - Job scheduling
+- `jinja2==3.1.2` - Template rendering
+- `sendgrid==6.10.0` - SendGrid provider (optional)
+- `boto3==1.28.85` - AWS SES provider (optional)
 
 **Frontend:**
-```yaml
-# pubspec.yaml additions
-dependencies:
-  intl: ^0.18.0  # Timezone handling
-```
+- `intl: ^0.18.0` - Timezone handling
 
 ### Configuration Examples
 
 **Gmail SMTP:**
-```env
-EMAIL_PROVIDER=smtp
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USERNAME=your-email@gmail.com
-SMTP_PASSWORD=your-app-password
-SMTP_USE_TLS=true
-```
+- EMAIL_PROVIDER=smtp
+- SMTP_HOST=smtp.gmail.com
+- SMTP_PORT=587
+- SMTP_USERNAME=your-email@gmail.com
+- SMTP_PASSWORD=your-app-password
+- SMTP_USE_TLS=true
 
 **SendGrid:**
-```env
-EMAIL_PROVIDER=sendgrid
-SENDGRID_API_KEY=SG.xxx
-```
+- EMAIL_PROVIDER=sendgrid
+- SENDGRID_API_KEY=SG.xxx
 
 **AWS SES:**
-```env
-EMAIL_PROVIDER=aws_ses
-AWS_SES_ACCESS_KEY_ID=AKIA...
-AWS_SES_SECRET_ACCESS_KEY=xxx
-AWS_SES_REGION=us-east-1
-```
+- EMAIL_PROVIDER=aws_ses
+- AWS_SES_ACCESS_KEY_ID=AKIA...
+- AWS_SES_SECRET_ACCESS_KEY=xxx
+- AWS_SES_REGION=us-east-1
 
 ---
 
