@@ -116,7 +116,7 @@ void main() {
 
       expect(find.text('Content to Include'), findsOneWidget);
       expect(find.text('Active Blockers'), findsOneWidget);
-      expect(find.text('Tasks Assigned to Me'), findsOneWidget);
+      expect(find.text('Tasks'), findsOneWidget);
       expect(find.text('Critical Risks'), findsOneWidget);
     });
 

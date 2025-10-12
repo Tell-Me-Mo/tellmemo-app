@@ -144,7 +144,7 @@ class DigestContentType {
       case blockers:
         return 'Active Blockers';
       case tasksAssigned:
-        return 'Tasks Assigned to Me';
+        return 'Tasks';
       case risksCritical:
         return 'Critical Risks';
       case activities:
@@ -161,7 +161,7 @@ class DigestContentType {
       case blockers:
         return 'Include active and escalated project blockers';
       case tasksAssigned:
-        return 'Include tasks that are assigned to you';
+        return 'Include all project tasks';
       case risksCritical:
         return 'Include high and critical severity risks';
       case activities:

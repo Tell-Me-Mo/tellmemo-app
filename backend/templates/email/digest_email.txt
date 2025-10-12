@@ -21,7 +21,7 @@ Critical Risks: {{ summary_stats.critical_risks }}
 {% if project.organization_name %}Organization: {{ project.organization_name }}{% endif %}
 
 {% if project.tasks and project.tasks|length > 0 %}
-✅ Your Tasks ({{ project.tasks|length }}):
+✅ Tasks ({{ project.tasks|length }}):
 {% for task in project.tasks[:5] %}
   • {{ task.title }}{% if task.due_date %} (Due: {{ task.due_date|format_date }}){% endif %}
 {% endfor %}

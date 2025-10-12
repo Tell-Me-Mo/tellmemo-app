@@ -242,7 +242,7 @@ void main() {
 
     test('displayName returns correct values', () {
       expect(DigestContentType.displayName(DigestContentType.blockers), 'Active Blockers');
-      expect(DigestContentType.displayName(DigestContentType.tasksAssigned), 'Tasks Assigned to Me');
+      expect(DigestContentType.displayName(DigestContentType.tasksAssigned), 'Tasks');
       expect(DigestContentType.displayName(DigestContentType.risksCritical), 'Critical Risks');
       expect(DigestContentType.displayName(DigestContentType.activities), 'Project Activities');
       expect(DigestContentType.displayName(DigestContentType.decisions), 'Key Decisions');

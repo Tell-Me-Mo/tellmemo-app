@@ -77,10 +77,10 @@
     </p>
     {% endif %}
 
-    <!-- Your Tasks -->
+    <!-- Tasks -->
     {% if project.tasks and project.tasks|length > 0 %}
     <div style="margin-top: 16px;">
-        <strong style="color: #374151; font-size: 14px;">✅ Your Tasks ({{ project.tasks|length }})</strong>
+        <strong style="color: #374151; font-size: 14px;">✅ Tasks ({{ project.tasks|length }})</strong>
         {% for task in project.tasks[:5] %}
         <div style="margin: 8px 0 8px 16px; padding: 8px; background-color: #ffffff; border-radius: 4px;">
             <div style="font-size: 13px; color: #1f2937;">{{ task.title }}</div>
