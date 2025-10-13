@@ -37,6 +37,11 @@ def mock_settings():
     settings.max_tokens = 4096
     settings.temperature = 0.7
     settings.api_env = "test"
+    # Circuit breaker settings (default to disabled)
+    settings.enable_circuit_breaker = False
+    settings.circuit_breaker_failure_threshold = 5
+    settings.circuit_breaker_timeout_seconds = 300
+    settings.circuit_breaker_expected_exception = "overloaded"
     return settings
 
 
