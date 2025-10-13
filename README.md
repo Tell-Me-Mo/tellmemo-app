@@ -15,7 +15,7 @@ Turn project chaos into clarity. AI-powered platform that transforms meetings in
 
 - **Frontend**: Flutter Web
 - **Backend**: FastAPI + PostgreSQL + Qdrant
-- **AI**: Claude 3.5 (LLM), EmbeddingGemma (local embeddings)
+- **AI**: Claude 3.5 (primary LLM) + OpenAI GPT (fallback), EmbeddingGemma (local embeddings)
 - **Deploy**: Docker Compose (everything containerized)
 
 ## 🚀 Quick Start
@@ -49,9 +49,11 @@ docker compose up -d
 
 ### Getting API Keys
 
-**ANTHROPIC_API_KEY**: Get from [console.anthropic.com](https://console.anthropic.com/) → API Keys
+**ANTHROPIC_API_KEY** (Required): Get from [console.anthropic.com](https://console.anthropic.com/) → API Keys
 
-**HF_TOKEN**: Get from [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) → Create token (Read permission)
+**HF_TOKEN** (Required): Get from [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) → Create token (Read permission)
+
+**OPENAI_API_KEY** (Optional): Get from [platform.openai.com](https://platform.openai.com/api-keys) → For automatic fallback when Claude is overloaded
 
 ### Useful Commands
 
@@ -130,7 +132,11 @@ Key environment variables:
 ANTHROPIC_API_KEY=sk-ant-api03-xxx
 HF_TOKEN=hf_xxx
 
-# Optional
+# Optional (High Availability)
+OPENAI_API_KEY=sk-proj-xxx           # Automatic fallback on Claude overload
+ENABLE_LLM_FALLBACK=true             # Enable provider fallback (default: true)
+
+# Optional (Other)
 JWT_SECRET=your-secret-here
 SENTRY_ENABLED=false
 ```
