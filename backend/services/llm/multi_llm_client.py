@@ -327,13 +327,6 @@ class ProviderCascade:
         self.fallback_provider_name = fallback_provider_name
         self.settings = settings
 
-    def _get_provider_from_model(self, model: str) -> Optional[AIProvider]:
-        """Determine which provider a model belongs to."""
-        for model_enum in AIModel:
-            if model_enum.value == model:
-                return MODEL_PROVIDER_MAP.get(model_enum)
-        return None
-
     def _translate_model_for_fallback(self, source_model: str) -> Optional[str]:
         """
         Translate a model to its equivalent in the fallback provider.
@@ -367,6 +360,106 @@ class ProviderCascade:
             )
 
         return equivalent_model
+
+    async def _execute_fallback(
+        self,
+        operation: str,
+        primary_model: str,
+        fallback_reason: str,
+        metadata: Dict[str, Any],
+        **kwargs
+    ) -> tuple[Optional[Any], Dict[str, Any]]:
+        """
+        Execute fallback to secondary provider.
+
+        Args:
+            operation: Operation type ("create_message" or "create_conversation")
+            primary_model: Primary model that failed
+            fallback_reason: Reason for fallback (e.g., "overloaded", "rate_limit")
+            metadata: Metadata dictionary to update
+            **kwargs: Arguments to pass to the provider method
+
+        Returns:
+            Tuple of (response, metadata_dict)
+        """
+        from utils.exceptions import (
+            LLMRateLimitException,
+            LLMTimeoutException,
+            LLMOverloadedException,
+        )
+        from utils.retry import RetryConfig, retry_with_backoff
+
+        logger.info(
+            f"🔄 Fallback triggered: {self.primary_provider_name} → {self.fallback_provider_name} "
+            f"(reason: {fallback_reason})"
+        )
+        metadata["fallback_triggered"] = True
+        metadata["fallback_reason"] = fallback_reason
+
+        # Translate model to equivalent
+        fallback_model = self._translate_model_for_fallback(primary_model)
+        if not fallback_model:
+            logger.error(
+                f"Cannot fallback: no model equivalence for {primary_model}"
+            )
+            raise Exception(f"No model equivalence found for {primary_model}")
+
+        metadata["fallback_model"] = fallback_model
+        metadata["provider_used"] = self.fallback_provider_name
+
+        # Update kwargs with translated model
+        kwargs["model"] = fallback_model
+
+        # Configure retry for fallback provider
+        retry_config = RetryConfig(
+            max_attempts=self.settings.fallback_provider_max_retries,
+            initial_delay=2.0,
+            max_delay=30.0,
+            exponential_base=2.0,
+            jitter=True,
+            retryable_exceptions=(
+                LLMRateLimitException,
+                LLMTimeoutException,
+                LLMOverloadedException,
+            )
+        )
+
+        async def call_fallback():
+            """Call fallback provider with error handling."""
+            try:
+                if operation == "create_message":
+                    response = await self.fallback_client.create_message(**kwargs)
+                elif operation == "create_conversation":
+                    response = await self.fallback_client.create_conversation(**kwargs)
+                else:
+                    raise ValueError(f"Unknown operation: {operation}")
+
+                metadata["attempts"].append({
+                    "provider": self.fallback_provider_name,
+                    "model": fallback_model,
+                    "success": True
+                })
+                logger.info(
+                    f"✅ Fallback successful: {self.fallback_provider_name} / {fallback_model}"
+                )
+                return response
+
+            except Exception as e:
+                error_str = str(e)
+                metadata["attempts"].append({
+                    "provider": self.fallback_provider_name,
+                    "model": fallback_model,
+                    "success": False,
+                    "error": error_str
+                })
+                logger.error(
+                    f"❌ Fallback failed on {self.fallback_provider_name}: {error_str}"
+                )
+                raise
+
+        # Try fallback provider with retries
+        response = await retry_with_backoff(call_fallback, config=retry_config)
+        return response, metadata
 
     async def execute_with_fallback(
         self,
@@ -529,109 +622,24 @@ class ProviderCascade:
                 raise
 
             # Phase 2: Fallback to secondary provider
-            logger.info(
-                f"🔄 Fallback triggered: {self.primary_provider_name} → {self.fallback_provider_name}"
+            return await self._execute_fallback(
+                operation=operation,
+                primary_model=primary_model,
+                fallback_reason="overloaded",
+                metadata=metadata,
+                **kwargs
             )
-            metadata["fallback_triggered"] = True
-            metadata["fallback_reason"] = "overloaded"
-
-            # Translate model to equivalent
-            fallback_model = self._translate_model_for_fallback(primary_model)
-            if not fallback_model:
-                logger.error(
-                    f"Cannot fallback: no model equivalence for {primary_model}"
-                )
-                raise
-
-            metadata["fallback_model"] = fallback_model
-            metadata["provider_used"] = self.fallback_provider_name
-
-            # Update kwargs with translated model
-            if operation == "create_message":
-                kwargs["model"] = fallback_model
-            elif operation == "create_conversation":
-                kwargs["model"] = fallback_model
-
-            # Configure retry for fallback provider
-            retry_config = RetryConfig(
-                max_attempts=self.settings.fallback_provider_max_retries,
-                initial_delay=2.0,
-                max_delay=30.0,
-                exponential_base=2.0,
-                jitter=True,
-                retryable_exceptions=(
-                    LLMRateLimitException,
-                    LLMTimeoutException,
-                    LLMOverloadedException,
-                )
-            )
-
-            async def call_fallback():
-                """Call fallback provider with error handling."""
-                try:
-                    if operation == "create_message":
-                        response = await self.fallback_client.create_message(**kwargs)
-                    elif operation == "create_conversation":
-                        response = await self.fallback_client.create_conversation(**kwargs)
-                    else:
-                        raise ValueError(f"Unknown operation: {operation}")
-
-                    metadata["attempts"].append({
-                        "provider": self.fallback_provider_name,
-                        "model": fallback_model,
-                        "success": True
-                    })
-                    logger.info(
-                        f"✅ Fallback successful: {self.fallback_provider_name} / {fallback_model}"
-                    )
-                    return response
-
-                except Exception as e:
-                    error_str = str(e)
-                    metadata["attempts"].append({
-                        "provider": self.fallback_provider_name,
-                        "model": fallback_model,
-                        "success": False,
-                        "error": error_str
-                    })
-                    logger.error(
-                        f"❌ Fallback failed on {self.fallback_provider_name}: {error_str}"
-                    )
-                    raise
-
-            # Try fallback provider with retries
-            response = await retry_with_backoff(call_fallback, config=retry_config)
-            return response, metadata
 
         except LLMRateLimitException as e:
             # Rate limit on primary - optionally fallback
             if fallback_available and self.settings.fallback_on_rate_limit:
-                logger.info(
-                    f"🔄 Fallback on rate limit: {self.primary_provider_name} → {self.fallback_provider_name}"
+                return await self._execute_fallback(
+                    operation=operation,
+                    primary_model=primary_model,
+                    fallback_reason="rate_limit",
+                    metadata=metadata,
+                    **kwargs
                 )
-                # Similar fallback logic as above
-                # (Reusing the fallback code from overload case)
-                metadata["fallback_triggered"] = True
-                metadata["fallback_reason"] = "rate_limit"
-
-                fallback_model = self._translate_model_for_fallback(primary_model)
-                if fallback_model:
-                    metadata["fallback_model"] = fallback_model
-                    metadata["provider_used"] = self.fallback_provider_name
-
-                    if operation == "create_message":
-                        kwargs["model"] = fallback_model
-                        response = await self.fallback_client.create_message(**kwargs)
-                    else:
-                        kwargs["model"] = fallback_model
-                        response = await self.fallback_client.create_conversation(**kwargs)
-
-                    metadata["attempts"].append({
-                        "provider": self.fallback_provider_name,
-                        "model": fallback_model,
-                        "success": True
-                    })
-                    return response, metadata
 
             # No fallback for rate limit - re-raise
             raise
