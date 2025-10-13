@@ -37,7 +37,24 @@ class Settings(BaseSettings):
     llm_model: str = Field(default="claude-3-5-haiku-latest", env="LLM_MODEL")
     max_tokens: int = Field(default=4096, env="MAX_TOKENS")
     temperature: float = Field(default=0.7, env="TEMPERATURE")
-    
+
+    # OpenAI API Configuration
+    openai_api_key: str = Field(default="", env="OPENAI_API_KEY")
+
+    # LLM Fallback Configuration
+    enable_llm_fallback: bool = Field(default=True, env="ENABLE_LLM_FALLBACK")
+    fallback_provider: str = Field(default="openai", env="FALLBACK_PROVIDER")  # "openai" or "claude"
+    primary_provider_max_retries: int = Field(default=2, env="PRIMARY_PROVIDER_MAX_RETRIES")
+    fallback_provider_max_retries: int = Field(default=3, env="FALLBACK_PROVIDER_MAX_RETRIES")
+    fallback_on_overload: bool = Field(default=True, env="FALLBACK_ON_OVERLOAD")  # Fallback on 529/503
+    fallback_on_rate_limit: bool = Field(default=False, env="FALLBACK_ON_RATE_LIMIT")  # Don't fallback on 429 by default
+
+    # Circuit Breaker Configuration
+    enable_circuit_breaker: bool = Field(default=True, env="ENABLE_CIRCUIT_BREAKER")
+    circuit_breaker_failure_threshold: int = Field(default=5, env="CIRCUIT_BREAKER_FAILURE_THRESHOLD")  # Open circuit after N consecutive failures
+    circuit_breaker_timeout_seconds: int = Field(default=300, env="CIRCUIT_BREAKER_TIMEOUT_SECONDS")  # Keep circuit open for 5 minutes
+    circuit_breaker_expected_exception: str = Field(default="overloaded", env="CIRCUIT_BREAKER_EXPECTED_EXCEPTION")  # "overloaded", "rate_limit", or "any"
+
     # Langfuse Configuration
     LANGFUSE_ENABLED: bool = Field(default=False, env="LANGFUSE_ENABLED")
     LANGFUSE_URL: str = Field(default="http://localhost:3000", env="LANGFUSE_URL")

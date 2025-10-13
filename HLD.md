@@ -126,7 +126,8 @@ TellMeMo helps teams extract insights from project content using AI:
 | **ORM** | SQLAlchemy 2.0+ | Database operations |
 | **Migrations** | Alembic | Database versioning |
 | **Auth** | Supabase Auth | User authentication |
-| **LLM** | Anthropic Claude | AI generation (Haiku/Sonnet/Opus) |
+| **LLM (Primary)** | Anthropic Claude | AI generation (Haiku/Sonnet/Opus) |
+| **LLM (Fallback)** | OpenAI GPT | Automatic fallback on Claude overload |
 | **Embeddings** | EmbeddingGemma | Local embedding model |
 | **Transcription** | OpenAI Whisper + Salad Cloud + Replicate | Audio to text (242x speedup with Replicate) |
 | **Job Queue** | Redis Queue (RQ) | Background job processing with multi-priority queues |
@@ -300,6 +301,14 @@ Standalone Projects (no parent)
 - Claude Haiku (fast, economical)
 - Claude Sonnet 3.5 (balanced)
 - Claude Opus (highest quality)
+- GPT-4o / GPT-4o-mini (automatic fallback)
+
+**Provider Fallback System:**
+- Automatic OpenAI fallback on Claude 529 errors
+- Intelligent model translation (Haiku → GPT-4o-mini, Sonnet → GPT-4o)
+- Zero downtime with transparent failover
+- Configurable retry strategies
+- Full observability with Langfuse tracking
 
 **Database Tables:**
 - `queries` - Query history
@@ -307,7 +316,7 @@ Standalone Projects (no parent)
 
 **Services:**
 - `rag_service.py` - RAG orchestration
-- `multi_llm_client.py` - LLM provider abstraction
+- `multi_llm_client.py` - Multi-provider LLM abstraction with fallback
 - `rag_prompts.py` - Prompt templates
 
 ### 6. Summary Generation
@@ -992,11 +1001,18 @@ Return to user
 - Sufficient quality for semantic search
 - Data privacy (no external API calls)
 
-**Why Anthropic Claude:**
+**Why Anthropic Claude (Primary):**
 - Superior reasoning capabilities
 - Large context window (200K tokens)
 - Structured output support
 - Reliable API performance
+
+**Why OpenAI GPT (Fallback):**
+- High availability and reliability
+- Equivalent model quality tiers (GPT-4o ≈ Claude Sonnet)
+- Automatic failover prevents service disruption
+- Cost-effective disaster recovery
+- Transparent to application code
 
 **Why Qdrant:**
 - Fast semantic search
