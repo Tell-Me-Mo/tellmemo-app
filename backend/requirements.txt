@@ -49,7 +49,7 @@ fast-langdetect==1.0.0
 
 # LLM Integration
 anthropic==0.69.0
-openai==2.1.0
+openai==2.3.0
 
 # Circuit Breaker
 purgatory==3.0.1  # Circuit breaker for resilient API calls
