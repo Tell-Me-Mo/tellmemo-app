@@ -78,6 +78,6 @@ pytest==8.4.2
 pytest-asyncio==0.25.0
 fakeredis==2.32.0  # In-memory Redis for testing (no workers needed)
 black==25.1.0
-ruff==0.9.1
+ruff==0.14.0
 cryptography>=46.0.1
 bcrypt>=4.3.0  # Direct bcrypt for password hashing
