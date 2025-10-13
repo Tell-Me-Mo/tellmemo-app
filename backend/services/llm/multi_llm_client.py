@@ -27,6 +27,14 @@ except ImportError:
 
     langfuse_context = DummyLangfuseContext()
 
+try:
+    from purgatory import AsyncCircuitBreakerFactory
+    from purgatory.domain.model import OpenedState
+    PURGATORY_AVAILABLE = True
+except ImportError:
+    PURGATORY_AVAILABLE = False
+    OpenedState = Exception  # Fallback for type hints
+
 from config import Settings
 from models.integration import AIProvider, AIModel, MODEL_PROVIDER_MAP, Integration, IntegrationType, IntegrationStatus, get_equivalent_model
 from models.organization import Organization
@@ -327,6 +335,24 @@ class ProviderCascade:
         self.fallback_provider_name = fallback_provider_name
         self.settings = settings
 
+        # Initialize circuit breaker factory for primary provider
+        self.circuit_breaker_factory = None
+        self.circuit_breaker_name = f"{primary_provider_name}_api"
+        if PURGATORY_AVAILABLE and settings.enable_circuit_breaker:
+            try:
+                self.circuit_breaker_factory = AsyncCircuitBreakerFactory(
+                    default_threshold=settings.circuit_breaker_failure_threshold,
+                    default_ttl=settings.circuit_breaker_timeout_seconds
+                )
+                logger.info(
+                    f"Circuit breaker enabled for {primary_provider_name} "
+                    f"(threshold: {settings.circuit_breaker_failure_threshold}, "
+                    f"timeout: {settings.circuit_breaker_timeout_seconds}s)"
+                )
+            except Exception as e:
+                logger.warning(f"Failed to initialize circuit breaker: {e}")
+                self.circuit_breaker_factory = None
+
     def _translate_model_for_fallback(self, source_model: str) -> Optional[str]:
         """
         Translate a model to its equivalent in the fallback provider.
@@ -602,9 +628,28 @@ class ProviderCascade:
                         logger.error(f"Unknown error on {self.primary_provider_name}: {error_str}")
                         raise
 
-            # Try primary provider with retries
-            response = await retry_with_backoff(call_primary, config=retry_config)
-            return response, metadata
+            # Try primary provider with retries (wrapped with circuit breaker if enabled)
+            if self.circuit_breaker_factory:
+                try:
+                    async with await self.circuit_breaker_factory.get_breaker(self.circuit_breaker_name):
+                        response = await retry_with_backoff(call_primary, config=retry_config)
+                    return response, metadata
+                except OpenedState:
+                    # Circuit is open - immediately trigger fallback
+                    logger.warning(
+                        f"🚫 Circuit breaker open for {self.primary_provider_name} - "
+                        f"skipping primary and using fallback immediately"
+                    )
+                    metadata["attempts"].append({
+                        "provider": self.primary_provider_name,
+                        "model": primary_model,
+                        "success": False,
+                        "error": "circuit_breaker_open"
+                    })
+                    raise LLMOverloadedException()
+            else:
+                response = await retry_with_backoff(call_primary, config=retry_config)
+                return response, metadata
 
         except LLMOverloadedException as e:
             # Primary provider is overloaded - try fallback if available

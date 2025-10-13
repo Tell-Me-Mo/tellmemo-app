@@ -53,8 +53,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Zero code changes required - transparent failover
   - Configurable per-organization or globally
   - Maintains equivalent model quality across providers
+  - **Circuit Breaker Pattern** - Production resilience with purgatory library
+    - Automatically opens circuit after configurable threshold (default: 5 failures)
+    - Prevents cascading failures by skipping primary provider when circuit is open
+    - Auto-recovery with configurable timeout (default: 5 minutes)
+    - Transparent integration with existing fallback system
+    - Environment-based configuration (ENABLE_CIRCUIT_BREAKER, threshold, timeout)
   - Detailed documentation in `backend/FALLBACK_IMPLEMENTATION.md`
-  - Full test coverage with 12 integration tests
+  - Full test coverage with 16 integration tests
 
 ### Changed
 - Migrated from multi-service architecture to simplified 4-service core

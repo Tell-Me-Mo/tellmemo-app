@@ -136,6 +136,11 @@ HF_TOKEN=hf_xxx
 OPENAI_API_KEY=sk-proj-xxx           # Automatic fallback on Claude overload
 ENABLE_LLM_FALLBACK=true             # Enable provider fallback (default: true)
 
+# Optional (Circuit Breaker - Production Resilience)
+ENABLE_CIRCUIT_BREAKER=true          # Enable circuit breaker pattern (default: true)
+CIRCUIT_BREAKER_FAILURE_THRESHOLD=5  # Failures before circuit opens (default: 5)
+CIRCUIT_BREAKER_TIMEOUT_SECONDS=300  # Circuit open duration in seconds (default: 300 = 5 min)
+
 # Optional (Other)
 JWT_SECRET=your-secret-here
 SENTRY_ENABLED=false

@@ -427,3 +427,150 @@ class TestFallbackEdgeCases:
         assert response == openai_response
         assert metadata["fallback_triggered"] is True
         mock_openai_client.create_conversation.assert_called_once()
+
+
+class TestCircuitBreaker:
+    """Test circuit breaker functionality."""
+
+    @pytest.fixture
+    def mock_settings_with_circuit_breaker(self, mock_settings):
+        """Extend mock settings with circuit breaker configuration."""
+        mock_settings.enable_circuit_breaker = True
+        mock_settings.circuit_breaker_failure_threshold = 2
+        mock_settings.circuit_breaker_timeout_seconds = 5
+        mock_settings.circuit_breaker_expected_exception = "overloaded"
+        return mock_settings
+
+    @pytest.mark.asyncio
+    async def test_circuit_breaker_initializes(self, mock_settings_with_circuit_breaker, mock_claude_client, mock_openai_client):
+        """Test that circuit breaker factory initializes when enabled."""
+        cascade = ProviderCascade(
+            primary_client=mock_claude_client,
+            primary_provider_name="Claude",
+            fallback_client=mock_openai_client,
+            fallback_provider_name="OpenAI",
+            settings=mock_settings_with_circuit_breaker
+        )
+
+        # Verify circuit breaker is initialized
+        assert cascade.circuit_breaker_factory is not None
+        assert cascade.circuit_breaker_name == "Claude_api"
+
+    @pytest.mark.asyncio
+    async def test_circuit_breaker_disabled(self, mock_settings, mock_claude_client, mock_openai_client):
+        """Test that circuit breaker is not initialized when disabled."""
+        mock_settings.enable_circuit_breaker = False
+
+        cascade = ProviderCascade(
+            primary_client=mock_claude_client,
+            primary_provider_name="Claude",
+            fallback_client=mock_openai_client,
+            fallback_provider_name="OpenAI",
+            settings=mock_settings
+        )
+
+        # Verify circuit breaker is NOT initialized
+        assert cascade.circuit_breaker_factory is None
+
+    @pytest.mark.asyncio
+    async def test_circuit_breaker_opens_after_threshold(self, mock_settings_with_circuit_breaker, mock_claude_client, mock_openai_client):
+        """Test that circuit breaker opens after threshold failures and triggers fallback."""
+        # Setup Claude to always fail with 529
+        claude_error = Exception("Error code: 529 - overloaded")
+        mock_claude_client.create_message = AsyncMock(side_effect=claude_error)
+
+        # Setup OpenAI success
+        openai_response = Mock()
+        openai_response.content = [Mock(text="Success")]
+        openai_response.usage = Mock(prompt_tokens=50, completion_tokens=100)
+        mock_openai_client.create_message = AsyncMock(return_value=openai_response)
+
+        # Create cascade
+        cascade = ProviderCascade(
+            primary_client=mock_claude_client,
+            primary_provider_name="Claude",
+            fallback_client=mock_openai_client,
+            fallback_provider_name="OpenAI",
+            settings=mock_settings_with_circuit_breaker
+        )
+
+        # First call - should trigger primary failure and fallback
+        response1, metadata1 = await cascade.execute_with_fallback(
+            operation="create_message",
+            primary_model="claude-3-5-haiku-latest",
+            prompt="Test 1",
+            model="claude-3-5-haiku-latest",
+            max_tokens=100,
+            temperature=0.7
+        )
+
+        assert metadata1["fallback_triggered"] is True
+        assert metadata1["fallback_reason"] == "overloaded"
+
+        # Second call - circuit should open after threshold
+        response2, metadata2 = await cascade.execute_with_fallback(
+            operation="create_message",
+            primary_model="claude-3-5-haiku-latest",
+            prompt="Test 2",
+            model="claude-3-5-haiku-latest",
+            max_tokens=100,
+            temperature=0.7
+        )
+
+        assert metadata2["fallback_triggered"] is True
+
+        # Verify fallback was used both times
+        assert mock_openai_client.create_message.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_circuit_breaker_skips_primary_when_open(self, mock_settings_with_circuit_breaker, mock_claude_client, mock_openai_client):
+        """Test that circuit breaker skips primary provider when circuit is open."""
+        # Setup Claude to fail
+        claude_error = Exception("Error code: 529")
+        mock_claude_client.create_message = AsyncMock(side_effect=claude_error)
+
+        # Setup OpenAI success
+        openai_response = Mock()
+        openai_response.content = [Mock(text="Success")]
+        openai_response.usage = Mock(prompt_tokens=50, completion_tokens=100)
+        mock_openai_client.create_message = AsyncMock(return_value=openai_response)
+
+        # Create cascade with threshold of 1 (opens immediately)
+        mock_settings_with_circuit_breaker.circuit_breaker_failure_threshold = 1
+        cascade = ProviderCascade(
+            primary_client=mock_claude_client,
+            primary_provider_name="Claude",
+            fallback_client=mock_openai_client,
+            fallback_provider_name="OpenAI",
+            settings=mock_settings_with_circuit_breaker
+        )
+
+        # First call - triggers circuit to open
+        await cascade.execute_with_fallback(
+            operation="create_message",
+            primary_model="claude-3-5-haiku-latest",
+            prompt="Test 1",
+            model="claude-3-5-haiku-latest",
+            max_tokens=100,
+            temperature=0.7
+        )
+
+        # Reset call count
+        mock_claude_client.create_message.reset_mock()
+
+        # Second call - circuit should be open, skipping primary
+        response2, metadata2 = await cascade.execute_with_fallback(
+            operation="create_message",
+            primary_model="claude-3-5-haiku-latest",
+            prompt="Test 2",
+            model="claude-3-5-haiku-latest",
+            max_tokens=100,
+            temperature=0.7
+        )
+
+        # Verify metadata shows circuit breaker was open
+        assert metadata2["fallback_triggered"] is True
+        assert any(attempt.get("error") == "circuit_breaker_open" for attempt in metadata2["attempts"])
+
+        # Verify OpenAI was called but Claude might not have been (circuit open)
+        assert mock_openai_client.create_message.called
