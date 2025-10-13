@@ -1,6 +1,7 @@
 """Integration model for storing external service configurations."""
 
 import uuid
+import logging
 from datetime import datetime
 from typing import Optional, Dict, Any
 from sqlalchemy import Column, String, DateTime, Boolean, JSON, Enum as SQLEnum, ForeignKey
@@ -8,6 +9,8 @@ from sqlalchemy.dialects.postgresql import UUID
 import enum
 
 from db.database import Base
+
+logger = logging.getLogger(__name__)
 
 
 class IntegrationType(str, enum.Enum):
@@ -64,6 +67,77 @@ MODEL_PROVIDER_MAP = {
     AIModel.GPT_4_TURBO: AIProvider.OPENAI,
     AIModel.GPT_35_TURBO: AIProvider.OPENAI,
 }
+
+
+# Model equivalence mapping for intelligent fallback
+# Maps each model to its closest equivalent in the other provider
+MODEL_EQUIVALENCE_MAP = {
+    # Claude → OpenAI equivalents (based on capability & cost)
+    AIModel.CLAUDE_3_5_HAIKU: AIModel.GPT_4O_MINI,      # Cost/speed optimized, similar pricing
+    AIModel.CLAUDE_3_5_SONNET: AIModel.GPT_4O,          # Balanced performance, high capability
+    AIModel.CLAUDE_SONNET_4: AIModel.GPT_4O,            # Latest Sonnet → GPT-4o
+    AIModel.CLAUDE_OPUS_4: AIModel.GPT_4O,              # High capability flagship
+    AIModel.CLAUDE_OPUS_4_1: AIModel.GPT_4_TURBO,       # Extended context, advanced reasoning
+
+    # OpenAI → Claude equivalents (reverse mapping)
+    AIModel.GPT_4O_MINI: AIModel.CLAUDE_3_5_HAIKU,      # Cost optimized
+    AIModel.GPT_4O: AIModel.CLAUDE_3_5_SONNET,          # Balanced capability
+    AIModel.GPT_4_TURBO: AIModel.CLAUDE_OPUS_4,         # High capability
+    AIModel.GPT_35_TURBO: AIModel.CLAUDE_3_5_HAIKU,     # Legacy model → Haiku
+}
+
+
+def get_equivalent_model(source_model: str, target_provider: AIProvider) -> Optional[str]:
+    """
+    Get the equivalent model in the target provider.
+
+    Args:
+        source_model: The model string (e.g., "claude-3-5-haiku-latest")
+        target_provider: The target provider enum
+
+    Returns:
+        Equivalent model string, or None if no mapping exists
+
+    Example:
+        >>> get_equivalent_model("claude-3-5-haiku-latest", AIProvider.OPENAI)
+        "gpt-4o-mini"
+    """
+    # Try to find the model in AIModel enum
+    source_model_enum = None
+    for model_enum in AIModel:
+        if model_enum.value == source_model:
+            source_model_enum = model_enum
+            break
+
+    if not source_model_enum:
+        # Model not found in enum, return None
+        logger.warning(
+            f"Model translation failed: '{source_model}' not found in AIModel enum. "
+            f"Available models: {[m.value for m in AIModel]}"
+        )
+        return None
+
+    # Get the equivalent model
+    equivalent_model_enum = MODEL_EQUIVALENCE_MAP.get(source_model_enum)
+    if not equivalent_model_enum:
+        # No equivalence mapping exists
+        logger.warning(
+            f"Model translation failed: No equivalence mapping for {source_model_enum.value} → {target_provider.value}. "
+            f"Add mapping to MODEL_EQUIVALENCE_MAP if this model should support fallback."
+        )
+        return None
+
+    # Verify the equivalent model belongs to the target provider
+    if MODEL_PROVIDER_MAP.get(equivalent_model_enum) != target_provider:
+        # Mapping doesn't match target provider (shouldn't happen with correct mapping)
+        logger.error(
+            f"Model translation error: Mapped model {equivalent_model_enum.value} belongs to "
+            f"{MODEL_PROVIDER_MAP.get(equivalent_model_enum)}, not {target_provider}. "
+            "This is a configuration error in MODEL_EQUIVALENCE_MAP."
+        )
+        return None
+
+    return equivalent_model_enum.value
 
 
 class Integration(Base):
