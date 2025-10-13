@@ -10,7 +10,7 @@ websockets==15.0.1
 
 # Database
 asyncpg==0.30.0
-sqlalchemy[asyncio]==2.0.43
+sqlalchemy[asyncio]==2.0.44
 alembic==1.16.5
 
 # Cache & Job Queue
