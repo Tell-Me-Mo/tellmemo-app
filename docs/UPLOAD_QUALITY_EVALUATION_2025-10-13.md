@@ -130,7 +130,7 @@ Deduplication prompt exists but uses:
 **Issues Found:**
 1. Prompt is good but AI interpretation varies (confidence 0.6-0.9)
 2. No **embedding-based similarity** check as backup
-3. Deduplication happens **after** items are created (not preventive)
+3. Deduplication threshold **not aggressive enough** (allows 37 semantic duplicate pairs)
 
 #### Recommendations
 
