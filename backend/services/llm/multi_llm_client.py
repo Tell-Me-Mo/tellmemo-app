@@ -31,9 +31,17 @@ try:
     from purgatory import AsyncCircuitBreakerFactory
     from purgatory.domain.model import OpenedState
     PURGATORY_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     PURGATORY_AVAILABLE = False
     OpenedState = Exception  # Fallback for type hints
+    # Log import failure at module load time
+    import logging
+    _logger = logging.getLogger(__name__)
+    _logger.warning(
+        f"⚠️  Circuit breaker library 'purgatory' not available: {e}. "
+        "Circuit breaker functionality will be disabled. "
+        "Install with: pip install purgatory==3.0.1"
+    )
 
 from config import Settings
 from models.integration import AIProvider, AIModel, MODEL_PROVIDER_MAP, Integration, IntegrationType, IntegrationStatus, get_equivalent_model
@@ -338,20 +346,26 @@ class ProviderCascade:
         # Initialize circuit breaker factory for primary provider
         self.circuit_breaker_factory = None
         self.circuit_breaker_name = f"{primary_provider_name}_api"
-        if PURGATORY_AVAILABLE and settings.enable_circuit_breaker:
-            try:
-                self.circuit_breaker_factory = AsyncCircuitBreakerFactory(
-                    default_threshold=settings.circuit_breaker_failure_threshold,
-                    default_ttl=settings.circuit_breaker_timeout_seconds
+        if settings.enable_circuit_breaker:
+            if PURGATORY_AVAILABLE:
+                try:
+                    self.circuit_breaker_factory = AsyncCircuitBreakerFactory(
+                        default_threshold=settings.circuit_breaker_failure_threshold,
+                        default_ttl=settings.circuit_breaker_timeout_seconds
+                    )
+                    logger.info(
+                        f"Circuit breaker enabled for {primary_provider_name} "
+                        f"(threshold: {settings.circuit_breaker_failure_threshold}, "
+                        f"timeout: {settings.circuit_breaker_timeout_seconds}s)"
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to initialize circuit breaker: {e}")
+                    self.circuit_breaker_factory = None
+            else:
+                logger.warning(
+                    f"⚠️  Circuit breaker requested for {primary_provider_name} but purgatory library is not available. "
+                    "Circuit breaker functionality will be disabled. Install with: pip install purgatory==3.0.1"
                 )
-                logger.info(
-                    f"Circuit breaker enabled for {primary_provider_name} "
-                    f"(threshold: {settings.circuit_breaker_failure_threshold}, "
-                    f"timeout: {settings.circuit_breaker_timeout_seconds}s)"
-                )
-            except Exception as e:
-                logger.warning(f"Failed to initialize circuit breaker: {e}")
-                self.circuit_breaker_factory = None
 
     def _translate_model_for_fallback(self, source_model: str) -> Optional[str]:
         """
@@ -995,7 +1009,8 @@ class MultiProviderLLMClient:
                         "fallback_provider": self.secondary_provider_name,
                         "fallback_reason": metadata.get("fallback_reason"),
                         "fallback_model": metadata.get("fallback_model"),
-                        "attempts": len(metadata.get("attempts", []))
+                        "attempts": metadata.get("attempts", []),  # Full attempts array for debugging
+                        "attempt_count": len(metadata.get("attempts", []))
                     }
                 )
 
@@ -1080,7 +1095,8 @@ class MultiProviderLLMClient:
                         "fallback_provider": self.secondary_provider_name,
                         "fallback_reason": metadata.get("fallback_reason"),
                         "fallback_model": metadata.get("fallback_model"),
-                        "attempts": len(metadata.get("attempts", []))
+                        "attempts": metadata.get("attempts", []),  # Full attempts array for debugging
+                        "attempt_count": len(metadata.get("attempts", []))
                     }
                 )
 

@@ -574,3 +574,76 @@ class TestCircuitBreaker:
 
         # Verify OpenAI was called but Claude might not have been (circuit open)
         assert mock_openai_client.create_message.called
+
+    @pytest.mark.asyncio
+    async def test_circuit_breaker_auto_recovery(self, mock_settings_with_circuit_breaker, mock_claude_client, mock_openai_client):
+        """Test that circuit breaker automatically recovers after timeout."""
+        import asyncio
+
+        # Use very short timeout for testing (1 second)
+        mock_settings_with_circuit_breaker.circuit_breaker_failure_threshold = 1
+        mock_settings_with_circuit_breaker.circuit_breaker_timeout_seconds = 1
+
+        # Setup Claude to fail initially
+        claude_error = Exception("Error code: 529")
+        mock_claude_client.create_message = AsyncMock(side_effect=claude_error)
+
+        # Setup OpenAI success
+        openai_response = Mock()
+        openai_response.content = [Mock(text="Success")]
+        openai_response.usage = Mock(prompt_tokens=50, completion_tokens=100)
+        mock_openai_client.create_message = AsyncMock(return_value=openai_response)
+
+        # Create cascade
+        cascade = ProviderCascade(
+            primary_client=mock_claude_client,
+            primary_provider_name="Claude",
+            fallback_client=mock_openai_client,
+            fallback_provider_name="OpenAI",
+            settings=mock_settings_with_circuit_breaker
+        )
+
+        # First call - opens the circuit
+        response1, metadata1 = await cascade.execute_with_fallback(
+            operation="create_message",
+            primary_model="claude-3-5-haiku-latest",
+            prompt="Test 1",
+            model="claude-3-5-haiku-latest",
+            max_tokens=100,
+            temperature=0.7
+        )
+        assert metadata1["fallback_triggered"] is True
+
+        # Second call - circuit is open, fallback immediately
+        response2, metadata2 = await cascade.execute_with_fallback(
+            operation="create_message",
+            primary_model="claude-3-5-haiku-latest",
+            prompt="Test 2",
+            model="claude-3-5-haiku-latest",
+            max_tokens=100,
+            temperature=0.7
+        )
+        assert metadata2["fallback_triggered"] is True
+
+        # Wait for circuit timeout to expire (1 second)
+        await asyncio.sleep(1.5)
+
+        # Now make Claude succeed
+        claude_success = Mock()
+        claude_success.content = [Mock(text="Claude success")]
+        claude_success.usage = Mock(input_tokens=50, output_tokens=100)
+        mock_claude_client.create_message = AsyncMock(return_value=claude_success)
+
+        # Third call after timeout - circuit should try primary again
+        response3, metadata3 = await cascade.execute_with_fallback(
+            operation="create_message",
+            primary_model="claude-3-5-haiku-latest",
+            prompt="Test 3",
+            model="claude-3-5-haiku-latest",
+            max_tokens=100,
+            temperature=0.7
+        )
+
+        # Circuit should have recovered and used primary
+        assert metadata3["fallback_triggered"] is False
+        assert response3 == claude_success

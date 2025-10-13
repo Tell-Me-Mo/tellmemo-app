@@ -1,6 +1,7 @@
 """Integration model for storing external service configurations."""
 
 import uuid
+import logging
 from datetime import datetime
 from typing import Optional, Dict, Any
 from sqlalchemy import Column, String, DateTime, Boolean, JSON, Enum as SQLEnum, ForeignKey
@@ -8,6 +9,8 @@ from sqlalchemy.dialects.postgresql import UUID
 import enum
 
 from db.database import Base
+
+logger = logging.getLogger(__name__)
 
 
 class IntegrationType(str, enum.Enum):
@@ -108,17 +111,30 @@ def get_equivalent_model(source_model: str, target_provider: AIProvider) -> Opti
 
     if not source_model_enum:
         # Model not found in enum, return None
+        logger.warning(
+            f"Model translation failed: '{source_model}' not found in AIModel enum. "
+            f"Available models: {[m.value for m in AIModel]}"
+        )
         return None
 
     # Get the equivalent model
     equivalent_model_enum = MODEL_EQUIVALENCE_MAP.get(source_model_enum)
     if not equivalent_model_enum:
         # No equivalence mapping exists
+        logger.warning(
+            f"Model translation failed: No equivalence mapping for {source_model_enum.value} → {target_provider.value}. "
+            f"Add mapping to MODEL_EQUIVALENCE_MAP if this model should support fallback."
+        )
         return None
 
     # Verify the equivalent model belongs to the target provider
     if MODEL_PROVIDER_MAP.get(equivalent_model_enum) != target_provider:
         # Mapping doesn't match target provider (shouldn't happen with correct mapping)
+        logger.error(
+            f"Model translation error: Mapped model {equivalent_model_enum.value} belongs to "
+            f"{MODEL_PROVIDER_MAP.get(equivalent_model_enum)}, not {target_provider}. "
+            "This is a configuration error in MODEL_EQUIVALENCE_MAP."
+        )
         return None
 
     return equivalent_model_enum.value
