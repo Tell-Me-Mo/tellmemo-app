@@ -28,7 +28,7 @@ except ImportError:
     langfuse_context = DummyLangfuseContext()
 
 from config import Settings
-from models.integration import AIProvider, AIModel, MODEL_PROVIDER_MAP, Integration, IntegrationType, IntegrationStatus
+from models.integration import AIProvider, AIModel, MODEL_PROVIDER_MAP, Integration, IntegrationType, IntegrationStatus, get_equivalent_model
 from models.organization import Organization
 
 logger = logging.getLogger(__name__)
@@ -292,6 +292,356 @@ class OpenAIProviderClient(BaseProviderClient):
         return WrappedResponse(response)
 
 
+class ProviderCascade:
+    """
+    Manages cascading fallback between primary and fallback LLM providers.
+
+    This class implements an elegant fallback strategy:
+    - Primary provider is tried first with limited retries
+    - On overload errors (529, 503), automatically fallback to secondary provider
+    - On rate limit errors (429), retry primary with exponential backoff
+    - Tracks metadata about provider usage and fallback events
+    """
+
+    def __init__(
+        self,
+        primary_client: Optional[BaseProviderClient],
+        primary_provider_name: str,
+        fallback_client: Optional[BaseProviderClient],
+        fallback_provider_name: str,
+        settings: Settings
+    ):
+        """
+        Initialize the provider cascade.
+
+        Args:
+            primary_client: Primary provider client instance
+            primary_provider_name: Name of primary provider (for logging)
+            fallback_client: Fallback provider client instance
+            fallback_provider_name: Name of fallback provider (for logging)
+            settings: Application settings
+        """
+        self.primary_client = primary_client
+        self.primary_provider_name = primary_provider_name
+        self.fallback_client = fallback_client
+        self.fallback_provider_name = fallback_provider_name
+        self.settings = settings
+
+    def _get_provider_from_model(self, model: str) -> Optional[AIProvider]:
+        """Determine which provider a model belongs to."""
+        for model_enum in AIModel:
+            if model_enum.value == model:
+                return MODEL_PROVIDER_MAP.get(model_enum)
+        return None
+
+    def _translate_model_for_fallback(self, source_model: str) -> Optional[str]:
+        """
+        Translate a model to its equivalent in the fallback provider.
+
+        Args:
+            source_model: The source model string
+
+        Returns:
+            Equivalent model string, or None if translation fails
+        """
+        # Determine target provider based on fallback client
+        if isinstance(self.fallback_client, OpenAIProviderClient):
+            target_provider = AIProvider.OPENAI
+        elif isinstance(self.fallback_client, ClaudeProviderClient):
+            target_provider = AIProvider.CLAUDE
+        else:
+            logger.warning(f"Unknown fallback client type: {type(self.fallback_client)}")
+            return None
+
+        # Use the model equivalence mapping
+        equivalent_model = get_equivalent_model(source_model, target_provider)
+
+        if equivalent_model:
+            logger.info(
+                f"Model translation: {source_model} → {equivalent_model} "
+                f"(for {target_provider.value} provider)"
+            )
+        else:
+            logger.warning(
+                f"No model equivalence found for {source_model} → {target_provider.value}"
+            )
+
+        return equivalent_model
+
+    async def execute_with_fallback(
+        self,
+        operation: str,
+        primary_model: str,
+        **kwargs
+    ) -> tuple[Optional[Any], Dict[str, Any]]:
+        """
+        Execute an LLM operation with automatic provider fallback.
+
+        Strategy:
+        1. Try primary provider with limited retries (for rate limits only)
+        2. On overload (529/503), immediately fallback to secondary provider
+        3. On rate limit (429), retry primary with exponential backoff
+        4. Track all attempts and metadata
+
+        Args:
+            operation: Operation type ("create_message" or "create_conversation")
+            primary_model: Primary model to use
+            **kwargs: Arguments to pass to the provider method
+
+        Returns:
+            Tuple of (response, metadata_dict)
+            metadata includes: provider_used, fallback_triggered, attempts, fallback_model
+        """
+        # Import exceptions here to avoid circular dependency
+        from utils.exceptions import (
+            LLMOverloadedException,
+            LLMRateLimitException,
+            LLMTimeoutException,
+            LLMAuthenticationException
+        )
+        from utils.retry import RetryConfig, retry_with_backoff
+
+        metadata = {
+            "provider_used": self.primary_provider_name,
+            "fallback_triggered": False,
+            "fallback_enabled": self.settings.enable_llm_fallback,
+            "primary_model": primary_model,
+            "attempts": []
+        }
+
+        # Check if fallback is available
+        fallback_available = (
+            self.settings.enable_llm_fallback and
+            self.fallback_client is not None and
+            self.fallback_client.is_available()
+        )
+
+        # Phase 1: Try primary provider
+        try:
+            logger.debug(
+                f"Attempting {operation} with primary provider: "
+                f"{self.primary_provider_name} / {primary_model}"
+            )
+
+            # Configure retry for primary provider (only for rate limits and timeouts)
+            retry_config = RetryConfig(
+                max_attempts=self.settings.primary_provider_max_retries,
+                initial_delay=2.0,
+                max_delay=30.0,
+                exponential_base=2.0,
+                jitter=True,
+                retryable_exceptions=(
+                    LLMRateLimitException,
+                    LLMTimeoutException,
+                )
+            )
+
+            async def call_primary():
+                """Call primary provider with error handling."""
+                try:
+                    if operation == "create_message":
+                        response = await self.primary_client.create_message(**kwargs)
+                    elif operation == "create_conversation":
+                        response = await self.primary_client.create_conversation(**kwargs)
+                    else:
+                        raise ValueError(f"Unknown operation: {operation}")
+
+                    metadata["attempts"].append({
+                        "provider": self.primary_provider_name,
+                        "model": primary_model,
+                        "success": True
+                    })
+                    return response
+
+                except Exception as e:
+                    error_str = str(e)
+
+                    # Classify the error
+                    if "529" in error_str or "overloaded" in error_str.lower() or "503" in error_str:
+                        metadata["attempts"].append({
+                            "provider": self.primary_provider_name,
+                            "model": primary_model,
+                            "success": False,
+                            "error": "overloaded"
+                        })
+                        logger.warning(
+                            f"{self.primary_provider_name} overloaded (529/503): {error_str}"
+                        )
+                        raise LLMOverloadedException()
+
+                    elif "429" in error_str or "rate_limit" in error_str.lower():
+                        metadata["attempts"].append({
+                            "provider": self.primary_provider_name,
+                            "model": primary_model,
+                            "success": False,
+                            "error": "rate_limit"
+                        })
+                        logger.warning(f"Rate limit on {self.primary_provider_name}: {error_str}")
+                        raise LLMRateLimitException()
+
+                    elif "timeout" in error_str.lower() or "504" in error_str:
+                        metadata["attempts"].append({
+                            "provider": self.primary_provider_name,
+                            "model": primary_model,
+                            "success": False,
+                            "error": "timeout"
+                        })
+                        logger.warning(f"Timeout on {self.primary_provider_name}: {error_str}")
+                        raise LLMTimeoutException()
+
+                    elif "401" in error_str or "unauthorized" in error_str.lower():
+                        metadata["attempts"].append({
+                            "provider": self.primary_provider_name,
+                            "model": primary_model,
+                            "success": False,
+                            "error": "authentication"
+                        })
+                        logger.error(f"Authentication failed on {self.primary_provider_name}: {error_str}")
+                        raise LLMAuthenticationException()
+
+                    else:
+                        metadata["attempts"].append({
+                            "provider": self.primary_provider_name,
+                            "model": primary_model,
+                            "success": False,
+                            "error": "unknown"
+                        })
+                        logger.error(f"Unknown error on {self.primary_provider_name}: {error_str}")
+                        raise
+
+            # Try primary provider with retries
+            response = await retry_with_backoff(call_primary, config=retry_config)
+            return response, metadata
+
+        except LLMOverloadedException as e:
+            # Primary provider is overloaded - try fallback if available
+            if not fallback_available:
+                logger.error(
+                    f"{self.primary_provider_name} overloaded and no fallback available"
+                )
+                raise
+
+            if not self.settings.fallback_on_overload:
+                logger.warning(
+                    f"{self.primary_provider_name} overloaded but fallback disabled "
+                    f"by configuration (FALLBACK_ON_OVERLOAD=false)"
+                )
+                raise
+
+            # Phase 2: Fallback to secondary provider
+            logger.info(
+                f"🔄 Fallback triggered: {self.primary_provider_name} → {self.fallback_provider_name}"
+            )
+            metadata["fallback_triggered"] = True
+            metadata["fallback_reason"] = "overloaded"
+
+            # Translate model to equivalent
+            fallback_model = self._translate_model_for_fallback(primary_model)
+            if not fallback_model:
+                logger.error(
+                    f"Cannot fallback: no model equivalence for {primary_model}"
+                )
+                raise
+
+            metadata["fallback_model"] = fallback_model
+            metadata["provider_used"] = self.fallback_provider_name
+
+            # Update kwargs with translated model
+            if operation == "create_message":
+                kwargs["model"] = fallback_model
+            elif operation == "create_conversation":
+                kwargs["model"] = fallback_model
+
+            # Configure retry for fallback provider
+            retry_config = RetryConfig(
+                max_attempts=self.settings.fallback_provider_max_retries,
+                initial_delay=2.0,
+                max_delay=30.0,
+                exponential_base=2.0,
+                jitter=True,
+                retryable_exceptions=(
+                    LLMRateLimitException,
+                    LLMTimeoutException,
+                    LLMOverloadedException,
+                )
+            )
+
+            async def call_fallback():
+                """Call fallback provider with error handling."""
+                try:
+                    if operation == "create_message":
+                        response = await self.fallback_client.create_message(**kwargs)
+                    elif operation == "create_conversation":
+                        response = await self.fallback_client.create_conversation(**kwargs)
+                    else:
+                        raise ValueError(f"Unknown operation: {operation}")
+
+                    metadata["attempts"].append({
+                        "provider": self.fallback_provider_name,
+                        "model": fallback_model,
+                        "success": True
+                    })
+                    logger.info(
+                        f"✅ Fallback successful: {self.fallback_provider_name} / {fallback_model}"
+                    )
+                    return response
+
+                except Exception as e:
+                    error_str = str(e)
+                    metadata["attempts"].append({
+                        "provider": self.fallback_provider_name,
+                        "model": fallback_model,
+                        "success": False,
+                        "error": error_str
+                    })
+                    logger.error(
+                        f"❌ Fallback failed on {self.fallback_provider_name}: {error_str}"
+                    )
+                    raise
+
+            # Try fallback provider with retries
+            response = await retry_with_backoff(call_fallback, config=retry_config)
+            return response, metadata
+
+        except LLMRateLimitException as e:
+            # Rate limit on primary - optionally fallback
+            if fallback_available and self.settings.fallback_on_rate_limit:
+                logger.info(
+                    f"🔄 Fallback on rate limit: {self.primary_provider_name} → {self.fallback_provider_name}"
+                )
+                # Similar fallback logic as above
+                # (Reusing the fallback code from overload case)
+                metadata["fallback_triggered"] = True
+                metadata["fallback_reason"] = "rate_limit"
+
+                fallback_model = self._translate_model_for_fallback(primary_model)
+                if fallback_model:
+                    metadata["fallback_model"] = fallback_model
+                    metadata["provider_used"] = self.fallback_provider_name
+
+                    if operation == "create_message":
+                        kwargs["model"] = fallback_model
+                        response = await self.fallback_client.create_message(**kwargs)
+                    else:
+                        kwargs["model"] = fallback_model
+                        response = await self.fallback_client.create_conversation(**kwargs)
+
+                    metadata["attempts"].append({
+                        "provider": self.fallback_provider_name,
+                        "model": fallback_model,
+                        "success": True
+                    })
+                    return response, metadata
+
+            # No fallback for rate limit - re-raise
+            raise
+
+        except Exception as e:
+            # Other errors - re-raise without fallback
+            logger.error(f"Non-retryable error: {str(e)}")
+            raise
+
+
 class MultiProviderLLMClient:
     """
     Multi-provider LLM client that dynamically switches between Claude and OpenAI.
@@ -300,7 +650,7 @@ class MultiProviderLLMClient:
     _instance: Optional['MultiProviderLLMClient'] = None
 
     def __init__(self, settings: Optional[Settings] = None):
-        """Initialize the multi-provider LLM client."""
+        """Initialize the multi-provider LLM client with primary and fallback providers."""
         if settings is None:
             from config import get_settings
             settings = get_settings()
@@ -315,20 +665,67 @@ class MultiProviderLLMClient:
         self.fallback_max_tokens = settings.max_tokens
         self.fallback_temperature = settings.temperature
 
-        # Initialize fallback provider from environment if available
-        if settings.anthropic_api_key:
-            self._initialize_fallback_provider()
+        # Initialize primary and fallback providers from environment
+        self.primary_provider_client = None
+        self.primary_provider_name = None
+        self.secondary_provider_client = None
+        self.secondary_provider_name = None
 
-        logger.info("Multi-provider LLM Client initialized")
+        self._initialize_providers_from_env()
 
-    def _initialize_fallback_provider(self):
-        """Initialize fallback provider from environment variables."""
-        if self.settings.anthropic_api_key:
-            self.fallback_provider = ClaudeProviderClient(
+        logger.info(
+            f"Multi-provider LLM Client initialized - "
+            f"Primary: {self.primary_provider_name or 'None'}, "
+            f"Fallback: {self.secondary_provider_name or 'None'} "
+            f"(fallback {'enabled' if self.settings.enable_llm_fallback else 'disabled'})"
+        )
+
+    def _initialize_providers_from_env(self):
+        """
+        Initialize primary and fallback providers from environment variables.
+
+        Strategy:
+        - Primary provider is determined by which API key is set (Claude by default)
+        - Fallback provider is the opposite provider (if both keys are configured)
+        - If FALLBACK_PROVIDER is explicitly set, use that configuration
+        """
+        has_claude = bool(self.settings.anthropic_api_key)
+        has_openai = bool(self.settings.openai_api_key)
+
+        # Determine primary provider based on configuration
+        # By default, Claude is primary (backward compatibility)
+        if has_claude:
+            self.primary_provider_client = ClaudeProviderClient(
                 self.settings.anthropic_api_key,
                 self.settings
             )
-            logger.info("Fallback Claude provider initialized from environment")
+            self.primary_provider_name = "Claude"
+            logger.info("Primary provider: Claude (initialized from environment)")
+
+            # Set Claude as fallback for backward compatibility
+            self.fallback_provider = self.primary_provider_client
+
+        # If OpenAI is also available, set it as fallback
+        if has_openai and self.settings.enable_llm_fallback:
+            if self.settings.fallback_provider.lower() == "openai":
+                self.secondary_provider_client = OpenAIProviderClient(
+                    self.settings.openai_api_key,
+                    self.settings
+                )
+                self.secondary_provider_name = "OpenAI"
+                logger.info("Fallback provider: OpenAI (initialized from environment)")
+            elif not has_claude:
+                # No Claude, use OpenAI as primary
+                self.primary_provider_client = OpenAIProviderClient(
+                    self.settings.openai_api_key,
+                    self.settings
+                )
+                self.primary_provider_name = "OpenAI"
+                self.fallback_provider = self.primary_provider_client
+                logger.info("Primary provider: OpenAI (Claude not configured)")
+
+        if not has_claude and not has_openai:
+            logger.warning("No LLM provider API keys configured in environment")
 
     @classmethod
     def get_instance(cls, settings: Optional[Settings] = None) -> 'MultiProviderLLMClient':
@@ -471,9 +868,12 @@ class MultiProviderLLMClient:
         **kwargs
     ) -> Optional[Any]:
         """
-        Create a message using the active provider for the organization.
-        If no session is provided, uses the fallback provider.
-        Includes retry logic with exponential backoff for 529 errors.
+        Create a message using the active provider with automatic fallback on overload.
+
+        New behavior:
+        - Uses ProviderCascade for intelligent fallback
+        - On 529 overload, automatically switches to fallback provider (e.g., OpenAI)
+        - Tracks fallback metadata for observability
         """
         if session:
             provider_client, ai_config = await self.get_active_provider(session, organization_id)
@@ -497,81 +897,56 @@ class MultiProviderLLMClient:
             max_tokens = max_tokens or self.fallback_max_tokens
             temperature = temperature or self.fallback_temperature
 
-        # Import here to avoid circular dependency
-        from utils.retry import RetryConfig, retry_with_backoff
-        from utils.exceptions import (
-            LLMOverloadedException,
-            LLMRateLimitException,
-            LLMTimeoutException,
-            LLMAuthenticationException
+        # Determine provider name for logging
+        if isinstance(provider_client, ClaudeProviderClient):
+            provider_name = "Claude"
+        elif isinstance(provider_client, OpenAIProviderClient):
+            provider_name = "OpenAI"
+        else:
+            provider_name = "Unknown"
+
+        # Create ProviderCascade for intelligent fallback
+        cascade = ProviderCascade(
+            primary_client=provider_client,
+            primary_provider_name=provider_name,
+            fallback_client=self.secondary_provider_client,
+            fallback_provider_name=self.secondary_provider_name or "None",
+            settings=self.settings
         )
-        import asyncio
 
-        async def call_provider():
-            try:
-                logger.debug(f"Creating message with model: {model}, provider: {provider_client.__class__.__name__}")
+        # Execute with cascade fallback
+        response, metadata = await cascade.execute_with_fallback(
+            operation="create_message",
+            primary_model=model,
+            prompt=prompt,
+            model=model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            system=system,
+            **kwargs
+        )
 
-                response = await provider_client.create_message(
-                    prompt,
-                    model=model,
-                    max_tokens=max_tokens,
-                    temperature=temperature,
-                    system=system,
-                    **kwargs
+        # Log fallback events for monitoring
+        if metadata.get("fallback_triggered"):
+            logger.warning(
+                f"⚠️  Fallback used: {metadata.get('primary_model')} → {metadata.get('fallback_model')} "
+                f"(reason: {metadata.get('fallback_reason')})"
+            )
+
+            # Update Langfuse metadata if available
+            if LANGFUSE_AVAILABLE:
+                langfuse_context.update_current_observation(
+                    metadata={
+                        "fallback_triggered": True,
+                        "primary_provider": metadata.get("provider_used"),
+                        "fallback_provider": self.secondary_provider_name,
+                        "fallback_reason": metadata.get("fallback_reason"),
+                        "fallback_model": metadata.get("fallback_model"),
+                        "attempts": len(metadata.get("attempts", []))
+                    }
                 )
 
-                # Note: Usage statistics tracking removed (AIConfiguration table dropped)
-
-                return response
-
-            except Exception as e:
-                error_str = str(e)
-                # Check for specific error codes (handles both Claude and OpenAI)
-                if "529" in error_str or "overloaded" in error_str.lower() or "503" in error_str:
-                    # 529 is Claude overloaded, 503 is OpenAI service unavailable
-                    logger.warning(f"LLM API overloaded: {error_str}")
-                    raise LLMOverloadedException()
-                elif "429" in error_str or "rate_limit" in error_str.lower():
-                    # 429 is rate limit for both providers
-                    logger.warning(f"Rate limit exceeded: {error_str}")
-                    raise LLMRateLimitException()
-                elif "timeout" in error_str.lower() or "504" in error_str:
-                    # Timeout errors
-                    logger.warning(f"Request timeout: {error_str}")
-                    raise LLMTimeoutException()
-                elif "401" in error_str or "unauthorized" in error_str.lower():
-                    # Authentication errors
-                    logger.error(f"Authentication failed: {error_str}")
-                    raise LLMAuthenticationException()
-                else:
-                    logger.error(f"Error calling LLM API: {error_str}")
-                    raise
-
-        # Configure retry with exponential backoff for overloaded errors
-        retry_config = RetryConfig(
-            max_attempts=5,  # Increased from 3 to 5 for 529 errors
-            initial_delay=2.0,  # Start with 2 second delay
-            max_delay=30.0,  # Cap at 30 seconds
-            exponential_base=2.0,
-            jitter=True,
-            retryable_exceptions=(
-                LLMOverloadedException,
-                LLMRateLimitException,
-                LLMTimeoutException,
-            )
-        )
-
-        try:
-            return await retry_with_backoff(
-                call_provider,
-                config=retry_config
-            )
-        except (LLMOverloadedException, LLMRateLimitException, LLMTimeoutException) as e:
-            # These exceptions have user-friendly messages
-            raise
-        except Exception as e:
-            logger.error(f"Failed after retries: {str(e)}")
-            raise
+        return response
 
     async def create_conversation(
         self,
@@ -585,8 +960,12 @@ class MultiProviderLLMClient:
         **kwargs
     ) -> Optional[Any]:
         """
-        Create a conversation using the active provider.
-        Includes retry logic with exponential backoff for transient errors.
+        Create a conversation using the active provider with automatic fallback on overload.
+
+        New behavior:
+        - Uses ProviderCascade for intelligent fallback
+        - On 529 overload, automatically switches to fallback provider
+        - Tracks fallback metadata for observability
         """
         provider_client, ai_config = await self.get_active_provider(session, organization_id)
 
@@ -604,79 +983,55 @@ class MultiProviderLLMClient:
             max_tokens = max_tokens or self.fallback_max_tokens
             temperature = temperature or self.fallback_temperature
 
-        # Import here to avoid circular dependency
-        from utils.retry import RetryConfig, retry_with_backoff
-        from utils.exceptions import (
-            LLMOverloadedException,
-            LLMRateLimitException,
-            LLMTimeoutException,
-            LLMAuthenticationException
+        # Determine provider name for logging
+        if isinstance(provider_client, ClaudeProviderClient):
+            provider_name = "Claude"
+        elif isinstance(provider_client, OpenAIProviderClient):
+            provider_name = "OpenAI"
+        else:
+            provider_name = "Unknown"
+
+        # Create ProviderCascade for intelligent fallback
+        cascade = ProviderCascade(
+            primary_client=provider_client,
+            primary_provider_name=provider_name,
+            fallback_client=self.secondary_provider_client,
+            fallback_provider_name=self.secondary_provider_name or "None",
+            settings=self.settings
         )
 
-        async def call_provider():
-            try:
-                logger.debug(f"Creating conversation with model: {model}, provider: {provider_client.__class__.__name__}")
+        # Execute with cascade fallback
+        response, metadata = await cascade.execute_with_fallback(
+            operation="create_conversation",
+            primary_model=model,
+            messages=messages,
+            model=model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            **kwargs
+        )
 
-                response = await provider_client.create_conversation(
-                    messages,
-                    model=model,
-                    max_tokens=max_tokens,
-                    temperature=temperature,
-                    **kwargs
+        # Log fallback events for monitoring
+        if metadata.get("fallback_triggered"):
+            logger.warning(
+                f"⚠️  Fallback used: {metadata.get('primary_model')} → {metadata.get('fallback_model')} "
+                f"(reason: {metadata.get('fallback_reason')})"
+            )
+
+            # Update Langfuse metadata if available
+            if LANGFUSE_AVAILABLE:
+                langfuse_context.update_current_observation(
+                    metadata={
+                        "fallback_triggered": True,
+                        "primary_provider": metadata.get("provider_used"),
+                        "fallback_provider": self.secondary_provider_name,
+                        "fallback_reason": metadata.get("fallback_reason"),
+                        "fallback_model": metadata.get("fallback_model"),
+                        "attempts": len(metadata.get("attempts", []))
+                    }
                 )
 
-                # Note: Usage statistics tracking removed (AIConfiguration table dropped)
-
-                return response
-
-            except Exception as e:
-                error_str = str(e)
-                # Check for specific error codes (handles both Claude and OpenAI)
-                if "529" in error_str or "overloaded" in error_str.lower() or "503" in error_str:
-                    # 529 is Claude overloaded, 503 is OpenAI service unavailable
-                    logger.warning(f"LLM API overloaded: {error_str}")
-                    raise LLMOverloadedException()
-                elif "429" in error_str or "rate_limit" in error_str.lower():
-                    # 429 is rate limit for both providers
-                    logger.warning(f"Rate limit exceeded: {error_str}")
-                    raise LLMRateLimitException()
-                elif "timeout" in error_str.lower() or "504" in error_str:
-                    # Timeout errors
-                    logger.warning(f"Request timeout: {error_str}")
-                    raise LLMTimeoutException()
-                elif "401" in error_str or "unauthorized" in error_str.lower():
-                    # Authentication errors
-                    logger.error(f"Authentication failed: {error_str}")
-                    raise LLMAuthenticationException()
-                else:
-                    logger.error(f"Error in conversation API call: {error_str}")
-                    raise
-
-        # Configure retry with exponential backoff for overloaded errors
-        retry_config = RetryConfig(
-            max_attempts=5,  # Same as create_message
-            initial_delay=2.0,
-            max_delay=30.0,
-            exponential_base=2.0,
-            jitter=True,
-            retryable_exceptions=(
-                LLMOverloadedException,
-                LLMRateLimitException,
-                LLMTimeoutException,
-            )
-        )
-
-        try:
-            return await retry_with_backoff(
-                call_provider,
-                config=retry_config
-            )
-        except (LLMOverloadedException, LLMRateLimitException, LLMTimeoutException) as e:
-            # These exceptions have user-friendly messages
-            raise
-        except Exception as e:
-            logger.error(f"Failed after retries: {str(e)}")
-            raise
+        return response
 
     # Note: _update_usage_stats removed (AIConfiguration table dropped)
 

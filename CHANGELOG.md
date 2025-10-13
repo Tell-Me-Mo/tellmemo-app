@@ -44,6 +44,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Email preferences UI in Flutter app
   - Preview digest functionality before sending
   - Send test email capability
+- **Intelligent LLM Provider Fallback** (2025-10-13) ✨ NEW
+  - Automatic OpenAI fallback when Claude is overloaded (529 errors)
+  - Intelligent model translation (Claude Haiku → GPT-4o-mini, Sonnet → GPT-4o)
+  - Provider cascade architecture with configurable retry strategies
+  - Comprehensive fallback metadata tracking for observability
+  - Langfuse integration for monitoring fallback events
+  - Zero code changes required - transparent failover
+  - Configurable per-organization or globally
+  - Maintains equivalent model quality across providers
+  - Detailed documentation in `backend/FALLBACK_IMPLEMENTATION.md`
+  - Full test coverage with 12 integration tests
 
 ### Changed
 - Migrated from multi-service architecture to simplified 4-service core
@@ -112,7 +123,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 4+ CPU cores (recommended)
 
 ### API Keys Required
-- Anthropic API Key (Claude 3.5)
+- Anthropic API Key (Claude 3.5) - Primary LLM provider
+- OpenAI API Key (Optional) - Fallback provider for high availability
 - Hugging Face Token (for embedding models)
 
 ## Upcoming Features

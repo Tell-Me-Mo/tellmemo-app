@@ -37,6 +37,17 @@ class Settings(BaseSettings):
     llm_model: str = Field(default="claude-3-5-haiku-latest", env="LLM_MODEL")
     max_tokens: int = Field(default=4096, env="MAX_TOKENS")
     temperature: float = Field(default=0.7, env="TEMPERATURE")
+
+    # OpenAI API Configuration
+    openai_api_key: str = Field(default="", env="OPENAI_API_KEY")
+
+    # LLM Fallback Configuration
+    enable_llm_fallback: bool = Field(default=True, env="ENABLE_LLM_FALLBACK")
+    fallback_provider: str = Field(default="openai", env="FALLBACK_PROVIDER")  # "openai" or "claude"
+    primary_provider_max_retries: int = Field(default=2, env="PRIMARY_PROVIDER_MAX_RETRIES")
+    fallback_provider_max_retries: int = Field(default=3, env="FALLBACK_PROVIDER_MAX_RETRIES")
+    fallback_on_overload: bool = Field(default=True, env="FALLBACK_ON_OVERLOAD")  # Fallback on 529/503
+    fallback_on_rate_limit: bool = Field(default=False, env="FALLBACK_ON_RATE_LIMIT")  # Don't fallback on 429 by default
     
     # Langfuse Configuration
     LANGFUSE_ENABLED: bool = Field(default=False, env="LANGFUSE_ENABLED")
