@@ -514,6 +514,7 @@ ${_buildLessonContext(lesson)}''';
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
+                          isExpanded: true,
                           initialValue: _selectedProjectId,
                           decoration: InputDecoration(
                             hintText: 'Select a project',
@@ -590,6 +591,7 @@ ${_buildLessonContext(lesson)}''';
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<LessonType>(
+                        isExpanded: true,
                         initialValue: _selectedType,
                         decoration: InputDecoration(
                           border: OutlineInputBorder(
@@ -622,7 +624,12 @@ ${_buildLessonContext(lesson)}''';
                               children: [
                                 Icon(_getTypeIcon(type), size: 16, color: _getTypeColor(type)),
                                 const SizedBox(width: 8),
-                                Text(type.label),
+                                Flexible(
+                                  child: Text(
+                                    type.label,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
                               ],
                             ),
                           );
@@ -652,6 +659,7 @@ ${_buildLessonContext(lesson)}''';
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<LessonCategory>(
+                        isExpanded: true,
                         initialValue: _selectedCategory,
                         decoration: InputDecoration(
                           border: OutlineInputBorder(
@@ -711,6 +719,7 @@ ${_buildLessonContext(lesson)}''';
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<LessonImpact>(
+                  isExpanded: true,
                   initialValue: _selectedImpact,
                   decoration: InputDecoration(
                     border: OutlineInputBorder(
@@ -750,7 +759,12 @@ ${_buildLessonContext(lesson)}''';
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(impact.label),
+                          Flexible(
+                            child: Text(
+                              impact.label,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         ],
                       ),
                     );

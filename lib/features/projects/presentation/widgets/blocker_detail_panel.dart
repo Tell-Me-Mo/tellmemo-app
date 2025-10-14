@@ -753,6 +753,7 @@ ${_buildBlockerContext(_editedBlocker!)}''';
                       const SizedBox(height: 12),
                       if (_isEditing)
                         DropdownButtonFormField<BlockerStatus>(
+                          isExpanded: true,
                           initialValue: _selectedStatus,
                           decoration: InputDecoration(
                             border: OutlineInputBorder(
@@ -792,7 +793,12 @@ ${_buildBlockerContext(_editedBlocker!)}''';
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  Text(status.name),
+                                  Flexible(
+                                    child: Text(
+                                      status.name,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
                                 ],
                               ),
                             );
@@ -861,6 +867,7 @@ ${_buildBlockerContext(_editedBlocker!)}''';
                       const SizedBox(height: 12),
                       if (_isEditing)
                         DropdownButtonFormField<BlockerImpact>(
+                          isExpanded: true,
                           initialValue: _selectedImpact,
                           decoration: InputDecoration(
                             border: OutlineInputBorder(
@@ -897,7 +904,12 @@ ${_buildBlockerContext(_editedBlocker!)}''';
                                     color: _getImpactColor(impact),
                                   ),
                                   const SizedBox(width: 8),
-                                  Text(impact.name),
+                                  Flexible(
+                                    child: Text(
+                                      impact.name,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
                                 ],
                               ),
                             );

@@ -576,6 +576,7 @@ ${_buildRiskContext(risk)}''';
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
+                          isExpanded: true,
                           initialValue: _selectedProjectId,
                           decoration: InputDecoration(
                             hintText: 'Select a project',
@@ -765,6 +766,7 @@ ${_buildRiskContext(risk)}''';
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<RiskSeverity>(
+                        isExpanded: true,
                         initialValue: _selectedSeverity,
                         decoration: InputDecoration(
                           border: OutlineInputBorder(
@@ -797,7 +799,12 @@ ${_buildRiskContext(risk)}''';
                           children: [
                             Icon(Icons.flag, size: 16, color: _getSeverityColor(severity)),
                             const SizedBox(width: 8),
-                            Text(severity.toString().split('.').last),
+                            Flexible(
+                              child: Text(
+                                severity.toString().split('.').last,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                           ],
                         ),
                       );
@@ -827,6 +834,7 @@ ${_buildRiskContext(risk)}''';
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<RiskStatus>(
+                        isExpanded: true,
                         initialValue: _selectedStatus,
                         decoration: InputDecoration(
                           border: OutlineInputBorder(
@@ -866,7 +874,12 @@ ${_buildRiskContext(risk)}''';
                               ),
                             ),
                             const SizedBox(width: 8),
-                            Text(status.toString().split('.').last),
+                            Flexible(
+                              child: Text(
+                                status.toString().split('.').last,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                           ],
                         ),
                       );

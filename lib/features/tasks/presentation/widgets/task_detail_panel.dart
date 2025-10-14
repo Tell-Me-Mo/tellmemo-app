@@ -715,6 +715,7 @@ ${_buildTaskContext(task)}''';
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
+                        isExpanded: true,
                         initialValue: _selectedProjectId,
                         decoration: InputDecoration(
                           hintText: 'Select a project',
@@ -849,6 +850,7 @@ ${_buildTaskContext(task)}''';
                     const SizedBox(height: 12),
                     if (_isEditing)
                       DropdownButtonFormField<TaskStatus>(
+                        isExpanded: true,
                         initialValue: _selectedStatus,
                         decoration: InputDecoration(
                           border: OutlineInputBorder(
@@ -888,7 +890,12 @@ ${_buildTaskContext(task)}''';
                                   ),
                                 ),
                                 const SizedBox(width: 8),
-                                Text(status.name),
+                                Flexible(
+                                  child: Text(
+                                    status.name,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
                               ],
                             ),
                           );
@@ -954,6 +961,7 @@ ${_buildTaskContext(task)}''';
                     const SizedBox(height: 12),
                     if (_isEditing)
                       DropdownButtonFormField<TaskPriority>(
+                        isExpanded: true,
                         initialValue: _selectedPriority,
                         decoration: InputDecoration(
                           border: OutlineInputBorder(
@@ -986,7 +994,12 @@ ${_buildTaskContext(task)}''';
                               children: [
                                 Icon(Icons.flag, size: 16, color: TaskUIHelpers.getPriorityColor(priority)),
                                 const SizedBox(width: 8),
-                                Text(priority.name),
+                                Flexible(
+                                  child: Text(
+                                    priority.name,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
                               ],
                             ),
                           );
