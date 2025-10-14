@@ -603,27 +603,18 @@ ${_buildTaskContext(task)}''';
               icon: const Icon(Icons.play_arrow),
               onPressed: _isSaving ? null : _startWorking,
               tooltip: 'Start Task',
-              style: IconButton.styleFrom(
-                backgroundColor: Colors.blue.withValues(alpha: 0.1),
-                foregroundColor: Colors.blue,
-              ),
             )
           else if (_editedTask!.status == TaskStatus.blocked)
             IconButton(
               icon: const Icon(Icons.play_arrow),
               onPressed: _isSaving ? null : _unblockTask,
               tooltip: 'Resume Task',
-              style: IconButton.styleFrom(
-                backgroundColor: Colors.green.withValues(alpha: 0.1),
-                foregroundColor: Colors.green,
-              ),
             )
           else if (_editedTask!.status == TaskStatus.inProgress)
             IconButton(
               icon: const Icon(Icons.block),
               onPressed: _isSaving ? null : _markAsBlocked,
               tooltip: 'Block Task',
-              style: IconButton.styleFrom(foregroundColor: Colors.orange),
             ),
 
           // Complete/Incomplete toggle
@@ -633,10 +624,6 @@ ${_buildTaskContext(task)}''';
             ),
             onPressed: _isSaving ? null : _toggleComplete,
             tooltip: _editedTask!.status == TaskStatus.completed ? 'Mark as incomplete' : 'Mark as complete',
-            style: IconButton.styleFrom(
-              foregroundColor:
-                  _editedTask!.status == TaskStatus.completed ? Colors.green : colorScheme.onSurfaceVariant,
-            ),
           ),
 
           // More actions menu
@@ -693,10 +680,6 @@ ${_buildTaskContext(task)}''';
             onPressed: _openAIDialog,
             icon: const Icon(Icons.auto_awesome),
             tooltip: 'AI Assistant',
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.green.withValues(alpha: 0.1),
-              foregroundColor: Colors.green,
-            ),
           ),
         ],
       ],

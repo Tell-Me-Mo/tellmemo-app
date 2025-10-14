@@ -593,10 +593,7 @@ ${_buildBlockerContext(_editedBlocker!)}''';
               if (_editedBlocker != null &&
                   _editedBlocker!.status != BlockerStatus.resolved)
                 IconButton(
-                  icon: const Icon(
-                    Icons.check_circle_outline,
-                    color: Colors.green,
-                  ),
+                  icon: const Icon(Icons.check_circle_outline),
                   onPressed: _isSaving ? null : _markAsResolved,
                   tooltip: 'Mark as resolved',
                 ),
@@ -662,10 +659,6 @@ ${_buildBlockerContext(_editedBlocker!)}''';
                   onPressed: _openAIDialog,
                   icon: const Icon(Icons.auto_awesome),
                   tooltip: 'AI Assistant',
-                  style: IconButton.styleFrom(
-                    backgroundColor: Colors.green.withValues(alpha: 0.1),
-                    foregroundColor: Colors.green,
-                  ),
                 ),
               ],
             ],

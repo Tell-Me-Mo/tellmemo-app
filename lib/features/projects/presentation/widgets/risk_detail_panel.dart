@@ -459,28 +459,19 @@ ${_buildRiskContext(risk)}''';
         // Quick Status Buttons
         if (_risk!.status == RiskStatus.identified)
           IconButton(
-            icon: const Icon(
-              Icons.engineering,
-              color: Colors.blue,
-            ),
+            icon: const Icon(Icons.engineering),
             onPressed: _isSaving ? null : _markAsMitigating,
             tooltip: 'Start mitigating',
           ),
         if (_risk!.status == RiskStatus.mitigating)
           IconButton(
-            icon: const Icon(
-              Icons.check_circle_outline,
-              color: Colors.green,
-            ),
+            icon: const Icon(Icons.check_circle_outline),
             onPressed: _isSaving ? null : _markAsResolved,
             tooltip: 'Mark as resolved',
           ),
         if (_risk!.status == RiskStatus.resolved)
           IconButton(
-            icon: const Icon(
-              Icons.refresh,
-              color: Colors.orange,
-            ),
+            icon: const Icon(Icons.refresh),
             onPressed: _isSaving ? null : _markAsIdentified,
             tooltip: 'Reactivate risk',
           ),
@@ -543,10 +534,6 @@ ${_buildRiskContext(risk)}''';
           onPressed: _openAIDialog,
           icon: const Icon(Icons.auto_awesome),
           tooltip: 'AI Assistant',
-          style: IconButton.styleFrom(
-            backgroundColor: Colors.green.withValues(alpha: 0.1),
-            foregroundColor: Colors.green,
-          ),
         ),
       ],
       mainViewContent: _isEditing ? _buildEditView(context) : _buildMainView(context),
@@ -1112,9 +1099,6 @@ ${_buildRiskContext(risk)}''';
                         color: _getStatusColor(risk.status)
                             .withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: _getStatusColor(risk.status),
-                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,

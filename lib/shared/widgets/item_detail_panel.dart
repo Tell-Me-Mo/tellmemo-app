@@ -62,6 +62,13 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
       initialIndex: widget.initiallyShowUpdates ? 1 : 0,
     );
 
+    // Listen to tab changes to update the segmented control UI
+    _tabController.addListener(() {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+
     _animationController.forward();
   }
 
@@ -76,6 +83,85 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
     _animationController.reverse().then((_) {
       widget.onClose();
     });
+  }
+
+  /// Helper method to add consistent spacing between action items
+  /// Skips adding spacing if the action is already a SizedBox or Container (divider)
+  List<Widget> _buildSpacedActions(List<Widget> actions) {
+    final spacedActions = <Widget>[];
+    for (int i = 0; i < actions.length; i++) {
+      final currentAction = actions[i];
+      spacedActions.add(currentAction);
+
+      // Add spacing after each action except the last one
+      // Skip if current action is already a spacer or divider
+      if (i < actions.length - 1 &&
+          currentAction is! SizedBox &&
+          currentAction is! Container) {
+        spacedActions.add(const SizedBox(width: 4));
+      }
+    }
+    return spacedActions;
+  }
+
+  /// Builds a single segmented tab button
+  Widget _buildSegmentedTab({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        decoration: BoxDecoration(
+          color: isSelected
+              ? colorScheme.surface
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ]
+              : null,
+        ),
+        child: Center(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 18,
+                color: isSelected
+                    ? colorScheme.onSurface
+                    : colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: theme.textTheme.labelLarge?.copyWith(
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  color: isSelected
+                      ? colorScheme.onSurface
+                      : colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                  letterSpacing: 0.1,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -140,7 +226,7 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
                     Container(
                       padding: EdgeInsets.only(
                         left: 24,
-                        right: 20,
+                        right: 16,
                         top: MediaQuery.of(context).padding.top + 20,
                         bottom: 0,
                       ),
@@ -149,7 +235,7 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
                         border: Border(
                           bottom: BorderSide(
                             color: colorScheme.outlineVariant
-                                .withValues(alpha: 0.2),
+                                .withValues(alpha: 0.15),
                             width: 1,
                           ),
                         ),
@@ -159,20 +245,27 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
                           // Title Row
                           Row(
                             children: [
+                              // Icon with refined styling
                               Container(
-                                padding: const EdgeInsets.all(12),
+                                padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
                                   color: widget.headerIconColor
-                                      .withValues(alpha: 0.08),
-                                  borderRadius: BorderRadius.circular(14),
+                                      .withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: widget.headerIconColor
+                                        .withValues(alpha: 0.15),
+                                    width: 1,
+                                  ),
                                 ),
                                 child: Icon(
                                   widget.headerIcon,
-                                  size: 22,
+                                  size: 20,
                                   color: widget.headerIconColor,
                                 ),
                               ),
-                              const SizedBox(width: 16),
+                              const SizedBox(width: 14),
+                              // Title and Subtitle with improved typography
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,15 +275,18 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
                                       style:
                                           theme.textTheme.titleMedium?.copyWith(
                                         fontWeight: FontWeight.w600,
+                                        letterSpacing: -0.2,
                                       ),
                                     ),
-                                    const SizedBox(height: 2),
+                                    const SizedBox(height: 3),
                                     Text(
                                       widget.subtitle,
                                       style:
-                                          theme.textTheme.bodySmall?.copyWith(
+                                          theme.textTheme.labelMedium?.copyWith(
                                         color: colorScheme.onSurfaceVariant
-                                            .withValues(alpha: 0.7),
+                                            .withValues(alpha: 0.6),
+                                        fontWeight: FontWeight.w500,
+                                        letterSpacing: 0.1,
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -198,49 +294,68 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
                                   ],
                                 ),
                               ),
-                              // Header Actions
-                              if (widget.headerActions != null)
-                                ...widget.headerActions!,
+                              // Header Actions with proper spacing
+                              if (widget.headerActions != null) ...[
+                                const SizedBox(width: 8),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: _buildSpacedActions(widget.headerActions!),
+                                ),
+                              ],
+                              const SizedBox(width: 4),
                               IconButton(
-                                icon: const Icon(Icons.close),
+                                icon: const Icon(Icons.close, size: 20),
                                 onPressed: _handleClose,
                                 tooltip: 'Close',
+                                style: IconButton.styleFrom(
+                                  minimumSize: const Size(40, 40),
+                                  padding: EdgeInsets.zero,
+                                ),
                               ),
                             ],
                           ),
-                          // Tab Bar
+                          // Segmented Control Tabs
                           Padding(
-                            padding: const EdgeInsets.only(top: 20),
-                            child: TabBar(
-                              controller: _tabController,
-                              tabs: const [
-                                Tab(
-                                  icon: Icon(Icons.info_outline, size: 18),
-                                  text: 'Main',
-                                  height: 48,
-                                ),
-                                Tab(
-                                  icon: Icon(Icons.comment_outlined, size: 18),
-                                  text: 'Updates',
-                                  height: 48,
-                                ),
-                              ],
-                              labelColor: colorScheme.primary,
-                              unselectedLabelColor: colorScheme.onSurfaceVariant
-                                  .withValues(alpha: 0.7),
-                              indicatorColor: colorScheme.primary,
-                              indicatorWeight: 2.5,
-                              indicatorSize: TabBarIndicatorSize.tab,
-                              labelStyle: theme.textTheme.labelLarge?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.2,
+                            padding: const EdgeInsets.fromLTRB(0, 16, 0, 16),
+                            child: Container(
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: colorScheme.surfaceContainerHighest
+                                    .withValues(alpha: 0.3),
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              unselectedLabelStyle:
-                                  theme.textTheme.labelLarge?.copyWith(
-                                fontWeight: FontWeight.w500,
-                                letterSpacing: 0.1,
+                              padding: const EdgeInsets.all(4),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildSegmentedTab(
+                                      context: context,
+                                      icon: Icons.info_outline,
+                                      label: 'Overview',
+                                      isSelected: _tabController.index == 0,
+                                      onTap: () {
+                                        setState(() {
+                                          _tabController.animateTo(0);
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: _buildSegmentedTab(
+                                      context: context,
+                                      icon: Icons.comment_outlined,
+                                      label: 'Updates',
+                                      isSelected: _tabController.index == 1,
+                                      onTap: () {
+                                        setState(() {
+                                          _tabController.animateTo(1);
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ],
                               ),
-                              dividerColor: Colors.transparent,
                             ),
                           ),
                         ],
