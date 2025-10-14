@@ -913,7 +913,6 @@ ${_buildTaskContext(task)}''';
                         decoration: BoxDecoration(
                           color: TaskUIHelpers.getStatusColor(_editedTask!.status, colorScheme).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: TaskUIHelpers.getStatusColor(_editedTask!.status, colorScheme)),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,

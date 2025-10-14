@@ -164,6 +164,18 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
     );
   }
 
+  String _getDisplayTitle(String title, bool isMobile) {
+    if (!isMobile) return title;
+
+    // In mobile view, simplify titles by removing "Create New" or "Create" prefix
+    if (title.startsWith('Create New ')) {
+      return title.replaceFirst('Create New ', 'New ');
+    } else if (title.startsWith('Create ')) {
+      return title.replaceFirst('Create ', 'New ');
+    }
+    return title;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -271,7 +283,7 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      widget.title,
+                                      _getDisplayTitle(widget.title, screenInfo.isMobile),
                                       style:
                                           theme.textTheme.titleMedium?.copyWith(
                                         fontWeight: FontWeight.w600,

@@ -419,9 +419,24 @@ ${_buildRiskContext(risk)}''';
   Widget build(BuildContext context) {
     final isCreating = _risk == null;
 
+    // Get project name from either widget.project or fetch using projectId
+    final effectiveProjectId = _selectedProjectId ?? widget.projectId ?? _risk?.projectId;
+    String projectName = widget.project?.name ?? 'Project';
+
+    if (widget.project == null && effectiveProjectId != null) {
+      final projectsAsync = ref.watch(projectsListProvider);
+      projectsAsync.whenData((projects) {
+        final project = projects.firstWhere(
+          (p) => p.id == effectiveProjectId,
+          orElse: () => projects.first,
+        );
+        projectName = project.name;
+      });
+    }
+
     return ItemDetailPanel(
       title: isCreating ? 'Create New Risk' : (_isEditing ? 'Edit Risk' : 'Risk Details'),
-      subtitle: widget.project?.name ?? 'Project',
+      subtitle: projectName,
       headerIcon: Icons.warning,
       headerIconColor: _isEditing ? Colors.orange : (_risk != null ? _getSeverityColor(_risk!.severity) : Colors.orange),
       onClose: () => Navigator.of(context).pop(),

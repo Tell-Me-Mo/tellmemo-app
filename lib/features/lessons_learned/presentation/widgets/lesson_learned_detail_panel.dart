@@ -8,6 +8,8 @@ import '../providers/aggregated_lessons_learned_provider.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../shared/widgets/item_detail_panel.dart';
 import '../../../../shared/widgets/item_updates_tab.dart';
+import '../../../queries/presentation/widgets/ask_ai_panel.dart';
+import '../../../queries/presentation/providers/query_provider.dart';
 
 class LessonLearnedDetailPanel extends ConsumerStatefulWidget {
   final String? projectId;
@@ -281,6 +283,56 @@ class _LessonLearnedDetailPanelState extends ConsumerState<LessonLearnedDetailPa
     }
   }
 
+  String _buildLessonContext(LessonLearned lesson) {
+    final buffer = StringBuffer();
+    buffer.writeln('- Type: ${lesson.lessonType.label}');
+    buffer.writeln('- Category: ${_getCategoryLabel(lesson.category)}');
+    buffer.writeln('- Impact: ${lesson.impact.label}');
+    buffer.writeln('- Description: ${lesson.description}');
+    if (lesson.recommendation != null && lesson.recommendation!.isNotEmpty) {
+      buffer.writeln('- Recommendation: ${lesson.recommendation}');
+    }
+    if (lesson.context != null && lesson.context!.isNotEmpty) {
+      buffer.writeln('- Context: ${lesson.context}');
+    }
+    if (lesson.tags.isNotEmpty) {
+      buffer.writeln('- Tags: ${lesson.tags.join(', ')}');
+    }
+    return buffer.toString();
+  }
+
+  void _openAIDialog() {
+    if (_lesson == null) return;
+
+    final lesson = _lesson!;
+    final lessonContext = '''Context: Analyzing a lesson learned in the project.
+Lesson Title: ${lesson.title}
+${_buildLessonContext(lesson)}''';
+
+    final projectId = _selectedProjectId ?? widget.projectId!;
+    final projectName = widget.projectName ?? 'Project';
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.transparent,
+      transitionDuration: Duration.zero,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return AskAIPanel(
+          projectId: projectId,
+          projectName: projectName,
+          contextInfo: lessonContext,
+          conversationId: 'lesson_${lesson.id}',
+          rightOffset: 0.0,
+          onClose: () {
+            Navigator.of(context).pop();
+            ref.read(queryProvider.notifier).clearConversation();
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -313,27 +365,6 @@ class _LessonLearnedDetailPanelState extends ConsumerState<LessonLearnedDetailPa
         ),
       ] : [
         // View mode actions
-        if (_lesson?.aiGenerated == true) ...[
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.auto_awesome, size: 16),
-                const SizedBox(width: 4),
-                Text(
-                  'AI',
-                  style: theme.textTheme.labelSmall,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-        ],
-
         PopupMenuButton<String>(
           icon: const Icon(Icons.more_vert),
           tooltip: 'More actions',
@@ -372,6 +403,21 @@ class _LessonLearnedDetailPanelState extends ConsumerState<LessonLearnedDetailPa
               ),
             ),
           ],
+        ),
+
+        const SizedBox(width: 8),
+        Container(
+          width: 1,
+          height: 24,
+          color: colorScheme.outline.withValues(alpha: 0.2),
+        ),
+        const SizedBox(width: 8),
+
+        // AI Assistant button
+        IconButton(
+          onPressed: _openAIDialog,
+          icon: const Icon(Icons.auto_awesome),
+          tooltip: 'AI Assistant',
         ),
       ],
       mainViewContent: _isEditing ? _buildEditView(context) : _buildMainView(context),
@@ -964,9 +1010,10 @@ class _LessonLearnedDetailPanelState extends ConsumerState<LessonLearnedDetailPa
 
           const SizedBox(height: 20),
 
-          // Type and Category Row
+          // Type, Category, and Impact Row
           Row(
             children: [
+              // Type
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -985,10 +1032,13 @@ class _LessonLearnedDetailPanelState extends ConsumerState<LessonLearnedDetailPa
                           Icon(_getTypeIcon(lesson.lessonType),
                               size: 16, color: _getTypeColor(lesson.lessonType)),
                           const SizedBox(width: 8),
-                          Text(
-                            lesson.lessonType.label,
-                            style: TextStyle(
-                                color: _getTypeColor(lesson.lessonType), fontWeight: FontWeight.bold),
+                          Flexible(
+                            child: Text(
+                              lesson.lessonType.label,
+                              style: TextStyle(
+                                  color: _getTypeColor(lesson.lessonType), fontWeight: FontWeight.bold),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ),
@@ -996,7 +1046,8 @@ class _LessonLearnedDetailPanelState extends ConsumerState<LessonLearnedDetailPa
                   ],
                 ),
               ),
-              const SizedBox(width: 20),
+              const SizedBox(width: 16),
+              // Category
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1012,40 +1063,44 @@ class _LessonLearnedDetailPanelState extends ConsumerState<LessonLearnedDetailPa
                       child: Text(
                         _getCategoryLabel(lesson.category),
                         style: const TextStyle(fontWeight: FontWeight.bold),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
-
-          const SizedBox(height: 20),
-
-          // Impact
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Impact', style: theme.textTheme.labelLarge),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: _getImpactColor(lesson.impact).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+              const SizedBox(width: 16),
+              // Impact
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text('Impact', style: theme.textTheme.labelLarge),
+                    const SizedBox(height: 8),
                     Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(color: _getImpactColor(lesson.impact), shape: BoxShape.circle),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      lesson.impact.label,
-                      style: TextStyle(color: _getImpactColor(lesson.impact), fontWeight: FontWeight.bold),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _getImpactColor(lesson.impact).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(color: _getImpactColor(lesson.impact), shape: BoxShape.circle),
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              lesson.impact.label,
+                              style: TextStyle(color: _getImpactColor(lesson.impact), fontWeight: FontWeight.bold),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),

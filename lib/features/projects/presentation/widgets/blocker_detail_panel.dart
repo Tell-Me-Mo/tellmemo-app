@@ -816,9 +816,6 @@ ${_buildBlockerContext(_editedBlocker!)}''';
                               _editedBlocker!.status,
                             ).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: _getStatusColor(_editedBlocker!.status),
-                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -1437,13 +1434,13 @@ ${_buildBlockerContext(_editedBlocker!)}''';
               ),
             ],
 
-            // Metadata
-            const SizedBox(height: 20),
-            const Divider(),
-            const SizedBox(height: 20),
-            Text('Metadata', style: theme.textTheme.labelLarge),
-            const SizedBox(height: 12),
-            if (_editedBlocker != null)
+            // Metadata (only show in view mode)
+            if (!_isEditing && _editedBlocker != null) ...[
+              const SizedBox(height: 20),
+              const Divider(),
+              const SizedBox(height: 20),
+              Text('Metadata', style: theme.textTheme.labelLarge),
+              const SizedBox(height: 12),
               Wrap(
                 spacing: 16,
                 runSpacing: 8,
@@ -1504,6 +1501,7 @@ ${_buildBlockerContext(_editedBlocker!)}''';
                     ),
                 ],
               ),
+            ],
           ],
         ),
       ),
