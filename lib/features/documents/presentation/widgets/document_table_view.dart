@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import '../../../../core/utils/datetime_utils.dart';
 import '../../../meetings/domain/entities/content.dart';
 import '../../../projects/presentation/providers/projects_provider.dart';
-import 'document_detail_dialog.dart';
 
 enum SortColumn { type, title, project, date, status, summary }
 enum SortDirection { asc, desc }
