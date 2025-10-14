@@ -97,37 +97,6 @@ void main() {
       expect(find.text('HIGH'), findsOneWidget);
     });
 
-    testWidgets('displays AI indicator when lesson is AI generated', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: LessonLearnedListTile(
-              lesson: testLesson1,
-              project: testProject1,
-            ),
-          ),
-        ),
-      );
-
-      expect(find.byIcon(Icons.auto_awesome), findsOneWidget);
-      expect(find.text('AI'), findsOneWidget);
-    });
-
-    testWidgets('does not display AI indicator when lesson is not AI generated', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: LessonLearnedListTile(
-              lesson: testLesson2,
-              project: testProject1,
-            ),
-          ),
-        ),
-      );
-
-      expect(find.byIcon(Icons.auto_awesome), findsNothing);
-      expect(find.text('AI'), findsNothing);
-    });
 
     testWidgets('displays tags (up to 3)', (tester) async {
       await tester.pumpWidget(

@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import '../../../../core/utils/datetime_utils.dart';
 import '../../../meetings/domain/entities/content.dart';
 import '../../../projects/presentation/providers/projects_provider.dart';
-import 'document_detail_dialog.dart';
 
 enum SortColumn { type, title, project, date, status, summary }
 enum SortDirection { asc, desc }
@@ -630,10 +629,13 @@ class _DocumentTableViewState extends ConsumerState<DocumentTableView> {
 
   Widget _buildSummaryIndicator(Content doc, ThemeData theme, ColorScheme colorScheme, {bool isMobile = false}) {
     if (doc.summaryGenerated) {
+      // Use the same color as "Processed" status for consistency
+      final color = Colors.green;
+
       return Container(
         padding: EdgeInsets.symmetric(horizontal: isMobile ? 6 : 8, vertical: 2),
         decoration: BoxDecoration(
-          color: Colors.purple.withValues(alpha: 0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -642,14 +644,14 @@ class _DocumentTableViewState extends ConsumerState<DocumentTableView> {
             Icon(
               Icons.summarize,
               size: isMobile ? 10 : 12,
-              color: Colors.purple,
+              color: color,
             ),
             SizedBox(width: isMobile ? 2 : 4),
             Flexible(
               child: Text(
                 'Available',
                 style: theme.textTheme.labelSmall?.copyWith(
-                  color: Colors.purple,
+                  color: color,
                   fontWeight: FontWeight.w500,
                   fontSize: isMobile ? 10 : null,
                 ),

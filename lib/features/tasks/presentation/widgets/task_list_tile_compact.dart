@@ -6,7 +6,7 @@ import '../../../projects/presentation/providers/risks_tasks_provider.dart';
 import '../providers/aggregated_tasks_provider.dart';
 import '../providers/tasks_state_provider.dart';
 import '../utils/task_ui_helpers.dart';
-import 'task_detail_dialog.dart';
+import 'task_detail_panel.dart';
 
 class TaskListTileCompact extends ConsumerWidget {
   final TaskWithProject taskWithProject;
@@ -65,9 +65,13 @@ class TaskListTileCompact extends ConsumerWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final result = await showDialog<bool>(
+    final result = await showGeneralDialog<bool>(
       context: context,
-      builder: (dialogContext) => Dialog(
+      barrierDismissible: false,
+      barrierColor: Colors.transparent,
+      transitionDuration: Duration.zero,
+      pageBuilder: (dialogContext, animation, secondaryAnimation) {
+        return Dialog(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
@@ -195,7 +199,8 @@ class TaskListTileCompact extends ConsumerWidget {
             ),
           ),
         ),
-      ),
+      );
+      },
     );
 
     if (result == true && blockerDescription.isNotEmpty && context.mounted) {
@@ -221,11 +226,16 @@ class TaskListTileCompact extends ConsumerWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(6),
         onTap: () {
-          showDialog(
+          showGeneralDialog(
             context: context,
-            builder: (context) => TaskDetailDialog(
-              taskWithProject: taskWithProject,
-            ),
+            barrierDismissible: false,
+            barrierColor: Colors.transparent,
+            transitionDuration: Duration.zero,
+            pageBuilder: (context, animation, secondaryAnimation) {
+              return TaskDetailPanel(
+                taskWithProject: taskWithProject,
+              );
+            },
           );
         },
         child: Container(

@@ -9,10 +9,12 @@ import 'risk_kanban_card.dart';
 
 class RiskKanbanBoardView extends ConsumerStatefulWidget {
   final List<AggregatedRisk> risks;
+  final Function(Risk risk, String projectId)? onRiskTap;
 
   const RiskKanbanBoardView({
     super.key,
     required this.risks,
+    this.onRiskTap,
   });
 
   @override
@@ -244,10 +246,18 @@ class _RiskKanbanBoardViewState extends ConsumerState<RiskKanbanBoardView> {
                                 opacity: 0.5,
                                 child: RiskKanbanCard(
                                   aggregatedRisk: aggregatedRisk,
+                                  onTap: () => widget.onRiskTap?.call(
+                                    aggregatedRisk.risk,
+                                    aggregatedRisk.project.id,
+                                  ),
                                 ),
                               ),
                               child: RiskKanbanCard(
                                 aggregatedRisk: aggregatedRisk,
+                                onTap: () => widget.onRiskTap?.call(
+                                  aggregatedRisk.risk,
+                                  aggregatedRisk.project.id,
+                                ),
                               ),
                             );
                           },

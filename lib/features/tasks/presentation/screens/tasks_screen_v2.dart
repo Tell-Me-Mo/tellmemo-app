@@ -10,7 +10,7 @@ import '../providers/aggregated_tasks_provider.dart';
 import '../providers/tasks_filter_provider.dart';
 import '../providers/tasks_state_provider.dart';
 import '../widgets/kanban_board_view.dart';
-import '../widgets/create_task_dialog.dart';
+import '../widgets/task_detail_panel.dart';
 import '../widgets/advanced_filter_dialog.dart';
 import '../widgets/task_export_dialog.dart';
 import '../widgets/task_sort_dialog.dart';
@@ -91,9 +91,47 @@ class _TasksScreenV2State extends ConsumerState<TasksScreenV2>
   }
 
   void _showCreateTaskDialog() {
-    showDialog(
+    // Get project from widget (if coming from project screen) or first available project
+    String? projectId = widget.projectId;
+    String? projectName;
+
+    if (projectId != null) {
+      // Get project name from provider
+      final projectAsync = ref.read(projectDetailProvider(projectId));
+      projectName = projectAsync.whenOrNull(
+        data: (project) => project?.name,
+      );
+    } else {
+      // Get first available project
+      final projectsAsync = ref.read(projectsListProvider);
+      final firstProject = projectsAsync.whenOrNull(
+        data: (projects) => projects.isNotEmpty ? projects.first : null,
+      );
+
+      if (firstProject == null) {
+        ref.read(notificationServiceProvider.notifier).showError(
+          'Please create a project first before adding tasks',
+        );
+        return;
+      }
+
+      projectId = firstProject.id;
+      projectName = firstProject.name;
+    }
+
+    showGeneralDialog(
       context: context,
-      builder: (context) => const CreateTaskDialog(),
+      barrierDismissible: false,
+      barrierColor: Colors.transparent,
+      transitionDuration: Duration.zero,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return TaskDetailPanel(
+          taskWithProject: null,
+          projectId: projectId,
+          projectName: projectName,
+          initiallyInEditMode: true,
+        );
+      },
     );
   }
 
