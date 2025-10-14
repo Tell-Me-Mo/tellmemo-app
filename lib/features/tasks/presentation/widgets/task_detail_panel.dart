@@ -19,14 +19,19 @@ class TaskDetailPanel extends ConsumerStatefulWidget {
   final String? projectName; // Required when creating new task
   final bool initiallyInEditMode;
 
-  const TaskDetailPanel({
+  TaskDetailPanel({
     super.key,
     this.taskWithProject,
     this.projectId,
     this.projectName,
     this.initiallyInEditMode = false,
-  }) : assert(taskWithProject != null || (projectId != null && projectName != null),
-              'Either taskWithProject or both projectId and projectName must be provided');
+  }) {
+    if (taskWithProject == null && (projectId == null || projectName == null)) {
+      throw ArgumentError(
+        'Either taskWithProject or both projectId and projectName must be provided'
+      );
+    }
+  }
 
   @override
   ConsumerState<TaskDetailPanel> createState() => _TaskDetailPanelState();

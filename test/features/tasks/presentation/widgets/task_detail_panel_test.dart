@@ -61,7 +61,7 @@ void main() {
 
     await pumpWidgetWithProviders(
       tester,
-      const Scaffold(
+      Scaffold(
         body: TaskDetailPanel(
           projectId: 'project-1',
           projectName: 'Test Project 1',
@@ -129,7 +129,7 @@ void main() {
 
       await pumpWidgetWithProviders(
         tester,
-        const Scaffold(
+        Scaffold(
           body: TaskDetailPanel(
             projectId: 'project-1',
             projectName: 'Test Project 1',

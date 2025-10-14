@@ -63,17 +63,20 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
     );
 
     // Listen to tab changes to update the segmented control UI
-    _tabController.addListener(() {
-      if (mounted) {
-        setState(() {});
-      }
-    });
+    _tabController.addListener(_onTabChanged);
 
     _animationController.forward();
   }
 
+  void _onTabChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   @override
   void dispose() {
+    _tabController.removeListener(_onTabChanged);
     _animationController.dispose();
     _tabController.dispose();
     super.dispose();
@@ -81,7 +84,9 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
 
   void _handleClose() {
     _animationController.reverse().then((_) {
-      widget.onClose();
+      if (mounted) {  // Add mounted check
+        widget.onClose();
+      }
     });
   }
 
