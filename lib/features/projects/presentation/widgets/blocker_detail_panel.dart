@@ -351,22 +351,41 @@ class _BlockerDetailPanelState extends ConsumerState<BlockerDetailPanel> {
                       children: [
                         Text(
                           'Resolution Description *',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w500,
-                            color: colorScheme.onSurfaceVariant,
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.1,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 12),
                         TextField(
                           autofocus: true,
                           decoration: InputDecoration(
                             hintText: 'How was this blocker resolved?',
+                            hintStyle: TextStyle(
+                              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                            ),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: colorScheme.primary,
+                                width: 1.5,
+                              ),
                             ),
                             filled: true,
-                            fillColor: colorScheme.surfaceContainerHighest
-                                .withValues(alpha: 0.3),
+                            fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+                            contentPadding: const EdgeInsets.all(16),
                           ),
                           maxLines: 3,
                           onChanged: (value) => resolutionText = value,
@@ -662,30 +681,66 @@ ${_buildBlockerContext(_editedBlocker!)}''';
     return Form(
       key: _formKey,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Title
             if (_isEditing)
-              TextFormField(
-                controller: _titleController,
-                decoration: InputDecoration(
-                  labelText: 'Title *',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Title *',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.1,
+                    ),
                   ),
-                  filled: true,
-                  fillColor: colorScheme.surfaceContainerHighest.withValues(
-                    alpha: 0.3,
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _titleController,
+                    decoration: InputDecoration(
+                      hintText: 'Enter blocker title',
+                      hintStyle: TextStyle(
+                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: colorScheme.primary,
+                          width: 1.5,
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      prefixIcon: Icon(
+                        Icons.label_outline,
+                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                        size: 20,
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Title is required';
+                      }
+                      return null;
+                    },
                   ),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Title is required';
-                  }
-                  return null;
-                },
+                ],
               )
             else if (_editedBlocker != null)
               Text(
@@ -695,7 +750,7 @@ ${_buildBlockerContext(_editedBlocker!)}''';
                 ),
               ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
             // Status and Impact Row
             Row(
@@ -704,22 +759,40 @@ ${_buildBlockerContext(_editedBlocker!)}''';
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Status', style: theme.textTheme.labelLarge),
-                      const SizedBox(height: 8),
+                      Text(
+                        'Status',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.1,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       if (_isEditing)
                         DropdownButtonFormField<BlockerStatus>(
                           initialValue: _selectedStatus,
                           decoration: InputDecoration(
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: colorScheme.primary,
+                                width: 1.5,
+                              ),
                             ),
                             filled: true,
-                            fillColor: colorScheme.surfaceContainerHighest
-                                .withValues(alpha: 0.3),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
+                            fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                           ),
                           items: BlockerStatus.values.map((status) {
                             return DropdownMenuItem(
@@ -797,22 +870,40 @@ ${_buildBlockerContext(_editedBlocker!)}''';
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Impact', style: theme.textTheme.labelLarge),
-                      const SizedBox(height: 8),
+                      Text(
+                        'Impact',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.1,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       if (_isEditing)
                         DropdownButtonFormField<BlockerImpact>(
                           initialValue: _selectedImpact,
                           decoration: InputDecoration(
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: colorScheme.primary,
+                                width: 1.5,
+                              ),
                             ),
                             filled: true,
-                            fillColor: colorScheme.surfaceContainerHighest
-                                .withValues(alpha: 0.3),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
+                            fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                           ),
                           items: BlockerImpact.values.map((impact) {
                             return DropdownMenuItem(
@@ -877,25 +968,54 @@ ${_buildBlockerContext(_editedBlocker!)}''';
               ],
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
             // Description
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Description', style: theme.textTheme.labelLarge),
-                const SizedBox(height: 8),
+                Text(
+                  'Description',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.1,
+                  ),
+                ),
+                const SizedBox(height: 12),
                 if (_isEditing)
                   TextField(
                     controller: _descriptionController,
                     decoration: InputDecoration(
                       hintText: 'Enter blocker description...',
+                      hintStyle: TextStyle(
+                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                      ),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: colorScheme.primary,
+                          width: 1.5,
+                        ),
                       ),
                       filled: true,
-                      fillColor: colorScheme.surfaceContainerHighest.withValues(
-                        alpha: 0.3,
+                      fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+                      contentPadding: const EdgeInsets.all(16),
+                      prefixIcon: Icon(
+                        Icons.description,
+                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                        size: 20,
                       ),
                     ),
                     maxLines: 3,
@@ -921,25 +1041,55 @@ ${_buildBlockerContext(_editedBlocker!)}''';
             // Resolution (if resolved)
             if (_editedBlocker != null &&
                 _editedBlocker!.status == BlockerStatus.resolved) ...[
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Resolution', style: theme.textTheme.labelLarge),
-                  const SizedBox(height: 8),
+                  Text(
+                    'Resolution',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.1,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   if (_isEditing)
                     TextField(
                       controller: _resolutionController,
                       decoration: InputDecoration(
                         hintText: 'How was this blocker resolved?',
+                        hintStyle: TextStyle(
+                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                        ),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: colorScheme.primary,
+                            width: 1.5,
+                          ),
                         ),
                         filled: true,
-                        fillColor: colorScheme.surfaceContainerHighest
-                            .withValues(alpha: 0.3),
+                        fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+                        contentPadding: const EdgeInsets.all(16),
+                        prefixIcon: Icon(
+                          Icons.check_circle_outline,
+                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                          size: 20,
+                        ),
                       ),
-                      maxLines: 2,
+                      maxLines: 3,
                     )
                   else
                     Container(
@@ -964,7 +1114,7 @@ ${_buildBlockerContext(_editedBlocker!)}''';
               ),
             ],
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
             // Assignment Row
             Row(
@@ -973,22 +1123,48 @@ ${_buildBlockerContext(_editedBlocker!)}''';
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Assigned To', style: theme.textTheme.labelLarge),
-                      const SizedBox(height: 8),
+                      Text(
+                        'Assigned To',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.1,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       if (_isEditing)
                         TextField(
                           controller: _assignedToController,
                           decoration: InputDecoration(
                             hintText: 'Enter assignee name...',
+                            hintStyle: TextStyle(
+                              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                            ),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: colorScheme.primary,
+                                width: 1.5,
+                              ),
                             ),
                             filled: true,
-                            fillColor: colorScheme.surfaceContainerHighest
-                                .withValues(alpha: 0.3),
+                            fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+                            contentPadding: const EdgeInsets.all(16),
                             prefixIcon: Icon(
                               Icons.person,
-                              color: colorScheme.onSurfaceVariant,
+                              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                              size: 20,
                             ),
                           ),
                         )
@@ -1027,22 +1203,48 @@ ${_buildBlockerContext(_editedBlocker!)}''';
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Category', style: theme.textTheme.labelLarge),
-                      const SizedBox(height: 8),
+                      Text(
+                        'Category',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.1,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       if (_isEditing)
                         TextField(
                           controller: _categoryController,
                           decoration: InputDecoration(
                             hintText: 'Enter category...',
+                            hintStyle: TextStyle(
+                              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                            ),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: colorScheme.primary,
+                                width: 1.5,
+                              ),
                             ),
                             filled: true,
-                            fillColor: colorScheme.surfaceContainerHighest
-                                .withValues(alpha: 0.3),
+                            fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+                            contentPadding: const EdgeInsets.all(16),
                             prefixIcon: Icon(
                               Icons.category,
-                              color: colorScheme.onSurfaceVariant,
+                              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                              size: 20,
                             ),
                           ),
                         )
@@ -1079,39 +1281,60 @@ ${_buildBlockerContext(_editedBlocker!)}''';
               ],
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
             // Target Date
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Target Date', style: theme.textTheme.labelLarge),
-                const SizedBox(height: 8),
+                Text(
+                  'Target Date',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.1,
+                  ),
+                ),
+                const SizedBox(height: 12),
                 if (_isEditing)
                   InkWell(
                     onTap: _selectTargetDate,
                     child: InputDecorator(
                       decoration: InputDecoration(
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: colorScheme.primary,
+                            width: 1.5,
+                          ),
                         ),
                         filled: true,
-                        fillColor: colorScheme.surfaceContainerHighest
-                            .withValues(alpha: 0.3),
+                        fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+                        contentPadding: const EdgeInsets.all(16),
                         prefixIcon: Icon(
                           Icons.calendar_today,
-                          color: colorScheme.onSurfaceVariant,
+                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                          size: 20,
                         ),
                       ),
                       child: Text(
                         _selectedTargetDate != null
-                            ? DateFormat(
-                                'MMM d, y',
-                              ).format(_selectedTargetDate!)
+                            ? DateFormat('MMM d, y').format(_selectedTargetDate!)
                             : 'Select target date',
                         style: TextStyle(
                           color: _selectedTargetDate == null
-                              ? colorScheme.onSurfaceVariant
+                              ? colorScheme.onSurfaceVariant.withValues(alpha: 0.6)
                               : null,
                         ),
                       ),
@@ -1157,23 +1380,53 @@ ${_buildBlockerContext(_editedBlocker!)}''';
                     _editedBlocker!.dependencies != null &&
                     _editedBlocker!.dependencies!.isNotEmpty) ||
                 _isEditing) ...[
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Dependencies', style: theme.textTheme.labelLarge),
-                  const SizedBox(height: 8),
+                  Text(
+                    'Dependencies',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.1,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   if (_isEditing)
                     TextField(
                       controller: _dependenciesController,
                       decoration: InputDecoration(
                         hintText: 'List any dependencies...',
+                        hintStyle: TextStyle(
+                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                        ),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: colorScheme.primary,
+                            width: 1.5,
+                          ),
                         ),
                         filled: true,
-                        fillColor: colorScheme.surfaceContainerHighest
-                            .withValues(alpha: 0.3),
+                        fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+                        contentPadding: const EdgeInsets.all(16),
+                        prefixIcon: Icon(
+                          Icons.link,
+                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                          size: 20,
+                        ),
                       ),
                       maxLines: 2,
                     )

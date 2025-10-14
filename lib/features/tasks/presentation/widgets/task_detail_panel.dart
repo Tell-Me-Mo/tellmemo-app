@@ -296,17 +296,43 @@ class _TaskDetailPanelState extends ConsumerState<TaskDetailPanel> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Blocker Description *',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w500, color: colorScheme.onSurfaceVariant)),
-                        const SizedBox(height: 8),
+                        Text(
+                          'Blocker Description *',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.1,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
                         TextField(
                           autofocus: true,
                           decoration: InputDecoration(
                             hintText: 'What is blocking this task?',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            hintStyle: TextStyle(
+                              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: colorScheme.primary,
+                                width: 1.5,
+                              ),
+                            ),
                             filled: true,
-                            fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                            fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+                            contentPadding: const EdgeInsets.all(16),
                           ),
                           maxLines: 3,
                           onChanged: (value) => description = value,
@@ -690,7 +716,7 @@ ${_buildTaskContext(task)}''';
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -705,16 +731,48 @@ ${_buildTaskContext(task)}''';
                   data: (projects) => Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Project *', style: theme.textTheme.labelLarge),
-                      const SizedBox(height: 8),
+                      Text(
+                        'Project *',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.1,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
                         initialValue: _selectedProjectId,
                         decoration: InputDecoration(
                           hintText: 'Select a project',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          hintStyle: TextStyle(
+                            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: colorScheme.primary,
+                              width: 1.5,
+                            ),
+                          ),
                           filled: true,
-                          fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                          prefixIcon: Icon(Icons.folder, color: colorScheme.onSurfaceVariant),
+                          fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                          prefixIcon: Icon(
+                            Icons.folder_outlined,
+                            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                            size: 20,
+                          ),
                         ),
                         items: projects.map((project) {
                           return DropdownMenuItem(
@@ -739,26 +797,65 @@ ${_buildTaskContext(task)}''';
                 );
               },
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
           ],
 
           // Title
           if (_isEditing)
-            TextField(
-              controller: _titleController,
-              decoration: InputDecoration(
-                labelText: 'Title *',
-                hintText: 'Enter task title',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                filled: true,
-                fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-              ),
-              style: theme.textTheme.titleMedium,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Title *',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.1,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _titleController,
+                  decoration: InputDecoration(
+                    hintText: 'Enter task title',
+                    hintStyle: TextStyle(
+                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: colorScheme.primary,
+                        width: 1.5,
+                      ),
+                    ),
+                    filled: true,
+                    fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    prefixIcon: Icon(
+                      Icons.label_outline,
+                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                      size: 20,
+                    ),
+                  ),
+                  style: theme.textTheme.bodyLarge,
+                ),
+              ],
             )
           else
             Text(_editedTask!.title, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
 
           // Status and Priority Row
           Row(
@@ -767,16 +864,40 @@ ${_buildTaskContext(task)}''';
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Status', style: theme.textTheme.labelLarge),
-                    const SizedBox(height: 8),
+                    Text(
+                      'Status',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.1,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     if (_isEditing)
                       DropdownButtonFormField<TaskStatus>(
                         initialValue: _selectedStatus,
                         decoration: InputDecoration(
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: colorScheme.primary,
+                              width: 1.5,
+                            ),
+                          ),
                           filled: true,
-                          fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                         ),
                         items: TaskStatus.values.map((status) {
                           return DropdownMenuItem(
@@ -849,16 +970,40 @@ ${_buildTaskContext(task)}''';
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Priority', style: theme.textTheme.labelLarge),
-                    const SizedBox(height: 8),
+                    Text(
+                      'Priority',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.1,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     if (_isEditing)
                       DropdownButtonFormField<TaskPriority>(
                         initialValue: _selectedPriority,
                         decoration: InputDecoration(
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: colorScheme.primary,
+                              width: 1.5,
+                            ),
+                          ),
                           filled: true,
-                          fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                         ),
                         items: TaskPriority.values.map((priority) {
                           return DropdownMenuItem(
@@ -911,24 +1056,52 @@ ${_buildTaskContext(task)}''';
             ],
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
 
           // Description
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Description', style: theme.textTheme.labelLarge),
-              const SizedBox(height: 8),
+              Text(
+                'Description',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.1,
+                ),
+              ),
+              const SizedBox(height: 12),
               if (_isEditing)
                 TextField(
                   controller: _descriptionController,
                   decoration: InputDecoration(
                     hintText: 'Enter task description...',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    hintStyle: TextStyle(
+                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: colorScheme.primary,
+                        width: 1.5,
+                      ),
+                    ),
                     filled: true,
-                    fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                    fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+                    contentPadding: const EdgeInsets.all(16),
                   ),
-                  maxLines: 3,
+                  maxLines: 4,
                 )
               else
                 Container(
@@ -948,20 +1121,53 @@ ${_buildTaskContext(task)}''';
 
           // Question to Ask (if exists)
           if ((_editedTask?.questionToAsk != null) || _isEditing) ...[
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Question to Ask', style: theme.textTheme.labelLarge),
-                const SizedBox(height: 8),
+                Text(
+                  'Question to Ask',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.1,
+                  ),
+                ),
+                const SizedBox(height: 12),
                 if (_isEditing)
                   TextField(
                     controller: _questionController,
                     decoration: InputDecoration(
                       hintText: 'What specific question needs to be asked?',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      hintStyle: TextStyle(
+                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: colorScheme.primary,
+                          width: 1.5,
+                        ),
+                      ),
                       filled: true,
-                      fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                      fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+                      contentPadding: const EdgeInsets.all(16),
+                      prefixIcon: Icon(
+                        Icons.help_outline,
+                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                        size: 20,
+                      ),
                     ),
                     maxLines: 3,
                   )
@@ -983,7 +1189,7 @@ ${_buildTaskContext(task)}''';
             ),
           ],
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
 
           // Assignee and Due Date Row
           Row(
@@ -992,17 +1198,49 @@ ${_buildTaskContext(task)}''';
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Assignee', style: theme.textTheme.labelLarge),
-                    const SizedBox(height: 8),
+                    Text(
+                      'Assignee',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.1,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     if (_isEditing)
                       TextField(
                         controller: _assigneeController,
                         decoration: InputDecoration(
                           hintText: 'Enter assignee name...',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          hintStyle: TextStyle(
+                            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: colorScheme.primary,
+                              width: 1.5,
+                            ),
+                          ),
                           filled: true,
-                          fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                          prefixIcon: Icon(Icons.person, color: colorScheme.onSurfaceVariant),
+                          fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+                          contentPadding: const EdgeInsets.all(16),
+                          prefixIcon: Icon(
+                            Icons.person,
+                            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                            size: 20,
+                          ),
                         ),
                       )
                     else
@@ -1037,23 +1275,56 @@ ${_buildTaskContext(task)}''';
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Due Date', style: theme.textTheme.labelLarge),
-                    const SizedBox(height: 8),
+                    Text(
+                      'Due Date',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.1,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     if (_isEditing)
                       InkWell(
                         onTap: _selectDueDate,
                         child: InputDecorator(
                           decoration: InputDecoration(
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: colorScheme.primary,
+                                width: 1.5,
+                              ),
+                            ),
                             filled: true,
-                            fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                            prefixIcon: Icon(Icons.calendar_today, color: colorScheme.onSurfaceVariant),
+                            fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+                            contentPadding: const EdgeInsets.all(16),
+                            prefixIcon: Icon(
+                              Icons.calendar_today,
+                              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                              size: 20,
+                            ),
                           ),
                           child: Text(
                             _editedTask?.dueDate != null
                                 ? DateFormat('MMM d, y').format(_editedTask!.dueDate!)
                                 : 'Select due date',
-                            style: TextStyle(color: _editedTask?.dueDate == null ? colorScheme.onSurfaceVariant : null),
+                            style: TextStyle(
+                              color: _editedTask?.dueDate == null
+                                  ? colorScheme.onSurfaceVariant.withValues(alpha: 0.6)
+                                  : null,
+                            ),
                           ),
                         ),
                       )
@@ -1157,22 +1428,55 @@ ${_buildTaskContext(task)}''';
 
           // Blocker Description (if blocked)
           if ((_editedTask?.status == TaskStatus.blocked || _selectedStatus == TaskStatus.blocked)) ...[
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Blocker Description', style: theme.textTheme.labelLarge),
-                const SizedBox(height: 8),
+                Text(
+                  'Blocker Description',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.1,
+                  ),
+                ),
+                const SizedBox(height: 12),
                 if (_isEditing)
                   TextField(
                     controller: _blockerController,
                     decoration: InputDecoration(
                       hintText: 'Describe what is blocking this task...',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      hintStyle: TextStyle(
+                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: colorScheme.primary,
+                          width: 1.5,
+                        ),
+                      ),
                       filled: true,
-                      fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                      fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+                      contentPadding: const EdgeInsets.all(16),
+                      prefixIcon: Icon(
+                        Icons.block,
+                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                        size: 20,
+                      ),
                     ),
-                    maxLines: 2,
+                    maxLines: 3,
                   )
                 else
                   Container(

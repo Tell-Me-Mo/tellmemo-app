@@ -123,9 +123,14 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
                   color: colorScheme.surface,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 20,
-                      offset: const Offset(-5, 0),
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 32,
+                      offset: const Offset(-8, 0),
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 16,
+                      offset: const Offset(-4, 0),
                     ),
                   ],
                 ),
@@ -135,8 +140,8 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
                     Container(
                       padding: EdgeInsets.only(
                         left: 24,
-                        right: 16,
-                        top: MediaQuery.of(context).padding.top + 16,
+                        right: 20,
+                        top: MediaQuery.of(context).padding.top + 20,
                         bottom: 0,
                       ),
                       decoration: BoxDecoration(
@@ -144,7 +149,7 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
                         border: Border(
                           bottom: BorderSide(
                             color: colorScheme.outlineVariant
-                                .withValues(alpha: 0.3),
+                                .withValues(alpha: 0.2),
                             width: 1,
                           ),
                         ),
@@ -155,15 +160,15 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
                           Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(10),
+                                padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
                                   color: widget.headerIconColor
-                                      .withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(12),
+                                      .withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(14),
                                 ),
                                 child: Icon(
                                   widget.headerIcon,
-                                  size: 24,
+                                  size: 22,
                                   color: widget.headerIconColor,
                                 ),
                               ),
@@ -204,28 +209,38 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
                             ],
                           ),
                           // Tab Bar
-                          TabBar(
-                            controller: _tabController,
-                            tabs: const [
-                              Tab(
-                                icon: Icon(Icons.info_outline, size: 20),
-                                text: 'Main',
+                          Padding(
+                            padding: const EdgeInsets.only(top: 20),
+                            child: TabBar(
+                              controller: _tabController,
+                              tabs: const [
+                                Tab(
+                                  icon: Icon(Icons.info_outline, size: 18),
+                                  text: 'Main',
+                                  height: 48,
+                                ),
+                                Tab(
+                                  icon: Icon(Icons.comment_outlined, size: 18),
+                                  text: 'Updates',
+                                  height: 48,
+                                ),
+                              ],
+                              labelColor: colorScheme.primary,
+                              unselectedLabelColor: colorScheme.onSurfaceVariant
+                                  .withValues(alpha: 0.7),
+                              indicatorColor: colorScheme.primary,
+                              indicatorWeight: 2.5,
+                              indicatorSize: TabBarIndicatorSize.tab,
+                              labelStyle: theme.textTheme.labelLarge?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.2,
                               ),
-                              Tab(
-                                icon: Icon(Icons.comment_outlined, size: 20),
-                                text: 'Updates',
+                              unselectedLabelStyle:
+                                  theme.textTheme.labelLarge?.copyWith(
+                                fontWeight: FontWeight.w500,
+                                letterSpacing: 0.1,
                               ),
-                            ],
-                            labelColor: colorScheme.primary,
-                            unselectedLabelColor: colorScheme.onSurfaceVariant,
-                            indicatorColor: colorScheme.primary,
-                            indicatorWeight: 3,
-                            labelStyle: theme.textTheme.labelLarge?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                            unselectedLabelStyle:
-                                theme.textTheme.labelLarge?.copyWith(
-                              fontWeight: FontWeight.normal,
+                              dividerColor: Colors.transparent,
                             ),
                           ),
                         ],
