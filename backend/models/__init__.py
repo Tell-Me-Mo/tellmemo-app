@@ -19,6 +19,7 @@ from .blocker import Blocker
 from .conversation import Conversation
 from .notification import Notification, NotificationType, NotificationPriority, NotificationCategory
 from .support_ticket import SupportTicket, TicketComment, TicketAttachment
+from .item_update import ItemUpdate, ItemUpdateType
 
 __all__ = [
     "Project",
@@ -47,5 +48,7 @@ __all__ = [
     "NotificationCategory",
     "SupportTicket",
     "TicketComment",
-    "TicketAttachment"
+    "TicketAttachment",
+    "ItemUpdate",
+    "ItemUpdateType"
 ]

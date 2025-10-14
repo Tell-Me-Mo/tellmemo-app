@@ -17,6 +17,7 @@ from utils.logger import get_logger, sanitize_for_log
 from utils.monitoring import monitor_operation
 from pydantic import BaseModel
 from datetime import datetime
+from services.item_updates_service import ItemUpdatesService
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["lessons-learned"])
@@ -176,6 +177,20 @@ async def create_lesson_learned(
         await db.commit()
         await db.refresh(lesson)
 
+        # Create CREATED update
+        author_name = current_user.full_name or current_user.email or "User"
+        await ItemUpdatesService.create_item_created_update(
+            db=db,
+            project_id=project_id,
+            item_id=lesson.id,
+            item_type='lessons',
+            item_title=lesson.title,
+            author_name=author_name,
+            author_email=current_user.email,
+            ai_generated=False
+        )
+        await db.commit()
+
         logger.info(f"Created lesson learned {sanitize_for_log(lesson.id)} for project {sanitize_for_log(project_id)}")
 
         return LessonLearnedResponse(
@@ -230,23 +245,43 @@ async def update_lesson_learned(
         if lesson.project.organization_id != current_org.id:
             raise HTTPException(status_code=404, detail="Lesson learned not found")
 
-        # Update fields
+        # Build update data dict
+        update_data = {}
         if lesson_data.title is not None:
-            lesson.title = lesson_data.title
+            update_data['title'] = lesson_data.title
         if lesson_data.description is not None:
-            lesson.description = lesson_data.description
+            update_data['description'] = lesson_data.description
         if lesson_data.category is not None:
-            lesson.category = LessonCategory(lesson_data.category)
+            update_data['category'] = LessonCategory(lesson_data.category)
         if lesson_data.lesson_type is not None:
-            lesson.lesson_type = LessonType(lesson_data.lesson_type)
+            update_data['lesson_type'] = LessonType(lesson_data.lesson_type)
         if lesson_data.impact is not None:
-            lesson.impact = LessonLearnedImpact(lesson_data.impact)
+            update_data['impact'] = LessonLearnedImpact(lesson_data.impact)
         if lesson_data.recommendation is not None:
-            lesson.recommendation = lesson_data.recommendation
+            update_data['recommendation'] = lesson_data.recommendation
         if lesson_data.context is not None:
-            lesson.context = lesson_data.context
+            update_data['context'] = lesson_data.context
         if lesson_data.tags is not None:
-            lesson.tags = lesson_data.tags
+            update_data['tags'] = lesson_data.tags
+
+        # Track field changes
+        author_name = current_user.full_name or current_user.email or "User"
+        changes = ItemUpdatesService.detect_changes(lesson, update_data)
+        if changes:
+            await ItemUpdatesService.track_field_changes(
+                db=db,
+                project_id=lesson.project_id,
+                item_id=lesson.id,
+                item_type='lessons',
+                changes=changes,
+                author_name=author_name,
+                author_email=current_user.email
+            )
+
+        # Apply updates
+        for key, value in update_data.items():
+            if hasattr(lesson, key):
+                setattr(lesson, key, value)
 
         lesson.last_updated = datetime.utcnow()
         lesson.updated_by = "manual"
