@@ -9,7 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../projects/domain/entities/risk.dart';
-import '../../../projects/presentation/widgets/risk_view_dialog.dart';
+import '../../../projects/presentation/widgets/risk_detail_panel.dart';
 import '../../../projects/presentation/providers/projects_provider.dart';
 import '../../../projects/presentation/providers/risks_tasks_provider.dart';
 import '../providers/aggregated_risks_provider.dart';
@@ -2572,39 +2572,69 @@ class _RisksAggregationScreenV2State extends ConsumerState<RisksAggregationScree
   }
 
   void _showRiskDetails(BuildContext context, Risk risk, String projectId) {
-    showDialog(
+    showGeneralDialog(
       context: context,
-      builder: (context) => RiskViewDialog(
-        projectId: projectId,
-        risk: risk,
-      ),
+      barrierDismissible: false,
+      barrierColor: Colors.transparent,
+      transitionDuration: Duration.zero,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return RiskDetailPanel(
+          projectId: projectId,
+          risk: risk,
+        );
+      },
     );
   }
 
   void _showCreateRiskDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => CreateRiskDialog(
-        onCreated: () {
-          ref.invalidate(aggregatedRisksProvider);
-        },
-      ),
+    // Get first available project (or show error if none)
+    final projectsAsync = ref.read(projectsListProvider);
+    final firstProject = projectsAsync.whenOrNull(
+      data: (projects) => projects.isNotEmpty ? projects.first.id : null,
     );
+
+    if (firstProject == null) {
+      ref.read(notificationServiceProvider.notifier).showError(
+        'Please create a project first before adding risks',
+      );
+      return;
+    }
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.transparent,
+      transitionDuration: Duration.zero,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return RiskDetailPanel(
+          projectId: firstProject,
+          risk: null,
+          initiallyInEditMode: true,
+        );
+      },
+    ).then((_) {
+      ref.invalidate(aggregatedRisksProvider);
+    });
   }
 
   void _handleRiskAction(String action, Risk risk, String projectId) {
     switch (action) {
       case 'edit':
-        showDialog(
+        showGeneralDialog(
           context: context,
-          builder: (context) => CreateRiskDialog(
-            initialProjectId: projectId,
-            initialRisk: risk,
-            onCreated: () {
-              ref.invalidate(aggregatedRisksProvider);
-            },
-          ),
-        );
+          barrierDismissible: false,
+          barrierColor: Colors.transparent,
+          transitionDuration: Duration.zero,
+          pageBuilder: (context, animation, secondaryAnimation) {
+            return RiskDetailPanel(
+              projectId: projectId,
+              risk: risk,
+              initiallyInEditMode: true,
+            );
+          },
+        ).then((_) {
+          ref.invalidate(aggregatedRisksProvider);
+        });
         break;
       case 'assign':
         _showAssignmentDialog(risk, projectId);
@@ -2886,688 +2916,5 @@ class _StatusChip extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-// Create Risk Dialog Widget
-class CreateRiskDialog extends ConsumerStatefulWidget {
-  final VoidCallback onCreated;
-  final String? initialProjectId;
-  final Risk? initialRisk; // null for create, existing risk for edit
-
-  const CreateRiskDialog({
-    super.key,
-    required this.onCreated,
-    this.initialProjectId,
-    this.initialRisk,
-  });
-
-  @override
-  ConsumerState<CreateRiskDialog> createState() => _CreateRiskDialogState();
-}
-
-class _CreateRiskDialogState extends ConsumerState<CreateRiskDialog> {
-  final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  final _mitigationController = TextEditingController();
-  final _impactController = TextEditingController();
-  final _probabilityController = TextEditingController(text: '0.5');
-
-  String? _selectedProjectId;
-  RiskSeverity _selectedSeverity = RiskSeverity.medium;
-  RiskStatus _selectedStatus = RiskStatus.identified;
-  bool _isCreating = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedProjectId = widget.initialProjectId ?? widget.initialRisk?.projectId;
-
-    // If editing existing risk, populate fields
-    if (widget.initialRisk != null) {
-      final risk = widget.initialRisk!;
-      _titleController.text = risk.title;
-      _descriptionController.text = risk.description;
-      _mitigationController.text = risk.mitigation ?? '';
-      _impactController.text = risk.impact ?? '';
-      _probabilityController.text = risk.probability?.toString() ?? '0.5';
-      _selectedSeverity = risk.severity;
-      _selectedStatus = risk.status;
-    }
-  }
-
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _descriptionController.dispose();
-    _mitigationController.dispose();
-    _impactController.dispose();
-    _probabilityController.dispose();
-    super.dispose();
-  }
-
-  Color _getSeverityColor(RiskSeverity severity) {
-    switch (severity) {
-      case RiskSeverity.low:
-        return Colors.blue;
-      case RiskSeverity.medium:
-        return Colors.orange;
-      case RiskSeverity.high:
-        return Colors.deepOrange;
-      case RiskSeverity.critical:
-        return Colors.red;
-    }
-  }
-
-  String _getSeverityLabel(RiskSeverity severity) {
-    switch (severity) {
-      case RiskSeverity.low:
-        return 'Low';
-      case RiskSeverity.medium:
-        return 'Medium';
-      case RiskSeverity.high:
-        return 'High';
-      case RiskSeverity.critical:
-        return 'Critical';
-    }
-  }
-
-  String _getStatusLabel(RiskStatus status) {
-    switch (status) {
-      case RiskStatus.identified:
-        return 'Identified';
-      case RiskStatus.mitigating:
-        return 'Mitigating';
-      case RiskStatus.resolved:
-        return 'Resolved';
-      case RiskStatus.accepted:
-        return 'Accepted';
-      case RiskStatus.escalated:
-        return 'Escalated';
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final projectsAsync = ref.watch(projectsListProvider);
-
-    return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: 500,
-          maxHeight: MediaQuery.of(context).size.height * 0.9,
-          minWidth: 400,
-        ),
-        child: IntrinsicHeight(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Header
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.1),
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      topRight: Radius.circular(16),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.warning_amber_rounded,
-                        color: Colors.orange,
-                        size: 28,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          widget.initialRisk != null ? 'Edit Risk' : 'Create New Risk',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Content
-                Flexible(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Project Selection
-                        projectsAsync.when(
-                          loading: () => const Center(child: CircularProgressIndicator()),
-                          error: (error, stack) => Text('Error loading projects: $error'),
-                          data: (projects) => DropdownButtonFormField<String>(
-                            initialValue: _selectedProjectId,
-                            decoration: InputDecoration(
-                              labelText: 'Project *',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(
-                                  color: colorScheme.outline.withValues(alpha: 0.3),
-                                ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(
-                                  color: colorScheme.outline.withValues(alpha: 0.3),
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(
-                                  color: colorScheme.primary.withValues(alpha: 0.5),
-                                ),
-                              ),
-                              filled: true,
-                              fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                              prefixIcon: Icon(
-                                Icons.folder,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please select a project';
-                              }
-                              return null;
-                            },
-                            items: projects.map((project) {
-                              return DropdownMenuItem(
-                                value: project.id,
-                                child: Text(project.name),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedProjectId = value;
-                              });
-                            },
-                          ),
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // Title
-                        TextFormField(
-                          controller: _titleController,
-                          decoration: InputDecoration(
-                            labelText: 'Risk Title *',
-                            hintText: 'Brief description of the risk',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(
-                                color: colorScheme.outline.withValues(alpha: 0.3),
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(
-                                color: colorScheme.outline.withValues(alpha: 0.3),
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(
-                                color: colorScheme.primary.withValues(alpha: 0.5),
-                              ),
-                            ),
-                            filled: true,
-                            fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                            prefixIcon: Icon(
-                              Icons.title,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Title is required';
-                            }
-                            return null;
-                          },
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // Description
-                        TextFormField(
-                          controller: _descriptionController,
-                          decoration: InputDecoration(
-                            labelText: 'Description *',
-                            hintText: 'Detailed description of the risk',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(
-                                color: colorScheme.outline.withValues(alpha: 0.3),
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(
-                                color: colorScheme.outline.withValues(alpha: 0.3),
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(
-                                color: colorScheme.primary.withValues(alpha: 0.5),
-                              ),
-                            ),
-                            filled: true,
-                            fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                            alignLabelWithHint: true,
-                            prefixIcon: Icon(
-                              Icons.description,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          maxLines: 3,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Description is required';
-                            }
-                            return null;
-                          },
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // Severity and Status Row
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Severity',
-                                    style: theme.textTheme.labelLarge,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  DropdownButtonFormField<RiskSeverity>(
-                                    initialValue: _selectedSeverity,
-                                    decoration: InputDecoration(
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide(
-                                          color: colorScheme.outline.withValues(alpha: 0.3),
-                                        ),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide(
-                                          color: colorScheme.outline.withValues(alpha: 0.3),
-                                        ),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide(
-                                          color: colorScheme.primary.withValues(alpha: 0.5),
-                                        ),
-                                      ),
-                                      filled: true,
-                                      fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                                      contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 12,
-                                      ),
-                                    ),
-                                    items: RiskSeverity.values.map((severity) {
-                                      return DropdownMenuItem(
-                                        value: severity,
-                                        child: Row(
-                                          children: [
-                                            Container(
-                                              width: 12,
-                                              height: 12,
-                                              decoration: BoxDecoration(
-                                                color: _getSeverityColor(severity),
-                                                shape: BoxShape.circle,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Text(_getSeverityLabel(severity)),
-                                          ],
-                                        ),
-                                      );
-                                    }).toList(),
-                                    onChanged: (value) {
-                                      if (value != null) {
-                                        setState(() {
-                                          _selectedSeverity = value;
-                                        });
-                                      }
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 20),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Status',
-                                    style: theme.textTheme.labelLarge,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  DropdownButtonFormField<RiskStatus>(
-                                    initialValue: _selectedStatus,
-                                    decoration: InputDecoration(
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide(
-                                          color: colorScheme.outline.withValues(alpha: 0.3),
-                                        ),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide(
-                                          color: colorScheme.outline.withValues(alpha: 0.3),
-                                        ),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide(
-                                          color: colorScheme.primary.withValues(alpha: 0.5),
-                                        ),
-                                      ),
-                                      filled: true,
-                                      fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                                      contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 12,
-                                      ),
-                                    ),
-                                    items: RiskStatus.values.map((status) {
-                                      return DropdownMenuItem(
-                                        value: status,
-                                        child: Text(_getStatusLabel(status)),
-                                      );
-                                    }).toList(),
-                                    onChanged: (value) {
-                                      if (value != null) {
-                                        setState(() {
-                                          _selectedStatus = value;
-                                        });
-                                      }
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // Probability
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Probability',
-                              style: theme.textTheme.labelLarge,
-                            ),
-                            const SizedBox(height: 8),
-                            TextFormField(
-                              controller: _probabilityController,
-                              decoration: InputDecoration(
-                                hintText: '0.5',
-                                helperText: 'Value between 0 and 1',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(
-                                    color: colorScheme.outline.withValues(alpha: 0.3),
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(
-                                    color: colorScheme.outline.withValues(alpha: 0.3),
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(
-                                    color: colorScheme.primary.withValues(alpha: 0.5),
-                                  ),
-                                ),
-                                filled: true,
-                                fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                                prefixIcon: Icon(
-                                  Icons.percent,
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                              keyboardType: TextInputType.number,
-                              validator: (value) {
-                                if (value != null && value.isNotEmpty) {
-                                  final probability = double.tryParse(value);
-                                  if (probability == null || probability < 0 || probability > 1) {
-                                    return 'Must be between 0.0 and 1.0';
-                                  }
-                                }
-                                return null;
-                              },
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // Impact
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Impact',
-                              style: theme.textTheme.labelLarge,
-                            ),
-                            const SizedBox(height: 8),
-                            TextFormField(
-                              controller: _impactController,
-                              decoration: InputDecoration(
-                                hintText: 'Potential impact if risk occurs',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(
-                                    color: colorScheme.outline.withValues(alpha: 0.3),
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(
-                                    color: colorScheme.outline.withValues(alpha: 0.3),
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(
-                                    color: colorScheme.primary.withValues(alpha: 0.5),
-                                  ),
-                                ),
-                                filled: true,
-                                fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                                alignLabelWithHint: true,
-                                prefixIcon: Icon(
-                                  Icons.trending_up,
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                              maxLines: 2,
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // Mitigation
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Mitigation Strategy',
-                              style: theme.textTheme.labelLarge,
-                            ),
-                            const SizedBox(height: 8),
-                            TextFormField(
-                              controller: _mitigationController,
-                              decoration: InputDecoration(
-                                hintText: 'How to mitigate or prevent this risk',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(
-                                    color: colorScheme.outline.withValues(alpha: 0.3),
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(
-                                    color: colorScheme.outline.withValues(alpha: 0.3),
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(
-                                    color: colorScheme.primary.withValues(alpha: 0.5),
-                                  ),
-                                ),
-                                filled: true,
-                                fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                                alignLabelWithHint: true,
-                                prefixIcon: Icon(
-                                  Icons.shield_outlined,
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                              maxLines: 2,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Actions
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(16),
-                      bottomRight: Radius.circular(16),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: _isCreating ? null : () => Navigator.of(context).pop(),
-                        child: const Text('Cancel'),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton.icon(
-                        onPressed: _isCreating ? null : _createRisk,
-                        icon: _isCreating
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.add),
-                        label: Text(_isCreating ? (widget.initialRisk != null ? 'Updating...' : 'Creating...') : (widget.initialRisk != null ? 'Update Risk' : 'Create Risk')),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _createRisk() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() {
-      _isCreating = true;
-    });
-
-    try {
-      final probability = _probabilityController.text.trim().isEmpty
-          ? 0.5
-          : double.tryParse(_probabilityController.text.trim()) ?? 0.5;
-
-      if (widget.initialRisk != null) {
-        // Edit existing risk
-        final updatedRisk = widget.initialRisk!.copyWith(
-          title: _titleController.text.trim(),
-          description: _descriptionController.text.trim(),
-          severity: _selectedSeverity,
-          status: _selectedStatus,
-          probability: probability,
-          impact: _impactController.text.trim().isEmpty ? null : _impactController.text.trim(),
-          mitigation: _mitigationController.text.trim().isEmpty ? null : _mitigationController.text.trim(),
-          lastUpdated: DateTime.now(),
-        );
-
-        await ref.read(risksNotifierProvider(_selectedProjectId!).notifier).updateRisk(updatedRisk);
-      } else {
-        // Create new risk
-        final newRisk = Risk(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          projectId: _selectedProjectId!,
-          title: _titleController.text.trim(),
-          description: _descriptionController.text.trim(),
-          severity: _selectedSeverity,
-          status: _selectedStatus,
-          probability: probability,
-          impact: _impactController.text.trim().isEmpty ? null : _impactController.text.trim(),
-          mitigation: _mitigationController.text.trim().isEmpty ? null : _mitigationController.text.trim(),
-          identifiedDate: DateTime.now(),
-        );
-
-        await ref.read(risksNotifierProvider(_selectedProjectId!).notifier).addRisk(newRisk);
-      }
-
-      widget.onCreated();
-
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
-    } catch (e) {
-      if (mounted) {
-        ref.read(notificationServiceProvider.notifier).showError('Error creating risk: $e');
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isCreating = false;
-        });
-      }
-    }
   }
 }

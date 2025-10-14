@@ -3,7 +3,7 @@ import '../providers/aggregated_lessons_learned_provider.dart';
 import '../widgets/lesson_group_dialog.dart';
 import 'lesson_learned_list_tile_compact.dart';
 import 'lesson_learned_list_tile.dart';
-import 'lesson_learned_detail_dialog.dart';
+import 'lesson_learned_detail_panel.dart';
 
 class LessonGroupingView extends StatelessWidget {
   final List<AggregatedLessonLearned> lessons;
@@ -169,12 +169,18 @@ class LessonGroupingView extends StatelessWidget {
             lesson: aggregatedLesson.lesson,
             project: aggregatedLesson.project,
             onTap: () {
-              showDialog(
+              showGeneralDialog(
                 context: context,
-                builder: (context) => LessonLearnedDetailDialog(
-                  lesson: aggregatedLesson.lesson,
-                  project: aggregatedLesson.project,
-                ),
+                barrierDismissible: false,
+                barrierColor: Colors.transparent,
+                transitionDuration: Duration.zero,
+                pageBuilder: (context, animation, secondaryAnimation) {
+                  return LessonLearnedDetailPanel(
+                    lesson: aggregatedLesson.lesson,
+                    projectId: aggregatedLesson.project?.id,
+                    projectName: aggregatedLesson.project?.name,
+                  );
+                },
               );
             },
           )
@@ -182,12 +188,18 @@ class LessonGroupingView extends StatelessWidget {
             lesson: aggregatedLesson.lesson,
             project: aggregatedLesson.project,
             onTap: () {
-              showDialog(
+              showGeneralDialog(
                 context: context,
-                builder: (context) => LessonLearnedDetailDialog(
-                  lesson: aggregatedLesson.lesson,
-                  project: aggregatedLesson.project,
-                ),
+                barrierDismissible: false,
+                barrierColor: Colors.transparent,
+                transitionDuration: Duration.zero,
+                pageBuilder: (context, animation, secondaryAnimation) {
+                  return LessonLearnedDetailPanel(
+                    lesson: aggregatedLesson.lesson,
+                    projectId: aggregatedLesson.project?.id,
+                    projectName: aggregatedLesson.project?.name,
+                  );
+                },
               );
             },
           );

@@ -1,0 +1,1299 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import '../../domain/entities/blocker.dart';
+import '../../domain/entities/project.dart';
+import '../providers/risks_tasks_provider.dart';
+import '../../../queries/presentation/widgets/ask_ai_panel.dart';
+import '../../../queries/presentation/providers/query_provider.dart';
+import '../../../../core/services/notification_service.dart';
+import '../../../../shared/widgets/item_detail_panel.dart';
+import '../../../../shared/widgets/item_updates_tab.dart';
+
+class BlockerDetailPanel extends ConsumerStatefulWidget {
+  final String projectId;
+  final String? projectName;
+  final Blocker? blocker; // null for creating new blocker
+  final Project? project;
+  final bool initiallyInEditMode;
+
+  const BlockerDetailPanel({
+    super.key,
+    required this.projectId,
+    this.projectName,
+    this.blocker,
+    this.project,
+    this.initiallyInEditMode = false,
+  });
+
+  @override
+  ConsumerState<BlockerDetailPanel> createState() => _BlockerDetailPanelState();
+}
+
+class _BlockerDetailPanelState extends ConsumerState<BlockerDetailPanel> {
+  late Blocker? _editedBlocker;
+  late TextEditingController _titleController;
+  late TextEditingController _descriptionController;
+  late TextEditingController _resolutionController;
+  late TextEditingController _categoryController;
+  late TextEditingController _ownerController;
+  late TextEditingController _dependenciesController;
+  late TextEditingController _assignedToController;
+  late TextEditingController _assignedToEmailController;
+  late BlockerImpact _selectedImpact;
+  late BlockerStatus _selectedStatus;
+  DateTime? _selectedTargetDate;
+
+  bool _isEditing = false;
+  bool _isSaving = false;
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _editedBlocker = widget.blocker;
+    _isEditing = widget.initiallyInEditMode || widget.blocker == null;
+
+    _titleController = TextEditingController(text: _editedBlocker?.title ?? '');
+    _descriptionController = TextEditingController(
+      text: _editedBlocker?.description ?? '',
+    );
+    _resolutionController = TextEditingController(
+      text: _editedBlocker?.resolution ?? '',
+    );
+    _categoryController = TextEditingController(
+      text: _editedBlocker?.category ?? '',
+    );
+    _ownerController = TextEditingController(text: _editedBlocker?.owner ?? '');
+    _dependenciesController = TextEditingController(
+      text: _editedBlocker?.dependencies ?? '',
+    );
+    _assignedToController = TextEditingController(
+      text: _editedBlocker?.assignedTo ?? '',
+    );
+    _assignedToEmailController = TextEditingController(
+      text: _editedBlocker?.assignedToEmail ?? '',
+    );
+    _selectedImpact = _editedBlocker?.impact ?? BlockerImpact.high;
+    _selectedStatus = _editedBlocker?.status ?? BlockerStatus.active;
+    _selectedTargetDate = _editedBlocker?.targetDate;
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    _resolutionController.dispose();
+    _categoryController.dispose();
+    _ownerController.dispose();
+    _dependenciesController.dispose();
+    _assignedToController.dispose();
+    _assignedToEmailController.dispose();
+    super.dispose();
+  }
+
+  DateTime _createTimezoneNaiveNow() {
+    final now = DateTime.now();
+    return DateTime(
+      now.year,
+      now.month,
+      now.day,
+      now.hour,
+      now.minute,
+      now.second,
+      now.millisecond,
+    );
+  }
+
+  DateTime? _createTimezoneNaiveDate(DateTime? date) {
+    if (date == null) return null;
+    return DateTime(date.year, date.month, date.day);
+  }
+
+  void _cancelEdit() {
+    if (_editedBlocker == null) {
+      // If creating new, close the panel
+      Navigator.of(context).pop();
+    } else {
+      // If editing existing, just exit edit mode and reset values
+      setState(() {
+        _isEditing = false;
+        _titleController.text = _editedBlocker!.title;
+        _descriptionController.text = _editedBlocker!.description;
+        _resolutionController.text = _editedBlocker!.resolution ?? '';
+        _categoryController.text = _editedBlocker!.category ?? '';
+        _ownerController.text = _editedBlocker!.owner ?? '';
+        _dependenciesController.text = _editedBlocker!.dependencies ?? '';
+        _assignedToController.text = _editedBlocker!.assignedTo ?? '';
+        _assignedToEmailController.text = _editedBlocker!.assignedToEmail ?? '';
+        _selectedImpact = _editedBlocker!.impact;
+        _selectedStatus = _editedBlocker!.status;
+        _selectedTargetDate = _editedBlocker!.targetDate;
+      });
+    }
+  }
+
+  Future<void> _saveChanges() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    if (_titleController.text.trim().isEmpty) {
+      ref
+          .read(notificationServiceProvider.notifier)
+          .showWarning('Title cannot be empty');
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      final blockerToSave = Blocker(
+        id: _editedBlocker?.id ?? '',
+        projectId: widget.projectId,
+        title: _titleController.text.trim(),
+        description: _descriptionController.text.trim(),
+        impact: _selectedImpact,
+        status: _selectedStatus,
+        resolution: _resolutionController.text.trim().isEmpty
+            ? null
+            : _resolutionController.text.trim(),
+        category: _categoryController.text.trim().isEmpty
+            ? null
+            : _categoryController.text.trim(),
+        owner: _ownerController.text.trim().isEmpty
+            ? null
+            : _ownerController.text.trim(),
+        dependencies: _dependenciesController.text.trim().isEmpty
+            ? null
+            : _dependenciesController.text.trim(),
+        assignedTo: _assignedToController.text.trim().isEmpty
+            ? null
+            : _assignedToController.text.trim(),
+        assignedToEmail: _assignedToEmailController.text.trim().isEmpty
+            ? null
+            : _assignedToEmailController.text.trim(),
+        targetDate: _selectedTargetDate,
+        resolvedDate: _selectedStatus == BlockerStatus.resolved
+            ? (_editedBlocker?.resolvedDate ?? _createTimezoneNaiveNow())
+            : null,
+        escalationDate: _selectedStatus == BlockerStatus.escalated
+            ? (_editedBlocker?.escalationDate ?? _createTimezoneNaiveNow())
+            : null,
+        identifiedDate:
+            _editedBlocker?.identifiedDate ?? _createTimezoneNaiveNow(),
+        lastUpdated: _createTimezoneNaiveNow(),
+        updatedBy: 'current_user',
+      );
+
+      final notifier = ref.read(
+        blockersNotifierProvider(widget.projectId).notifier,
+      );
+
+      if (_editedBlocker == null) {
+        // Creating new blocker
+        await notifier.addBlocker(blockerToSave);
+        if (mounted) {
+          Navigator.of(context).pop();
+          ref
+              .read(notificationServiceProvider.notifier)
+              .showSuccess('Blocker created successfully');
+        }
+      } else {
+        // Updating existing blocker
+        await notifier.updateBlocker(blockerToSave);
+        if (mounted) {
+          setState(() {
+            _editedBlocker = blockerToSave;
+            _isEditing = false;
+          });
+          ref
+              .read(notificationServiceProvider.notifier)
+              .showSuccess('Blocker updated successfully');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ref
+            .read(notificationServiceProvider.notifier)
+            .showError('Error saving blocker: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _deleteBlocker() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Blocker'),
+        content: const Text('Are you sure you want to delete this blocker?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      final notifier = ref.read(
+        blockersNotifierProvider(widget.projectId).notifier,
+      );
+      await notifier.deleteBlocker(_editedBlocker!.id);
+
+      if (mounted) {
+        Navigator.of(context).pop();
+        ref
+            .read(notificationServiceProvider.notifier)
+            .showSuccess('Blocker deleted successfully');
+      }
+    } catch (e) {
+      if (mounted) {
+        ref
+            .read(notificationServiceProvider.notifier)
+            .showError('Error deleting blocker: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _selectTargetDate() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _selectedTargetDate ?? DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+    );
+
+    if (date != null) {
+      setState(() {
+        _selectedTargetDate = _createTimezoneNaiveDate(date);
+      });
+    }
+  }
+
+  Future<void> _markAsResolved() async {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final resolution = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        String resolutionText = '';
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 450, minWidth: 350),
+            child: IntrinsicHeight(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.1),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(16),
+                        topRight: Radius.circular(16),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.check_circle,
+                          color: Colors.green,
+                          size: 28,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Mark as Resolved',
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Resolution Description *',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          autofocus: true,
+                          decoration: InputDecoration(
+                            hintText: 'How was this blocker resolved?',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            filled: true,
+                            fillColor: colorScheme.surfaceContainerHighest
+                                .withValues(alpha: 0.3),
+                          ),
+                          maxLines: 3,
+                          onChanged: (value) => resolutionText = value,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest.withValues(
+                        alpha: 0.3,
+                      ),
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(16),
+                        bottomRight: Radius.circular(16),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                          child: const Text('Cancel'),
+                        ),
+                        const SizedBox(width: 12),
+                        FilledButton(
+                          onPressed: () =>
+                              Navigator.of(dialogContext).pop(resolutionText),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.green,
+                          ),
+                          child: const Text('Mark as Resolved'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    if (resolution == null || resolution.isEmpty) return;
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      final updatedBlocker = _editedBlocker!.copyWith(
+        status: BlockerStatus.resolved,
+        resolution: resolution,
+        resolvedDate: _createTimezoneNaiveNow(),
+        lastUpdated: _createTimezoneNaiveNow(),
+      );
+
+      final notifier = ref.read(
+        blockersNotifierProvider(widget.projectId).notifier,
+      );
+      await notifier.updateBlocker(updatedBlocker);
+
+      if (mounted) {
+        setState(() {
+          _editedBlocker = updatedBlocker;
+          _resolutionController.text = resolution;
+        });
+        ref
+            .read(notificationServiceProvider.notifier)
+            .showSuccess('Blocker marked as resolved');
+      }
+    } catch (e) {
+      if (mounted) {
+        ref
+            .read(notificationServiceProvider.notifier)
+            .showError('Error updating blocker: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  String _buildBlockerContext(Blocker blocker) {
+    final buffer = StringBuffer();
+    buffer.writeln('- Status: ${blocker.statusLabel}');
+    buffer.writeln('- Impact: ${blocker.impactLabel}');
+    buffer.writeln('- Description: ${blocker.description}');
+    if (blocker.resolution != null && blocker.resolution!.isNotEmpty) {
+      buffer.writeln('- Resolution: ${blocker.resolution}');
+    }
+    if (blocker.category != null && blocker.category!.isNotEmpty) {
+      buffer.writeln('- Category: ${blocker.category}');
+    }
+    if (blocker.dependencies != null && blocker.dependencies!.isNotEmpty) {
+      buffer.writeln('- Dependencies: ${blocker.dependencies}');
+    }
+    if (blocker.assignedTo != null && blocker.assignedTo!.isNotEmpty) {
+      buffer.writeln('- Assigned to: ${blocker.assignedTo}');
+    }
+    if (blocker.targetDate != null) {
+      buffer.writeln(
+        '- Target Date: ${blocker.targetDate!.toIso8601String().split('T')[0]}',
+      );
+    }
+    return buffer.toString();
+  }
+
+  void _openAIDialog() {
+    final blockerContext =
+        '''Context: Analyzing a blocker in the project.
+Blocker Title: ${_editedBlocker!.title}
+${_buildBlockerContext(_editedBlocker!)}''';
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.transparent,
+      transitionDuration: Duration.zero,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return AskAIPanel(
+          projectId: widget.projectId,
+          projectName: widget.project?.name ?? 'Project',
+          contextInfo: blockerContext,
+          conversationId: 'blocker_${_editedBlocker!.id}',
+          rightOffset: 0.0,
+          onClose: () {
+            Navigator.of(context).pop();
+            ref.read(queryProvider.notifier).clearConversation();
+          },
+        );
+      },
+    );
+  }
+
+  Color _getImpactColor(BlockerImpact impact) {
+    switch (impact) {
+      case BlockerImpact.low:
+        return Colors.blue;
+      case BlockerImpact.medium:
+        return Colors.orange;
+      case BlockerImpact.high:
+        return Colors.deepOrange;
+      case BlockerImpact.critical:
+        return Colors.red;
+    }
+  }
+
+  Color _getStatusColor(BlockerStatus status) {
+    switch (status) {
+      case BlockerStatus.active:
+        return Colors.orange;
+      case BlockerStatus.resolved:
+        return Colors.green;
+      case BlockerStatus.pending:
+        return Colors.grey;
+      case BlockerStatus.escalated:
+        return Colors.red;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isCreating = _editedBlocker == null;
+
+    return ItemDetailPanel(
+      title: isCreating
+          ? 'Create New Blocker'
+          : (_isEditing ? 'Edit Blocker' : 'Blocker Details'),
+      subtitle: widget.projectName ?? widget.project?.name ?? 'Project',
+      headerIcon: Icons.block,
+      headerIconColor: _editedBlocker != null
+          ? _getImpactColor(_editedBlocker!.impact)
+          : Colors.red,
+      onClose: () => Navigator.of(context).pop(),
+      headerActions: _isEditing
+          ? [
+              // Edit mode actions
+              TextButton(
+                onPressed: _isSaving ? null : _cancelEdit,
+                child: const Text('Cancel'),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.icon(
+                onPressed: _isSaving ? null : _saveChanges,
+                icon: _isSaving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save, size: 18),
+                label: Text(
+                  _isSaving ? 'Saving...' : (isCreating ? 'Create' : 'Save'),
+                ),
+              ),
+            ]
+          : [
+              // View mode actions
+              if (_editedBlocker != null &&
+                  _editedBlocker!.status != BlockerStatus.resolved)
+                IconButton(
+                  icon: const Icon(
+                    Icons.check_circle_outline,
+                    color: Colors.green,
+                  ),
+                  onPressed: _isSaving ? null : _markAsResolved,
+                  tooltip: 'Mark as resolved',
+                ),
+
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert),
+                tooltip: 'More actions',
+                offset: const Offset(0, 45),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                onSelected: (value) {
+                  switch (value) {
+                    case 'edit':
+                      setState(() => _isEditing = true);
+                      break;
+                    case 'delete':
+                      _deleteBlocker();
+                      break;
+                  }
+                },
+                itemBuilder: (BuildContext context) => [
+                  PopupMenuItem<String>(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.edit_outlined,
+                          size: 20,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(width: 12),
+                        const Text('Edit'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(),
+                  const PopupMenuItem<String>(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                        SizedBox(width: 12),
+                        Text('Delete', style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              if (_editedBlocker != null) ...[
+                const SizedBox(width: 8),
+                Container(
+                  width: 1,
+                  height: 24,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.outline.withValues(alpha: 0.2),
+                ),
+                const SizedBox(width: 8),
+
+                IconButton(
+                  onPressed: _openAIDialog,
+                  icon: const Icon(Icons.auto_awesome),
+                  tooltip: 'AI Assistant',
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.green.withValues(alpha: 0.1),
+                    foregroundColor: Colors.green,
+                  ),
+                ),
+              ],
+            ],
+      mainViewContent: _buildMainView(context),
+      updatesContent: _buildUpdatesTab(),
+    );
+  }
+
+  Widget _buildMainView(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Form(
+      key: _formKey,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Title
+            if (_isEditing)
+              TextFormField(
+                controller: _titleController,
+                decoration: InputDecoration(
+                  labelText: 'Title *',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  filled: true,
+                  fillColor: colorScheme.surfaceContainerHighest.withValues(
+                    alpha: 0.3,
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Title is required';
+                  }
+                  return null;
+                },
+              )
+            else if (_editedBlocker != null)
+              Text(
+                _editedBlocker!.title,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+            const SizedBox(height: 20),
+
+            // Status and Impact Row
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Status', style: theme.textTheme.labelLarge),
+                      const SizedBox(height: 8),
+                      if (_isEditing)
+                        DropdownButtonFormField<BlockerStatus>(
+                          initialValue: _selectedStatus,
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            filled: true,
+                            fillColor: colorScheme.surfaceContainerHighest
+                                .withValues(alpha: 0.3),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                          ),
+                          items: BlockerStatus.values.map((status) {
+                            return DropdownMenuItem(
+                              value: status,
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 12,
+                                    height: 12,
+                                    decoration: BoxDecoration(
+                                      color: _getStatusColor(status),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(status.name),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() {
+                                _selectedStatus = value;
+                              });
+                            }
+                          },
+                        )
+                      else if (_editedBlocker != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getStatusColor(
+                              _editedBlocker!.status,
+                            ).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: _getStatusColor(_editedBlocker!.status),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 12,
+                                height: 12,
+                                decoration: BoxDecoration(
+                                  color: _getStatusColor(
+                                    _editedBlocker!.status,
+                                  ),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                _editedBlocker!.statusLabel,
+                                style: TextStyle(
+                                  color: _getStatusColor(
+                                    _editedBlocker!.status,
+                                  ),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Impact', style: theme.textTheme.labelLarge),
+                      const SizedBox(height: 8),
+                      if (_isEditing)
+                        DropdownButtonFormField<BlockerImpact>(
+                          initialValue: _selectedImpact,
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            filled: true,
+                            fillColor: colorScheme.surfaceContainerHighest
+                                .withValues(alpha: 0.3),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                          ),
+                          items: BlockerImpact.values.map((impact) {
+                            return DropdownMenuItem(
+                              value: impact,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.priority_high,
+                                    size: 16,
+                                    color: _getImpactColor(impact),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(impact.name),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() {
+                                _selectedImpact = value;
+                              });
+                            }
+                          },
+                        )
+                      else if (_editedBlocker != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getImpactColor(
+                              _editedBlocker!.impact,
+                            ).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.priority_high,
+                                size: 16,
+                                color: _getImpactColor(_editedBlocker!.impact),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                _editedBlocker!.impactLabel,
+                                style: TextStyle(
+                                  color: _getImpactColor(
+                                    _editedBlocker!.impact,
+                                  ),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            // Description
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Description', style: theme.textTheme.labelLarge),
+                const SizedBox(height: 8),
+                if (_isEditing)
+                  TextField(
+                    controller: _descriptionController,
+                    decoration: InputDecoration(
+                      hintText: 'Enter blocker description...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      filled: true,
+                      fillColor: colorScheme.surfaceContainerHighest.withValues(
+                        alpha: 0.3,
+                      ),
+                    ),
+                    maxLines: 3,
+                  )
+                else if (_editedBlocker != null)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest.withValues(
+                        alpha: 0.3,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      _editedBlocker!.description,
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ),
+              ],
+            ),
+
+            // Resolution (if resolved)
+            if (_editedBlocker != null &&
+                _editedBlocker!.status == BlockerStatus.resolved) ...[
+              const SizedBox(height: 20),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Resolution', style: theme.textTheme.labelLarge),
+                  const SizedBox(height: 8),
+                  if (_isEditing)
+                    TextField(
+                      controller: _resolutionController,
+                      decoration: InputDecoration(
+                        hintText: 'How was this blocker resolved?',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        filled: true,
+                        fillColor: colorScheme.surfaceContainerHighest
+                            .withValues(alpha: 0.3),
+                      ),
+                      maxLines: 2,
+                    )
+                  else
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest.withValues(
+                          alpha: 0.3,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        _editedBlocker!.resolution ?? 'No resolution provided',
+                        style: TextStyle(
+                          color: _editedBlocker!.resolution == null
+                              ? colorScheme.onSurfaceVariant
+                              : null,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+
+            const SizedBox(height: 20),
+
+            // Assignment Row
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Assigned To', style: theme.textTheme.labelLarge),
+                      const SizedBox(height: 8),
+                      if (_isEditing)
+                        TextField(
+                          controller: _assignedToController,
+                          decoration: InputDecoration(
+                            hintText: 'Enter assignee name...',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            filled: true,
+                            fillColor: colorScheme.surfaceContainerHighest
+                                .withValues(alpha: 0.3),
+                            prefixIcon: Icon(
+                              Icons.person,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        )
+                      else
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceContainerHighest
+                                .withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.person,
+                                size: 16,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                _editedBlocker!.assignedTo ?? 'Unassigned',
+                                style: TextStyle(
+                                  color: _editedBlocker!.assignedTo == null
+                                      ? colorScheme.onSurfaceVariant
+                                      : null,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Category', style: theme.textTheme.labelLarge),
+                      const SizedBox(height: 8),
+                      if (_isEditing)
+                        TextField(
+                          controller: _categoryController,
+                          decoration: InputDecoration(
+                            hintText: 'Enter category...',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            filled: true,
+                            fillColor: colorScheme.surfaceContainerHighest
+                                .withValues(alpha: 0.3),
+                            prefixIcon: Icon(
+                              Icons.category,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        )
+                      else
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceContainerHighest
+                                .withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.category,
+                                size: 16,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                _editedBlocker!.category ?? 'No category',
+                                style: TextStyle(
+                                  color: _editedBlocker!.category == null
+                                      ? colorScheme.onSurfaceVariant
+                                      : null,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            // Target Date
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Target Date', style: theme.textTheme.labelLarge),
+                const SizedBox(height: 8),
+                if (_isEditing)
+                  InkWell(
+                    onTap: _selectTargetDate,
+                    child: InputDecorator(
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        filled: true,
+                        fillColor: colorScheme.surfaceContainerHighest
+                            .withValues(alpha: 0.3),
+                        prefixIcon: Icon(
+                          Icons.calendar_today,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      child: Text(
+                        _selectedTargetDate != null
+                            ? DateFormat(
+                                'MMM d, y',
+                              ).format(_selectedTargetDate!)
+                            : 'Select target date',
+                        style: TextStyle(
+                          color: _selectedTargetDate == null
+                              ? colorScheme.onSurfaceVariant
+                              : null,
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest.withValues(
+                        alpha: 0.3,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today,
+                          size: 16,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _editedBlocker!.targetDate != null
+                              ? DateFormat(
+                                  'MMM d, y',
+                                ).format(_editedBlocker!.targetDate!)
+                              : 'No target date',
+                          style: TextStyle(
+                            color: _editedBlocker!.targetDate == null
+                                ? colorScheme.onSurfaceVariant
+                                : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+
+            // Dependencies (if exists)
+            if ((_editedBlocker != null &&
+                    _editedBlocker!.dependencies != null &&
+                    _editedBlocker!.dependencies!.isNotEmpty) ||
+                _isEditing) ...[
+              const SizedBox(height: 20),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Dependencies', style: theme.textTheme.labelLarge),
+                  const SizedBox(height: 8),
+                  if (_isEditing)
+                    TextField(
+                      controller: _dependenciesController,
+                      decoration: InputDecoration(
+                        hintText: 'List any dependencies...',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        filled: true,
+                        fillColor: colorScheme.surfaceContainerHighest
+                            .withValues(alpha: 0.3),
+                      ),
+                      maxLines: 2,
+                    )
+                  else
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest.withValues(
+                          alpha: 0.3,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        _editedBlocker!.dependencies ?? 'No dependencies',
+                        style: TextStyle(
+                          color: _editedBlocker!.dependencies == null
+                              ? colorScheme.onSurfaceVariant
+                              : null,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+
+            // Metadata
+            const SizedBox(height: 20),
+            const Divider(),
+            const SizedBox(height: 20),
+            Text('Metadata', style: theme.textTheme.labelLarge),
+            const SizedBox(height: 12),
+            if (_editedBlocker != null)
+              Wrap(
+                spacing: 16,
+                runSpacing: 8,
+                children: [
+                  if (_editedBlocker!.identifiedDate != null)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.create,
+                          size: 14,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Identified: ${DateFormat('MMM d, y').format(_editedBlocker!.identifiedDate!)}',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  if (_editedBlocker!.lastUpdated != null)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.update,
+                          size: 14,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Updated: ${DateFormat('MMM d, y').format(_editedBlocker!.lastUpdated!)}',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  if (_editedBlocker!.resolvedDate != null)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.check_circle,
+                          size: 14,
+                          color: Colors.green,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Resolved: ${DateFormat('MMM d, y').format(_editedBlocker!.resolvedDate!)}',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: Colors.green,
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUpdatesTab() {
+    // TODO: Replace with actual updates from backend when API is ready
+    final mockUpdates = <ItemUpdate>[
+      ItemUpdate(
+        id: '1',
+        content: 'Blocker identified and assigned',
+        authorName: 'Current User',
+        timestamp: DateTime.now().subtract(const Duration(days: 1)),
+        type: ItemUpdateType.created,
+      ),
+    ];
+
+    return ItemUpdatesTab(
+      updates: mockUpdates,
+      itemType: 'blocker',
+      onAddComment: (content) async {
+        // TODO: Implement comment submission to backend
+        ref
+            .read(notificationServiceProvider.notifier)
+            .showSuccess('Comment added (not yet persisted)');
+      },
+    );
+  }
+}
