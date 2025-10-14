@@ -5,7 +5,7 @@ import '../../../projects/domain/entities/task.dart';
 import '../providers/aggregated_tasks_provider.dart';
 import '../providers/tasks_state_provider.dart';
 import '../utils/task_ui_helpers.dart';
-import 'task_detail_dialog.dart';
+import 'task_detail_panel.dart';
 
 class TaskListTile extends ConsumerWidget {
   final TaskWithProject taskWithProject;
@@ -34,11 +34,16 @@ class TaskListTile extends ConsumerWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () {
-          showDialog(
+          showGeneralDialog(
             context: context,
-            builder: (context) => TaskDetailDialog(
-              taskWithProject: taskWithProject,
-            ),
+            barrierDismissible: false,
+            barrierColor: Colors.transparent,
+            transitionDuration: Duration.zero,
+            pageBuilder: (context, animation, secondaryAnimation) {
+              return TaskDetailPanel(
+                taskWithProject: taskWithProject,
+              );
+            },
           );
         },
         child: Padding(

@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/lesson_learned.dart';
 import '../providers/lessons_learned_provider.dart';
-import 'lesson_learned_dialog.dart';
 import 'package:go_router/go_router.dart';
-import '../../../lessons_learned/presentation/widgets/lesson_learned_detail_dialog.dart';
+import '../../../lessons_learned/presentation/widgets/lesson_learned_detail_panel.dart';
 import '../providers/projects_provider.dart';
 
 class ProjectLessonsLearnedWidget extends ConsumerWidget {
@@ -363,9 +362,56 @@ class ProjectLessonsLearnedWidget extends ConsumerWidget {
   }
 
   void _showAddLessonDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (context) => const LessonLearnedDialog(),
+    final projectAsync = ref.read(projectDetailProvider(projectId));
+
+    projectAsync.when(
+      data: (project) {
+        showGeneralDialog(
+          context: context,
+          barrierDismissible: false,
+          barrierColor: Colors.transparent,
+          transitionDuration: Duration.zero,
+          pageBuilder: (context, animation, secondaryAnimation) {
+            return LessonLearnedDetailPanel(
+              projectId: projectId,
+              projectName: project?.name,
+              initiallyInEditMode: true,
+            );
+          },
+        );
+      },
+      loading: () {
+        // Fallback: show panel without project name
+        showGeneralDialog(
+          context: context,
+          barrierDismissible: false,
+          barrierColor: Colors.transparent,
+          transitionDuration: Duration.zero,
+          pageBuilder: (context, animation, secondaryAnimation) {
+            return LessonLearnedDetailPanel(
+              projectId: projectId,
+              projectName: null,
+              initiallyInEditMode: true,
+            );
+          },
+        );
+      },
+      error: (error, stackTrace) {
+        // Fallback: show panel without project name
+        showGeneralDialog(
+          context: context,
+          barrierDismissible: false,
+          barrierColor: Colors.transparent,
+          transitionDuration: Duration.zero,
+          pageBuilder: (context, animation, secondaryAnimation) {
+            return LessonLearnedDetailPanel(
+              projectId: projectId,
+              projectName: null,
+              initiallyInEditMode: true,
+            );
+          },
+        );
+      },
     );
   }
 
@@ -374,12 +420,18 @@ class ProjectLessonsLearnedWidget extends ConsumerWidget {
 
     projectAsync.when(
       data: (project) {
-        showDialog(
+        showGeneralDialog(
           context: context,
-          builder: (context) => LessonLearnedDetailDialog(
-            lesson: lesson,
-            project: project,
-          ),
+          barrierDismissible: false,
+          barrierColor: Colors.transparent,
+          transitionDuration: Duration.zero,
+          pageBuilder: (context, animation, secondaryAnimation) {
+            return LessonLearnedDetailPanel(
+              lesson: lesson,
+              projectId: project?.id,
+              projectName: project?.name,
+            );
+          },
         );
       },
       loading: () {
@@ -397,27 +449,22 @@ class ProjectLessonsLearnedWidget extends ConsumerWidget {
         );
       },
       error: (error, stackTrace) {
-        // Fallback to original dialog without project info
-        showDialog(
+        // Fallback to panel without project info
+        showGeneralDialog(
           context: context,
-          builder: (context) => LessonLearnedDetailDialog(
-            lesson: lesson,
-            project: null,
-          ),
+          barrierDismissible: false,
+          barrierColor: Colors.transparent,
+          transitionDuration: Duration.zero,
+          pageBuilder: (context, animation, secondaryAnimation) {
+            return LessonLearnedDetailPanel(
+              lesson: lesson,
+              projectId: null,
+              projectName: null,
+            );
+          },
         );
       },
     );
-  }
-
-  Color _getImpactColor(LessonImpact impact) {
-    switch (impact) {
-      case LessonImpact.low:
-        return Colors.blue;
-      case LessonImpact.medium:
-        return Colors.orange;
-      case LessonImpact.high:
-        return Colors.red;
-    }
   }
 
   IconData _getTypeIcon(LessonType type) {
@@ -444,90 +491,5 @@ class ProjectLessonsLearnedWidget extends ConsumerWidget {
       case LessonType.bestPractice:
         return Colors.blue;
     }
-  }
-
-  Color _getCategoryColor(LessonCategory category) {
-    switch (category) {
-      case LessonCategory.technical:
-        return Colors.purple;
-      case LessonCategory.process:
-        return Colors.teal;
-      case LessonCategory.communication:
-        return Colors.indigo;
-      case LessonCategory.planning:
-        return Colors.green;
-      case LessonCategory.resource:
-        return Colors.orange;
-      case LessonCategory.quality:
-        return Colors.blue;
-      case LessonCategory.other:
-        return Colors.grey;
-    }
-  }
-}
-
-class _CategoryChip extends StatelessWidget {
-  final String label;
-  final Color color;
-
-  const _CategoryChip({
-    required this.label,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withValues(alpha: 0.3),
-          width: 1,
-        ),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-}
-
-class _ImpactChip extends StatelessWidget {
-  final String label;
-  final Color color;
-
-  const _ImpactChip({
-    required this.label,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withValues(alpha: 0.3),
-          width: 1,
-        ),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
   }
 }

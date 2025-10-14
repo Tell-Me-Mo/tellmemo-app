@@ -3,8 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/blocker.dart';
 import '../../domain/entities/project.dart';
 import '../providers/risks_tasks_provider.dart';
-import 'blocker_dialog.dart';
-import 'blocker_detail_dialog.dart';
+import 'blocker_detail_panel.dart';
 
 class ProjectBlockersWidget extends ConsumerWidget {
   final String projectId;
@@ -747,26 +746,38 @@ class ProjectBlockersWidget extends ConsumerWidget {
   }
 
   void _showAddBlockerDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
+    showGeneralDialog(
       context: context,
-      builder: (context) => BlockerDialog(
-        projectId: projectId,
-      ),
+      barrierDismissible: false,
+      barrierColor: Colors.transparent,
+      transitionDuration: Duration.zero,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return BlockerDetailPanel(
+          projectId: projectId,
+          project: project,
+          initiallyInEditMode: true,
+        );
+      },
     ).then((_) {
-      ref.refresh(blockersNotifierProvider(projectId));
+      ref.invalidate(blockersNotifierProvider(projectId));
     });
   }
 
   void _showBlockerDetails(BuildContext context, WidgetRef ref, Blocker blocker) {
-    showDialog(
+    showGeneralDialog(
       context: context,
-      builder: (context) => BlockerDetailDialog(
-        projectId: projectId,
-        blocker: blocker,
-        project: project,
-      ),
+      barrierDismissible: false,
+      barrierColor: Colors.transparent,
+      transitionDuration: Duration.zero,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return BlockerDetailPanel(
+          projectId: projectId,
+          blocker: blocker,
+          project: project,
+        );
+      },
     ).then((_) {
-      ref.refresh(blockersNotifierProvider(projectId));
+      ref.invalidate(blockersNotifierProvider(projectId));
     });
   }
 

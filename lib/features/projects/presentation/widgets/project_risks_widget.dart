@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../domain/entities/risk.dart';
 import '../providers/risks_tasks_provider.dart';
 import '../../../risks/presentation/screens/risks_aggregation_screen_v2.dart';
-import 'risk_view_dialog.dart';
+import 'risk_detail_panel.dart';
 
 class ProjectRisksWidget extends ConsumerWidget {
   final String projectId;
@@ -323,23 +323,34 @@ class ProjectRisksWidget extends ConsumerWidget {
   }
 
   void _showAddRiskDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
+    showGeneralDialog(
       context: context,
-      builder: (context) => CreateRiskDialog(
-        initialProjectId: projectId,
-        onCreated: () {
-          ref.refresh(risksNotifierProvider(projectId));
-        },
-      ),
-    );
+      barrierDismissible: false,
+      barrierColor: Colors.transparent,
+      transitionDuration: Duration.zero,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return RiskDetailPanel(
+          projectId: projectId,
+          risk: null,
+          initiallyInEditMode: true,
+        );
+      },
+    ).then((_) {
+      ref.invalidate(risksNotifierProvider(projectId));
+    });
   }
 
   void _showRiskDetails(BuildContext context, WidgetRef ref, Risk risk) {
-    showDialog(
+    showGeneralDialog(
       context: context,
-      builder: (context) => RiskViewDialog(projectId: projectId, risk: risk),
+      barrierDismissible: false,
+      barrierColor: Colors.transparent,
+      transitionDuration: Duration.zero,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return RiskDetailPanel(projectId: projectId, risk: risk);
+      },
     ).then((_) {
-      ref.refresh(risksNotifierProvider(projectId));
+      ref.invalidate(risksNotifierProvider(projectId));
     });
   }
 

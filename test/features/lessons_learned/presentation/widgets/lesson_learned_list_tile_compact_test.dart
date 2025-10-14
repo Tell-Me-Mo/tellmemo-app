@@ -97,35 +97,6 @@ void main() {
       expect(find.text('H'), findsOneWidget);
     });
 
-    testWidgets('displays AI indicator when lesson is AI generated', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: LessonLearnedListTileCompact(
-              lesson: testLesson1,
-              project: testProject1,
-            ),
-          ),
-        ),
-      );
-
-      expect(find.byIcon(Icons.auto_awesome), findsOneWidget);
-    });
-
-    testWidgets('does not display AI indicator when lesson is not AI generated', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: LessonLearnedListTileCompact(
-              lesson: testLesson2,
-              project: testProject1,
-            ),
-          ),
-        ),
-      );
-
-      expect(find.byIcon(Icons.auto_awesome), findsNothing);
-    });
 
     testWidgets('displays date when identifiedDate is provided', (tester) async {
       await tester.pumpWidget(

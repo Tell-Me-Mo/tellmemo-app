@@ -12,10 +12,9 @@ import '../providers/lessons_learned_filter_provider.dart';
 import '../widgets/lesson_learned_list_tile.dart';
 import '../widgets/lesson_learned_list_tile_compact.dart';
 import '../widgets/lessons_filter_dialog.dart';
-import '../widgets/lesson_learned_detail_dialog.dart';
+import '../widgets/lesson_learned_detail_panel.dart';
 import '../widgets/lesson_group_dialog.dart';
 import '../widgets/lesson_grouping_view.dart';
-import '../../../projects/presentation/widgets/lesson_learned_dialog.dart';
 import '../../../projects/presentation/providers/projects_provider.dart';
 
 class LessonsLearnedScreenV2 extends ConsumerStatefulWidget {
@@ -141,9 +140,24 @@ class _LessonsLearnedScreenV2State extends ConsumerState<LessonsLearnedScreenV2>
   }
 
   void _showCreateLessonDialog() {
-    showDialog(
+    // Get first available project (or null if none)
+    final projectsAsync = ref.read(projectsListProvider);
+    final firstProject = projectsAsync.whenOrNull(
+      data: (projects) => projects.isNotEmpty ? projects.first : null,
+    );
+
+    showGeneralDialog(
       context: context,
-      builder: (context) => const LessonLearnedDialog(),
+      barrierDismissible: false,
+      barrierColor: Colors.transparent,
+      transitionDuration: Duration.zero,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return LessonLearnedDetailPanel(
+          projectId: widget.projectId ?? firstProject?.id,
+          projectName: firstProject?.name,
+          initiallyInEditMode: true,
+        );
+      },
     );
   }
 
@@ -1038,12 +1052,18 @@ class _LessonsLearnedScreenV2State extends ConsumerState<LessonsLearnedScreenV2>
                     lesson: item.lesson,
                     project: item.project,
                     onTap: () {
-                      showDialog(
+                      showGeneralDialog(
                         context: context,
-                        builder: (context) => LessonLearnedDetailDialog(
-                          lesson: item.lesson,
-                          project: item.project,
-                        ),
+                        barrierDismissible: false,
+                        barrierColor: Colors.transparent,
+                        transitionDuration: Duration.zero,
+                        pageBuilder: (context, animation, secondaryAnimation) {
+                          return LessonLearnedDetailPanel(
+                            lesson: item.lesson,
+                            projectId: item.project?.id,
+                            projectName: item.project?.name,
+                          );
+                        },
                       );
                     },
                   )
@@ -1051,12 +1071,18 @@ class _LessonsLearnedScreenV2State extends ConsumerState<LessonsLearnedScreenV2>
                     lesson: item.lesson,
                     project: item.project,
                     onTap: () {
-                      showDialog(
+                      showGeneralDialog(
                         context: context,
-                        builder: (context) => LessonLearnedDetailDialog(
-                          lesson: item.lesson,
-                          project: item.project,
-                        ),
+                        barrierDismissible: false,
+                        barrierColor: Colors.transparent,
+                        transitionDuration: Duration.zero,
+                        pageBuilder: (context, animation, secondaryAnimation) {
+                          return LessonLearnedDetailPanel(
+                            lesson: item.lesson,
+                            projectId: item.project?.id,
+                            projectName: item.project?.name,
+                          );
+                        },
                       );
                     },
                   ),

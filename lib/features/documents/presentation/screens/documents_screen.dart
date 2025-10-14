@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/constants/layout_constants.dart';
 import '../../../meetings/domain/entities/content.dart' as meetings;
-import '../../../projects/presentation/providers/projects_provider.dart';
 import '../providers/documents_provider.dart';
 import '../widgets/document_table_view.dart';
 import '../widgets/empty_documents_widget.dart';
 import '../widgets/document_skeleton_loader.dart';
-import '../widgets/document_detail_dialog.dart';
+import '../widgets/document_detail_panel.dart';
 
 class DocumentsScreen extends ConsumerStatefulWidget {
   const DocumentsScreen({super.key});
@@ -25,13 +23,27 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
     super.dispose();
   }
 
+  void _showDocumentDetailPanel(BuildContext context, meetings.Content document) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Document Detail',
+      barrierColor: Colors.transparent,
+      transitionDuration: Duration.zero,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return DocumentDetailPanel(
+          document: document,
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 1024;
-    final isTablet = screenWidth > 768 && screenWidth <= 1024;
     final isMobile = screenWidth < 768;
 
     // Watch real data providers
@@ -455,7 +467,7 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
             child: DocumentTableView(
               documents: documents,
               onDocumentTap: (document) {
-                DocumentDetailDialog.show(context, document);
+                _showDocumentDetailPanel(context, document);
               },
             ),
           ),

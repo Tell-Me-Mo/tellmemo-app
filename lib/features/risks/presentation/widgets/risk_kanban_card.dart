@@ -6,11 +6,13 @@ import '../providers/aggregated_risks_provider.dart';
 class RiskKanbanCard extends ConsumerWidget {
   final AggregatedRisk aggregatedRisk;
   final bool isDragging;
+  final VoidCallback? onTap;
 
   const RiskKanbanCard({
     super.key,
     required this.aggregatedRisk,
     this.isDragging = false,
+    this.onTap,
   });
 
   Color _getSeverityColor(RiskSeverity severity) {
@@ -61,9 +63,12 @@ class RiskKanbanCard extends ConsumerWidget {
           width: 1,
         ),
       ),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        child: Column(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -216,6 +221,7 @@ class RiskKanbanCard extends ConsumerWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

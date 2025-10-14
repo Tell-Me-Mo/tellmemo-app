@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import '../../../projects/domain/entities/task.dart';
 import '../providers/aggregated_tasks_provider.dart';
 import '../utils/task_ui_helpers.dart';
-import 'task_detail_dialog.dart';
+import 'task_detail_panel.dart';
 
 class TaskKanbanCard extends StatelessWidget {
   final TaskWithProject taskWithProject;
@@ -38,11 +38,16 @@ class TaskKanbanCard extends StatelessWidget {
           onTap: isDragging
               ? null
               : () {
-                  showDialog(
+                  showGeneralDialog(
                     context: context,
-                    builder: (context) => TaskDetailDialog(
-                      taskWithProject: taskWithProject,
-                    ),
+                    barrierDismissible: false,
+                    barrierColor: Colors.transparent,
+                    transitionDuration: Duration.zero,
+                    pageBuilder: (context, animation, secondaryAnimation) {
+                      return TaskDetailPanel(
+                        taskWithProject: taskWithProject,
+                      );
+                    },
                   );
                 },
           child: Padding(

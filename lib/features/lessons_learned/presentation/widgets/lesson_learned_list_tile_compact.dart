@@ -167,16 +167,6 @@ class LessonLearnedListTileCompact extends StatelessWidget {
                                   fontSize: 10,
                                 ),
                               ),
-
-                              // AI indicator
-                              if (lesson.aiGenerated) ...[
-                                const SizedBox(width: 6),
-                                Icon(
-                                  Icons.auto_awesome,
-                                  size: 11,
-                                  color: theme.colorScheme.primary.withValues(alpha: 0.7),
-                                ),
-                              ],
                             ],
                           ),
                         ),

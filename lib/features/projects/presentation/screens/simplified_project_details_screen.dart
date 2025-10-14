@@ -44,7 +44,7 @@ import '../providers/lessons_learned_provider.dart';
 import '../widgets/project_blockers_widget.dart';
 import '../../../queries/presentation/widgets/ask_ai_panel.dart';
 import '../../../queries/presentation/providers/query_provider.dart';
-import '../../../documents/presentation/widgets/document_detail_dialog.dart';
+import '../../../documents/presentation/widgets/document_detail_panel.dart';
 
 class SimplifiedProjectDetailsScreen extends ConsumerStatefulWidget {
   final String projectId;
@@ -3696,8 +3696,19 @@ class _SimplifiedProjectDetailsScreenState
   }
 
   void _showContentDetails(BuildContext context, Content content) {
-    // Use the consistent DocumentDetailDialog
-    DocumentDetailDialog.show(context, content);
+    // Use the consistent DocumentDetailPanel
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Document Detail',
+      barrierColor: Colors.transparent,
+      transitionDuration: Duration.zero,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return DocumentDetailPanel(
+          document: content,
+        );
+      },
+    );
   }
 
   void _showGenerateSummaryDialog(BuildContext context, Project project) {
@@ -4688,8 +4699,19 @@ class _DocumentsDialogState extends ConsumerState<_DocumentsDialog> {
                         color: Colors.transparent,
                         child: InkWell(
                           onTap: () {
-                            // Use the consistent DocumentDetailDialog instead of navigating
-                            DocumentDetailDialog.show(context, meeting);
+                            // Use the consistent DocumentDetailPanel instead of navigating
+                            showGeneralDialog(
+                              context: context,
+                              barrierDismissible: true,
+                              barrierLabel: 'Document Detail',
+                              barrierColor: Colors.transparent,
+                              transitionDuration: Duration.zero,
+                              pageBuilder: (context, animation, secondaryAnimation) {
+                                return DocumentDetailPanel(
+                                  document: meeting,
+                                );
+                              },
+                            );
                           },
                           borderRadius: BorderRadius.circular(12),
                           child: Container(

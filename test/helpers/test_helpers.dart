@@ -36,7 +36,11 @@ Future<void> pumpWidgetWithProviders(
 }) async {
   // Set screen size if provided
   if (screenSize != null) {
-    await tester.binding.setSurfaceSize(screenSize);
+    // Set physical size and ensure device pixel ratio is 1.0
+    // so logical size matches physical size for predictable testing
+    tester.view.physicalSize = screenSize;
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
   }
 
   await tester.pumpWidget(

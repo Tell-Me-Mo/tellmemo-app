@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/task.dart';
 import '../providers/risks_tasks_provider.dart';
-import 'task_dialog.dart';
 import 'package:go_router/go_router.dart';
-import '../../../tasks/presentation/widgets/create_task_dialog.dart';
-import '../../../tasks/presentation/widgets/task_detail_dialog.dart';
+import '../../../tasks/presentation/widgets/task_detail_panel.dart';
 import '../../../tasks/presentation/providers/aggregated_tasks_provider.dart';
 import '../providers/projects_provider.dart';
 
@@ -317,9 +315,25 @@ class ProjectTasksWidget extends ConsumerWidget {
   }
 
   void _showAddTaskDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
+    final projectAsync = ref.watch(projectDetailProvider(projectId));
+
+    final projectName = projectAsync.whenOrNull(
+      data: (project) => project?.name,
+    );
+
+    showGeneralDialog(
       context: context,
-      builder: (context) => CreateTaskDialog(initialProjectId: projectId),
+      barrierDismissible: false,
+      barrierColor: Colors.transparent,
+      transitionDuration: Duration.zero,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return TaskDetailPanel(
+          taskWithProject: null,
+          projectId: projectId,
+          projectName: projectName,
+          initiallyInEditMode: true,
+        );
+      },
     );
   }
 
@@ -329,14 +343,19 @@ class ProjectTasksWidget extends ConsumerWidget {
     projectAsync.when(
       data: (project) {
         if (project != null) {
-          showDialog(
+          showGeneralDialog(
             context: context,
-            builder: (context) => TaskDetailDialog(
-              taskWithProject: TaskWithProject(
-                task: task,
-                project: project,
-              ),
-            ),
+            barrierDismissible: false,
+            barrierColor: Colors.transparent,
+            transitionDuration: Duration.zero,
+            pageBuilder: (context, animation, secondaryAnimation) {
+              return TaskDetailPanel(
+                taskWithProject: TaskWithProject(
+                  task: task,
+                  project: project,
+                ),
+              );
+            },
           );
         }
       },
@@ -356,13 +375,18 @@ class ProjectTasksWidget extends ConsumerWidget {
         );
       },
       error: (error, stackTrace) {
-        // Handle error case - fallback to original dialog
+        // Handle error case - show error message
         showDialog(
           context: context,
-          builder: (context) => TaskDialog(
-            projectId: projectId,
-            projectName: 'Project',
-            task: task,
+          builder: (context) => AlertDialog(
+            title: const Text('Error'),
+            content: const Text('Failed to load project details. Please try again.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
           ),
         );
       },
@@ -380,53 +404,5 @@ class ProjectTasksWidget extends ConsumerWidget {
       case TaskPriority.urgent:
         return Colors.red;
     }
-  }
-
-  Color _getStatusColor(TaskStatus status) {
-    switch (status) {
-      case TaskStatus.todo:
-        return Colors.grey;
-      case TaskStatus.inProgress:
-        return Colors.blue;
-      case TaskStatus.blocked:
-        return Colors.red;
-      case TaskStatus.completed:
-        return Colors.green;
-      case TaskStatus.cancelled:
-        return Colors.grey;
-    }
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  final String label;
-  final Color color;
-
-  const _StatusChip({
-    required this.label,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withValues(alpha: 0.3),
-          width: 1,
-        ),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
   }
 }

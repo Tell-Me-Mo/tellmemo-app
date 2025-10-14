@@ -168,25 +168,6 @@ class LessonLearnedListTile extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 6),
-
-                        // AI indicator
-                        if (lesson.aiGenerated) ...[
-                          Icon(
-                            Icons.auto_awesome,
-                            size: 14,
-                            color: theme.colorScheme.primary,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'AI',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                        ],
 
                       ],
                     ),
