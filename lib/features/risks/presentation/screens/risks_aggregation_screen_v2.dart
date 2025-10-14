@@ -1664,7 +1664,10 @@ class _RisksAggregationScreenV2State extends ConsumerState<RisksAggregationScree
     ThemeData theme,
     bool isDesktop,
   ) {
-    return RiskKanbanBoardView(risks: risks);
+    return RiskKanbanBoardView(
+      risks: risks,
+      onRiskTap: (risk, projectId) => _showRiskDetails(context, risk, projectId),
+    );
   }
 
   Widget _buildGridRiskCard(ThemeData theme, AggregatedRisk aggregatedRisk, bool isDesktop) {

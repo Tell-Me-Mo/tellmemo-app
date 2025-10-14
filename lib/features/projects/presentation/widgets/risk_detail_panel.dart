@@ -102,9 +102,6 @@ class _RiskDetailPanelState extends ConsumerState<RiskDetailPanel> {
         setState(() {
           _risk = updatedRisk;
         });
-        ref
-            .read(notificationServiceProvider.notifier)
-            .showSuccess('Risk marked as resolved');
       }
     } catch (e) {
       if (mounted) {
@@ -143,9 +140,6 @@ class _RiskDetailPanelState extends ConsumerState<RiskDetailPanel> {
         setState(() {
           _risk = updatedRisk;
         });
-        ref
-            .read(notificationServiceProvider.notifier)
-            .showSuccess('Risk marked as mitigating');
       }
     } catch (e) {
       if (mounted) {
@@ -184,9 +178,6 @@ class _RiskDetailPanelState extends ConsumerState<RiskDetailPanel> {
         setState(() {
           _risk = updatedRisk;
         });
-        ref
-            .read(notificationServiceProvider.notifier)
-            .showSuccess('Risk marked as identified');
       }
     } catch (e) {
       if (mounted) {
@@ -322,7 +313,6 @@ class _RiskDetailPanelState extends ConsumerState<RiskDetailPanel> {
         await notifier.addRisk(riskToSave);
         if (mounted) {
           Navigator.of(context).pop();
-          ref.read(notificationServiceProvider.notifier).showSuccess('Risk created successfully');
         }
       } else {
         // Updating existing risk
@@ -332,7 +322,6 @@ class _RiskDetailPanelState extends ConsumerState<RiskDetailPanel> {
             _risk = riskToSave;
             _isEditing = false;
           });
-          ref.read(notificationServiceProvider.notifier).showSuccess('Risk updated successfully');
         }
       }
     } catch (e) {

@@ -144,7 +144,6 @@ class _TaskDetailPanelState extends ConsumerState<TaskDetailPanel> {
         await ref.read(forceRefreshTasksProvider)();
         if (mounted) {
           Navigator.of(context).pop();
-          ref.read(notificationServiceProvider.notifier).showSuccess('Task created successfully');
         }
       } else {
         // Updating existing task
@@ -155,7 +154,6 @@ class _TaskDetailPanelState extends ConsumerState<TaskDetailPanel> {
             _editedTask = taskToSave;
             _isEditing = false;
           });
-          ref.read(notificationServiceProvider.notifier).showSuccess('Task updated successfully');
         }
       }
     } catch (e) {
@@ -198,9 +196,6 @@ class _TaskDetailPanelState extends ConsumerState<TaskDetailPanel> {
         setState(() {
           _editedTask = updatedTask;
         });
-        ref.read(notificationServiceProvider.notifier).showSuccess(
-          newStatus == TaskStatus.completed ? 'Task marked as completed' : 'Task marked as incomplete'
-        );
       }
     } catch (e) {
       if (mounted) {
@@ -237,7 +232,6 @@ class _TaskDetailPanelState extends ConsumerState<TaskDetailPanel> {
         setState(() {
           _editedTask = updatedTask;
         });
-        ref.read(notificationServiceProvider.notifier).showSuccess('Task marked as in progress');
       }
     } catch (e) {
       if (mounted) {
@@ -393,7 +387,6 @@ class _TaskDetailPanelState extends ConsumerState<TaskDetailPanel> {
           _editedTask = updatedTask;
           _blockerController.text = blockerDescription;
         });
-        ref.read(notificationServiceProvider.notifier).showSuccess('Task marked as blocked');
       }
     } catch (e) {
       if (mounted) {
@@ -432,7 +425,6 @@ class _TaskDetailPanelState extends ConsumerState<TaskDetailPanel> {
           _editedTask = updatedTask;
           _blockerController.clear();
         });
-        ref.read(notificationServiceProvider.notifier).showSuccess('Task unblocked and marked as in progress');
       }
     } catch (e) {
       if (mounted) {

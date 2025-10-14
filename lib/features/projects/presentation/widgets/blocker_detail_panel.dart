@@ -195,9 +195,6 @@ class _BlockerDetailPanelState extends ConsumerState<BlockerDetailPanel> {
         await notifier.addBlocker(blockerToSave);
         if (mounted) {
           Navigator.of(context).pop();
-          ref
-              .read(notificationServiceProvider.notifier)
-              .showSuccess('Blocker created successfully');
         }
       } else {
         // Updating existing blocker
@@ -207,9 +204,6 @@ class _BlockerDetailPanelState extends ConsumerState<BlockerDetailPanel> {
             _editedBlocker = blockerToSave;
             _isEditing = false;
           });
-          ref
-              .read(notificationServiceProvider.notifier)
-              .showSuccess('Blocker updated successfully');
         }
       }
     } catch (e) {
@@ -455,9 +449,6 @@ class _BlockerDetailPanelState extends ConsumerState<BlockerDetailPanel> {
           _editedBlocker = updatedBlocker;
           _resolutionController.text = resolution;
         });
-        ref
-            .read(notificationServiceProvider.notifier)
-            .showSuccess('Blocker marked as resolved');
       }
     } catch (e) {
       if (mounted) {

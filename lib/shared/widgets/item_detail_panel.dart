@@ -365,6 +365,7 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
                     Expanded(
                       child: TabBarView(
                         controller: _tabController,
+                        physics: const NeverScrollableScrollPhysics(),
                         children: [
                           widget.mainViewContent,
                           widget.updatesContent,

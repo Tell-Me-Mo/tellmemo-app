@@ -152,7 +152,6 @@ class _LessonLearnedDetailPanelState extends ConsumerState<LessonLearnedDetailPa
         ref.read(forceRefreshLessonsProvider)();
         if (mounted) {
           Navigator.of(context).pop();
-          ref.read(notificationServiceProvider.notifier).showSuccess('Lesson created successfully');
         }
       } else {
         // Updating existing lesson
@@ -163,7 +162,6 @@ class _LessonLearnedDetailPanelState extends ConsumerState<LessonLearnedDetailPa
             _lesson = lessonToSave;
             _isEditing = false;
           });
-          ref.read(notificationServiceProvider.notifier).showSuccess('Lesson updated successfully');
         }
       }
     } catch (e) {
