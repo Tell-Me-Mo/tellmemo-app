@@ -4,11 +4,13 @@ import 'package:intl/intl.dart';
 import '../../domain/entities/blocker.dart';
 import '../../domain/entities/project.dart';
 import '../providers/risks_tasks_provider.dart';
+import '../providers/item_updates_provider.dart';
 import '../../../queries/presentation/widgets/ask_ai_panel.dart';
 import '../../../queries/presentation/providers/query_provider.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../shared/widgets/item_detail_panel.dart';
 import '../../../../shared/widgets/item_updates_tab.dart';
+import '../../domain/entities/item_update.dart' as domain;
 
 class BlockerDetailPanel extends ConsumerStatefulWidget {
   final String projectId;
@@ -1521,26 +1523,76 @@ ${_buildBlockerContext(_editedBlocker!)}''';
   }
 
   Widget _buildUpdatesTab() {
-    // TODO: Replace with actual updates from backend when API is ready
-    final mockUpdates = <ItemUpdate>[
-      ItemUpdate(
-        id: '1',
-        content: 'Blocker identified and assigned',
-        authorName: 'Current User',
-        timestamp: DateTime.now().subtract(const Duration(days: 1)),
-        type: ItemUpdateType.created,
-      ),
-    ];
+    if (_editedBlocker == null) {
+      return const Center(
+        child: Text('No blocker data available'),
+      );
+    }
 
-    return ItemUpdatesTab(
-      updates: mockUpdates,
-      itemType: 'blocker',
-      onAddComment: (content) async {
-        // TODO: Implement comment submission to backend
-        ref
-            .read(notificationServiceProvider.notifier)
-            .showSuccess('Comment added (not yet persisted)');
+    final params = ItemUpdatesParams(
+      projectId: widget.projectId,
+      itemId: _editedBlocker!.id,
+      itemType: 'blockers',
+    );
+
+    final updatesAsync = ref.watch(itemUpdatesNotifierProvider(params));
+
+    return updatesAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(
+        child: Text('Error loading updates: $error'),
+      ),
+      data: (domainUpdates) {
+        // Convert domain ItemUpdate to widget ItemUpdate
+        final widgetUpdates = domainUpdates.map((domainUpdate) {
+          return ItemUpdate(
+            id: domainUpdate.id,
+            content: domainUpdate.content,
+            authorName: domainUpdate.authorName,
+            timestamp: domainUpdate.timestamp,
+            type: _convertDomainUpdateTypeToWidget(domainUpdate.type),
+          );
+        }).toList();
+
+        return ItemUpdatesTab(
+          updates: widgetUpdates,
+          itemType: 'blocker',
+          onAddComment: (content) async {
+            try {
+              await ref
+                  .read(itemUpdatesNotifierProvider(params).notifier)
+                  .addComment(content);
+              if (mounted) {
+                ref
+                    .read(notificationServiceProvider.notifier)
+                    .showSuccess('Comment added successfully');
+              }
+            } catch (e) {
+              if (mounted) {
+                ref
+                    .read(notificationServiceProvider.notifier)
+                    .showError('Failed to add comment: $e');
+              }
+            }
+          },
+        );
       },
     );
+  }
+
+  // Helper method to convert domain ItemUpdateType to widget ItemUpdateType
+  ItemUpdateType _convertDomainUpdateTypeToWidget(domain.ItemUpdateType type) {
+    switch (type) {
+      case domain.ItemUpdateType.comment:
+        return ItemUpdateType.comment;
+      case domain.ItemUpdateType.statusChange:
+        return ItemUpdateType.statusChange;
+      case domain.ItemUpdateType.assignment:
+        return ItemUpdateType.assignment;
+      case domain.ItemUpdateType.edit:
+        return ItemUpdateType.edit;
+      case domain.ItemUpdateType.created:
+        return ItemUpdateType.created;
+    }
   }
 }
