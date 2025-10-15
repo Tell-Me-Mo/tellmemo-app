@@ -107,11 +107,10 @@ void main() {
         screenSize: const Size(1200, 800),
       );
 
-      // Check header shows view mode
-      expect(find.text('Risk Details'), findsOneWidget);
+      // Check header shows risk title (not "Risk Details")
+      expect(find.text('Test Risk'), findsOneWidget);
 
       // Check risk data is displayed
-      expect(find.text('Test Risk'), findsOneWidget);
       expect(find.text('Test risk description'), findsOneWidget);
     });
 
@@ -140,8 +139,8 @@ void main() {
       await tester.tap(find.text('Edit'));
       await tester.pump();
 
-      // Should show edit mode
-      expect(find.text('Edit Risk'), findsOneWidget);
+      // Should show Save button in edit mode (title still shows risk name, not "Edit Risk")
+      expect(find.text('Save'), findsOneWidget);
     });
 
     testWidgets('cancel edit returns to view mode', (tester) async {
@@ -171,8 +170,9 @@ void main() {
       await tester.tap(find.text('Cancel'));
       await tester.pump();
 
-      // Should return to view mode
-      expect(find.text('Risk Details'), findsOneWidget);
+      // Should return to view mode (action buttons visible instead of Save/Cancel)
+      expect(find.text('Save'), findsNothing);
+      expect(find.byIcon(Icons.more_vert), findsOneWidget);
     });
   });
 }

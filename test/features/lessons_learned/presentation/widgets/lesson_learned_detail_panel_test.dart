@@ -139,11 +139,10 @@ void main() {
         screenSize: const Size(1200, 800),
       );
 
-      // Check header shows view mode
-      expect(find.text('Lesson Learned'), findsOneWidget);
+      // Check header shows lesson title (not "Lesson Learned")
+      expect(find.text('Test Lesson'), findsOneWidget);
 
       // Check lesson data is displayed
-      expect(find.text('Test Lesson'), findsOneWidget);
       expect(find.text('Test lesson description'), findsOneWidget);
     });
 
@@ -172,8 +171,8 @@ void main() {
       await tester.tap(find.text('Edit'));
       await tester.pump();
 
-      // Should show edit mode
-      expect(find.text('Edit Lesson'), findsOneWidget);
+      // Should show Save button in edit mode (title still shows lesson name, not "Edit Lesson")
+      expect(find.text('Save'), findsOneWidget);
     });
 
     testWidgets('cancel edit returns to view mode', (tester) async {
@@ -203,8 +202,9 @@ void main() {
       await tester.tap(find.text('Cancel'));
       await tester.pump();
 
-      // Should return to view mode
-      expect(find.text('Lesson Learned'), findsOneWidget);
+      // Should return to view mode (action buttons visible instead of Save/Cancel)
+      expect(find.text('Save'), findsNothing);
+      expect(find.byIcon(Icons.more_vert), findsOneWidget);
     });
   });
 }
