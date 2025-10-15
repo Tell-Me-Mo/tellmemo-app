@@ -468,12 +468,29 @@ ${_buildRiskContext(risk)}''';
       });
     }
 
+    // Get comment count for the badge
+    int? commentCount;
+    if (_risk != null && _selectedProjectId != null) {
+      final params = ItemUpdatesParams(
+        projectId: _selectedProjectId!,
+        itemId: _risk!.id,
+        itemType: 'risks',
+      );
+      final updatesAsync = ref.watch(itemUpdatesNotifierProvider(params));
+      commentCount = updatesAsync.when(
+        data: (updates) => updates.where((u) => u.type == domain.ItemUpdateType.comment).length,
+        loading: () => null,
+        error: (_, _) => null,
+      );
+    }
+
     return ItemDetailPanel(
       title: isCreating ? 'Create New Risk' : (_risk?.title ?? 'Risk'),
       subtitle: projectName,
       headerIcon: Icons.warning,
       headerIconColor: _isEditing ? Colors.orange : (_risk != null ? _getSeverityColor(_risk!.severity) : Colors.orange),
       onClose: () => Navigator.of(context).pop(),
+      commentCount: commentCount,
       headerActions: _isEditing ? [
         // Edit mode actions
         TextButton(

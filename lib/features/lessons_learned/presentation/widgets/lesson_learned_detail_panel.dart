@@ -350,12 +350,29 @@ ${_buildLessonContext(lesson)}''';
     final colorScheme = theme.colorScheme;
     final isCreating = _lesson == null;
 
+    // Get comment count for the badge
+    int? commentCount;
+    if (_lesson != null && _selectedProjectId != null) {
+      final params = ItemUpdatesParams(
+        projectId: _selectedProjectId!,
+        itemId: _lesson!.id,
+        itemType: 'lessons',
+      );
+      final updatesAsync = ref.watch(itemUpdatesNotifierProvider(params));
+      commentCount = updatesAsync.when(
+        data: (updates) => updates.where((u) => u.type == domain.ItemUpdateType.comment).length,
+        loading: () => null,
+        error: (_, _) => null,
+      );
+    }
+
     return ItemDetailPanel(
       title: isCreating ? 'Create New Lesson' : (_lesson?.title ?? 'Lesson'),
       subtitle: widget.projectName ?? 'Project',
       headerIcon: Icons.lightbulb,
       headerIconColor: _lesson != null ? _getTypeColor(_lesson!.lessonType) : Colors.orange,
       onClose: () => Navigator.of(context).pop(),
+      commentCount: commentCount,
       headerActions: _isEditing ? [
         // Edit mode actions
         TextButton(

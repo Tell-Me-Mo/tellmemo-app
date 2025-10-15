@@ -573,6 +573,22 @@ ${_buildTaskContext(task)}''';
     final isCreating = _editedTask == null;
     final projectName = widget.taskWithProject?.project.name ?? widget.projectName ?? 'Project';
 
+    // Get comment count for the badge
+    int? commentCount;
+    if (_editedTask != null && _selectedProjectId != null) {
+      final params = ItemUpdatesParams(
+        projectId: _selectedProjectId!,
+        itemId: _editedTask!.id,
+        itemType: 'tasks',
+      );
+      final updatesAsync = ref.watch(itemUpdatesNotifierProvider(params));
+      commentCount = updatesAsync.when(
+        data: (updates) => updates.where((u) => u.type == domain.ItemUpdateType.comment).length,
+        loading: () => null,
+        error: (_, _) => null,
+      );
+    }
+
     return ItemDetailPanel(
       title: isCreating ? 'Create New Task' : (_editedTask?.title ?? 'Task'),
       subtitle: projectName,
@@ -581,6 +597,7 @@ ${_buildTaskContext(task)}''';
           ? TaskUIHelpers.getStatusColor(_editedTask!.status, colorScheme)
           : Colors.blue,
       onClose: () => Navigator.of(context).pop(),
+      commentCount: commentCount,
       headerActions: _isEditing ? [
         // Edit mode actions
         TextButton(

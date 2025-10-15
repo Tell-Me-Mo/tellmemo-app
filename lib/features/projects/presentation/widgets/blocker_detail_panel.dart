@@ -565,6 +565,22 @@ ${_buildBlockerContext(_editedBlocker!)}''';
   Widget build(BuildContext context) {
     final isCreating = _editedBlocker == null;
 
+    // Get comment count for the badge
+    int? commentCount;
+    if (_editedBlocker != null) {
+      final params = ItemUpdatesParams(
+        projectId: widget.projectId,
+        itemId: _editedBlocker!.id,
+        itemType: 'blockers',
+      );
+      final updatesAsync = ref.watch(itemUpdatesNotifierProvider(params));
+      commentCount = updatesAsync.when(
+        data: (updates) => updates.where((u) => u.type == domain.ItemUpdateType.comment).length,
+        loading: () => null,
+        error: (_, _) => null,
+      );
+    }
+
     return ItemDetailPanel(
       title: isCreating ? 'Create New Blocker' : (_editedBlocker?.title ?? 'Blocker'),
       subtitle: widget.projectName ?? widget.project?.name ?? 'Project',
@@ -573,6 +589,7 @@ ${_buildBlockerContext(_editedBlocker!)}''';
           ? _getImpactColor(_editedBlocker!.impact)
           : Colors.red,
       onClose: () => Navigator.of(context).pop(),
+      commentCount: commentCount,
       headerActions: _isEditing
           ? [
               // Edit mode actions
