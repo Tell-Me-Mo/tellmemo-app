@@ -10,6 +10,7 @@ import '../../../../core/services/notification_service.dart';
 import '../../../../shared/widgets/item_detail_panel.dart';
 import '../../../../shared/widgets/item_updates_tab.dart';
 import '../../../../shared/widgets/expandable_text_container.dart';
+import '../../../../shared/widgets/ai_assist_button.dart';
 import '../../../queries/presentation/widgets/ask_ai_panel.dart';
 import '../../../queries/presentation/providers/query_provider.dart';
 import '../../../projects/domain/entities/item_update.dart' as domain;
@@ -1189,27 +1190,10 @@ ${_buildLessonContext(lesson)}''';
                 children: [
                   Text('Description', style: theme.textTheme.labelLarge),
                   const SizedBox(width: 8),
-                  IconButton(
-                    icon: Icon(
-                      Icons.auto_awesome,
-                      size: 16,
-                      color: Colors.green.shade400,
-                    ),
+                  AIAssistButton(
                     onPressed: () {
                       _openAIDialogWithFieldAssist('description', lesson.description);
                     },
-                    tooltip: 'Ask AI for more information',
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                      minWidth: 24,
-                      minHeight: 24,
-                    ),
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.green.withValues(alpha: 0.1),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                    ),
                   ),
                 ],
               ),
@@ -1231,27 +1215,10 @@ ${_buildLessonContext(lesson)}''';
                   children: [
                     Text('Recommendation', style: theme.textTheme.labelLarge),
                     const SizedBox(width: 8),
-                    IconButton(
-                      icon: Icon(
-                        Icons.auto_awesome,
-                        size: 16,
-                        color: Colors.green.shade400,
-                      ),
+                    AIAssistButton(
                       onPressed: () {
                         _openAIDialogWithFieldAssist('recommendation', lesson.recommendation!);
                       },
-                      tooltip: 'Ask AI for more information',
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(
-                        minWidth: 24,
-                        minHeight: 24,
-                      ),
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.green.withValues(alpha: 0.1),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                      ),
                     ),
                   ],
                 ),

@@ -11,6 +11,7 @@ import '../../../../core/services/notification_service.dart';
 import '../../../../shared/widgets/item_detail_panel.dart';
 import '../../../../shared/widgets/item_updates_tab.dart';
 import '../../../../shared/widgets/expandable_text_container.dart';
+import '../../../../shared/widgets/ai_assist_button.dart';
 import '../../domain/entities/item_update.dart' as domain;
 
 class BlockerDetailPanel extends ConsumerStatefulWidget {
@@ -1038,27 +1039,10 @@ ${_buildBlockerContext(_editedBlocker!)}''';
                     ),
                     if (!_isEditing && _editedBlocker != null) ...[
                       const SizedBox(width: 8),
-                      IconButton(
-                        icon: Icon(
-                          Icons.auto_awesome,
-                          size: 16,
-                          color: Colors.green.shade400,
-                        ),
+                      AIAssistButton(
                         onPressed: () {
                           _openAIDialogWithFieldAssist('description', _editedBlocker!.description);
                         },
-                        tooltip: 'Ask AI for more information',
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(
-                          minWidth: 24,
-                          minHeight: 24,
-                        ),
-                        style: IconButton.styleFrom(
-                          backgroundColor: Colors.green.withValues(alpha: 0.1),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                        ),
                       ),
                     ],
                   ],

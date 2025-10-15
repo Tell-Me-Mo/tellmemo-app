@@ -78,6 +78,9 @@ class HybridSearchConfig:
     final_result_count: int = 15
     diversity_boost: float = 0.1
 
+    # Diversity optimization
+    diversity_similarity_threshold: float = 0.85  # Results with similarity > this are considered duplicates
+
     # Quality filters
     min_confidence_score: float = 0.3
     filter_low_quality: bool = True
@@ -805,24 +808,23 @@ class HybridSearchService:
 
                 # SIMPLIFIED: Just filter out highly similar consecutive results
                 # This is much faster than full MMR and good enough for our use case
-                # Create index mapping to avoid O(n) lookups
-                result_to_idx = {id(result): idx for idx, result in enumerate(results)}
                 diverse_results = [results[0]]  # Always keep the best result
+                selected_indices = [0]  # Track indices of selected results
 
                 for i in range(1, len(results)):
                     # Check similarity to all selected results
                     is_diverse = True
-                    for selected_result in diverse_results:
-                        selected_idx = result_to_idx[id(selected_result)]
+                    for selected_idx in selected_indices:
                         sim = self._cosine_similarity(embeddings[i], embeddings[selected_idx])
 
                         # If too similar to any selected result, skip it
-                        if sim > 0.85:  # High similarity threshold
+                        if sim > self.config.diversity_similarity_threshold:
                             is_diverse = False
                             break
 
                     if is_diverse:
                         diverse_results.append(results[i])
+                        selected_indices.append(i)
 
                 return diverse_results
                 

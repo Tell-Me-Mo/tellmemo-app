@@ -12,6 +12,7 @@ import '../../../../core/services/notification_service.dart';
 import '../../../../shared/widgets/item_detail_panel.dart';
 import '../../../../shared/widgets/item_updates_tab.dart';
 import '../../../../shared/widgets/expandable_text_container.dart';
+import '../../../../shared/widgets/ai_assist_button.dart';
 import '../../domain/entities/item_update.dart' as domain;
 
 class RiskDetailPanel extends ConsumerStatefulWidget {
@@ -1279,7 +1280,7 @@ ${_buildRiskContext(risk)}''';
                     icon: Icon(
                       Icons.auto_awesome,
                       size: 16,
-                      color: Colors.green.shade400,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                     onPressed: () {
                       _openAIDialogWithFieldAssist('description', risk.description);
@@ -1324,7 +1325,7 @@ ${_buildRiskContext(risk)}''';
                       icon: Icon(
                         Icons.auto_awesome,
                         size: 16,
-                        color: Colors.green.shade400,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                       onPressed: () {
                         _openAIDialogWithFieldAssist('mitigation strategy', risk.mitigation!);
@@ -1370,7 +1371,7 @@ ${_buildRiskContext(risk)}''';
                       icon: Icon(
                         Icons.auto_awesome,
                         size: 16,
-                        color: Colors.green.shade400,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                       onPressed: () {
                         _openAIDialogWithFieldAssist('impact', risk.impact!);

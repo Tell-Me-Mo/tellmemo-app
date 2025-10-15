@@ -15,6 +15,7 @@ import '../../../queries/presentation/providers/query_provider.dart';
 import '../../../../shared/widgets/item_detail_panel.dart';
 import '../../../../shared/widgets/item_updates_tab.dart';
 import '../../../../shared/widgets/expandable_text_container.dart';
+import '../../../../shared/widgets/ai_assist_button.dart';
 import '../../../projects/domain/entities/item_update.dart' as domain;
 
 class TaskDetailPanel extends ConsumerStatefulWidget {
@@ -1123,29 +1124,15 @@ ${_buildTaskContext(task)}''';
                       letterSpacing: 0.1,
                     ),
                   ),
-                  if (!_isEditing && _editedTask!.description != null && _editedTask!.description!.isNotEmpty) ...[
+                  if (!_isEditing && _editedTask?.description?.isNotEmpty == true) ...[
                     const SizedBox(width: 8),
-                    IconButton(
-                      icon: Icon(
-                        Icons.auto_awesome,
-                        size: 16,
-                        color: Colors.green.shade400,
-                      ),
+                    AIAssistButton(
                       onPressed: () {
-                        _openAIDialogWithFieldAssist('description', _editedTask!.description!);
+                        final description = _editedTask?.description;
+                        if (description != null) {
+                          _openAIDialogWithFieldAssist('description', description);
+                        }
                       },
-                      tooltip: 'Ask AI for more information',
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(
-                        minWidth: 24,
-                        minHeight: 24,
-                      ),
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.green.withValues(alpha: 0.1),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                      ),
                     ),
                   ],
                 ],
@@ -1208,29 +1195,15 @@ ${_buildTaskContext(task)}''';
                         letterSpacing: 0.1,
                       ),
                     ),
-                    if (!_isEditing && _editedTask!.questionToAsk != null && _editedTask!.questionToAsk!.isNotEmpty) ...[
+                    if (!_isEditing && _editedTask?.questionToAsk?.isNotEmpty == true) ...[
                       const SizedBox(width: 8),
-                      IconButton(
-                        icon: Icon(
-                          Icons.auto_awesome,
-                          size: 16,
-                          color: Colors.green.shade400,
-                        ),
+                      AIAssistButton(
                         onPressed: () {
-                          _openAIDialogWithFieldAssist('question to ask', _editedTask!.questionToAsk!);
+                          final question = _editedTask?.questionToAsk;
+                          if (question != null) {
+                            _openAIDialogWithFieldAssist('question to ask', question);
+                          }
                         },
-                        tooltip: 'Ask AI for more information',
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(
-                          minWidth: 24,
-                          minHeight: 24,
-                        ),
-                        style: IconButton.styleFrom(
-                          backgroundColor: Colors.green.withValues(alpha: 0.1),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                        ),
                       ),
                     ],
                   ],
