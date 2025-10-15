@@ -6,7 +6,7 @@ from sqlalchemy import select, update, delete, and_
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 
 from db.database import get_db
 from dependencies.auth import get_current_organization, get_current_user, require_role
@@ -116,9 +116,16 @@ class BlockerUpdate(BaseModel):
 # ItemUpdate schemas
 class ItemUpdateCreate(BaseModel):
     content: str
-    update_type: ItemUpdateType = ItemUpdateType.COMMENT
+    update_type: str = ItemUpdateType.COMMENT  # Now using string with default
     author_name: str
     author_email: Optional[str] = None
+
+    @validator('update_type')
+    def validate_update_type(cls, v):
+        """Validate that update_type is one of the allowed values."""
+        if not ItemUpdateType.is_valid(v):
+            raise ValueError(f"Invalid update_type. Must be one of: {', '.join(ItemUpdateType.ALL_TYPES)}")
+        return v
 
 
 # Risk endpoints

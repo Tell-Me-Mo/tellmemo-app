@@ -423,14 +423,21 @@ async def batch_create_lessons_learned(
 
 # ItemUpdate endpoints for lessons
 from models.item_update import ItemUpdate, ItemUpdateType
-from pydantic import BaseModel as PydanticBase
+from pydantic import BaseModel as PydanticBase, validator
 
 
 class ItemUpdateCreate(PydanticBase):
     content: str
-    update_type: ItemUpdateType = ItemUpdateType.COMMENT
+    update_type: str = ItemUpdateType.COMMENT  # Now using string with default
     author_name: str
     author_email: Optional[str] = None
+
+    @validator('update_type')
+    def validate_update_type(cls, v):
+        """Validate that update_type is one of the allowed values."""
+        if not ItemUpdateType.is_valid(v):
+            raise ValueError(f"Invalid update_type. Must be one of: {', '.join(ItemUpdateType.ALL_TYPES)}")
+        return v
 
 
 @router.get("/projects/{project_id}/lessons/{lesson_id}/updates")
