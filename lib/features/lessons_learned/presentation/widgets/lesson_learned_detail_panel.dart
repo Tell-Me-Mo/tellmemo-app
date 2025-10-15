@@ -1133,14 +1133,9 @@ ${_buildLessonContext(lesson)}''';
             children: [
               Text('Description', style: theme.textTheme.labelLarge),
               const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(lesson.description),
+              _ExpandableTextContainer(
+                text: lesson.description,
+                colorScheme: colorScheme,
               ),
             ],
           ),
@@ -1153,14 +1148,9 @@ ${_buildLessonContext(lesson)}''';
               children: [
                 Text('Recommendation', style: theme.textTheme.labelLarge),
                 const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(lesson.recommendation!),
+                _ExpandableTextContainer(
+                  text: lesson.recommendation!,
+                  colorScheme: colorScheme,
                 ),
               ],
             ),
@@ -1440,6 +1430,81 @@ ${_buildLessonContext(lesson)}''';
           ),
         ),
       ],
+    );
+  }
+}
+
+/// A widget that displays text with automatic truncation and "read more" functionality
+class _ExpandableTextContainer extends StatefulWidget {
+  final String text;
+  final ColorScheme colorScheme;
+
+  const _ExpandableTextContainer({
+    required this.text,
+    required this.colorScheme,
+  });
+
+  @override
+  State<_ExpandableTextContainer> createState() => _ExpandableTextContainerState();
+}
+
+class _ExpandableTextContainerState extends State<_ExpandableTextContainer> {
+  bool _isExpanded = false;
+  static const int _maxCharacters = 200;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final shouldTruncate = widget.text.length > _maxCharacters;
+    final displayText = shouldTruncate && !_isExpanded
+        ? '${widget.text.substring(0, _maxCharacters)}...'
+        : widget.text;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: widget.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(displayText),
+          if (shouldTruncate) ...[
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: () {
+                setState(() {
+                  _isExpanded = !_isExpanded;
+                });
+              },
+              borderRadius: BorderRadius.circular(4),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _isExpanded ? 'Read less' : 'Read more',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: widget.colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      _isExpanded ? Icons.expand_less : Icons.expand_more,
+                      size: 16,
+                      color: widget.colorScheme.primary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
