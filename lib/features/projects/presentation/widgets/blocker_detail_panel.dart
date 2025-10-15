@@ -10,6 +10,7 @@ import '../../../queries/presentation/providers/query_provider.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../shared/widgets/item_detail_panel.dart';
 import '../../../../shared/widgets/item_updates_tab.dart';
+import '../../../../shared/widgets/expandable_text_container.dart';
 import '../../domain/entities/item_update.dart' as domain;
 
 class BlockerDetailPanel extends ConsumerStatefulWidget {
@@ -1102,7 +1103,7 @@ ${_buildBlockerContext(_editedBlocker!)}''';
                     maxLines: 3,
                   )
                 else if (_editedBlocker != null)
-                  _ExpandableTextContainer(
+                  ExpandableTextContainer(
                     text: _editedBlocker!.description,
                     colorScheme: colorScheme,
                   ),
@@ -1768,81 +1769,6 @@ ${_buildBlockerContext(_editedBlocker!)}''';
           ),
         ),
       ],
-    );
-  }
-}
-
-/// A widget that displays text with automatic truncation and "read more" functionality
-class _ExpandableTextContainer extends StatefulWidget {
-  final String text;
-  final ColorScheme colorScheme;
-
-  const _ExpandableTextContainer({
-    required this.text,
-    required this.colorScheme,
-  });
-
-  @override
-  State<_ExpandableTextContainer> createState() => _ExpandableTextContainerState();
-}
-
-class _ExpandableTextContainerState extends State<_ExpandableTextContainer> {
-  bool _isExpanded = false;
-  static const int _maxCharacters = 200;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final shouldTruncate = widget.text.length > _maxCharacters;
-    final displayText = shouldTruncate && !_isExpanded
-        ? '${widget.text.substring(0, _maxCharacters)}...'
-        : widget.text;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: widget.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SelectableText(displayText),
-          if (shouldTruncate) ...[
-            const SizedBox(height: 8),
-            InkWell(
-              onTap: () {
-                setState(() {
-                  _isExpanded = !_isExpanded;
-                });
-              },
-              borderRadius: BorderRadius.circular(4),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _isExpanded ? 'Read less' : 'Read more',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: widget.colorScheme.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Icon(
-                      _isExpanded ? Icons.expand_less : Icons.expand_more,
-                      size: 16,
-                      color: widget.colorScheme.primary,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
     );
   }
 }

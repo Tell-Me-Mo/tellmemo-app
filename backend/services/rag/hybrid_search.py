@@ -805,13 +805,15 @@ class HybridSearchService:
 
                 # SIMPLIFIED: Just filter out highly similar consecutive results
                 # This is much faster than full MMR and good enough for our use case
+                # Create index mapping to avoid O(n) lookups
+                result_to_idx = {id(result): idx for idx, result in enumerate(results)}
                 diverse_results = [results[0]]  # Always keep the best result
 
                 for i in range(1, len(results)):
                     # Check similarity to all selected results
                     is_diverse = True
                     for selected_result in diverse_results:
-                        selected_idx = results.index(selected_result)
+                        selected_idx = result_to_idx[id(selected_result)]
                         sim = self._cosine_similarity(embeddings[i], embeddings[selected_idx])
 
                         # If too similar to any selected result, skip it
