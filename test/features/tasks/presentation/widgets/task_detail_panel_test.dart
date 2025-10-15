@@ -7,6 +7,8 @@ import 'package:pm_master_v2/features/tasks/presentation/providers/aggregated_ta
 import '../../../../helpers/test_helpers.dart';
 import '../../../../mocks/mock_providers.dart';
 import '../../../../mocks/mock_tasks_providers.dart';
+import '../../../../mocks/mock_auth_providers.dart';
+import '../../../../mocks/mock_auth.dart';
 
 void main() {
   late List<Project> testProjects;
@@ -57,6 +59,10 @@ void main() {
       createProjectsListOverride(projects: testProjects),
       createRisksTasksRepositoryOverride(onCreateTask: onCreateTask),
       createForceRefreshTasksOverride(onRefresh: onRefresh),
+      // Mock item updates repository to avoid DioClient initialization
+      createItemUpdatesRepositoryOverride(updates: []),
+      // Mock auth providers
+      ...createMockAuthOverrides(user: createMockUser(), token: 'mock-token'),
     ];
 
     await pumpWidgetWithProviders(
@@ -83,6 +89,10 @@ void main() {
       createProjectsListOverride(projects: testProjects),
       createRisksTasksRepositoryOverride(onUpdateTask: onUpdateTask),
       createForceRefreshTasksOverride(onRefresh: onRefresh),
+      // Mock item updates repository to avoid DioClient initialization
+      createItemUpdatesRepositoryOverride(updates: []),
+      // Mock auth providers
+      ...createMockAuthOverrides(user: createMockUser(), token: 'mock-token'),
     ];
 
     await pumpWidgetWithProviders(
@@ -99,11 +109,10 @@ void main() {
     testWidgets('displays create mode with all required fields', (tester) async {
       await pumpPanelForCreation(tester);
 
-      // Check header
+      // Check header (title is displayed in ItemDetailPanel)
       expect(find.text('Create New Task'), findsOneWidget);
 
-      // Check form fields
-      expect(find.text('Project *'), findsOneWidget);
+      // Check form fields (Note: "Project *" dropdown is NOT shown when projectId is preset)
       expect(find.text('Title *'), findsOneWidget);
       expect(find.text('Description'), findsOneWidget);
       expect(find.text('Status'), findsOneWidget);
@@ -125,6 +134,10 @@ void main() {
           },
         ),
         createForceRefreshTasksOverride(onRefresh: () => refreshCalled = true),
+        // Mock item updates repository to avoid DioClient initialization
+        createItemUpdatesRepositoryOverride(updates: []),
+        // Mock auth providers
+        ...createMockAuthOverrides(user: createMockUser(), token: 'mock-token'),
       ];
 
       await pumpWidgetWithProviders(
@@ -140,12 +153,7 @@ void main() {
         screenSize: const Size(1200, 800),
       );
 
-      // Select project
-      await tester.tap(find.byType(DropdownButtonFormField<String>));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Test Project 1').last);
-      await tester.pumpAndSettle();
-
+      // No need to select project - projectId is already preset
       // Try to submit without title (leave title empty)
       final createButton = find.text('Create');
       await tester.ensureVisible(createButton);
@@ -173,14 +181,13 @@ void main() {
         onRefresh: () => refreshCalled = true,
       );
 
-      // Select project
-      await tester.tap(find.byType(DropdownButtonFormField<String>));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Test Project 1').last);
-      await tester.pumpAndSettle();
-
-      // Fill in title
-      await tester.enterText(find.widgetWithText(TextField, 'Enter task title'), 'New Task');
+      // No need to select project - projectId is already preset in pumpPanelForCreation
+      // Fill in title (find by hint text since TextField has no label)
+      final titleField = find.ancestor(
+        of: find.text('Enter task title'),
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(titleField, 'New Task');
       await tester.pumpAndSettle();
 
       // Submit
@@ -214,11 +221,10 @@ void main() {
 
       await pumpPanelForViewing(tester, taskWithProject);
 
-      // Check header shows view mode
-      expect(find.text('Task Details'), findsOneWidget);
+      // Check header shows task title (not "Task Details")
+      expect(find.text('Test Task'), findsOneWidget);
 
       // Check task data is displayed
-      expect(find.text('Test Task'), findsOneWidget);
       expect(find.text('Test description'), findsOneWidget);
       expect(find.text('John Doe'), findsOneWidget);
     });
@@ -250,11 +256,14 @@ void main() {
       await tester.tap(find.text('Edit'));
       await tester.pumpAndSettle();
 
-      // Should show edit mode
-      expect(find.text('Edit Task'), findsOneWidget);
+      // Should show Save button in edit mode (title still shows task name, not "Edit Task")
+      expect(find.text('Save'), findsOneWidget);
 
-      // Modify title
-      final titleField = find.widgetWithText(TextField, 'Test Task');
+      // Modify title - find the TextField that currently contains 'Test Task'
+      final titleField = find.ancestor(
+        of: find.text('Test Task'),
+        matching: find.byType(TextField),
+      );
       await tester.enterText(titleField, 'Updated Task Title');
       await tester.pumpAndSettle();
 
@@ -283,6 +292,10 @@ void main() {
           },
         ),
         createForceRefreshTasksOverride(onRefresh: () {}),
+        // Mock item updates repository to avoid DioClient initialization
+        createItemUpdatesRepositoryOverride(updates: []),
+        // Mock auth providers
+        ...createMockAuthOverrides(user: createMockUser(), token: 'mock-token'),
       ];
 
       await pumpWidgetWithProviders(
@@ -349,15 +362,16 @@ void main() {
       await tester.tap(find.text('Edit'));
       await tester.pumpAndSettle();
 
-      // Verify in edit mode
-      expect(find.text('Edit Task'), findsOneWidget);
+      // Verify in edit mode (Save button visible)
+      expect(find.text('Save'), findsOneWidget);
 
       // Cancel
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
 
-      // Should return to view mode
-      expect(find.text('Task Details'), findsOneWidget);
+      // Should return to view mode (action buttons visible instead of Save/Cancel)
+      expect(find.text('Save'), findsNothing);
+      expect(find.byIcon(Icons.more_vert), findsOneWidget);
     });
   });
 
@@ -431,22 +445,22 @@ void main() {
         },
       );
 
-      // Select project
-      await tester.tap(find.byType(DropdownButtonFormField<String>));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Test Project 1').last);
-      await tester.pumpAndSettle();
-
+      // No need to select project - projectId is preset
       // Fill in title
-      await tester.enterText(find.widgetWithText(TextField, 'Enter task title'), 'New Task');
+      final titleField = find.ancestor(
+        of: find.text('Enter task title'),
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(titleField, 'New Task');
       await tester.pumpAndSettle();
 
       // Submit
       await tester.tap(find.text('Create'));
       await tester.pumpAndSettle();
 
-      // Should show error
-      expect(find.textContaining('Error saving task'), findsOneWidget);
+      // Should show error (error is shown via NotificationService, not in the widget)
+      // The panel should still be showing the Create button after error
+      expect(find.text('Create'), findsOneWidget);
     });
   });
 }

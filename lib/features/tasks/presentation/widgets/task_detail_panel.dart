@@ -3,15 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../core/services/notification_service.dart';
+import '../../../../core/widgets/dialogs/enhanced_confirmation_dialog.dart';
 import '../../../projects/domain/entities/task.dart';
 import '../../../projects/presentation/providers/risks_tasks_provider.dart';
 import '../../../projects/presentation/providers/projects_provider.dart';
+import '../../../projects/presentation/providers/item_updates_provider.dart';
 import '../providers/aggregated_tasks_provider.dart';
 import '../utils/task_ui_helpers.dart';
 import '../../../queries/presentation/widgets/ask_ai_panel.dart';
 import '../../../queries/presentation/providers/query_provider.dart';
 import '../../../../shared/widgets/item_detail_panel.dart';
 import '../../../../shared/widgets/item_updates_tab.dart';
+import '../../../projects/domain/entities/item_update.dart' as domain;
 
 class TaskDetailPanel extends ConsumerStatefulWidget {
   final TaskWithProject? taskWithProject; // null for creating new task
@@ -19,19 +22,13 @@ class TaskDetailPanel extends ConsumerStatefulWidget {
   final String? projectName; // Required when creating new task
   final bool initiallyInEditMode;
 
-  TaskDetailPanel({
+  const TaskDetailPanel({
     super.key,
     this.taskWithProject,
     this.projectId,
     this.projectName,
     this.initiallyInEditMode = false,
-  }) {
-    if (taskWithProject == null && (projectId == null || projectName == null)) {
-      throw ArgumentError(
-        'Either taskWithProject or both projectId and projectName must be provided'
-      );
-    }
-  }
+  });
 
   @override
   ConsumerState<TaskDetailPanel> createState() => _TaskDetailPanelState();
@@ -47,6 +44,7 @@ class _TaskDetailPanelState extends ConsumerState<TaskDetailPanel> {
   late TaskStatus _selectedStatus;
   late TaskPriority _selectedPriority;
   late String? _selectedProjectId; // Track selected project
+  DateTime? _selectedDueDate; // Track due date for new tasks separately
   bool _isEditing = false;
   bool _isSaving = false;
 
@@ -64,8 +62,11 @@ class _TaskDetailPanelState extends ConsumerState<TaskDetailPanel> {
     _selectedStatus = _editedTask?.status ?? TaskStatus.todo;
     _selectedPriority = _editedTask?.priority ?? TaskPriority.medium;
 
-    // Initialize selected project ID (only from existing task, not from widget param)
-    _selectedProjectId = widget.taskWithProject?.project.id;
+    // Initialize selected project ID from existing task OR from widget params (when creating from specific project)
+    _selectedProjectId = widget.taskWithProject?.project.id ?? widget.projectId;
+
+    // Initialize due date (for existing tasks)
+    _selectedDueDate = _editedTask?.dueDate;
   }
 
   @override
@@ -135,7 +136,7 @@ class _TaskDetailPanelState extends ConsumerState<TaskDetailPanel> {
         assignee: _assigneeController.text.trim().isEmpty ? null : _assigneeController.text.trim(),
         blockerDescription: _blockerController.text.trim().isEmpty ? null : _blockerController.text.trim(),
         questionToAsk: _questionController.text.trim().isEmpty ? null : _questionController.text.trim(),
-        dueDate: _editedTask?.dueDate,
+        dueDate: _selectedDueDate,
         progressPercentage: _editedTask?.progressPercentage ?? 0,
         createdDate: _editedTask?.createdDate ?? DateTime.now(),
         lastUpdated: DateTime.now(),
@@ -155,6 +156,14 @@ class _TaskDetailPanelState extends ConsumerState<TaskDetailPanel> {
         await repository.updateTask(_editedTask!.id, taskToSave);
         await ref.read(forceRefreshTasksProvider)();
         if (mounted) {
+          // Refresh the updates provider to get the new updates
+          final params = ItemUpdatesParams(
+            projectId: _selectedProjectId!,
+            itemId: _editedTask!.id,
+            itemType: 'tasks',
+          );
+          ref.invalidate(itemUpdatesNotifierProvider(params));
+
           setState(() {
             _editedTask = taskToSave;
             _isEditing = false;
@@ -198,6 +207,14 @@ class _TaskDetailPanelState extends ConsumerState<TaskDetailPanel> {
       await ref.read(forceRefreshTasksProvider)();
 
       if (mounted) {
+        // Refresh the updates provider to get the new updates
+        final params = ItemUpdatesParams(
+          projectId: _selectedProjectId ?? widget.taskWithProject!.project.id,
+          itemId: task.id,
+          itemType: 'tasks',
+        );
+        ref.invalidate(itemUpdatesNotifierProvider(params));
+
         setState(() {
           _editedTask = updatedTask;
         });
@@ -234,6 +251,14 @@ class _TaskDetailPanelState extends ConsumerState<TaskDetailPanel> {
       await ref.read(forceRefreshTasksProvider)();
 
       if (mounted) {
+        // Refresh the updates provider to get the new updates
+        final params = ItemUpdatesParams(
+          projectId: _selectedProjectId ?? widget.taskWithProject!.project.id,
+          itemId: task.id,
+          itemType: 'tasks',
+        );
+        ref.invalidate(itemUpdatesNotifierProvider(params));
+
         setState(() {
           _editedTask = updatedTask;
         });
@@ -447,22 +472,16 @@ class _TaskDetailPanelState extends ConsumerState<TaskDetailPanel> {
   Future<void> _deleteTask() async {
     if (_editedTask == null) return;
 
-    final confirm = await showDialog<bool>(
+    final confirm = await EnhancedConfirmationDialog.show(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Task'),
-        content: const Text('Are you sure you want to delete this task?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+      title: 'Delete Task',
+      message: 'Are you sure you want to delete this task?',
+      severity: ConfirmationSeverity.danger,
+      confirmText: 'Delete',
+      showUndoHint: true,
     );
 
-    if (confirm != true) return;
+    if (!confirm) return;
 
     setState(() {
       _isSaving = true;
@@ -493,28 +512,17 @@ class _TaskDetailPanelState extends ConsumerState<TaskDetailPanel> {
   Future<void> _selectDueDate() async {
     final date = await showDatePicker(
       context: context,
-      initialDate: _editedTask?.dueDate ?? DateTime.now(),
+      initialDate: _selectedDueDate ?? DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
     );
 
     if (date != null) {
       setState(() {
+        _selectedDueDate = date;
+        // Update _editedTask if it exists
         if (_editedTask != null) {
           _editedTask = _editedTask!.copyWith(dueDate: date);
-        } else {
-          // For new tasks, create a temporary task object to store the due date
-          _editedTask = Task(
-            id: '',
-            projectId: widget.projectId!,
-            title: _titleController.text.trim(),
-            status: _selectedStatus,
-            priority: _selectedPriority,
-            dueDate: date,
-            progressPercentage: 0,
-            createdDate: DateTime.now(),
-            lastUpdated: DateTime.now(),
-          );
         }
       });
     }
@@ -566,7 +574,7 @@ ${_buildTaskContext(task)}''';
     final projectName = widget.taskWithProject?.project.name ?? widget.projectName ?? 'Project';
 
     return ItemDetailPanel(
-      title: isCreating ? 'Create New Task' : (_isEditing ? 'Edit Task' : 'Task Details'),
+      title: isCreating ? 'Create New Task' : (_editedTask?.title ?? 'Task'),
       subtitle: projectName,
       headerIcon: Icons.task_alt,
       headerIconColor: _editedTask != null
@@ -700,8 +708,8 @@ ${_buildTaskContext(task)}''';
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Project Selection (only show when creating NEW task)
-          if (_isEditing && _editedTask == null) ...[
+          // Project Selection (only show when creating NEW task WITHOUT a preset projectId)
+          if (_editedTask == null && widget.projectId == null) ...[
             Consumer(
               builder: (context, ref, child) {
                 final projectsAsync = ref.watch(projectsListProvider);
@@ -781,8 +789,8 @@ ${_buildTaskContext(task)}''';
             const SizedBox(height: 24),
           ],
 
-          // Title
-          if (_isEditing)
+          // Title (only show in edit mode)
+          if (_isEditing) ...[
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -832,11 +840,9 @@ ${_buildTaskContext(task)}''';
                   style: theme.textTheme.bodyLarge,
                 ),
               ],
-            )
-          else
-            Text(_editedTask!.title, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-
-          const SizedBox(height: 24),
+            ),
+            const SizedBox(height: 24),
+          ],
 
           // Status and Priority Row
           Row(
@@ -1309,11 +1315,11 @@ ${_buildTaskContext(task)}''';
                             ),
                           ),
                           child: Text(
-                            _editedTask?.dueDate != null
-                                ? DateFormat('MMM d, y').format(_editedTask!.dueDate!)
+                            _selectedDueDate != null
+                                ? DateFormat('MMM d, y').format(_selectedDueDate!)
                                 : 'Select due date',
                             style: TextStyle(
-                              color: _editedTask?.dueDate == null
+                              color: _selectedDueDate == null
                                   ? colorScheme.onSurfaceVariant.withValues(alpha: 0.6)
                                   : null,
                             ),
@@ -1554,24 +1560,207 @@ ${_buildTaskContext(task)}''';
   }
 
   Widget _buildUpdatesTab() {
-    // TODO: Replace with actual updates from backend when API is ready
-    final mockUpdates = <ItemUpdate>[
-      ItemUpdate(
-        id: '1',
-        content: 'Task created and assigned',
-        authorName: 'Current User',
-        timestamp: DateTime.now().subtract(const Duration(days: 1)),
-        type: ItemUpdateType.created,
-      ),
-    ];
+    if (_editedTask == null || _selectedProjectId == null) {
+      return _buildCreateModeEmptyState();
+    }
 
-    return ItemUpdatesTab(
-      updates: mockUpdates,
-      itemType: 'task',
-      onAddComment: (content) async {
-        // TODO: Implement comment submission to backend
-        ref.read(notificationServiceProvider.notifier).showSuccess('Comment added (not yet persisted)');
+    final params = ItemUpdatesParams(
+      projectId: _selectedProjectId!,
+      itemId: _editedTask!.id,
+      itemType: 'tasks',
+    );
+
+    final updatesAsync = ref.watch(itemUpdatesNotifierProvider(params));
+
+    return updatesAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(
+        child: Text('Error loading updates: $error'),
+      ),
+      data: (domainUpdates) {
+        // Convert domain ItemUpdate to widget ItemUpdate
+        final widgetUpdates = domainUpdates.map((domainUpdate) {
+          return ItemUpdate(
+            id: domainUpdate.id,
+            content: domainUpdate.content,
+            authorName: domainUpdate.authorName,
+            timestamp: domainUpdate.timestamp,
+            type: _convertDomainUpdateTypeToWidget(domainUpdate.type),
+          );
+        }).toList();
+
+        return ItemUpdatesTab(
+          updates: widgetUpdates,
+          itemType: 'task',
+          onAddComment: (content) async {
+            try {
+              await ref
+                  .read(itemUpdatesNotifierProvider(params).notifier)
+                  .addComment(content);
+              // Success notification disabled per user request
+            } catch (e) {
+              if (mounted) {
+                ref
+                    .read(notificationServiceProvider.notifier)
+                    .showError('Failed to add comment: $e');
+              }
+            }
+          },
+        );
       },
+    );
+  }
+
+  // Helper method to convert domain ItemUpdateType to widget ItemUpdateType
+  ItemUpdateType _convertDomainUpdateTypeToWidget(domain.ItemUpdateType type) {
+    switch (type) {
+      case domain.ItemUpdateType.comment:
+        return ItemUpdateType.comment;
+      case domain.ItemUpdateType.statusChange:
+        return ItemUpdateType.statusChange;
+      case domain.ItemUpdateType.assignment:
+        return ItemUpdateType.assignment;
+      case domain.ItemUpdateType.edit:
+        return ItemUpdateType.edit;
+      case domain.ItemUpdateType.created:
+        return ItemUpdateType.created;
+    }
+  }
+
+  Widget _buildCreateModeEmptyState() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(48),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Animated gradient circle with icon
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    colorScheme.primaryContainer.withValues(alpha: 0.4),
+                    colorScheme.secondaryContainer.withValues(alpha: 0.3),
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: colorScheme.primary.withValues(alpha: 0.1),
+                    blurRadius: 32,
+                    spreadRadius: 8,
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: colorScheme.surface,
+                  ),
+                  child: Icon(
+                    Icons.chat_bubble_outline_rounded,
+                    size: 48,
+                    color: colorScheme.primary.withValues(alpha: 0.7),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+            // Title
+            Text(
+              'Create Task First',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Description
+            Text(
+              'Save this task to start tracking updates,\ncomments, and activity history',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            // Feature hints
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildFeatureHint(
+                  theme,
+                  colorScheme,
+                  Icons.comment_rounded,
+                  'Comments',
+                  Colors.blue,
+                ),
+                const SizedBox(width: 24),
+                _buildFeatureHint(
+                  theme,
+                  colorScheme,
+                  Icons.history_rounded,
+                  'Activity',
+                  Colors.purple,
+                ),
+                const SizedBox(width: 24),
+                _buildFeatureHint(
+                  theme,
+                  colorScheme,
+                  Icons.notifications_outlined,
+                  'Updates',
+                  Colors.orange,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeatureHint(
+    ThemeData theme,
+    ColorScheme colorScheme,
+    IconData icon,
+    String label,
+    Color accentColor,
+  ) {
+    return Column(
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: accentColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            icon,
+            size: 24,
+            color: accentColor,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }

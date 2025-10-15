@@ -17,6 +17,7 @@ from utils.logger import get_logger, sanitize_for_log
 from utils.monitoring import monitor_operation
 from pydantic import BaseModel
 from datetime import datetime
+from services.item_updates_service import ItemUpdatesService
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["lessons-learned"])
@@ -176,6 +177,20 @@ async def create_lesson_learned(
         await db.commit()
         await db.refresh(lesson)
 
+        # Create CREATED update
+        author_name = current_user.name or current_user.email or "User"
+        await ItemUpdatesService.create_item_created_update(
+            db=db,
+            project_id=project_id,
+            item_id=lesson.id,
+            item_type='lessons',
+            item_title=lesson.title,
+            author_name=author_name,
+            author_email=current_user.email,
+            ai_generated=False
+        )
+        await db.commit()
+
         logger.info(f"Created lesson learned {sanitize_for_log(lesson.id)} for project {sanitize_for_log(project_id)}")
 
         return LessonLearnedResponse(
@@ -230,23 +245,43 @@ async def update_lesson_learned(
         if lesson.project.organization_id != current_org.id:
             raise HTTPException(status_code=404, detail="Lesson learned not found")
 
-        # Update fields
+        # Build update data dict
+        update_data = {}
         if lesson_data.title is not None:
-            lesson.title = lesson_data.title
+            update_data['title'] = lesson_data.title
         if lesson_data.description is not None:
-            lesson.description = lesson_data.description
+            update_data['description'] = lesson_data.description
         if lesson_data.category is not None:
-            lesson.category = LessonCategory(lesson_data.category)
+            update_data['category'] = LessonCategory(lesson_data.category)
         if lesson_data.lesson_type is not None:
-            lesson.lesson_type = LessonType(lesson_data.lesson_type)
+            update_data['lesson_type'] = LessonType(lesson_data.lesson_type)
         if lesson_data.impact is not None:
-            lesson.impact = LessonLearnedImpact(lesson_data.impact)
+            update_data['impact'] = LessonLearnedImpact(lesson_data.impact)
         if lesson_data.recommendation is not None:
-            lesson.recommendation = lesson_data.recommendation
+            update_data['recommendation'] = lesson_data.recommendation
         if lesson_data.context is not None:
-            lesson.context = lesson_data.context
+            update_data['context'] = lesson_data.context
         if lesson_data.tags is not None:
-            lesson.tags = lesson_data.tags
+            update_data['tags'] = lesson_data.tags
+
+        # Track field changes
+        author_name = current_user.name or current_user.email or "User"
+        changes = ItemUpdatesService.detect_changes(lesson, update_data)
+        if changes:
+            await ItemUpdatesService.track_field_changes(
+                db=db,
+                project_id=lesson.project_id,
+                item_id=lesson.id,
+                item_type='lessons',
+                changes=changes,
+                author_name=author_name,
+                author_email=current_user.email
+            )
+
+        # Apply updates
+        for key, value in update_data.items():
+            if hasattr(lesson, key):
+                setattr(lesson, key, value)
 
         lesson.last_updated = datetime.utcnow()
         lesson.updated_by = "manual"
@@ -384,3 +419,119 @@ async def batch_create_lessons_learned(
     except Exception as e:
         logger.error(f"Failed to batch create lessons learned for project {sanitize_for_log(project_id)}: {e}")
         raise HTTPException(status_code=500, detail="Failed to create lessons learned")
+
+
+# ItemUpdate endpoints for lessons
+from models.item_update import ItemUpdate, ItemUpdateType
+from pydantic import BaseModel as PydanticBase, validator
+
+
+class ItemUpdateCreate(PydanticBase):
+    content: str
+    update_type: str = ItemUpdateType.COMMENT  # Now using string with default
+    author_name: str
+    author_email: Optional[str] = None
+
+    @validator('update_type')
+    def validate_update_type(cls, v):
+        """Validate that update_type is one of the allowed values."""
+        if not ItemUpdateType.is_valid(v):
+            raise ValueError(f"Invalid update_type. Must be one of: {', '.join(ItemUpdateType.ALL_TYPES)}")
+        return v
+
+
+@router.get("/projects/{project_id}/lessons/{lesson_id}/updates")
+@monitor_operation("get_lesson_updates", "api")
+async def get_lesson_updates(
+    project_id: UUID,
+    lesson_id: UUID,
+    current_user: User = Depends(get_current_user),
+    current_org: Organization = Depends(get_current_organization),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get all updates for a specific lesson learned."""
+    try:
+        # Verify project belongs to organization
+        project_result = await db.execute(
+            select(Project).where(
+                and_(
+                    Project.id == project_id,
+                    Project.organization_id == current_org.id
+                )
+            )
+        )
+        project = project_result.scalar_one_or_none()
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        # Query item updates - ordered by most recent first
+        query = select(ItemUpdate).where(
+            and_(
+                ItemUpdate.project_id == project_id,
+                ItemUpdate.item_id == lesson_id,
+                ItemUpdate.item_type == 'lessons'
+            )
+        ).order_by(ItemUpdate.timestamp.desc())
+
+        result = await db.execute(query)
+        updates = result.scalars().all()
+
+        return [update.to_dict() for update in updates]
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get lesson updates for {sanitize_for_log(lesson_id)}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve lesson updates")
+
+
+@router.post("/projects/{project_id}/lessons/{lesson_id}/updates")
+@monitor_operation("create_lesson_update", "api")
+async def create_lesson_update(
+    project_id: UUID,
+    lesson_id: UUID,
+    update_data: ItemUpdateCreate,
+    current_user: User = Depends(get_current_user),
+    current_org: Organization = Depends(get_current_organization),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create a new update/comment for a lesson learned."""
+    try:
+        # Verify project belongs to organization
+        project_result = await db.execute(
+            select(Project).where(
+                and_(
+                    Project.id == project_id,
+                    Project.organization_id == current_org.id
+                )
+            )
+        )
+        project = project_result.scalar_one_or_none()
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        # Create update
+        new_update = ItemUpdate(
+            project_id=project_id,
+            item_id=lesson_id,
+            item_type='lessons',
+            content=update_data.content,
+            update_type=update_data.update_type,
+            author_name=update_data.author_name,
+            author_email=update_data.author_email,
+            timestamp=datetime.utcnow()
+        )
+
+        db.add(new_update)
+        await db.commit()
+        await db.refresh(new_update)
+
+        logger.info(f"Created update for lesson {sanitize_for_log(lesson_id)}")
+
+        return new_update.to_dict()
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to create lesson update for {sanitize_for_log(lesson_id)}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create lesson update")
