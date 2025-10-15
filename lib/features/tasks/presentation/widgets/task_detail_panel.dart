@@ -1493,7 +1493,7 @@ ${_buildTaskContext(task)}''';
                         const Icon(Icons.warning_amber, color: Colors.orange, size: 20),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text(
+                          child: SelectableText(
                             _editedTask?.blockerDescription ?? 'No blocker description provided',
                             style: TextStyle(
                                 color: _editedTask?.blockerDescription == null ? colorScheme.onSurfaceVariant : null),
@@ -1805,7 +1805,7 @@ class _ExpandableTextContainerState extends State<_ExpandableTextContainer> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          SelectableText(
             displayText,
             style: widget.showAsPlaceholder
                 ? TextStyle(color: widget.colorScheme.onSurfaceVariant)

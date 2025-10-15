@@ -1350,7 +1350,7 @@ ${_buildRiskContext(risk)}''';
                               color: colorScheme.onSurfaceVariant,
                             ),
                             const SizedBox(width: 8),
-                            Text(risk.assignedTo!),
+                            Expanded(child: SelectableText(risk.assignedTo!)),
                           ],
                         ),
                       ],
@@ -1364,7 +1364,7 @@ ${_buildRiskContext(risk)}''';
                               color: colorScheme.onSurfaceVariant,
                             ),
                             const SizedBox(width: 8),
-                            Text(risk.assignedToEmail!),
+                            Expanded(child: SelectableText(risk.assignedToEmail!)),
                           ],
                         ),
                       ],
@@ -1674,7 +1674,7 @@ class _ExpandableTextContainerState extends State<_ExpandableTextContainer> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(displayText),
+          SelectableText(displayText),
           if (shouldTruncate) ...[
             const SizedBox(height: 8),
             InkWell(

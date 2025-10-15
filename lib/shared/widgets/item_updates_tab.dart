@@ -664,7 +664,7 @@ class _ExpandableTextState extends State<_ExpandableText> {
 
     // If text is short enough, just display it
     if (widget.text.length <= widget.maxLength) {
-      return Text(
+      return SelectableText(
         widget.text,
         style: widget.style,
       );
@@ -688,7 +688,7 @@ class _ExpandableTextState extends State<_ExpandableText> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        SelectableText(
           _isExpanded ? widget.text : truncatedText,
           style: widget.style,
         ),

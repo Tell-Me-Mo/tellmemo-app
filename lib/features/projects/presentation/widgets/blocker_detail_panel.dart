@@ -1110,7 +1110,7 @@ ${_buildBlockerContext(_editedBlocker!)}''';
                         ),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Text(
+                      child: SelectableText(
                         _editedBlocker!.resolution ?? 'No resolution provided',
                         style: TextStyle(
                           color: _editedBlocker!.resolution == null
@@ -1449,7 +1449,7 @@ ${_buildBlockerContext(_editedBlocker!)}''';
                         ),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Text(
+                      child: SelectableText(
                         _editedBlocker!.dependencies ?? 'No dependencies',
                         style: TextStyle(
                           color: _editedBlocker!.dependencies == null
@@ -1746,7 +1746,7 @@ class _ExpandableTextContainerState extends State<_ExpandableTextContainer> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(displayText),
+          SelectableText(displayText),
           if (shouldTruncate) ...[
             const SizedBox(height: 8),
             InkWell(

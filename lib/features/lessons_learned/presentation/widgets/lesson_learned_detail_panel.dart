@@ -1188,7 +1188,7 @@ ${_buildLessonContext(lesson)}''';
                     color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text(lesson.context!),
+                  child: SelectableText(lesson.context!),
                 ),
               ],
             ),
@@ -1218,7 +1218,7 @@ ${_buildLessonContext(lesson)}''';
                         children: [
                           Icon(Icons.label, size: 14, color: colorScheme.primary),
                           const SizedBox(width: 4),
-                          Text(
+                          SelectableText(
                             tag,
                             style: TextStyle(
                               color: colorScheme.primary,
@@ -1487,7 +1487,7 @@ class _ExpandableTextContainerState extends State<_ExpandableTextContainer> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(displayText),
+          SelectableText(displayText),
           if (shouldTruncate) ...[
             const SizedBox(height: 8),
             InkWell(
