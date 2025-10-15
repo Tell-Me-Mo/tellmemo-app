@@ -101,6 +101,14 @@ class _RiskDetailPanelState extends ConsumerState<RiskDetailPanel> {
           .updateRisk(updatedRisk);
 
       if (mounted) {
+        // Refresh the updates provider to get the new updates
+        final params = ItemUpdatesParams(
+          projectId: _selectedProjectId!,
+          itemId: _risk!.id,
+          itemType: 'risks',
+        );
+        ref.invalidate(itemUpdatesNotifierProvider(params));
+
         setState(() {
           _risk = updatedRisk;
         });
@@ -139,6 +147,14 @@ class _RiskDetailPanelState extends ConsumerState<RiskDetailPanel> {
           .updateRisk(updatedRisk);
 
       if (mounted) {
+        // Refresh the updates provider to get the new updates
+        final params = ItemUpdatesParams(
+          projectId: _selectedProjectId!,
+          itemId: _risk!.id,
+          itemType: 'risks',
+        );
+        ref.invalidate(itemUpdatesNotifierProvider(params));
+
         setState(() {
           _risk = updatedRisk;
         });
@@ -177,6 +193,14 @@ class _RiskDetailPanelState extends ConsumerState<RiskDetailPanel> {
           .updateRisk(updatedRisk);
 
       if (mounted) {
+        // Refresh the updates provider to get the new updates
+        final params = ItemUpdatesParams(
+          projectId: _selectedProjectId!,
+          itemId: _risk!.id,
+          itemType: 'risks',
+        );
+        ref.invalidate(itemUpdatesNotifierProvider(params));
+
         setState(() {
           _risk = updatedRisk;
         });
@@ -320,6 +344,14 @@ class _RiskDetailPanelState extends ConsumerState<RiskDetailPanel> {
         // Updating existing risk
         await notifier.updateRisk(riskToSave);
         if (mounted) {
+          // Refresh the updates provider to get the new updates
+          final params = ItemUpdatesParams(
+            projectId: _selectedProjectId!,
+            itemId: _risk!.id,
+            itemType: 'risks',
+          );
+          ref.invalidate(itemUpdatesNotifierProvider(params));
+
           setState(() {
             _risk = riskToSave;
             _isEditing = false;
@@ -1451,11 +1483,7 @@ ${_buildRiskContext(risk)}''';
               await ref
                   .read(itemUpdatesNotifierProvider(params).notifier)
                   .addComment(content);
-              if (mounted) {
-                ref
-                    .read(notificationServiceProvider.notifier)
-                    .showSuccess('Comment added successfully');
-              }
+              // Success notification disabled per user request
             } catch (e) {
               if (mounted) {
                 ref

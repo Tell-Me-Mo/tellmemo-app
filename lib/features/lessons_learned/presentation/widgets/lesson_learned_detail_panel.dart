@@ -162,6 +162,14 @@ class _LessonLearnedDetailPanelState extends ConsumerState<LessonLearnedDetailPa
         await notifier.updateLessonLearned(lessonToSave);
         ref.read(forceRefreshLessonsProvider)();
         if (mounted) {
+          // Refresh the updates provider to get the new updates
+          final params = ItemUpdatesParams(
+            projectId: _selectedProjectId!,
+            itemId: _lesson!.id,
+            itemType: 'lessons',
+          );
+          ref.invalidate(itemUpdatesNotifierProvider(params));
+
           setState(() {
             _lesson = lessonToSave;
             _isEditing = false;
@@ -1309,11 +1317,7 @@ ${_buildLessonContext(lesson)}''';
               await ref
                   .read(itemUpdatesNotifierProvider(params).notifier)
                   .addComment(content);
-              if (mounted) {
-                ref
-                    .read(notificationServiceProvider.notifier)
-                    .showSuccess('Comment added successfully');
-              }
+              // Success notification disabled per user request
             } catch (e) {
               if (mounted) {
                 ref

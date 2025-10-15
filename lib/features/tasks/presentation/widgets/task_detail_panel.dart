@@ -157,6 +157,14 @@ class _TaskDetailPanelState extends ConsumerState<TaskDetailPanel> {
         await repository.updateTask(_editedTask!.id, taskToSave);
         await ref.read(forceRefreshTasksProvider)();
         if (mounted) {
+          // Refresh the updates provider to get the new updates
+          final params = ItemUpdatesParams(
+            projectId: _selectedProjectId!,
+            itemId: _editedTask!.id,
+            itemType: 'tasks',
+          );
+          ref.invalidate(itemUpdatesNotifierProvider(params));
+
           setState(() {
             _editedTask = taskToSave;
             _isEditing = false;
@@ -200,6 +208,14 @@ class _TaskDetailPanelState extends ConsumerState<TaskDetailPanel> {
       await ref.read(forceRefreshTasksProvider)();
 
       if (mounted) {
+        // Refresh the updates provider to get the new updates
+        final params = ItemUpdatesParams(
+          projectId: _selectedProjectId ?? widget.taskWithProject!.project.id,
+          itemId: task.id,
+          itemType: 'tasks',
+        );
+        ref.invalidate(itemUpdatesNotifierProvider(params));
+
         setState(() {
           _editedTask = updatedTask;
         });
@@ -236,6 +252,14 @@ class _TaskDetailPanelState extends ConsumerState<TaskDetailPanel> {
       await ref.read(forceRefreshTasksProvider)();
 
       if (mounted) {
+        // Refresh the updates provider to get the new updates
+        final params = ItemUpdatesParams(
+          projectId: _selectedProjectId ?? widget.taskWithProject!.project.id,
+          itemId: task.id,
+          itemType: 'tasks',
+        );
+        ref.invalidate(itemUpdatesNotifierProvider(params));
+
         setState(() {
           _editedTask = updatedTask;
         });
@@ -1595,11 +1619,7 @@ ${_buildTaskContext(task)}''';
               await ref
                   .read(itemUpdatesNotifierProvider(params).notifier)
                   .addComment(content);
-              if (mounted) {
-                ref
-                    .read(notificationServiceProvider.notifier)
-                    .showSuccess('Comment added successfully');
-              }
+              // Success notification disabled per user request
             } catch (e) {
               if (mounted) {
                 ref

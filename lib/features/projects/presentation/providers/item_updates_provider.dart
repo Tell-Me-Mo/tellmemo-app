@@ -70,7 +70,8 @@ class ItemUpdatesNotifier extends StateNotifier<AsyncValue<List<ItemUpdate>>> {
         type: ItemUpdateType.comment,
       );
       if (!mounted) return;
-      state = state.whenData((updates) => [...updates, newUpdate]);
+      // Prepend new update to the beginning since we're showing newest first
+      state = state.whenData((updates) => [newUpdate, ...updates]);
     } catch (e, st) {
       if (!mounted) return;
       state = AsyncValue.error(e, st);

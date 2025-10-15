@@ -202,6 +202,14 @@ class _BlockerDetailPanelState extends ConsumerState<BlockerDetailPanel> {
         // Updating existing blocker
         await notifier.updateBlocker(blockerToSave);
         if (mounted) {
+          // Refresh the updates provider to get the new updates
+          final params = ItemUpdatesParams(
+            projectId: widget.projectId,
+            itemId: _editedBlocker!.id,
+            itemType: 'blockers',
+          );
+          ref.invalidate(itemUpdatesNotifierProvider(params));
+
           setState(() {
             _editedBlocker = blockerToSave;
             _isEditing = false;
@@ -447,6 +455,14 @@ class _BlockerDetailPanelState extends ConsumerState<BlockerDetailPanel> {
       await notifier.updateBlocker(updatedBlocker);
 
       if (mounted) {
+        // Refresh the updates provider to get the new updates
+        final params = ItemUpdatesParams(
+          projectId: widget.projectId,
+          itemId: _editedBlocker!.id,
+          itemType: 'blockers',
+        );
+        ref.invalidate(itemUpdatesNotifierProvider(params));
+
         setState(() {
           _editedBlocker = updatedBlocker;
           _resolutionController.text = resolution;
@@ -1562,11 +1578,7 @@ ${_buildBlockerContext(_editedBlocker!)}''';
               await ref
                   .read(itemUpdatesNotifierProvider(params).notifier)
                   .addComment(content);
-              if (mounted) {
-                ref
-                    .read(notificationServiceProvider.notifier)
-                    .showSuccess('Comment added successfully');
-              }
+              // Success notification disabled per user request
             } catch (e) {
               if (mounted) {
                 ref

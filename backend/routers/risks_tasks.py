@@ -204,7 +204,7 @@ async def create_risk(
     await db.refresh(risk)
 
     # Create CREATED update
-    author_name = current_user.full_name or current_user.email or "User"
+    author_name = current_user.name or current_user.email or "User"
     await ItemUpdatesService.create_item_created_update(
         db=db,
         project_id=project_id,
@@ -243,7 +243,7 @@ async def update_risk(
     update_data = risk_data.dict(exclude_unset=True)
 
     # Track status changes before updating
-    author_name = current_user.full_name or current_user.email or "User"
+    author_name = current_user.name or current_user.email or "User"
     if "status" in update_data and update_data["status"] != risk.status:
         await ItemUpdatesService.track_status_change(
             db=db,
@@ -416,7 +416,7 @@ async def create_task(
     await db.refresh(task)
 
     # Create CREATED update
-    author_name = current_user.full_name or current_user.email or "User"
+    author_name = current_user.name or current_user.email or "User"
     await ItemUpdatesService.create_item_created_update(
         db=db,
         project_id=project_id,
@@ -455,7 +455,7 @@ async def update_task(
     update_data = task_data.dict(exclude_unset=True)
 
     # Track status changes before updating
-    author_name = current_user.full_name or current_user.email or "User"
+    author_name = current_user.name or current_user.email or "User"
     if "status" in update_data and update_data["status"] != task.status:
         await ItemUpdatesService.track_status_change(
             db=db,
@@ -789,7 +789,7 @@ async def create_blocker(
     await db.refresh(new_blocker)
 
     # Create CREATED update
-    author_name = current_user.full_name or current_user.email or "User"
+    author_name = current_user.name or current_user.email or "User"
     await ItemUpdatesService.create_item_created_update(
         db=db,
         project_id=project_id,
@@ -828,7 +828,7 @@ async def update_blocker(
     update_data = blocker_update.model_dump(exclude_unset=True)
 
     # Track status changes before updating
-    author_name = current_user.full_name or current_user.email or "User"
+    author_name = current_user.name or current_user.email or "User"
     if "status" in update_data and update_data["status"] != blocker.status:
         await ItemUpdatesService.track_status_change(
             db=db,
@@ -917,26 +917,15 @@ async def delete_blocker(
     return {"message": "Blocker deleted successfully"}
 
 
-# ItemUpdate endpoints
-@router.get("/projects/{project_id}/{item_type}/{item_id}/updates")
-async def get_item_updates(
+# ItemUpdate endpoints - Specific routes to avoid path conflicts
+async def _get_item_updates_internal(
     project_id: UUID,
     item_type: str,
     item_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    current_org: Organization = Depends(get_current_organization),
-    current_user: User = Depends(get_current_user),
-    _: str = Depends(require_role("member"))
+    db: AsyncSession,
+    current_org: Organization
 ):
-    """Get all updates for a specific item (risk, task, blocker, or lesson)."""
-    # Validate item_type
-    valid_types = ['risks', 'tasks', 'blockers', 'lessons']
-    if item_type not in valid_types:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid item_type. Must be one of: {', '.join(valid_types)}"
-        )
-
+    """Internal helper function to get item updates."""
     # Verify project belongs to organization
     project_result = await db.execute(
         select(Project).where(
@@ -950,7 +939,7 @@ async def get_item_updates(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # Query item updates
+    # Query item updates - ordered by most recent first
     query = select(ItemUpdate).where(
         and_(
             ItemUpdate.project_id == project_id,
@@ -965,26 +954,15 @@ async def get_item_updates(
     return [update.to_dict() for update in updates]
 
 
-@router.post("/projects/{project_id}/{item_type}/{item_id}/updates")
-async def create_item_update(
+async def _create_item_update_internal(
     project_id: UUID,
     item_type: str,
     item_id: UUID,
     update_data: ItemUpdateCreate,
-    db: AsyncSession = Depends(get_db),
-    current_org: Organization = Depends(get_current_organization),
-    current_user: User = Depends(get_current_user),
-    _: str = Depends(require_role("member"))
+    db: AsyncSession,
+    current_org: Organization
 ):
-    """Create a new update/comment for an item."""
-    # Validate item_type
-    valid_types = ['risks', 'tasks', 'blockers', 'lessons']
-    if item_type not in valid_types:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid item_type. Must be one of: {', '.join(valid_types)}"
-        )
-
+    """Internal helper function to create item updates."""
     # Verify project belongs to organization
     project_result = await db.execute(
         select(Project).where(
@@ -1015,6 +993,90 @@ async def create_item_update(
     await db.refresh(new_update)
 
     return new_update.to_dict()
+
+
+# Specific routes for risks
+@router.get("/projects/{project_id}/risks/{risk_id}/updates")
+async def get_risk_updates(
+    project_id: UUID,
+    risk_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_org: Organization = Depends(get_current_organization),
+    current_user: User = Depends(get_current_user),
+    _: str = Depends(require_role("member"))
+):
+    """Get all updates for a specific risk."""
+    return await _get_item_updates_internal(project_id, 'risks', risk_id, db, current_org)
+
+
+@router.post("/projects/{project_id}/risks/{risk_id}/updates")
+async def create_risk_update(
+    project_id: UUID,
+    risk_id: UUID,
+    update_data: ItemUpdateCreate,
+    db: AsyncSession = Depends(get_db),
+    current_org: Organization = Depends(get_current_organization),
+    current_user: User = Depends(get_current_user),
+    _: str = Depends(require_role("member"))
+):
+    """Create a new update/comment for a risk."""
+    return await _create_item_update_internal(project_id, 'risks', risk_id, update_data, db, current_org)
+
+
+# Specific routes for tasks
+@router.get("/projects/{project_id}/tasks/{task_id}/updates")
+async def get_task_updates(
+    project_id: UUID,
+    task_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_org: Organization = Depends(get_current_organization),
+    current_user: User = Depends(get_current_user),
+    _: str = Depends(require_role("member"))
+):
+    """Get all updates for a specific task."""
+    return await _get_item_updates_internal(project_id, 'tasks', task_id, db, current_org)
+
+
+@router.post("/projects/{project_id}/tasks/{task_id}/updates")
+async def create_task_update(
+    project_id: UUID,
+    task_id: UUID,
+    update_data: ItemUpdateCreate,
+    db: AsyncSession = Depends(get_db),
+    current_org: Organization = Depends(get_current_organization),
+    current_user: User = Depends(get_current_user),
+    _: str = Depends(require_role("member"))
+):
+    """Create a new update/comment for a task."""
+    return await _create_item_update_internal(project_id, 'tasks', task_id, update_data, db, current_org)
+
+
+# Specific routes for blockers
+@router.get("/projects/{project_id}/blockers/{blocker_id}/updates")
+async def get_blocker_updates(
+    project_id: UUID,
+    blocker_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_org: Organization = Depends(get_current_organization),
+    current_user: User = Depends(get_current_user),
+    _: str = Depends(require_role("member"))
+):
+    """Get all updates for a specific blocker."""
+    return await _get_item_updates_internal(project_id, 'blockers', blocker_id, db, current_org)
+
+
+@router.post("/projects/{project_id}/blockers/{blocker_id}/updates")
+async def create_blocker_update(
+    project_id: UUID,
+    blocker_id: UUID,
+    update_data: ItemUpdateCreate,
+    db: AsyncSession = Depends(get_db),
+    current_org: Organization = Depends(get_current_organization),
+    current_user: User = Depends(get_current_user),
+    _: str = Depends(require_role("member"))
+):
+    """Create a new update/comment for a blocker."""
+    return await _create_item_update_internal(project_id, 'blockers', blocker_id, update_data, db, current_org)
 
 
 @router.delete("/updates/{update_id}")
