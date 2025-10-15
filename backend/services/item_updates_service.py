@@ -21,7 +21,7 @@ class ItemUpdatesService:
         item_id: UUID,
         item_type: str,
         content: str,
-        update_type: ItemUpdateType,
+        update_type: str,  # Now accepts string directly
         author_name: str,
         author_email: Optional[str] = None,
         commit: bool = True
@@ -72,7 +72,7 @@ class ItemUpdatesService:
             item_id=item_id,
             item_type=item_type,
             content=content,
-            update_type=ItemUpdateType.STATUS_CHANGE,
+            update_type=ItemUpdateType.STATUS_CHANGE,  # Using string constant
             author_name=author_name,
             author_email=author_email,
             commit=False
@@ -108,7 +108,7 @@ class ItemUpdatesService:
             item_id=item_id,
             item_type=item_type,
             content=content,
-            update_type=ItemUpdateType.ASSIGNMENT,
+            update_type=ItemUpdateType.ASSIGNMENT,  # Using string constant
             author_name=author_name,
             author_email=author_email,
             commit=False
@@ -181,7 +181,7 @@ class ItemUpdatesService:
                 item_id=item_id,
                 item_type=item_type,
                 content=content,
-                update_type=ItemUpdateType.EDIT,
+                update_type=ItemUpdateType.EDIT,  # Using string constant
                 author_name=author_name,
                 author_email=author_email,
                 commit=False
@@ -228,7 +228,7 @@ class ItemUpdatesService:
             item_id=item_id,
             item_type=item_type,
             content=content,
-            update_type=ItemUpdateType.CREATED,
+            update_type=ItemUpdateType.CREATED,  # Using string constant
             author_name=author_name,
             author_email=author_email,
             commit=False
