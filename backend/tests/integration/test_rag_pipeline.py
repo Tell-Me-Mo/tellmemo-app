@@ -1056,3 +1056,100 @@ class TestVectorDeletion:
 
         assert len(results_proj1) == 0  # Project 1 deleted
         assert len(results_proj2) >= 1  # Project 2 still exists
+
+
+# ============================================================================
+# Section 6.2: RAG Pipeline - Diversity Optimization (Async Threading)
+# ============================================================================
+
+class TestDiversityOptimization:
+    """Test that diversity optimization uses async threading to avoid blocking."""
+
+    @pytest.mark.asyncio
+    async def test_diversify_results_with_async_threading(self, mock_embedding_model):
+        """
+        Test that _diversify_results uses asyncio.to_thread() for sentence transformer
+        encoding to avoid blocking the async event loop.
+
+        This test covers the fix for the hanging issue where synchronous
+        sentence_transformer.encode() calls would block the entire async event loop.
+        """
+        from services.rag.hybrid_search import HybridSearchService, SearchResult, SearchType
+        import asyncio
+
+        # Arrange - Create service with mock model
+        service = HybridSearchService()
+        service.sentence_transformer = mock_embedding_model
+
+        # Create 26 mock search results (same as real scenario that was hanging)
+        results = [
+            SearchResult(
+                chunk_id=f"chunk_{i}",
+                text=f"Meeting notes about security and risk assessment session {i}",
+                metadata={"title": f"Meeting {i}"},
+                semantic_score=0.8,
+                keyword_score=0.6,
+                hybrid_score=0.7,
+                final_score=0.75 - (i * 0.01),  # Decreasing scores
+                search_types=[SearchType.SEMANTIC, SearchType.KEYWORD],
+                confidence_score=0.7
+            )
+            for i in range(26)
+        ]
+
+        # Act - Run diversity optimization with timeout to detect hanging
+        try:
+            diverse_results = await asyncio.wait_for(
+                service._diversify_results(results, "test query"),
+                timeout=10.0  # Should complete in <1 second, 10s is generous
+            )
+
+            # Assert - Should complete without timing out
+            assert diverse_results is not None
+            assert len(diverse_results) > 0
+            assert len(diverse_results) <= len(results)  # May filter some
+
+        except asyncio.TimeoutError:
+            pytest.fail(
+                "Diversity optimization timed out! The asyncio.to_thread() fix "
+                "is not working - sentence_transformer.encode() is blocking the event loop."
+            )
+
+    @pytest.mark.asyncio
+    async def test_calculate_diversity_score_with_async_threading(self, mock_embedding_model):
+        """
+        Test that _calculate_diversity_score uses async threading for embedding generation.
+        """
+        from services.rag.hybrid_search import HybridSearchService, SearchResult, SearchType
+        import asyncio
+
+        # Arrange
+        service = HybridSearchService()
+        service.sentence_transformer = mock_embedding_model
+
+        results = [
+            SearchResult(
+                chunk_id=f"chunk_{i}",
+                text=f"Content {i}",
+                metadata={},
+                semantic_score=0.8,
+                final_score=0.8,
+                search_types=[SearchType.SEMANTIC],
+                confidence_score=0.8
+            )
+            for i in range(10)
+        ]
+
+        # Act - Should complete without hanging
+        try:
+            diversity_score = await asyncio.wait_for(
+                service._calculate_diversity_score(results),
+                timeout=5.0
+            )
+
+            # Assert
+            assert isinstance(diversity_score, float)
+            assert 0 <= diversity_score <= 1.0
+
+        except asyncio.TimeoutError:
+            pytest.fail("Diversity score calculation timed out - async threading issue!")

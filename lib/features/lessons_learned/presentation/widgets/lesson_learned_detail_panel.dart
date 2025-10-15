@@ -344,6 +344,42 @@ ${_buildLessonContext(lesson)}''';
     );
   }
 
+  void _openAIDialogWithFieldAssist(String fieldName, String fieldContent) {
+    if (_lesson == null) return;
+
+    final lesson = _lesson!;
+    final lessonContext = '''Context: Analyzing a lesson learned in the project.
+Lesson Title: ${lesson.title}
+${_buildLessonContext(lesson)}''';
+
+    final projectId = _selectedProjectId ?? widget.projectId!;
+    final projectName = widget.projectName ?? 'Project';
+
+    // Build the auto-submit question with the field content
+    final autoQuestion = 'Provide more detailed information and insights about the following $fieldName:\n\n$fieldContent';
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.transparent,
+      transitionDuration: Duration.zero,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return AskAIPanel(
+          projectId: projectId,
+          projectName: projectName,
+          contextInfo: lessonContext,
+          conversationId: 'lesson_${lesson.id}',
+          rightOffset: 0.0,
+          autoSubmitQuestion: autoQuestion,
+          onClose: () {
+            Navigator.of(context).pop();
+            ref.read(queryProvider.notifier).clearConversation();
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -1148,7 +1184,34 @@ ${_buildLessonContext(lesson)}''';
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Description', style: theme.textTheme.labelLarge),
+              Row(
+                children: [
+                  Text('Description', style: theme.textTheme.labelLarge),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: Icon(
+                      Icons.auto_awesome,
+                      size: 16,
+                      color: Colors.green.shade400,
+                    ),
+                    onPressed: () {
+                      _openAIDialogWithFieldAssist('description', lesson.description);
+                    },
+                    tooltip: 'Ask AI for more information',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 24,
+                      minHeight: 24,
+                    ),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.green.withValues(alpha: 0.1),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 8),
               _ExpandableTextContainer(
                 text: lesson.description,
@@ -1163,7 +1226,34 @@ ${_buildLessonContext(lesson)}''';
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Recommendation', style: theme.textTheme.labelLarge),
+                Row(
+                  children: [
+                    Text('Recommendation', style: theme.textTheme.labelLarge),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: Icon(
+                        Icons.auto_awesome,
+                        size: 16,
+                        color: Colors.green.shade400,
+                      ),
+                      onPressed: () {
+                        _openAIDialogWithFieldAssist('recommendation', lesson.recommendation!);
+                      },
+                      tooltip: 'Ask AI for more information',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 24,
+                        minHeight: 24,
+                      ),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.green.withValues(alpha: 0.1),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 8),
                 _ExpandableTextContainer(
                   text: lesson.recommendation!,

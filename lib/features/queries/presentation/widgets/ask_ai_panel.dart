@@ -18,6 +18,7 @@ class AskAIPanel extends ConsumerStatefulWidget {
   final VoidCallback onClose;
   final double rightOffset;  // Allow custom positioning from right edge
   final String entityType;  // 'project' or 'program'
+  final String? autoSubmitQuestion;  // Optional question to auto-submit on open
 
   const AskAIPanel({
     super.key,
@@ -28,6 +29,7 @@ class AskAIPanel extends ConsumerStatefulWidget {
     this.conversationId,
     this.rightOffset = 0.0,
     this.entityType = 'project',
+    this.autoSubmitQuestion,
   });
 
   @override
@@ -108,7 +110,18 @@ class _AskAIPanelState extends ConsumerState<AskAIPanel> with TickerProviderStat
         contextId: widget.conversationId,  // Pass the context ID
       );
 
-      _focusNode.requestFocus();
+      // Auto-submit question if provided
+      if (widget.autoSubmitQuestion != null && widget.autoSubmitQuestion!.isNotEmpty) {
+        _queryController.text = widget.autoSubmitQuestion!;
+        // Submit after a short delay to ensure the panel is ready
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted) {
+            _submitQuery();
+          }
+        });
+      } else {
+        _focusNode.requestFocus();
+      }
     });
   }
 
@@ -611,7 +624,7 @@ class _AskAIPanelState extends ConsumerState<AskAIPanel> with TickerProviderStat
                         ],
                       ),
                       const SizedBox(height: 6),
-                      Text(
+                      SelectableText(
                         _cleanQuestionForDisplay(item.question),
                         style: theme.textTheme.bodyMedium,
                       ),

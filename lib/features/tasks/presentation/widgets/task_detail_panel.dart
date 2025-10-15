@@ -567,6 +567,42 @@ ${_buildTaskContext(task)}''';
     );
   }
 
+  void _openAIDialogWithFieldAssist(String fieldName, String fieldContent) {
+    if (_editedTask == null) return;
+
+    final task = _editedTask!;
+    final taskContext = '''Context: Analyzing a task in the project.
+Task Title: ${task.title}
+${_buildTaskContext(task)}''';
+
+    final projectId = widget.taskWithProject?.project.id ?? widget.projectId!;
+    final projectName = widget.taskWithProject?.project.name ?? widget.projectName!;
+
+    // Build the auto-submit question with the field content
+    final autoQuestion = 'Provide more detailed information and insights about the following $fieldName:\n\n$fieldContent';
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.transparent,
+      transitionDuration: Duration.zero,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return AskAIPanel(
+          projectId: projectId,
+          projectName: projectName,
+          contextInfo: taskContext,
+          conversationId: 'task_${task.id}',
+          rightOffset: 0.0,
+          autoSubmitQuestion: autoQuestion,
+          onClose: () {
+            Navigator.of(context).pop();
+            ref.read(queryProvider.notifier).clearConversation();
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -1077,12 +1113,41 @@ ${_buildTaskContext(task)}''';
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Description',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.1,
-                ),
+              Row(
+                children: [
+                  Text(
+                    'Description',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.1,
+                    ),
+                  ),
+                  if (!_isEditing && _editedTask!.description != null && _editedTask!.description!.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: Icon(
+                        Icons.auto_awesome,
+                        size: 16,
+                        color: Colors.green.shade400,
+                      ),
+                      onPressed: () {
+                        _openAIDialogWithFieldAssist('description', _editedTask!.description!);
+                      },
+                      tooltip: 'Ask AI for more information',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 24,
+                        minHeight: 24,
+                      ),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.green.withValues(alpha: 0.1),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
               const SizedBox(height: 12),
               if (_isEditing)
@@ -1133,12 +1198,41 @@ ${_buildTaskContext(task)}''';
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Question to Ask',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.1,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      'Question to Ask',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.1,
+                      ),
+                    ),
+                    if (!_isEditing && _editedTask!.questionToAsk != null && _editedTask!.questionToAsk!.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: Icon(
+                          Icons.auto_awesome,
+                          size: 16,
+                          color: Colors.green.shade400,
+                        ),
+                        onPressed: () {
+                          _openAIDialogWithFieldAssist('question to ask', _editedTask!.questionToAsk!);
+                        },
+                        tooltip: 'Ask AI for more information',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 24,
+                          minHeight: 24,
+                        ),
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.green.withValues(alpha: 0.1),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 12),
                 if (_isEditing)

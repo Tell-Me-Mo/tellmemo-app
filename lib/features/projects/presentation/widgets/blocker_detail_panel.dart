@@ -535,6 +535,39 @@ ${_buildBlockerContext(_editedBlocker!)}''';
     );
   }
 
+  void _openAIDialogWithFieldAssist(String fieldName, String fieldContent) {
+    if (_editedBlocker == null) return;
+
+    final blockerContext =
+        '''Context: Analyzing a blocker in the project.
+Blocker Title: ${_editedBlocker!.title}
+${_buildBlockerContext(_editedBlocker!)}''';
+
+    // Build the auto-submit question with the field content
+    final autoQuestion = 'Provide more detailed information and insights about the following $fieldName:\n\n$fieldContent';
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.transparent,
+      transitionDuration: Duration.zero,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return AskAIPanel(
+          projectId: widget.projectId,
+          projectName: widget.project?.name ?? 'Project',
+          contextInfo: blockerContext,
+          conversationId: 'blocker_${_editedBlocker!.id}',
+          rightOffset: 0.0,
+          autoSubmitQuestion: autoQuestion,
+          onClose: () {
+            Navigator.of(context).pop();
+            ref.read(queryProvider.notifier).clearConversation();
+          },
+        );
+      },
+    );
+  }
+
   Color _getImpactColor(BlockerImpact impact) {
     switch (impact) {
       case BlockerImpact.low:
@@ -993,12 +1026,41 @@ ${_buildBlockerContext(_editedBlocker!)}''';
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Description',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.1,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      'Description',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.1,
+                      ),
+                    ),
+                    if (!_isEditing && _editedBlocker != null) ...[
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: Icon(
+                          Icons.auto_awesome,
+                          size: 16,
+                          color: Colors.green.shade400,
+                        ),
+                        onPressed: () {
+                          _openAIDialogWithFieldAssist('description', _editedBlocker!.description);
+                        },
+                        tooltip: 'Ask AI for more information',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 24,
+                          minHeight: 24,
+                        ),
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.green.withValues(alpha: 0.1),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 12),
                 if (_isEditing)

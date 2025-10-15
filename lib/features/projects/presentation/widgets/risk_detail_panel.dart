@@ -421,6 +421,39 @@ ${_buildRiskContext(risk)}''';
     );
   }
 
+  void _openAIDialogWithFieldAssist(String fieldName, String fieldContent) {
+    if (_risk == null || _selectedProjectId == null) return;
+
+    final risk = _risk!;
+    final riskContext = '''Context: Analyzing a risk in the project.
+Risk Title: ${risk.title}
+${_buildRiskContext(risk)}''';
+
+    // Build the auto-submit question with the field content
+    final autoQuestion = 'Provide more detailed information and insights about the following $fieldName:\n\n$fieldContent';
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.transparent,
+      transitionDuration: Duration.zero,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return AskAIPanel(
+          projectId: _selectedProjectId!,
+          projectName: widget.project?.name ?? 'Project',
+          contextInfo: riskContext,
+          conversationId: 'risk_${risk.id}',
+          rightOffset: 0.0,
+          autoSubmitQuestion: autoQuestion,
+          onClose: () {
+            Navigator.of(context).pop();
+            ref.read(queryProvider.notifier).clearConversation();
+          },
+        );
+      },
+    );
+  }
+
   Color _getStatusColor(RiskStatus status) {
     switch (status) {
       case RiskStatus.identified:
@@ -1234,9 +1267,36 @@ ${_buildRiskContext(risk)}''';
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Description',
-                style: theme.textTheme.labelLarge,
+              Row(
+                children: [
+                  Text(
+                    'Description',
+                    style: theme.textTheme.labelLarge,
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: Icon(
+                      Icons.auto_awesome,
+                      size: 16,
+                      color: Colors.green.shade400,
+                    ),
+                    onPressed: () {
+                      _openAIDialogWithFieldAssist('description', risk.description);
+                    },
+                    tooltip: 'Ask AI for more information',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 24,
+                      minHeight: 24,
+                    ),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.green.withValues(alpha: 0.1),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
               _ExpandableTextContainer(
@@ -1252,9 +1312,36 @@ ${_buildRiskContext(risk)}''';
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Mitigation Strategy',
-                  style: theme.textTheme.labelLarge,
+                Row(
+                  children: [
+                    Text(
+                      'Mitigation Strategy',
+                      style: theme.textTheme.labelLarge,
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: Icon(
+                        Icons.auto_awesome,
+                        size: 16,
+                        color: Colors.green.shade400,
+                      ),
+                      onPressed: () {
+                        _openAIDialogWithFieldAssist('mitigation strategy', risk.mitigation!);
+                      },
+                      tooltip: 'Ask AI for more information',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 24,
+                        minHeight: 24,
+                      ),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.green.withValues(alpha: 0.1),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 _ExpandableTextContainer(
@@ -1271,9 +1358,36 @@ ${_buildRiskContext(risk)}''';
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Impact',
-                  style: theme.textTheme.labelLarge,
+                Row(
+                  children: [
+                    Text(
+                      'Impact',
+                      style: theme.textTheme.labelLarge,
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: Icon(
+                        Icons.auto_awesome,
+                        size: 16,
+                        color: Colors.green.shade400,
+                      ),
+                      onPressed: () {
+                        _openAIDialogWithFieldAssist('impact', risk.impact!);
+                      },
+                      tooltip: 'Ask AI for more information',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 24,
+                        minHeight: 24,
+                      ),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.green.withValues(alpha: 0.1),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 _ExpandableTextContainer(
