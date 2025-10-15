@@ -583,26 +583,34 @@ ${_buildTaskContext(task)}''';
     // Build the auto-submit question with the field content
     final autoQuestion = 'Provide more detailed information and insights about the following $fieldName:\n\n$fieldContent';
 
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: false,
-      barrierColor: Colors.transparent,
-      transitionDuration: Duration.zero,
-      pageBuilder: (context, animation, secondaryAnimation) {
-        return AskAIPanel(
-          projectId: projectId,
-          projectName: projectName,
-          contextInfo: taskContext,
-          conversationId: 'task_${task.id}',
-          rightOffset: 0.0,
-          autoSubmitQuestion: autoQuestion,
-          onClose: () {
-            Navigator.of(context).pop();
-            ref.read(queryProvider.notifier).clearConversation();
-          },
+    try {
+      showGeneralDialog(
+        context: context,
+        barrierDismissible: false,
+        barrierColor: Colors.transparent,
+        transitionDuration: Duration.zero,
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return AskAIPanel(
+            projectId: projectId,
+            projectName: projectName,
+            contextInfo: taskContext,
+            conversationId: 'task_${task.id}',
+            rightOffset: 0.0,
+            autoSubmitQuestion: autoQuestion,
+            onClose: () {
+              Navigator.of(context).pop();
+              ref.read(queryProvider.notifier).clearConversation();
+            },
+          );
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ref.read(notificationServiceProvider.notifier).showError(
+          'Failed to open AI assist dialog. Please try again.',
         );
-      },
-    );
+      }
+    }
   }
 
   @override
@@ -611,7 +619,7 @@ ${_buildTaskContext(task)}''';
     final isCreating = _editedTask == null;
     final projectName = widget.taskWithProject?.project.name ?? widget.projectName ?? 'Project';
 
-    // Get comment count for the badge
+    // Get comment count for the badge (optimized with select to only rebuild when count changes)
     int? commentCount;
     if (_editedTask != null && _selectedProjectId != null) {
       final params = ItemUpdatesParams(
@@ -619,11 +627,13 @@ ${_buildTaskContext(task)}''';
         itemId: _editedTask!.id,
         itemType: 'tasks',
       );
-      final updatesAsync = ref.watch(itemUpdatesNotifierProvider(params));
-      commentCount = updatesAsync.when(
-        data: (updates) => updates.where((u) => u.type == domain.ItemUpdateType.comment).length,
-        loading: () => null,
-        error: (_, _) => null,
+      commentCount = ref.watch(
+        itemUpdatesNotifierProvider(params).select((asyncValue) =>
+          asyncValue.maybeWhen(
+            data: (updates) => updates.where((u) => u.type == domain.ItemUpdateType.comment).length,
+            orElse: () => null,
+          ),
+        ),
       );
     }
 
