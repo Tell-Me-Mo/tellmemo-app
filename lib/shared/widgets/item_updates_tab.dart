@@ -538,40 +538,35 @@ class _ItemUpdatesTabState extends State<ItemUpdatesTab> {
                               ),
                               child: Row(
                                 children: [
+                                  // Simple checkbox without borders
                                   Container(
                                     width: 20,
                                     height: 20,
                                     decoration: BoxDecoration(
-                                      border: Border.all(
-                                        color: isSelected
-                                            ? _getUpdateTypeColor(type)
-                                            : colorScheme.outlineVariant,
-                                        width: 2,
-                                      ),
                                       borderRadius: BorderRadius.circular(4),
                                       color: isSelected
-                                          ? _getUpdateTypeColor(type).withValues(alpha: 0.2)
-                                          : Colors.transparent,
+                                          ? _getUpdateTypeColor(type)
+                                          : colorScheme.surfaceContainerHighest,
                                     ),
                                     child: isSelected
-                                        ? Icon(
+                                        ? const Icon(
                                             Icons.check,
                                             size: 14,
-                                            color: _getUpdateTypeColor(type),
+                                            color: Colors.white,
                                           )
                                         : null,
                                   ),
                                   const SizedBox(width: 12),
-                                  Icon(
-                                    _getUpdateTypeIcon(type),
-                                    size: 18,
-                                    color: _getUpdateTypeColor(type),
-                                  ),
-                                  const SizedBox(width: 8),
+                                  // Remove the icon, just show the label
                                   Expanded(
                                     child: Text(
                                       _getUpdateTypeLabel(type),
-                                      style: theme.textTheme.bodyMedium,
+                                      style: theme.textTheme.bodyMedium?.copyWith(
+                                        color: isSelected
+                                            ? colorScheme.onSurface
+                                            : colorScheme.onSurfaceVariant,
+                                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                      ),
                                     ),
                                   ),
                                 ],

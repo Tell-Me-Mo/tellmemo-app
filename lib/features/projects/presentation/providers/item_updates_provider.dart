@@ -3,6 +3,7 @@ import '../../domain/entities/item_update.dart';
 import '../../domain/repositories/item_updates_repository.dart';
 import '../../data/repositories/item_updates_repository_impl.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 
 // Repository provider
 final itemUpdatesRepositoryProvider = Provider<ItemUpdatesRepository>((ref) {
@@ -38,8 +39,9 @@ class ItemUpdatesParams {
 class ItemUpdatesNotifier extends StateNotifier<AsyncValue<List<ItemUpdate>>> {
   final ItemUpdatesRepository _repository;
   final ItemUpdatesParams params;
+  final Ref _ref;
 
-  ItemUpdatesNotifier(this._repository, this.params) : super(const AsyncValue.loading()) {
+  ItemUpdatesNotifier(this._repository, this.params, this._ref) : super(const AsyncValue.loading()) {
     loadUpdates();
   }
 
@@ -62,12 +64,30 @@ class ItemUpdatesNotifier extends StateNotifier<AsyncValue<List<ItemUpdate>>> {
 
   Future<void> addComment(String content) async {
     try {
+      // Get current user information
+      final authState = _ref.read(authControllerProvider);
+      final currentUser = authState.value;
+
+      // Try to get display name from metadata, then email username, or default
+      String authorName = 'User';
+      if (currentUser != null) {
+        // Check metadata for name
+        if (currentUser.metadata != null && currentUser.metadata!['name'] != null) {
+          authorName = currentUser.metadata!['name'];
+        } else if (currentUser.email != null) {
+          // Use email username part as fallback
+          authorName = currentUser.email!.split('@')[0];
+        }
+      }
+
       final newUpdate = await _repository.addItemUpdate(
         projectId: params.projectId,
         itemId: params.itemId,
         itemType: params.itemType,
         content: content,
         type: ItemUpdateType.comment,
+        authorName: authorName,
+        authorEmail: currentUser?.email,
       );
       if (!mounted) return;
       // Prepend new update to the beginning since we're showing newest first
@@ -98,5 +118,5 @@ final itemUpdatesNotifierProvider = StateNotifierProvider.family<
     AsyncValue<List<ItemUpdate>>,
     ItemUpdatesParams>((ref, params) {
   final repository = ref.watch(itemUpdatesRepositoryProvider);
-  return ItemUpdatesNotifier(repository, params);
+  return ItemUpdatesNotifier(repository, params, ref);
 });
