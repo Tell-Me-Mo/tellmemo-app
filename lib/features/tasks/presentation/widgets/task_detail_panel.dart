@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../core/services/notification_service.dart';
+import '../../../../core/widgets/dialogs/enhanced_confirmation_dialog.dart';
 import '../../../projects/domain/entities/task.dart';
 import '../../../projects/presentation/providers/risks_tasks_provider.dart';
 import '../../../projects/presentation/providers/projects_provider.dart';
@@ -471,22 +472,16 @@ class _TaskDetailPanelState extends ConsumerState<TaskDetailPanel> {
   Future<void> _deleteTask() async {
     if (_editedTask == null) return;
 
-    final confirm = await showDialog<bool>(
+    final confirm = await EnhancedConfirmationDialog.show(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Task'),
-        content: const Text('Are you sure you want to delete this task?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+      title: 'Delete Task',
+      message: 'Are you sure you want to delete this task?',
+      severity: ConfirmationSeverity.danger,
+      confirmText: 'Delete',
+      showUndoHint: true,
     );
 
-    if (confirm != true) return;
+    if (!confirm) return;
 
     setState(() {
       _isSaving = true;
