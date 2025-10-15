@@ -4,6 +4,7 @@ import 'package:pm_master_v2/features/projects/presentation/widgets/blocker_deta
 import 'package:pm_master_v2/features/projects/domain/entities/blocker.dart';
 import 'package:pm_master_v2/features/projects/domain/entities/project.dart';
 import '../../../../helpers/test_helpers.dart';
+import '../../../../mocks/mock_providers.dart';
 
 void main() {
   late Project testProject;
@@ -44,6 +45,9 @@ void main() {
             initiallyInEditMode: true,
           ),
         ),
+        overrides: [
+          createItemUpdatesRepositoryOverride(updates: []),
+        ],
         screenSize: const Size(1200, 800),
       );
 
@@ -70,6 +74,9 @@ void main() {
             initiallyInEditMode: true,
           ),
         ),
+        overrides: [
+          createItemUpdatesRepositoryOverride(updates: []),
+        ],
         screenSize: const Size(1200, 800),
       );
 
@@ -93,6 +100,9 @@ void main() {
             initiallyInEditMode: true,
           ),
         ),
+        overrides: [
+          createItemUpdatesRepositoryOverride(updates: []),
+        ],
         screenSize: const Size(1200, 800),
       );
 
@@ -115,6 +125,9 @@ void main() {
             project: testProject,
           ),
         ),
+        overrides: [
+          createItemUpdatesRepositoryOverride(updates: []),
+        ],
         screenSize: const Size(1200, 800),
       );
 
@@ -137,6 +150,9 @@ void main() {
             project: testProject,
           ),
         ),
+        overrides: [
+          createItemUpdatesRepositoryOverride(updates: []),
+        ],
         screenSize: const Size(1200, 800),
       );
 
@@ -164,6 +180,9 @@ void main() {
             project: testProject,
           ),
         ),
+        overrides: [
+          createItemUpdatesRepositoryOverride(updates: []),
+        ],
         screenSize: const Size(1200, 800),
       );
 

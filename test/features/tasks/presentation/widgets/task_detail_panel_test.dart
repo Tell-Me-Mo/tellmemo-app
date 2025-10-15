@@ -7,6 +7,8 @@ import 'package:pm_master_v2/features/tasks/presentation/providers/aggregated_ta
 import '../../../../helpers/test_helpers.dart';
 import '../../../../mocks/mock_providers.dart';
 import '../../../../mocks/mock_tasks_providers.dart';
+import '../../../../mocks/mock_auth_providers.dart';
+import '../../../../mocks/mock_auth.dart';
 
 void main() {
   late List<Project> testProjects;
@@ -57,6 +59,10 @@ void main() {
       createProjectsListOverride(projects: testProjects),
       createRisksTasksRepositoryOverride(onCreateTask: onCreateTask),
       createForceRefreshTasksOverride(onRefresh: onRefresh),
+      // Mock item updates repository to avoid DioClient initialization
+      createItemUpdatesRepositoryOverride(updates: []),
+      // Mock auth providers
+      ...createMockAuthOverrides(user: createMockUser(), token: 'mock-token'),
     ];
 
     await pumpWidgetWithProviders(
@@ -83,6 +89,10 @@ void main() {
       createProjectsListOverride(projects: testProjects),
       createRisksTasksRepositoryOverride(onUpdateTask: onUpdateTask),
       createForceRefreshTasksOverride(onRefresh: onRefresh),
+      // Mock item updates repository to avoid DioClient initialization
+      createItemUpdatesRepositoryOverride(updates: []),
+      // Mock auth providers
+      ...createMockAuthOverrides(user: createMockUser(), token: 'mock-token'),
     ];
 
     await pumpWidgetWithProviders(
@@ -125,6 +135,10 @@ void main() {
           },
         ),
         createForceRefreshTasksOverride(onRefresh: () => refreshCalled = true),
+        // Mock item updates repository to avoid DioClient initialization
+        createItemUpdatesRepositoryOverride(updates: []),
+        // Mock auth providers
+        ...createMockAuthOverrides(user: createMockUser(), token: 'mock-token'),
       ];
 
       await pumpWidgetWithProviders(
@@ -283,6 +297,10 @@ void main() {
           },
         ),
         createForceRefreshTasksOverride(onRefresh: () {}),
+        // Mock item updates repository to avoid DioClient initialization
+        createItemUpdatesRepositoryOverride(updates: []),
+        // Mock auth providers
+        ...createMockAuthOverrides(user: createMockUser(), token: 'mock-token'),
       ];
 
       await pumpWidgetWithProviders(

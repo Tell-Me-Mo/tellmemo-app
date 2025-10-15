@@ -48,6 +48,7 @@ void main() {
         ),
         overrides: [
           createProjectsListOverride(projects: [testProject]),
+          createItemUpdatesRepositoryOverride(updates: []),
         ],
         screenSize: const Size(1200, 800),
       );
@@ -74,6 +75,7 @@ void main() {
         ),
         overrides: [
           createProjectsListOverride(projects: [testProject]),
+          createItemUpdatesRepositoryOverride(updates: []),
         ],
         screenSize: const Size(1200, 800),
       );
@@ -100,6 +102,7 @@ void main() {
         ),
         overrides: [
           createProjectsListOverride(projects: [testProject]),
+          createItemUpdatesRepositoryOverride(updates: []),
         ],
         screenSize: const Size(1200, 800),
       );
@@ -130,6 +133,9 @@ void main() {
             lesson: testLesson,
           ),
         ),
+        overrides: [
+          createItemUpdatesRepositoryOverride(updates: []),
+        ],
         screenSize: const Size(1200, 800),
       );
 
@@ -151,6 +157,9 @@ void main() {
             lesson: testLesson,
           ),
         ),
+        overrides: [
+          createItemUpdatesRepositoryOverride(updates: []),
+        ],
         screenSize: const Size(1200, 800),
       );
 
@@ -177,6 +186,9 @@ void main() {
             lesson: testLesson,
           ),
         ),
+        overrides: [
+          createItemUpdatesRepositoryOverride(updates: []),
+        ],
         screenSize: const Size(1200, 800),
       );
 
