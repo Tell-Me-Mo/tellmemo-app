@@ -180,8 +180,7 @@ class RiskListTileCompact extends ConsumerWidget {
                                 color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                               ),
                               const SizedBox(width: 3),
-                              ConstrainedBox(
-                                constraints: const BoxConstraints(maxWidth: 100),
+                              Flexible(
                                 child: Text(
                                   project.name,
                                   style: theme.textTheme.labelSmall?.copyWith(
