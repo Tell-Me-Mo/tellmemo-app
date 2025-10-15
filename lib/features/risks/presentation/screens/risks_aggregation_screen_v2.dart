@@ -2590,18 +2590,22 @@ class _RisksAggregationScreenV2State extends ConsumerState<RisksAggregationScree
   }
 
   void _showCreateRiskDialog(BuildContext context) {
-    // Get first available project (or show error if none)
+    // Check if there are any projects first
     final projectsAsync = ref.read(projectsListProvider);
-    final firstProject = projectsAsync.whenOrNull(
-      data: (projects) => projects.isNotEmpty ? projects.first.id : null,
-    );
+    final hasProjects = projectsAsync.whenOrNull(
+      data: (projects) => projects.isNotEmpty,
+    ) ?? false;
 
-    if (firstProject == null) {
+    if (!hasProjects) {
       ref.read(notificationServiceProvider.notifier).showError(
         'Please create a project first before adding risks',
       );
       return;
     }
+
+    // Get project from widget (if coming from project screen)
+    String? projectId = widget.projectId;
+    // If no project from widget, let user choose via dropdown (don't auto-select)
 
     showGeneralDialog(
       context: context,
@@ -2610,7 +2614,7 @@ class _RisksAggregationScreenV2State extends ConsumerState<RisksAggregationScree
       transitionDuration: Duration.zero,
       pageBuilder: (context, animation, secondaryAnimation) {
         return RiskDetailPanel(
-          projectId: firstProject,
+          projectId: projectId,  // Will be null if not from project context
           risk: null,
           initiallyInEditMode: true,
         );

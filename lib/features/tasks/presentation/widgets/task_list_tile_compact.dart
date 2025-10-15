@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/notification_service.dart';
+import '../../../../core/widgets/dialogs/enhanced_confirmation_dialog.dart';
 import '../../../projects/domain/entities/task.dart';
 import '../../../projects/presentation/providers/risks_tasks_provider.dart';
 import '../providers/aggregated_tasks_provider.dart';
@@ -58,6 +59,17 @@ class TaskListTileCompact extends ConsumerWidget {
       case TaskStatus.cancelled:
         return 'Task cancelled';
     }
+  }
+
+  Future<bool> _showDeleteConfirmDialog(BuildContext context) async {
+    return await EnhancedConfirmationDialog.show(
+      context: context,
+      title: 'Delete Task',
+      message: 'Are you sure you want to delete this task?',
+      severity: ConfirmationSeverity.danger,
+      confirmText: 'Delete',
+      showUndoHint: true,
+    );
   }
 
   Future<void> _showBlockerDialog(BuildContext context, WidgetRef ref) async {
@@ -514,6 +526,32 @@ class TaskListTileCompact extends ConsumerWidget {
                     case 'unblock':
                       await _updateTaskStatus(context, ref, TaskStatus.inProgress);
                       break;
+                    case 'edit':
+                      if (context.mounted) {
+                        showGeneralDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          barrierColor: Colors.transparent,
+                          transitionDuration: Duration.zero,
+                          pageBuilder: (context, animation, secondaryAnimation) {
+                            return TaskDetailPanel(
+                              taskWithProject: taskWithProject,
+                              initiallyInEditMode: true,
+                            );
+                          },
+                        );
+                      }
+                      break;
+                    case 'delete':
+                      final confirmed = await _showDeleteConfirmDialog(context);
+                      if (confirmed && context.mounted) {
+                        final bulkOps = ref.read(bulkTaskOperationsProvider);
+                        await bulkOps.deleteTasks({task.id});
+                        if (context.mounted) {
+                          ref.read(notificationServiceProvider.notifier).showSuccess('Task deleted successfully');
+                        }
+                      }
+                      break;
                   }
                 },
                 itemBuilder: (BuildContext context) {
@@ -603,6 +641,49 @@ class TaskListTileCompact extends ConsumerWidget {
                           ],
                         ),
                       ),
+
+                    // Divider
+                    const PopupMenuDivider(),
+
+                    // Edit Task
+                    PopupMenuItem<String>(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.edit,
+                            size: 20,
+                            color: colorScheme.primary,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Edit Task',
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Delete Task
+                    PopupMenuItem<String>(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.delete,
+                            size: 20,
+                            color: Colors.red,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Delete Task',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ];
                 },
               ),

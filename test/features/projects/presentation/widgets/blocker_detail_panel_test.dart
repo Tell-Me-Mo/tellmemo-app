@@ -4,6 +4,7 @@ import 'package:pm_master_v2/features/projects/presentation/widgets/blocker_deta
 import 'package:pm_master_v2/features/projects/domain/entities/blocker.dart';
 import 'package:pm_master_v2/features/projects/domain/entities/project.dart';
 import '../../../../helpers/test_helpers.dart';
+import '../../../../mocks/mock_providers.dart';
 
 void main() {
   late Project testProject;
@@ -44,6 +45,9 @@ void main() {
             initiallyInEditMode: true,
           ),
         ),
+        overrides: [
+          createItemUpdatesRepositoryOverride(updates: []),
+        ],
         screenSize: const Size(1200, 800),
       );
 
@@ -70,6 +74,9 @@ void main() {
             initiallyInEditMode: true,
           ),
         ),
+        overrides: [
+          createItemUpdatesRepositoryOverride(updates: []),
+        ],
         screenSize: const Size(1200, 800),
       );
 
@@ -93,6 +100,9 @@ void main() {
             initiallyInEditMode: true,
           ),
         ),
+        overrides: [
+          createItemUpdatesRepositoryOverride(updates: []),
+        ],
         screenSize: const Size(1200, 800),
       );
 
@@ -115,14 +125,16 @@ void main() {
             project: testProject,
           ),
         ),
+        overrides: [
+          createItemUpdatesRepositoryOverride(updates: []),
+        ],
         screenSize: const Size(1200, 800),
       );
 
-      // Check header shows view mode
-      expect(find.text('Blocker Details'), findsOneWidget);
+      // Check header shows blocker title (not "Blocker Details")
+      expect(find.text('Test Blocker'), findsOneWidget);
 
       // Check blocker data is displayed
-      expect(find.text('Test Blocker'), findsOneWidget);
       expect(find.text('Test blocker description'), findsOneWidget);
     });
 
@@ -137,6 +149,9 @@ void main() {
             project: testProject,
           ),
         ),
+        overrides: [
+          createItemUpdatesRepositoryOverride(updates: []),
+        ],
         screenSize: const Size(1200, 800),
       );
 
@@ -149,8 +164,8 @@ void main() {
       await tester.tap(find.text('Edit'));
       await tester.pump();
 
-      // Should show edit mode
-      expect(find.text('Edit Blocker'), findsOneWidget);
+      // Should show Save button in edit mode (title still shows blocker name, not "Edit Blocker")
+      expect(find.text('Save'), findsOneWidget);
     });
 
     testWidgets('cancel edit returns to view mode', (tester) async {
@@ -164,6 +179,9 @@ void main() {
             project: testProject,
           ),
         ),
+        overrides: [
+          createItemUpdatesRepositoryOverride(updates: []),
+        ],
         screenSize: const Size(1200, 800),
       );
 
@@ -178,8 +196,9 @@ void main() {
       await tester.tap(find.text('Cancel'));
       await tester.pump();
 
-      // Should return to view mode
-      expect(find.text('Blocker Details'), findsOneWidget);
+      // Should return to view mode (action buttons visible instead of Save/Cancel)
+      expect(find.text('Save'), findsNothing);
+      expect(find.byIcon(Icons.more_vert), findsOneWidget);
     });
   });
 }

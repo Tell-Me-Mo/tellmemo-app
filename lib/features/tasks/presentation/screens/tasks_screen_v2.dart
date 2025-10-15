@@ -91,7 +91,20 @@ class _TasksScreenV2State extends ConsumerState<TasksScreenV2>
   }
 
   void _showCreateTaskDialog() {
-    // Get project from widget (if coming from project screen) or first available project
+    // Check if there are any projects first
+    final projectsAsync = ref.read(projectsListProvider);
+    final hasProjects = projectsAsync.whenOrNull(
+      data: (projects) => projects.isNotEmpty,
+    ) ?? false;
+
+    if (!hasProjects) {
+      ref.read(notificationServiceProvider.notifier).showError(
+        'Please create a project first before adding tasks',
+      );
+      return;
+    }
+
+    // Get project from widget (if coming from project screen)
     String? projectId = widget.projectId;
     String? projectName;
 
@@ -101,23 +114,8 @@ class _TasksScreenV2State extends ConsumerState<TasksScreenV2>
       projectName = projectAsync.whenOrNull(
         data: (project) => project?.name,
       );
-    } else {
-      // Get first available project
-      final projectsAsync = ref.read(projectsListProvider);
-      final firstProject = projectsAsync.whenOrNull(
-        data: (projects) => projects.isNotEmpty ? projects.first : null,
-      );
-
-      if (firstProject == null) {
-        ref.read(notificationServiceProvider.notifier).showError(
-          'Please create a project first before adding tasks',
-        );
-        return;
-      }
-
-      projectId = firstProject.id;
-      projectName = firstProject.name;
     }
+    // If no project from widget, let user choose via dropdown (don't auto-select)
 
     showGeneralDialog(
       context: context,

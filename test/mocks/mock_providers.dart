@@ -9,6 +9,9 @@ import 'package:pm_master_v2/features/organizations/presentation/providers/organ
 import 'package:pm_master_v2/features/organizations/presentation/providers/members_provider.dart';
 import 'package:pm_master_v2/features/projects/domain/entities/project.dart';
 import 'package:pm_master_v2/features/projects/presentation/providers/projects_provider.dart';
+import 'package:pm_master_v2/features/projects/presentation/providers/item_updates_provider.dart';
+import 'package:pm_master_v2/features/projects/domain/entities/item_update.dart';
+import 'package:pm_master_v2/features/projects/domain/repositories/item_updates_repository.dart';
 import 'package:pm_master_v2/features/documents/presentation/providers/documents_provider.dart';
 import 'package:pm_master_v2/features/hierarchy/domain/entities/portfolio.dart';
 import 'package:pm_master_v2/features/hierarchy/domain/entities/program.dart';
@@ -597,6 +600,74 @@ Override createHierarchyStateOverride({
 }) {
   return hierarchyStateProvider().overrideWith(() {
     return MockHierarchyState(items: items, error: error);
+  });
+}
+
+/// Mock repository for ItemUpdates testing
+class MockItemUpdatesRepository implements ItemUpdatesRepository {
+  final List<ItemUpdate> _updates;
+  final Object? _error;
+
+  MockItemUpdatesRepository({
+    List<ItemUpdate> updates = const [],
+    Object? error,
+  })  : _updates = updates,
+        _error = error;
+
+  @override
+  Future<List<ItemUpdate>> getItemUpdates({
+    required String projectId,
+    required String itemId,
+    required String itemType,
+  }) async {
+    if (_error != null) {
+      throw _error!;
+    }
+    return _updates;
+  }
+
+  @override
+  Future<ItemUpdate> addItemUpdate({
+    required String projectId,
+    required String itemId,
+    required String itemType,
+    required String content,
+    required ItemUpdateType type,
+    String? authorName,
+    String? authorEmail,
+  }) async {
+    final newUpdate = ItemUpdate(
+      id: 'mock-update-${DateTime.now().millisecondsSinceEpoch}',
+      projectId: projectId,
+      itemId: itemId,
+      itemType: itemType,
+      content: content,
+      type: type,
+      authorName: authorName ?? 'Test User',
+      authorEmail: authorEmail,
+      timestamp: DateTime.now(),
+    );
+    return newUpdate;
+  }
+
+  @override
+  Future<void> deleteItemUpdate(String updateId) async {
+    if (_error != null) {
+      throw _error!;
+    }
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
+}
+
+/// Helper function to create item updates repository provider override
+Override createItemUpdatesRepositoryOverride({
+  List<ItemUpdate> updates = const [],
+  Object? error,
+}) {
+  return itemUpdatesRepositoryProvider.overrideWith((ref) {
+    return MockItemUpdatesRepository(updates: updates, error: error);
   });
 }
 

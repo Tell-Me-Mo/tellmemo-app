@@ -6,7 +6,7 @@ from sqlalchemy import select, update, delete, and_
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 
 from db.database import get_db
 from dependencies.auth import get_current_organization, get_current_user, require_role
@@ -16,6 +16,8 @@ from models.risk import Risk, RiskSeverity, RiskStatus
 from models.task import Task, TaskStatus, TaskPriority
 from models.blocker import Blocker, BlockerImpact, BlockerStatus
 from models.project import Project
+from models.item_update import ItemUpdate, ItemUpdateType
+from services.item_updates_service import ItemUpdatesService
 
 
 router = APIRouter(prefix="/api/v1", tags=["risks-tasks"])
@@ -111,6 +113,21 @@ class BlockerUpdate(BaseModel):
     assigned_to_email: Optional[str] = None
 
 
+# ItemUpdate schemas
+class ItemUpdateCreate(BaseModel):
+    content: str
+    update_type: str = ItemUpdateType.COMMENT  # Now using string with default
+    author_name: str
+    author_email: Optional[str] = None
+
+    @validator('update_type')
+    def validate_update_type(cls, v):
+        """Validate that update_type is one of the allowed values."""
+        if not ItemUpdateType.is_valid(v):
+            raise ValueError(f"Invalid update_type. Must be one of: {', '.join(ItemUpdateType.ALL_TYPES)}")
+        return v
+
+
 # Risk endpoints
 @router.get("/projects/{project_id}/risks")
 async def get_project_risks(
@@ -193,6 +210,20 @@ async def create_risk(
     await db.commit()
     await db.refresh(risk)
 
+    # Create CREATED update
+    author_name = current_user.name or current_user.email or "User"
+    await ItemUpdatesService.create_item_created_update(
+        db=db,
+        project_id=project_id,
+        item_id=risk.id,
+        item_type='risks',
+        item_title=risk.title,
+        author_name=author_name,
+        author_email=current_user.email,
+        ai_generated=risk_data.ai_generated
+    )
+    await db.commit()
+
     return risk.to_dict()
 
 
@@ -218,9 +249,48 @@ async def update_risk(
 
     update_data = risk_data.dict(exclude_unset=True)
 
-    # Handle status changes
-    if "status" in update_data and update_data["status"] == RiskStatus.RESOLVED:
-        update_data["resolved_date"] = datetime.utcnow()
+    # Track status changes before updating
+    author_name = current_user.name or current_user.email or "User"
+    if "status" in update_data and update_data["status"] != risk.status:
+        await ItemUpdatesService.track_status_change(
+            db=db,
+            project_id=risk.project_id,
+            item_id=risk.id,
+            item_type='risks',
+            old_status=risk.status,
+            new_status=update_data["status"],
+            author_name=author_name,
+            author_email=current_user.email
+        )
+        # Handle resolved date
+        if update_data["status"] == RiskStatus.RESOLVED:
+            update_data["resolved_date"] = datetime.utcnow()
+
+    # Track assignment changes
+    if "assigned_to" in update_data and update_data["assigned_to"] != risk.assigned_to:
+        await ItemUpdatesService.track_assignment(
+            db=db,
+            project_id=risk.project_id,
+            item_id=risk.id,
+            item_type='risks',
+            old_assignee=risk.assigned_to,
+            new_assignee=update_data["assigned_to"],
+            author_name=author_name,
+            author_email=current_user.email
+        )
+
+    # Detect other field changes
+    changes = ItemUpdatesService.detect_changes(risk, update_data)
+    if changes:
+        await ItemUpdatesService.track_field_changes(
+            db=db,
+            project_id=risk.project_id,
+            item_id=risk.id,
+            item_type='risks',
+            changes=changes,
+            author_name=author_name,
+            author_email=current_user.email
+        )
 
     update_data["last_updated"] = datetime.utcnow()
     update_data["updated_by"] = "manual"
@@ -352,6 +422,20 @@ async def create_task(
     await db.commit()
     await db.refresh(task)
 
+    # Create CREATED update
+    author_name = current_user.name or current_user.email or "User"
+    await ItemUpdatesService.create_item_created_update(
+        db=db,
+        project_id=project_id,
+        item_id=task.id,
+        item_type='tasks',
+        item_title=task.title,
+        author_name=author_name,
+        author_email=current_user.email,
+        ai_generated=task_data.ai_generated
+    )
+    await db.commit()
+
     return task.to_dict()
 
 
@@ -377,13 +461,38 @@ async def update_task(
 
     update_data = task_data.dict(exclude_unset=True)
 
-    # Handle status changes
-    if "status" in update_data:
+    # Track status changes before updating
+    author_name = current_user.name or current_user.email or "User"
+    if "status" in update_data and update_data["status"] != task.status:
+        await ItemUpdatesService.track_status_change(
+            db=db,
+            project_id=task.project_id,
+            item_id=task.id,
+            item_type='tasks',
+            old_status=task.status,
+            new_status=update_data["status"],
+            author_name=author_name,
+            author_email=current_user.email
+        )
+        # Handle completed date
         if update_data["status"] == TaskStatus.COMPLETED and not task.completed_date:
             update_data["completed_date"] = datetime.utcnow()
             update_data["progress_percentage"] = 100
         elif update_data["status"] != TaskStatus.COMPLETED:
             update_data["completed_date"] = None
+
+    # Track assignment changes (for tasks it's 'assignee' not 'assigned_to')
+    if "assignee" in update_data and update_data["assignee"] != task.assignee:
+        await ItemUpdatesService.track_assignment(
+            db=db,
+            project_id=task.project_id,
+            item_id=task.id,
+            item_type='tasks',
+            old_assignee=task.assignee,
+            new_assignee=update_data["assignee"],
+            author_name=author_name,
+            author_email=current_user.email
+        )
 
     # Auto-update progress based on status
     if "status" in update_data and "progress_percentage" not in update_data:
@@ -395,6 +504,19 @@ async def update_task(
             TaskStatus.CANCELLED: task.progress_percentage  # Keep current
         }
         update_data["progress_percentage"] = status_progress_map.get(update_data["status"], 0)
+
+    # Detect other field changes
+    changes = ItemUpdatesService.detect_changes(task, update_data)
+    if changes:
+        await ItemUpdatesService.track_field_changes(
+            db=db,
+            project_id=task.project_id,
+            item_id=task.id,
+            item_type='tasks',
+            changes=changes,
+            author_name=author_name,
+            author_email=current_user.email
+        )
 
     update_data["last_updated"] = datetime.utcnow()
     update_data["updated_by"] = "manual"
@@ -673,6 +795,20 @@ async def create_blocker(
     await db.commit()
     await db.refresh(new_blocker)
 
+    # Create CREATED update
+    author_name = current_user.name or current_user.email or "User"
+    await ItemUpdatesService.create_item_created_update(
+        db=db,
+        project_id=project_id,
+        item_id=new_blocker.id,
+        item_type='blockers',
+        item_title=new_blocker.title,
+        author_name=author_name,
+        author_email=current_user.email,
+        ai_generated=blocker_data.ai_generated
+    )
+    await db.commit()
+
     return new_blocker.to_dict()
 
 
@@ -696,8 +832,60 @@ async def update_blocker(
     if not project or project.organization_id != current_org.id:
         raise HTTPException(status_code=404, detail="Blocker not found")
 
-    # Update fields
     update_data = blocker_update.model_dump(exclude_unset=True)
+
+    # Track status changes before updating
+    author_name = current_user.name or current_user.email or "User"
+    if "status" in update_data and update_data["status"] != blocker.status:
+        await ItemUpdatesService.track_status_change(
+            db=db,
+            project_id=blocker.project_id,
+            item_id=blocker.id,
+            item_type='blockers',
+            old_status=blocker.status,
+            new_status=update_data["status"],
+            author_name=author_name,
+            author_email=current_user.email
+        )
+
+    # Track assignment changes (for blockers it can be 'assigned_to' or 'owner')
+    if "assigned_to" in update_data and update_data["assigned_to"] != blocker.assigned_to:
+        await ItemUpdatesService.track_assignment(
+            db=db,
+            project_id=blocker.project_id,
+            item_id=blocker.id,
+            item_type='blockers',
+            old_assignee=blocker.assigned_to,
+            new_assignee=update_data["assigned_to"],
+            author_name=author_name,
+            author_email=current_user.email
+        )
+    elif "owner" in update_data and update_data["owner"] != blocker.owner:
+        await ItemUpdatesService.track_assignment(
+            db=db,
+            project_id=blocker.project_id,
+            item_id=blocker.id,
+            item_type='blockers',
+            old_assignee=blocker.owner,
+            new_assignee=update_data["owner"],
+            author_name=author_name,
+            author_email=current_user.email
+        )
+
+    # Detect other field changes
+    changes = ItemUpdatesService.detect_changes(blocker, update_data)
+    if changes:
+        await ItemUpdatesService.track_field_changes(
+            db=db,
+            project_id=blocker.project_id,
+            item_id=blocker.id,
+            item_type='blockers',
+            changes=changes,
+            author_name=author_name,
+            author_email=current_user.email
+        )
+
+    # Update fields
     for key, value in update_data.items():
         if hasattr(blocker, key):
             setattr(blocker, key, value)
@@ -734,3 +922,190 @@ async def delete_blocker(
     await db.commit()
 
     return {"message": "Blocker deleted successfully"}
+
+
+# ItemUpdate endpoints - Specific routes to avoid path conflicts
+async def _get_item_updates_internal(
+    project_id: UUID,
+    item_type: str,
+    item_id: UUID,
+    db: AsyncSession,
+    current_org: Organization
+):
+    """Internal helper function to get item updates."""
+    # Verify project belongs to organization
+    project_result = await db.execute(
+        select(Project).where(
+            and_(
+                Project.id == project_id,
+                Project.organization_id == current_org.id
+            )
+        )
+    )
+    project = project_result.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Query item updates - ordered by most recent first
+    query = select(ItemUpdate).where(
+        and_(
+            ItemUpdate.project_id == project_id,
+            ItemUpdate.item_id == item_id,
+            ItemUpdate.item_type == item_type
+        )
+    ).order_by(ItemUpdate.timestamp.desc())
+
+    result = await db.execute(query)
+    updates = result.scalars().all()
+
+    return [update.to_dict() for update in updates]
+
+
+async def _create_item_update_internal(
+    project_id: UUID,
+    item_type: str,
+    item_id: UUID,
+    update_data: ItemUpdateCreate,
+    db: AsyncSession,
+    current_org: Organization
+):
+    """Internal helper function to create item updates."""
+    # Verify project belongs to organization
+    project_result = await db.execute(
+        select(Project).where(
+            and_(
+                Project.id == project_id,
+                Project.organization_id == current_org.id
+            )
+        )
+    )
+    project = project_result.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Create update
+    new_update = ItemUpdate(
+        project_id=project_id,
+        item_id=item_id,
+        item_type=item_type,
+        content=update_data.content,
+        update_type=update_data.update_type,
+        author_name=update_data.author_name,
+        author_email=update_data.author_email,
+        timestamp=datetime.utcnow()
+    )
+
+    db.add(new_update)
+    await db.commit()
+    await db.refresh(new_update)
+
+    return new_update.to_dict()
+
+
+# Specific routes for risks
+@router.get("/projects/{project_id}/risks/{risk_id}/updates")
+async def get_risk_updates(
+    project_id: UUID,
+    risk_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_org: Organization = Depends(get_current_organization),
+    current_user: User = Depends(get_current_user),
+    _: str = Depends(require_role("member"))
+):
+    """Get all updates for a specific risk."""
+    return await _get_item_updates_internal(project_id, 'risks', risk_id, db, current_org)
+
+
+@router.post("/projects/{project_id}/risks/{risk_id}/updates")
+async def create_risk_update(
+    project_id: UUID,
+    risk_id: UUID,
+    update_data: ItemUpdateCreate,
+    db: AsyncSession = Depends(get_db),
+    current_org: Organization = Depends(get_current_organization),
+    current_user: User = Depends(get_current_user),
+    _: str = Depends(require_role("member"))
+):
+    """Create a new update/comment for a risk."""
+    return await _create_item_update_internal(project_id, 'risks', risk_id, update_data, db, current_org)
+
+
+# Specific routes for tasks
+@router.get("/projects/{project_id}/tasks/{task_id}/updates")
+async def get_task_updates(
+    project_id: UUID,
+    task_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_org: Organization = Depends(get_current_organization),
+    current_user: User = Depends(get_current_user),
+    _: str = Depends(require_role("member"))
+):
+    """Get all updates for a specific task."""
+    return await _get_item_updates_internal(project_id, 'tasks', task_id, db, current_org)
+
+
+@router.post("/projects/{project_id}/tasks/{task_id}/updates")
+async def create_task_update(
+    project_id: UUID,
+    task_id: UUID,
+    update_data: ItemUpdateCreate,
+    db: AsyncSession = Depends(get_db),
+    current_org: Organization = Depends(get_current_organization),
+    current_user: User = Depends(get_current_user),
+    _: str = Depends(require_role("member"))
+):
+    """Create a new update/comment for a task."""
+    return await _create_item_update_internal(project_id, 'tasks', task_id, update_data, db, current_org)
+
+
+# Specific routes for blockers
+@router.get("/projects/{project_id}/blockers/{blocker_id}/updates")
+async def get_blocker_updates(
+    project_id: UUID,
+    blocker_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_org: Organization = Depends(get_current_organization),
+    current_user: User = Depends(get_current_user),
+    _: str = Depends(require_role("member"))
+):
+    """Get all updates for a specific blocker."""
+    return await _get_item_updates_internal(project_id, 'blockers', blocker_id, db, current_org)
+
+
+@router.post("/projects/{project_id}/blockers/{blocker_id}/updates")
+async def create_blocker_update(
+    project_id: UUID,
+    blocker_id: UUID,
+    update_data: ItemUpdateCreate,
+    db: AsyncSession = Depends(get_db),
+    current_org: Organization = Depends(get_current_organization),
+    current_user: User = Depends(get_current_user),
+    _: str = Depends(require_role("member"))
+):
+    """Create a new update/comment for a blocker."""
+    return await _create_item_update_internal(project_id, 'blockers', blocker_id, update_data, db, current_org)
+
+
+@router.delete("/updates/{update_id}")
+async def delete_item_update(
+    update_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_org: Organization = Depends(get_current_organization),
+    current_user: User = Depends(get_current_user),
+    _: str = Depends(require_role("member"))
+):
+    """Delete an item update."""
+    # Get update
+    update = await db.get(ItemUpdate, update_id)
+    if not update:
+        raise HTTPException(status_code=404, detail="Update not found")
+
+    # Verify project belongs to organization
+    project = await db.get(Project, update.project_id)
+    if not project or project.organization_id != current_org.id:
+        raise HTTPException(status_code=404, detail="Update not found")
+
+    await db.delete(update)
+    await db.commit()
+
+    return {"message": "Update deleted successfully"}

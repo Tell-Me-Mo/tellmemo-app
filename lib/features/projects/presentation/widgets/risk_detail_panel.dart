@@ -5,11 +5,13 @@ import '../../domain/entities/risk.dart';
 import '../../domain/entities/project.dart';
 import '../providers/risks_tasks_provider.dart';
 import '../providers/projects_provider.dart';
+import '../providers/item_updates_provider.dart';
 import '../../../queries/presentation/widgets/ask_ai_panel.dart';
 import '../../../queries/presentation/providers/query_provider.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../shared/widgets/item_detail_panel.dart';
 import '../../../../shared/widgets/item_updates_tab.dart';
+import '../../domain/entities/item_update.dart' as domain;
 
 class RiskDetailPanel extends ConsumerStatefulWidget {
   final String? projectId; // Make optional for when creating from global screen
@@ -60,8 +62,8 @@ class _RiskDetailPanelState extends ConsumerState<RiskDetailPanel> {
     _selectedSeverity = widget.risk?.severity ?? RiskSeverity.medium;
     _selectedStatus = widget.risk?.status ?? RiskStatus.identified;
 
-    // Initialize selected project ID (only from existing risk, not from widget param)
-    _selectedProjectId = widget.risk?.projectId;
+    // Initialize selected project ID from existing risk OR from widget params (when creating from specific project)
+    _selectedProjectId = widget.risk?.projectId ?? widget.projectId;
   }
 
   @override
@@ -99,6 +101,14 @@ class _RiskDetailPanelState extends ConsumerState<RiskDetailPanel> {
           .updateRisk(updatedRisk);
 
       if (mounted) {
+        // Refresh the updates provider to get the new updates
+        final params = ItemUpdatesParams(
+          projectId: _selectedProjectId!,
+          itemId: _risk!.id,
+          itemType: 'risks',
+        );
+        ref.invalidate(itemUpdatesNotifierProvider(params));
+
         setState(() {
           _risk = updatedRisk;
         });
@@ -137,6 +147,14 @@ class _RiskDetailPanelState extends ConsumerState<RiskDetailPanel> {
           .updateRisk(updatedRisk);
 
       if (mounted) {
+        // Refresh the updates provider to get the new updates
+        final params = ItemUpdatesParams(
+          projectId: _selectedProjectId!,
+          itemId: _risk!.id,
+          itemType: 'risks',
+        );
+        ref.invalidate(itemUpdatesNotifierProvider(params));
+
         setState(() {
           _risk = updatedRisk;
         });
@@ -175,6 +193,14 @@ class _RiskDetailPanelState extends ConsumerState<RiskDetailPanel> {
           .updateRisk(updatedRisk);
 
       if (mounted) {
+        // Refresh the updates provider to get the new updates
+        final params = ItemUpdatesParams(
+          projectId: _selectedProjectId!,
+          itemId: _risk!.id,
+          itemType: 'risks',
+        );
+        ref.invalidate(itemUpdatesNotifierProvider(params));
+
         setState(() {
           _risk = updatedRisk;
         });
@@ -318,6 +344,14 @@ class _RiskDetailPanelState extends ConsumerState<RiskDetailPanel> {
         // Updating existing risk
         await notifier.updateRisk(riskToSave);
         if (mounted) {
+          // Refresh the updates provider to get the new updates
+          final params = ItemUpdatesParams(
+            projectId: _selectedProjectId!,
+            itemId: _risk!.id,
+            itemType: 'risks',
+          );
+          ref.invalidate(itemUpdatesNotifierProvider(params));
+
           setState(() {
             _risk = riskToSave;
             _isEditing = false;
@@ -435,7 +469,7 @@ ${_buildRiskContext(risk)}''';
     }
 
     return ItemDetailPanel(
-      title: isCreating ? 'Create New Risk' : (_isEditing ? 'Edit Risk' : 'Risk Details'),
+      title: isCreating ? 'Create New Risk' : (_risk?.title ?? 'Risk'),
       subtitle: projectName,
       headerIcon: Icons.warning,
       headerIconColor: _isEditing ? Colors.orange : (_risk != null ? _getSeverityColor(_risk!.severity) : Colors.orange),
@@ -556,8 +590,8 @@ ${_buildRiskContext(risk)}''';
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Project Selection (only show when creating NEW risk)
-            if (_risk == null) ...[
+            // Project Selection (only show when creating NEW risk WITHOUT a preset projectId)
+            if (_risk == null && widget.projectId == null) ...[
               Consumer(
                 builder: (context, ref, child) {
                   final projectsAsync = ref.watch(projectsListProvider);
@@ -1085,16 +1119,6 @@ ${_buildRiskContext(risk)}''';
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title
-          Text(
-            risk.title,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
           // Status and Severity Row
           Row(
             children: [
@@ -1410,26 +1434,207 @@ ${_buildRiskContext(risk)}''';
   }
 
   Widget _buildUpdatesTab() {
-    // TODO: Replace with actual updates from backend when API is ready
-    final mockUpdates = <ItemUpdate>[
-      ItemUpdate(
-        id: '1',
-        content: 'Risk created and assigned to team lead',
-        authorName: 'Current User',
-        timestamp: DateTime.now().subtract(const Duration(days: 2)),
-        type: ItemUpdateType.created,
-      ),
-    ];
+    if (_risk == null || _selectedProjectId == null) {
+      return _buildCreateModeEmptyState();
+    }
 
-    return ItemUpdatesTab(
-      updates: mockUpdates,
-      itemType: 'risk',
-      onAddComment: (content) async {
-        // TODO: Implement comment submission to backend
-        ref
-            .read(notificationServiceProvider.notifier)
-            .showSuccess('Comment added (not yet persisted)');
+    final params = ItemUpdatesParams(
+      projectId: _selectedProjectId!,
+      itemId: _risk!.id,
+      itemType: 'risks',
+    );
+
+    final updatesAsync = ref.watch(itemUpdatesNotifierProvider(params));
+
+    return updatesAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(
+        child: Text('Error loading updates: $error'),
+      ),
+      data: (domainUpdates) {
+        // Convert domain ItemUpdate to widget ItemUpdate
+        final widgetUpdates = domainUpdates.map((domainUpdate) {
+          return ItemUpdate(
+            id: domainUpdate.id,
+            content: domainUpdate.content,
+            authorName: domainUpdate.authorName,
+            timestamp: domainUpdate.timestamp,
+            type: _convertDomainUpdateTypeToWidget(domainUpdate.type),
+          );
+        }).toList();
+
+        return ItemUpdatesTab(
+          updates: widgetUpdates,
+          itemType: 'risk',
+          onAddComment: (content) async {
+            try {
+              await ref
+                  .read(itemUpdatesNotifierProvider(params).notifier)
+                  .addComment(content);
+              // Success notification disabled per user request
+            } catch (e) {
+              if (mounted) {
+                ref
+                    .read(notificationServiceProvider.notifier)
+                    .showError('Failed to add comment: $e');
+              }
+            }
+          },
+        );
       },
+    );
+  }
+
+  // Helper method to convert domain ItemUpdateType to widget ItemUpdateType
+  ItemUpdateType _convertDomainUpdateTypeToWidget(domain.ItemUpdateType type) {
+    switch (type) {
+      case domain.ItemUpdateType.comment:
+        return ItemUpdateType.comment;
+      case domain.ItemUpdateType.statusChange:
+        return ItemUpdateType.statusChange;
+      case domain.ItemUpdateType.assignment:
+        return ItemUpdateType.assignment;
+      case domain.ItemUpdateType.edit:
+        return ItemUpdateType.edit;
+      case domain.ItemUpdateType.created:
+        return ItemUpdateType.created;
+    }
+  }
+
+  Widget _buildCreateModeEmptyState() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(48),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Animated gradient circle with icon
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    colorScheme.primaryContainer.withValues(alpha: 0.4),
+                    colorScheme.secondaryContainer.withValues(alpha: 0.3),
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: colorScheme.primary.withValues(alpha: 0.1),
+                    blurRadius: 32,
+                    spreadRadius: 8,
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: colorScheme.surface,
+                  ),
+                  child: Icon(
+                    Icons.chat_bubble_outline_rounded,
+                    size: 48,
+                    color: colorScheme.primary.withValues(alpha: 0.7),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+            // Title
+            Text(
+              'Create Risk First',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Description
+            Text(
+              'Save this risk to start tracking updates,\ncomments, and activity history',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            // Feature hints
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildFeatureHint(
+                  theme,
+                  colorScheme,
+                  Icons.comment_rounded,
+                  'Comments',
+                  Colors.blue,
+                ),
+                const SizedBox(width: 24),
+                _buildFeatureHint(
+                  theme,
+                  colorScheme,
+                  Icons.history_rounded,
+                  'Activity',
+                  Colors.purple,
+                ),
+                const SizedBox(width: 24),
+                _buildFeatureHint(
+                  theme,
+                  colorScheme,
+                  Icons.notifications_outlined,
+                  'Updates',
+                  Colors.orange,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeatureHint(
+    ThemeData theme,
+    ColorScheme colorScheme,
+    IconData icon,
+    String label,
+    Color accentColor,
+  ) {
+    return Column(
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: accentColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            icon,
+            size: 24,
+            color: accentColor,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }

@@ -167,11 +167,12 @@ class _EnhancedConfirmationDialogState extends State<EnhancedConfirmationDialog>
     final theme = Theme.of(context);
     final severityColor = _getSeverityColor(context);
     final dialogWidth = ResponsiveUtils.getDialogWidth(context);
-    
+
     return ScaleTransition(
       scale: _scaleAnimation,
       child: AlertDialog(
         titlePadding: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
         title: Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(

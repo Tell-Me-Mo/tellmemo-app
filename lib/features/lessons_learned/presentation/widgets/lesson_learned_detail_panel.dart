@@ -4,12 +4,14 @@ import 'package:intl/intl.dart';
 import '../../../projects/domain/entities/lesson_learned.dart';
 import '../../../projects/presentation/providers/lessons_learned_provider.dart';
 import '../../../projects/presentation/providers/projects_provider.dart';
+import '../../../projects/presentation/providers/item_updates_provider.dart';
 import '../providers/aggregated_lessons_learned_provider.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../shared/widgets/item_detail_panel.dart';
 import '../../../../shared/widgets/item_updates_tab.dart';
 import '../../../queries/presentation/widgets/ask_ai_panel.dart';
 import '../../../queries/presentation/providers/query_provider.dart';
+import '../../../projects/domain/entities/item_update.dart' as domain;
 
 class LessonLearnedDetailPanel extends ConsumerStatefulWidget {
   final String? projectId;
@@ -50,7 +52,8 @@ class _LessonLearnedDetailPanelState extends ConsumerState<LessonLearnedDetailPa
     super.initState();
     _lesson = widget.lesson;
     _isEditing = widget.initiallyInEditMode || widget.lesson == null;
-    _selectedProjectId = _lesson?.projectId; // Don't default to widget.projectId
+    // Initialize selected project ID from existing lesson OR from widget params (when creating from specific project)
+    _selectedProjectId = _lesson?.projectId ?? widget.projectId;
 
     _titleController = TextEditingController(text: _lesson?.title ?? '');
     _descriptionController = TextEditingController(text: _lesson?.description ?? '');
@@ -160,6 +163,14 @@ class _LessonLearnedDetailPanelState extends ConsumerState<LessonLearnedDetailPa
         await notifier.updateLessonLearned(lessonToSave);
         ref.read(forceRefreshLessonsProvider)();
         if (mounted) {
+          // Refresh the updates provider to get the new updates
+          final params = ItemUpdatesParams(
+            projectId: _selectedProjectId!,
+            itemId: _lesson!.id,
+            itemType: 'lessons',
+          );
+          ref.invalidate(itemUpdatesNotifierProvider(params));
+
           setState(() {
             _lesson = lessonToSave;
             _isEditing = false;
@@ -340,7 +351,7 @@ ${_buildLessonContext(lesson)}''';
     final isCreating = _lesson == null;
 
     return ItemDetailPanel(
-      title: isCreating ? 'Create New Lesson' : (_isEditing ? 'Edit Lesson' : 'Lesson Learned'),
+      title: isCreating ? 'Create New Lesson' : (_lesson?.title ?? 'Lesson'),
       subtitle: widget.projectName ?? 'Project',
       headerIcon: Icons.lightbulb,
       headerIconColor: _lesson != null ? _getTypeColor(_lesson!.lessonType) : Colors.orange,
@@ -494,8 +505,8 @@ ${_buildLessonContext(lesson)}''';
             ),
             const SizedBox(height: 24),
 
-            // Project Selection (only when creating new lesson)
-            if (_lesson == null) ...[
+            // Project Selection (only show when creating NEW lesson WITHOUT a preset projectId)
+            if (_lesson == null && widget.projectId == null) ...[
               Consumer(
                 builder: (context, ref, child) {
                   final projectsAsync = ref.watch(projectsListProvider);
@@ -1016,14 +1027,6 @@ ${_buildLessonContext(lesson)}''';
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title
-          Text(
-            lesson.title,
-            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-          ),
-
-          const SizedBox(height: 20),
-
           // Type, Category, and Impact Row
           Row(
             children: [
@@ -1268,24 +1271,175 @@ ${_buildLessonContext(lesson)}''';
   }
 
   Widget _buildUpdatesTab() {
-    // TODO: Replace with actual updates from backend when API is ready
-    final mockUpdates = <ItemUpdate>[
-      ItemUpdate(
-        id: '1',
-        content: 'Lesson learned documented',
-        authorName: 'Current User',
-        timestamp: DateTime.now().subtract(const Duration(days: 1)),
-        type: ItemUpdateType.created,
-      ),
-    ];
+    if (_lesson == null || _selectedProjectId == null) {
+      return _buildCreateModeEmptyState();
+    }
 
-    return ItemUpdatesTab(
-      updates: mockUpdates,
-      itemType: 'lesson',
-      onAddComment: (content) async {
-        // TODO: Implement comment submission to backend
-        ref.read(notificationServiceProvider.notifier).showSuccess('Comment added (not yet persisted)');
+    final params = ItemUpdatesParams(
+      projectId: _selectedProjectId!,
+      itemId: _lesson!.id,
+      itemType: 'lessons',
+    );
+
+    final updatesAsync = ref.watch(itemUpdatesNotifierProvider(params));
+
+    return updatesAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(
+        child: Text('Error loading updates: $error'),
+      ),
+      data: (domainUpdates) {
+        // Convert domain ItemUpdate to widget ItemUpdate
+        final widgetUpdates = domainUpdates.map((domainUpdate) {
+          return ItemUpdate(
+            id: domainUpdate.id,
+            content: domainUpdate.content,
+            authorName: domainUpdate.authorName,
+            timestamp: domainUpdate.timestamp,
+            type: _convertDomainUpdateTypeToWidget(domainUpdate.type),
+          );
+        }).toList();
+
+        return ItemUpdatesTab(
+          updates: widgetUpdates,
+          itemType: 'lesson',
+          onAddComment: (content) async {
+            try {
+              await ref
+                  .read(itemUpdatesNotifierProvider(params).notifier)
+                  .addComment(content);
+              // Success notification disabled per user request
+            } catch (e) {
+              if (mounted) {
+                ref
+                    .read(notificationServiceProvider.notifier)
+                    .showError('Failed to add comment: $e');
+              }
+            }
+          },
+        );
       },
+    );
+  }
+
+  // Helper method to convert domain ItemUpdateType to widget ItemUpdateType
+  ItemUpdateType _convertDomainUpdateTypeToWidget(domain.ItemUpdateType type) {
+    switch (type) {
+      case domain.ItemUpdateType.comment:
+        return ItemUpdateType.comment;
+      case domain.ItemUpdateType.statusChange:
+        return ItemUpdateType.statusChange;
+      case domain.ItemUpdateType.assignment:
+        return ItemUpdateType.assignment;
+      case domain.ItemUpdateType.edit:
+        return ItemUpdateType.edit;
+      case domain.ItemUpdateType.created:
+        return ItemUpdateType.created;
+    }
+  }
+
+  Widget _buildCreateModeEmptyState() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(48),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    colorScheme.primaryContainer.withValues(alpha: 0.4),
+                    colorScheme.secondaryContainer.withValues(alpha: 0.3),
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: colorScheme.primary.withValues(alpha: 0.1),
+                    blurRadius: 32,
+                    spreadRadius: 8,
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: colorScheme.surface,
+                  ),
+                  child: Icon(
+                    Icons.chat_bubble_outline_rounded,
+                    size: 48,
+                    color: colorScheme.primary.withValues(alpha: 0.7),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+            Text(
+              'Create Lesson First',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Save this lesson to start tracking updates,\ncomments, and activity history',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildFeatureHint(theme, colorScheme, Icons.comment_rounded, 'Comments', Colors.blue),
+                const SizedBox(width: 24),
+                _buildFeatureHint(theme, colorScheme, Icons.history_rounded, 'Activity', Colors.purple),
+                const SizedBox(width: 24),
+                _buildFeatureHint(theme, colorScheme, Icons.notifications_outlined, 'Updates', Colors.orange),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeatureHint(ThemeData theme, ColorScheme colorScheme, IconData icon, String label, Color accentColor) {
+    return Column(
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: accentColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, size: 24, color: accentColor),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }
