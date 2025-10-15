@@ -207,8 +207,11 @@ final forceRefreshTasksProvider = Provider((ref) {
     // Invalidate all project task providers first
     ref.invalidate(projectTasksProvider);
 
+    // Invalidate all tasks notifier providers to refresh project details screens
+    ref.invalidate(tasksNotifierProvider);
+
     // Refresh (not invalidate) - this waits for fresh data before returning
-    await ref.refresh(aggregatedTasksProvider.future);
+    final _ = await ref.refresh(aggregatedTasksProvider.future);
   };
 });
 

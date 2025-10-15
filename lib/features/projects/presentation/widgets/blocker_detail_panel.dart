@@ -566,9 +566,7 @@ ${_buildBlockerContext(_editedBlocker!)}''';
     final isCreating = _editedBlocker == null;
 
     return ItemDetailPanel(
-      title: isCreating
-          ? 'Create New Blocker'
-          : (_isEditing ? 'Edit Blocker' : 'Blocker Details'),
+      title: isCreating ? 'Create New Blocker' : (_editedBlocker?.title ?? 'Blocker'),
       subtitle: widget.projectName ?? widget.project?.name ?? 'Project',
       headerIcon: Icons.block,
       headerIconColor: _editedBlocker != null
@@ -687,8 +685,8 @@ ${_buildBlockerContext(_editedBlocker!)}''';
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Title
-            if (_isEditing)
+            // Title (only show in edit mode)
+            if (_isEditing) ...[
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -743,16 +741,9 @@ ${_buildBlockerContext(_editedBlocker!)}''';
                     },
                   ),
                 ],
-              )
-            else if (_editedBlocker != null)
-              Text(
-                _editedBlocker!.title,
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
               ),
-
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
+            ],
 
             // Status and Impact Row
             Row(
@@ -1540,9 +1531,7 @@ ${_buildBlockerContext(_editedBlocker!)}''';
 
   Widget _buildUpdatesTab() {
     if (_editedBlocker == null) {
-      return const Center(
-        child: Text('No blocker data available'),
-      );
+      return _buildCreateModeEmptyState();
     }
 
     final params = ItemUpdatesParams(
@@ -1606,5 +1595,110 @@ ${_buildBlockerContext(_editedBlocker!)}''';
       case domain.ItemUpdateType.created:
         return ItemUpdateType.created;
     }
+  }
+
+  Widget _buildCreateModeEmptyState() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(48),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    colorScheme.primaryContainer.withValues(alpha: 0.4),
+                    colorScheme.secondaryContainer.withValues(alpha: 0.3),
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: colorScheme.primary.withValues(alpha: 0.1),
+                    blurRadius: 32,
+                    spreadRadius: 8,
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: colorScheme.surface,
+                  ),
+                  child: Icon(
+                    Icons.chat_bubble_outline_rounded,
+                    size: 48,
+                    color: colorScheme.primary.withValues(alpha: 0.7),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+            Text(
+              'Create Blocker First',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Save this blocker to start tracking updates,\ncomments, and activity history',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildFeatureHint(theme, colorScheme, Icons.comment_rounded, 'Comments', Colors.blue),
+                const SizedBox(width: 24),
+                _buildFeatureHint(theme, colorScheme, Icons.history_rounded, 'Activity', Colors.purple),
+                const SizedBox(width: 24),
+                _buildFeatureHint(theme, colorScheme, Icons.notifications_outlined, 'Updates', Colors.orange),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeatureHint(ThemeData theme, ColorScheme colorScheme, IconData icon, String label, Color accentColor) {
+    return Column(
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: accentColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, size: 24, color: accentColor),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
   }
 }

@@ -52,7 +52,8 @@ class _LessonLearnedDetailPanelState extends ConsumerState<LessonLearnedDetailPa
     super.initState();
     _lesson = widget.lesson;
     _isEditing = widget.initiallyInEditMode || widget.lesson == null;
-    _selectedProjectId = _lesson?.projectId; // Don't default to widget.projectId
+    // Initialize selected project ID from existing lesson OR from widget params (when creating from specific project)
+    _selectedProjectId = _lesson?.projectId ?? widget.projectId;
 
     _titleController = TextEditingController(text: _lesson?.title ?? '');
     _descriptionController = TextEditingController(text: _lesson?.description ?? '');
@@ -350,7 +351,7 @@ ${_buildLessonContext(lesson)}''';
     final isCreating = _lesson == null;
 
     return ItemDetailPanel(
-      title: isCreating ? 'Create New Lesson' : (_isEditing ? 'Edit Lesson' : 'Lesson Learned'),
+      title: isCreating ? 'Create New Lesson' : (_lesson?.title ?? 'Lesson'),
       subtitle: widget.projectName ?? 'Project',
       headerIcon: Icons.lightbulb,
       headerIconColor: _lesson != null ? _getTypeColor(_lesson!.lessonType) : Colors.orange,
@@ -504,8 +505,8 @@ ${_buildLessonContext(lesson)}''';
             ),
             const SizedBox(height: 24),
 
-            // Project Selection (only when creating new lesson)
-            if (_lesson == null) ...[
+            // Project Selection (only show when creating NEW lesson WITHOUT a preset projectId)
+            if (_lesson == null && widget.projectId == null) ...[
               Consumer(
                 builder: (context, ref, child) {
                   final projectsAsync = ref.watch(projectsListProvider);
@@ -1026,14 +1027,6 @@ ${_buildLessonContext(lesson)}''';
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title
-          Text(
-            lesson.title,
-            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-          ),
-
-          const SizedBox(height: 20),
-
           // Type, Category, and Impact Row
           Row(
             children: [
@@ -1279,9 +1272,7 @@ ${_buildLessonContext(lesson)}''';
 
   Widget _buildUpdatesTab() {
     if (_lesson == null || _selectedProjectId == null) {
-      return const Center(
-        child: Text('No lesson data available'),
-      );
+      return _buildCreateModeEmptyState();
     }
 
     final params = ItemUpdatesParams(
@@ -1345,5 +1336,110 @@ ${_buildLessonContext(lesson)}''';
       case domain.ItemUpdateType.created:
         return ItemUpdateType.created;
     }
+  }
+
+  Widget _buildCreateModeEmptyState() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(48),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    colorScheme.primaryContainer.withValues(alpha: 0.4),
+                    colorScheme.secondaryContainer.withValues(alpha: 0.3),
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: colorScheme.primary.withValues(alpha: 0.1),
+                    blurRadius: 32,
+                    spreadRadius: 8,
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: colorScheme.surface,
+                  ),
+                  child: Icon(
+                    Icons.chat_bubble_outline_rounded,
+                    size: 48,
+                    color: colorScheme.primary.withValues(alpha: 0.7),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+            Text(
+              'Create Lesson First',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Save this lesson to start tracking updates,\ncomments, and activity history',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildFeatureHint(theme, colorScheme, Icons.comment_rounded, 'Comments', Colors.blue),
+                const SizedBox(width: 24),
+                _buildFeatureHint(theme, colorScheme, Icons.history_rounded, 'Activity', Colors.purple),
+                const SizedBox(width: 24),
+                _buildFeatureHint(theme, colorScheme, Icons.notifications_outlined, 'Updates', Colors.orange),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeatureHint(ThemeData theme, ColorScheme colorScheme, IconData icon, String label, Color accentColor) {
+    return Column(
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: accentColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, size: 24, color: accentColor),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
   }
 }

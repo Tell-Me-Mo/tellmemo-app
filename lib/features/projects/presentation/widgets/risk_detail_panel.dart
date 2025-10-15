@@ -62,8 +62,8 @@ class _RiskDetailPanelState extends ConsumerState<RiskDetailPanel> {
     _selectedSeverity = widget.risk?.severity ?? RiskSeverity.medium;
     _selectedStatus = widget.risk?.status ?? RiskStatus.identified;
 
-    // Initialize selected project ID (only from existing risk, not from widget param)
-    _selectedProjectId = widget.risk?.projectId;
+    // Initialize selected project ID from existing risk OR from widget params (when creating from specific project)
+    _selectedProjectId = widget.risk?.projectId ?? widget.projectId;
   }
 
   @override
@@ -469,7 +469,7 @@ ${_buildRiskContext(risk)}''';
     }
 
     return ItemDetailPanel(
-      title: isCreating ? 'Create New Risk' : (_isEditing ? 'Edit Risk' : 'Risk Details'),
+      title: isCreating ? 'Create New Risk' : (_risk?.title ?? 'Risk'),
       subtitle: projectName,
       headerIcon: Icons.warning,
       headerIconColor: _isEditing ? Colors.orange : (_risk != null ? _getSeverityColor(_risk!.severity) : Colors.orange),
@@ -590,8 +590,8 @@ ${_buildRiskContext(risk)}''';
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Project Selection (only show when creating NEW risk)
-            if (_risk == null) ...[
+            // Project Selection (only show when creating NEW risk WITHOUT a preset projectId)
+            if (_risk == null && widget.projectId == null) ...[
               Consumer(
                 builder: (context, ref, child) {
                   final projectsAsync = ref.watch(projectsListProvider);
@@ -1119,16 +1119,6 @@ ${_buildRiskContext(risk)}''';
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title
-          Text(
-            risk.title,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
           // Status and Severity Row
           Row(
             children: [
@@ -1445,9 +1435,7 @@ ${_buildRiskContext(risk)}''';
 
   Widget _buildUpdatesTab() {
     if (_risk == null || _selectedProjectId == null) {
-      return const Center(
-        child: Text('No risk data available'),
-      );
+      return _buildCreateModeEmptyState();
     }
 
     final params = ItemUpdatesParams(
@@ -1511,5 +1499,142 @@ ${_buildRiskContext(risk)}''';
       case domain.ItemUpdateType.created:
         return ItemUpdateType.created;
     }
+  }
+
+  Widget _buildCreateModeEmptyState() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(48),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Animated gradient circle with icon
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    colorScheme.primaryContainer.withValues(alpha: 0.4),
+                    colorScheme.secondaryContainer.withValues(alpha: 0.3),
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: colorScheme.primary.withValues(alpha: 0.1),
+                    blurRadius: 32,
+                    spreadRadius: 8,
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: colorScheme.surface,
+                  ),
+                  child: Icon(
+                    Icons.chat_bubble_outline_rounded,
+                    size: 48,
+                    color: colorScheme.primary.withValues(alpha: 0.7),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+            // Title
+            Text(
+              'Create Risk First',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Description
+            Text(
+              'Save this risk to start tracking updates,\ncomments, and activity history',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            // Feature hints
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildFeatureHint(
+                  theme,
+                  colorScheme,
+                  Icons.comment_rounded,
+                  'Comments',
+                  Colors.blue,
+                ),
+                const SizedBox(width: 24),
+                _buildFeatureHint(
+                  theme,
+                  colorScheme,
+                  Icons.history_rounded,
+                  'Activity',
+                  Colors.purple,
+                ),
+                const SizedBox(width: 24),
+                _buildFeatureHint(
+                  theme,
+                  colorScheme,
+                  Icons.notifications_outlined,
+                  'Updates',
+                  Colors.orange,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeatureHint(
+    ThemeData theme,
+    ColorScheme colorScheme,
+    IconData icon,
+    String label,
+    Color accentColor,
+  ) {
+    return Column(
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: accentColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            icon,
+            size: 24,
+            color: accentColor,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
   }
 }

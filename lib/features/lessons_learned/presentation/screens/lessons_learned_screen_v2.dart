@@ -140,11 +140,31 @@ class _LessonsLearnedScreenV2State extends ConsumerState<LessonsLearnedScreenV2>
   }
 
   void _showCreateLessonDialog() {
-    // Get first available project (or null if none)
+    // Check if there are any projects first
     final projectsAsync = ref.read(projectsListProvider);
-    final firstProject = projectsAsync.whenOrNull(
-      data: (projects) => projects.isNotEmpty ? projects.first : null,
-    );
+    final hasProjects = projectsAsync.whenOrNull(
+      data: (projects) => projects.isNotEmpty,
+    ) ?? false;
+
+    if (!hasProjects) {
+      ref.read(notificationServiceProvider.notifier).showError(
+        'Please create a project first before adding lessons',
+      );
+      return;
+    }
+
+    // Get project from widget (if coming from project screen)
+    String? projectId = widget.projectId;
+    String? projectName;
+
+    if (projectId != null) {
+      // Get project name from provider
+      final projectAsync = ref.read(projectDetailProvider(projectId));
+      projectName = projectAsync.whenOrNull(
+        data: (project) => project?.name,
+      );
+    }
+    // If no project from widget, let user choose via dropdown (don't auto-select)
 
     showGeneralDialog(
       context: context,
@@ -153,8 +173,8 @@ class _LessonsLearnedScreenV2State extends ConsumerState<LessonsLearnedScreenV2>
       transitionDuration: Duration.zero,
       pageBuilder: (context, animation, secondaryAnimation) {
         return LessonLearnedDetailPanel(
-          projectId: widget.projectId ?? firstProject?.id,
-          projectName: firstProject?.name,
+          projectId: projectId,
+          projectName: projectName,
           initiallyInEditMode: true,
         );
       },

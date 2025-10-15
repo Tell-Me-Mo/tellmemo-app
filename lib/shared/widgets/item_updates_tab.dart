@@ -386,9 +386,10 @@ class _ItemUpdatesTabState extends State<ItemUpdatesTab> {
                       color: colorScheme.outlineVariant.withValues(alpha: 0.2),
                     ),
                   ),
-                  child: Text(
-                    update.content,
+                  child: _ExpandableText(
+                    text: update.content,
                     style: theme.textTheme.bodyMedium,
+                    maxLength: 300,
                   ),
                 ),
               ],
@@ -633,6 +634,95 @@ class _ItemUpdatesTabState extends State<ItemUpdatesTab> {
           ),
         );
       },
+    );
+  }
+}
+
+/// A widget that displays text with "Read more" functionality for long content
+class _ExpandableText extends StatefulWidget {
+  final String text;
+  final TextStyle? style;
+  final int maxLength;
+
+  const _ExpandableText({
+    required this.text,
+    this.style,
+    this.maxLength = 300,
+  });
+
+  @override
+  State<_ExpandableText> createState() => _ExpandableTextState();
+}
+
+class _ExpandableTextState extends State<_ExpandableText> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    // If text is short enough, just display it
+    if (widget.text.length <= widget.maxLength) {
+      return Text(
+        widget.text,
+        style: widget.style,
+      );
+    }
+
+    // Truncate at word boundary for cleaner look
+    String truncatedText = widget.text;
+    if (!_isExpanded) {
+      // Find a good break point near maxLength
+      truncatedText = widget.text.substring(0, widget.maxLength);
+
+      // Try to break at last space before maxLength
+      final lastSpace = truncatedText.lastIndexOf(' ');
+      if (lastSpace > widget.maxLength * 0.8) { // Only if we're not losing too much text
+        truncatedText = truncatedText.substring(0, lastSpace);
+      }
+
+      truncatedText = '$truncatedText...';
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          _isExpanded ? widget.text : truncatedText,
+          style: widget.style,
+        ),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: () {
+            setState(() {
+              _isExpanded = !_isExpanded;
+            });
+          },
+          borderRadius: BorderRadius.circular(4),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _isExpanded ? 'Show less' : 'Read more',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                  size: 16,
+                  color: colorScheme.primary,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
