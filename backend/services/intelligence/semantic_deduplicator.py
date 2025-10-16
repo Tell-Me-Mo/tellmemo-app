@@ -337,7 +337,7 @@ class SemanticDeduplicator:
         try:
             response = await self.llm_client.create_message(
                 prompt=prompt,
-                model="claude-3-5-haiku-latest",
+                model=settings.llm_model,
                 max_tokens=4096,
                 temperature=0.1
             )
