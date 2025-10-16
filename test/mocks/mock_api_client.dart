@@ -67,7 +67,7 @@ class MockApiClient implements ApiClient {
   }
 
   @override
-  Future<List<dynamic>> getConversations(String projectId) async {
+  Future<List<dynamic>> getConversations(String projectId, {String? contextId}) async {
     if (shouldThrowError) {
       throw Exception('Get conversations failed');
     }

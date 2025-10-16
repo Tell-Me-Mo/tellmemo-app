@@ -32,11 +32,13 @@ class MessageModel(BaseModel):
 class ConversationCreateRequest(BaseModel):
     title: str
     messages: List[MessageModel] = []
+    context_id: Optional[str] = None  # Optional context ID (e.g., 'risk_<uuid>')
 
 
 class ConversationUpdateRequest(BaseModel):
     title: Optional[str] = None
     messages: Optional[List[MessageModel]] = None
+    context_id: Optional[str] = None
 
 
 class ConversationResponse(BaseModel):
@@ -51,6 +53,7 @@ class ConversationResponse(BaseModel):
 @router.get("/{project_id}/conversations", response_model=List[ConversationResponse])
 async def get_conversations(
     project_id: str,
+    context_id: Optional[str] = None,
     session: AsyncSession = Depends(get_db),
     current_org: Organization = Depends(get_current_organization),
     current_user: User = Depends(get_current_user),
@@ -61,39 +64,33 @@ async def get_conversations(
 
     Args:
         project_id: UUID of the entity or 'organization' for org-level conversations
+        context_id: Optional context ID to filter conversations (e.g., 'risk_<uuid>')
         session: Database session
 
     Returns:
         List of conversations for the entity
     """
-    logger.info(f"Getting conversations for entity {sanitize_for_log(project_id)}")
+    logger.info(f"Getting conversations for entity {sanitize_for_log(project_id)}, context_id: {sanitize_for_log(context_id)}")
 
     try:
+        # Build WHERE clause conditions
+        conditions = [Conversation.organization_id == current_org.id]
+
         # Handle organization-level conversations
         if project_id == 'organization':
-            result = await session.execute(
-                select(Conversation)
-                .where(
-                    and_(
-                        Conversation.project_id.is_(None),  # Organization-level conversations have NULL project_id
-                        Conversation.organization_id == current_org.id
-                    )
-                )
-                .order_by(desc(Conversation.last_accessed_at))
-            )
+            conditions.append(Conversation.project_id.is_(None))
         else:
-            # Get conversations directly by entity ID (no entity type validation needed)
-            # The entity ID could be a project, program, or portfolio
-            result = await session.execute(
-                select(Conversation)
-                .where(
-                    and_(
-                        Conversation.project_id == project_id,
-                        Conversation.organization_id == current_org.id
-                    )
-                )
-                .order_by(desc(Conversation.last_accessed_at))
-            )
+            conditions.append(Conversation.project_id == project_id)
+
+        # Filter by context_id if provided
+        if context_id:
+            conditions.append(Conversation.context_id == context_id)
+
+        result = await session.execute(
+            select(Conversation)
+            .where(and_(*conditions))
+            .order_by(desc(Conversation.last_accessed_at))
+        )
         conversations = result.scalars().all()
 
         return [
@@ -142,6 +139,7 @@ async def create_conversation(
         conversation = Conversation(
             project_id=None if project_id == 'organization' else uuid.UUID(project_id),
             organization_id=current_org.id,
+            context_id=request.context_id,  # Store context_id
             title=request.title,
             messages=[msg.model_dump() for msg in request.messages],
             created_by=current_user.email or "unknown",
@@ -230,6 +228,9 @@ async def update_conversation(
 
         if request.messages is not None:
             update_data["messages"] = [msg.model_dump() for msg in request.messages]
+
+        if request.context_id is not None:
+            update_data["context_id"] = request.context_id
 
         # Update conversation
         await session.execute(
