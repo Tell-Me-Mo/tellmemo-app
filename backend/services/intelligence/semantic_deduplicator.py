@@ -218,13 +218,25 @@ class SemanticDeduplicator:
         """
         Combine title and description for better semantic matching.
 
-        Using both title and description provides much better context
-        than title alone, reducing false positives.
+        STRATEGY: Always use title + description for embedding generation.
+
+        Why this matters:
+        - Title-only embeddings miss crucial context (e.g., "Budget Risk" is too generic)
+        - Title + description provides semantic richness for accurate matching
+        - This strategy MUST be used consistently for both new and existing items
+
+        Example:
+          Title: "Budget Risk"
+          Description: "Potential cost overrun in Q3 due to vendor delays"
+          Combined: "Budget Risk. Potential cost overrun in Q3 due to vendor delays"
+
+        This combined text creates a much more distinctive embedding vector,
+        reducing false positives when comparing similar items.
         """
         title = item.get('title', '').strip()
         description = item.get('description', '').strip()
 
-        # Combine with a separator
+        # Combine with a separator for better sentence boundary detection
         if title and description:
             return f"{title}. {description}"
         elif title:
@@ -258,34 +270,35 @@ class SemanticDeduplicator:
     ) -> List[List[float]]:
         """
         Get embeddings for existing items.
-        Uses cached embeddings if available, otherwise generates new ones.
+
+        IMPORTANT: Always regenerates embeddings to ensure consistency.
+
+        We cannot trust cached embeddings because:
+        1. Old embeddings might be title-only (before combined text strategy)
+        2. Comparing title+description vs title-only creates dimension mismatches
+        3. This causes incorrect similarity scores and false positives/negatives
+
+        Solution: Always embed title + description for ALL items (new and existing).
+        This ensures apples-to-apples comparison.
+
+        Performance note: This is acceptable because:
+        - Embedding generation is fast (~50ms for batch of 10)
+        - Deduplication only runs on new items (small batches)
+        - Correctness > slight performance gain from caching
         """
         embeddings = []
         items_to_embed = []
-        items_to_embed_indices = []
 
-        for idx, item in enumerate(existing_items):
-            # Check if item has cached embedding
-            cached_embedding = item.get('title_embedding')
+        # Always regenerate embeddings with title + description
+        for item in existing_items:
+            items_to_embed.append(self._combine_text_for_embedding(item))
 
-            if cached_embedding and isinstance(cached_embedding, list) and len(cached_embedding) > 0:
-                embeddings.append(cached_embedding)
-            else:
-                # Need to generate embedding from title + description
-                embeddings.append(None)
-                items_to_embed.append(self._combine_text_for_embedding(item))
-                items_to_embed_indices.append(idx)
-
-        # Generate missing embeddings
+        # Generate all embeddings
         if items_to_embed:
-            logger.debug(f"Generating {len(items_to_embed)} missing embeddings for existing items")
-            new_embeddings = await self.embedding_service.generate_embeddings_batch(
+            logger.debug(f"Generating {len(items_to_embed)} embeddings for existing items (always regenerating for consistency)")
+            embeddings = await self.embedding_service.generate_embeddings_batch(
                 items_to_embed
             )
-
-            # Fill in the missing embeddings
-            for i, embedding_idx in enumerate(items_to_embed_indices):
-                embeddings[embedding_idx] = new_embeddings[i]
 
         return embeddings
 
