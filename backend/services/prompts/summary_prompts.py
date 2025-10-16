@@ -4,6 +4,8 @@ Summary Generation Prompts for PM Master V2
 This module contains all prompts used for generating meeting and weekly summaries.
 Keeping prompts in a separate file makes them easier to maintain, review, and update.
 """
+from datetime import datetime
+
 
 def get_meeting_summary_prompt(
     project_name: str,
@@ -21,6 +23,11 @@ def get_meeting_summary_prompt(
     elif format_type == "stakeholder":
         return get_stakeholder_meeting_prompt(project_name, content_title, content_text, content_date)
 
+    # Get current date for context
+    today = datetime.now()
+    current_year = today.year
+    today_str = today.strftime('%Y-%m-%d')
+
     # Default general format with enhanced extraction (better than the separate analyzer)
     return f"""You are an intelligent project management assistant specializing in meeting analysis. Your task is to ALWAYS generate a complete JSON summary without asking questions or seeking clarification.
 
@@ -33,6 +40,13 @@ CRITICAL INSTRUCTIONS:
 Project: {project_name}
 Meeting: {content_title}
 Date: {content_date}
+Today's Date: {today_str}
+
+DATE FORMATTING RULES:
+- Current year is {current_year}
+- ALL future due dates MUST use {current_year} or later (e.g., "{current_year}-11-15")
+- NEVER use past years like {current_year - 1} for future deadlines
+- Format: YYYY-MM-DD (ISO 8601 standard)
 
 Meeting Content:
 {content_text}
@@ -111,7 +125,7 @@ CRITICAL REQUIREMENTS:
         Example: "During discussion of self-exclusion compliance gaps, Tanya mentioned two critical bugs affecting user safety. Need verification that both issues (cross-game exclusion and existing player login bug) are addressed in current sprint. This impacts regulatory compliance and carries $50K/day risk exposure. Depends on UDA Studio's gap analysis due next week."),
     urgency: "high"/"medium"/"low",
     priority: "low"/"medium"/"high"/"urgent",
-    due_date: ISO date string or null,
+    due_date: ISO date string or null (MUST be {current_year} or later, format: YYYY-MM-DD),
     assignee: string or null,
     dependencies: array,
     status: "not_started",
@@ -399,11 +413,19 @@ def get_project_summary_prompt(
     elif format_type == "stakeholder":
         return get_stakeholder_project_prompt(project_name, content_title, content_text, meetings_list)
 
+    # Get current date for context
+    today = datetime.now()
+    current_year = today.year
+    today_str = today.strftime('%Y-%m-%d')
+
     # Default general format
     return f"""Generate a comprehensive weekly summary based on the following structured meeting data.
 
 Project: {project_name}
 Week: {content_title}
+Today's Date: {today_str}
+
+DATE FORMATTING: Use {current_year} or later for all due dates (format: YYYY-MM-DD)
 
 Meetings included:
 {meetings_list}
@@ -460,7 +482,7 @@ Format your response as JSON with these keys:
     title: string (REQUIRED - clear, actionable title),
     description: string (REQUIRED - detailed context and requirements),
     urgency: "high"/"medium"/"low",
-    due_date: ISO date string or null,
+    due_date: ISO date string or null (MUST be {current_year} or later),
     assignee: name or null,
     dependencies: array,
     status: "not_started",
