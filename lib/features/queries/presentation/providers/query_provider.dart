@@ -83,7 +83,10 @@ class QueryNotifier extends StateNotifier<QueryState> {
 
     // Load historical sessions for this entity
     try {
-      final conversationsData = await _apiService.client.getConversations(projectId);
+      final conversationsData = await _apiService.client.getConversations(
+        projectId,
+        contextId: contextId,  // Pass context_id for filtering
+      );
 
       final sessions = conversationsData.map((data) {
         final messages = (data['messages'] as List?)?.map((msgData) {
@@ -326,6 +329,7 @@ class QueryNotifier extends StateNotifier<QueryState> {
           {
             'title': title,
             'messages': messages,
+            if (state.currentContextId != null) 'context_id': state.currentContextId,
           },
         );
       } else {
@@ -335,6 +339,7 @@ class QueryNotifier extends StateNotifier<QueryState> {
           {
             'title': title,
             'messages': messages,
+            if (state.currentContextId != null) 'context_id': state.currentContextId,
           },
         );
 

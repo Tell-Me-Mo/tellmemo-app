@@ -54,7 +54,7 @@ class OpenQuestionsWidget extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Question text
-                Text(
+                SelectableText(
                   question.question,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     height: 1.4,
@@ -64,7 +64,7 @@ class OpenQuestionsWidget extends StatelessWidget {
                 // Context (if available and concise)
                 if (question.context.isNotEmpty && question.context.length < 150) ...[
                   const SizedBox(height: 4),
-                  Text(
+                  SelectableText(
                     'Context: ${question.context}',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,

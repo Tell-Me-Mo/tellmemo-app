@@ -14,6 +14,7 @@ class ItemDetailPanel extends StatefulWidget {
   final List<Widget>? headerActions;
   final double rightOffset;
   final bool initiallyShowUpdates;
+  final int? commentCount; // Number of comments to display as badge (null or 0 = no badge)
 
   const ItemDetailPanel({
     super.key,
@@ -27,6 +28,7 @@ class ItemDetailPanel extends StatefulWidget {
     this.headerActions,
     this.rightOffset = 0.0,
     this.initiallyShowUpdates = false,
+    this.commentCount,
   });
 
   @override
@@ -116,9 +118,11 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
     required String label,
     required bool isSelected,
     required VoidCallback onTap,
+    int? badgeCount, // Optional badge count
   }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final showBadge = badgeCount != null && badgeCount > 0;
 
     return GestureDetector(
       onTap: onTap,
@@ -162,6 +166,26 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
                   letterSpacing: 0.1,
                 ),
               ),
+              if (showBadge) ...[
+                const SizedBox(width: 6),
+                Container(
+                  constraints: const BoxConstraints(minWidth: 18),
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    badgeCount.toString(),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                      fontWeight: FontWeight.w500,
+                      fontSize: 11,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -364,6 +388,7 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
                                       icon: Icons.comment_outlined,
                                       label: 'Updates',
                                       isSelected: _tabController.index == 1,
+                                      badgeCount: widget.commentCount,
                                       onTap: () {
                                         setState(() {
                                           _tabController.animateTo(1);

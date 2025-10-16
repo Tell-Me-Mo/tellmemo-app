@@ -14,6 +14,8 @@ import '../../../queries/presentation/widgets/ask_ai_panel.dart';
 import '../../../queries/presentation/providers/query_provider.dart';
 import '../../../../shared/widgets/item_detail_panel.dart';
 import '../../../../shared/widgets/item_updates_tab.dart';
+import '../../../../shared/widgets/expandable_text_container.dart';
+import '../../../../shared/widgets/ai_assist_button.dart';
 import '../../../projects/domain/entities/item_update.dart' as domain;
 
 class TaskDetailPanel extends ConsumerStatefulWidget {
@@ -567,11 +569,73 @@ ${_buildTaskContext(task)}''';
     );
   }
 
+  void _openAIDialogWithFieldAssist(String fieldName, String fieldContent) {
+    if (_editedTask == null) return;
+
+    final task = _editedTask!;
+    final taskContext = '''Context: Analyzing a task in the project.
+Task Title: ${task.title}
+${_buildTaskContext(task)}''';
+
+    final projectId = widget.taskWithProject?.project.id ?? widget.projectId!;
+    final projectName = widget.taskWithProject?.project.name ?? widget.projectName!;
+
+    // Build the auto-submit question with the field content
+    final autoQuestion = 'Provide more detailed information and insights about the following $fieldName:\n\n$fieldContent';
+
+    try {
+      showGeneralDialog(
+        context: context,
+        barrierDismissible: false,
+        barrierColor: Colors.transparent,
+        transitionDuration: Duration.zero,
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return AskAIPanel(
+            projectId: projectId,
+            projectName: projectName,
+            contextInfo: taskContext,
+            conversationId: 'task_${task.id}',
+            rightOffset: 0.0,
+            autoSubmitQuestion: autoQuestion,
+            onClose: () {
+              Navigator.of(context).pop();
+              ref.read(queryProvider.notifier).clearConversation();
+            },
+          );
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ref.read(notificationServiceProvider.notifier).showError(
+          'Failed to open AI assist dialog. Please try again.',
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isCreating = _editedTask == null;
     final projectName = widget.taskWithProject?.project.name ?? widget.projectName ?? 'Project';
+
+    // Get comment count for the badge (optimized with select to only rebuild when count changes)
+    int? commentCount;
+    if (_editedTask != null && _selectedProjectId != null) {
+      final params = ItemUpdatesParams(
+        projectId: _selectedProjectId!,
+        itemId: _editedTask!.id,
+        itemType: 'tasks',
+      );
+      commentCount = ref.watch(
+        itemUpdatesNotifierProvider(params).select((asyncValue) =>
+          asyncValue.maybeWhen(
+            data: (updates) => updates.where((u) => u.type == domain.ItemUpdateType.comment).length,
+            orElse: () => null,
+          ),
+        ),
+      );
+    }
 
     return ItemDetailPanel(
       title: isCreating ? 'Create New Task' : (_editedTask?.title ?? 'Task'),
@@ -581,6 +645,7 @@ ${_buildTaskContext(task)}''';
           ? TaskUIHelpers.getStatusColor(_editedTask!.status, colorScheme)
           : Colors.blue,
       onClose: () => Navigator.of(context).pop(),
+      commentCount: commentCount,
       headerActions: _isEditing ? [
         // Edit mode actions
         TextButton(
@@ -1060,12 +1125,27 @@ ${_buildTaskContext(task)}''';
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Description',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.1,
-                ),
+              Row(
+                children: [
+                  Text(
+                    'Description',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.1,
+                    ),
+                  ),
+                  if (!_isEditing && _editedTask?.description?.isNotEmpty == true) ...[
+                    const SizedBox(width: 8),
+                    AIAssistButton(
+                      onPressed: () {
+                        final description = _editedTask?.description;
+                        if (description != null) {
+                          _openAIDialogWithFieldAssist('description', description);
+                        }
+                      },
+                    ),
+                  ],
+                ],
               ),
               const SizedBox(height: 12),
               if (_isEditing)
@@ -1102,17 +1182,10 @@ ${_buildTaskContext(task)}''';
                   maxLines: 4,
                 )
               else
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    _editedTask!.description ?? 'No description',
-                    style: TextStyle(color: _editedTask!.description == null ? colorScheme.onSurfaceVariant : null),
-                  ),
+                ExpandableTextContainer(
+                  text: _editedTask!.description ?? 'No description',
+                  colorScheme: colorScheme,
+                  showAsPlaceholder: _editedTask!.description == null,
                 ),
             ],
           ),
@@ -1123,12 +1196,27 @@ ${_buildTaskContext(task)}''';
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Question to Ask',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.1,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      'Question to Ask',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.1,
+                      ),
+                    ),
+                    if (!_isEditing && _editedTask?.questionToAsk?.isNotEmpty == true) ...[
+                      const SizedBox(width: 8),
+                      AIAssistButton(
+                        onPressed: () {
+                          final question = _editedTask?.questionToAsk;
+                          if (question != null) {
+                            _openAIDialogWithFieldAssist('question to ask', question);
+                          }
+                        },
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 12),
                 if (_isEditing)
@@ -1170,18 +1258,10 @@ ${_buildTaskContext(task)}''';
                     maxLines: 3,
                   )
                 else
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      _editedTask!.questionToAsk ?? 'No question to ask',
-                      style:
-                          TextStyle(color: _editedTask!.questionToAsk == null ? colorScheme.onSurfaceVariant : null),
-                    ),
+                  ExpandableTextContainer(
+                    text: _editedTask!.questionToAsk ?? 'No question to ask',
+                    colorScheme: colorScheme,
+                    showAsPlaceholder: _editedTask!.questionToAsk == null,
                   ),
               ],
             ),
@@ -1491,7 +1571,7 @@ ${_buildTaskContext(task)}''';
                         const Icon(Icons.warning_amber, color: Colors.orange, size: 20),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text(
+                          child: SelectableText(
                             _editedTask?.blockerDescription ?? 'No blocker description provided',
                             style: TextStyle(
                                 color: _editedTask?.blockerDescription == null ? colorScheme.onSurfaceVariant : null),

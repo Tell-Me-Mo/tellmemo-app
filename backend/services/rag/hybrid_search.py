@@ -78,6 +78,9 @@ class HybridSearchConfig:
     final_result_count: int = 15
     diversity_boost: float = 0.1
 
+    # Diversity optimization
+    diversity_similarity_threshold: float = 0.85  # Results with similarity > this are considered duplicates
+
     # Quality filters
     min_confidence_score: float = 0.3
     filter_low_quality: bool = True
@@ -225,6 +228,7 @@ class HybridSearchService:
             
             # Calculate pipeline metrics
             processing_time = int((time.time() - start_time) * 1000)
+            diversity_score = await self._calculate_diversity_score(final_results)
             pipeline = SearchPipeline(
                 query=query,
                 config=self.config,
@@ -236,7 +240,7 @@ class HybridSearchService:
                 semantic_result_count=len(semantic_results),
                 keyword_result_count=len(keyword_results),
                 overlap_count=self._calculate_overlap(semantic_results, keyword_results),
-                diversity_score=self._calculate_diversity_score(final_results),
+                diversity_score=diversity_score,
                 confidence_distribution=self._calculate_confidence_distribution(final_results),
                 processing_time_ms=processing_time
             )
@@ -786,62 +790,42 @@ class HybridSearchService:
         return final_results
     
     async def _diversify_results(
-        self, 
-        results: List[SearchResult], 
+        self,
+        results: List[SearchResult],
         query: str
     ) -> List[SearchResult]:
         """Apply diversity optimization to avoid redundant results."""
         if not results or len(results) <= 1:
             return results
-        
+
         # Simple diversity based on content similarity
         if self.sentence_transformer:
             try:
                 # Get embeddings for result texts
                 texts = [r.text[:200] for r in results]  # Limit length
-                embeddings = self.sentence_transformer.encode(texts)
-                
-                # Select diverse results using MMR-like approach
-                diverse_results = []
-                remaining_indices = set(range(len(results)))
-                
-                # Start with highest scoring result
-                best_idx = 0
-                diverse_results.append(results[best_idx])
-                remaining_indices.remove(best_idx)
-                
-                # Select remaining results balancing relevance and diversity
-                while remaining_indices and len(diverse_results) < len(results):
-                    best_score = -1
-                    best_idx = -1
-                    
-                    for idx in remaining_indices:
-                        # Relevance score
-                        relevance = results[idx].final_score
-                        
-                        # Diversity score (minimum similarity to selected results)
-                        similarities = []
-                        for selected_result in diverse_results:
-                            selected_idx = results.index(selected_result)
-                            sim = self._cosine_similarity(
-                                embeddings[idx], 
-                                embeddings[selected_idx]
-                            )
-                            similarities.append(sim)
-                        
-                        diversity = 1.0 - max(similarities) if similarities else 1.0
-                        
-                        # Combined score (balance relevance and diversity)
-                        combined_score = 0.7 * relevance + 0.3 * diversity
-                        
-                        if combined_score > best_score:
-                            best_score = combined_score
-                            best_idx = idx
-                    
-                    if best_idx != -1:
-                        diverse_results.append(results[best_idx])
-                        remaining_indices.remove(best_idx)
-                
+                # Run blocking sentence transformer in thread pool to avoid blocking event loop
+                embeddings = await asyncio.to_thread(self.sentence_transformer.encode, texts)
+
+                # SIMPLIFIED: Just filter out highly similar consecutive results
+                # This is much faster than full MMR and good enough for our use case
+                diverse_results = [results[0]]  # Always keep the best result
+                selected_indices = [0]  # Track indices of selected results
+
+                for i in range(1, len(results)):
+                    # Check similarity to all selected results
+                    is_diverse = True
+                    for selected_idx in selected_indices:
+                        sim = self._cosine_similarity(embeddings[i], embeddings[selected_idx])
+
+                        # If too similar to any selected result, skip it
+                        if sim > self.config.diversity_similarity_threshold:
+                            is_diverse = False
+                            break
+
+                    if is_diverse:
+                        diverse_results.append(results[i])
+                        selected_indices.append(i)
+
                 return diverse_results
                 
             except Exception as e:
@@ -862,24 +846,25 @@ class HybridSearchService:
         keyword_ids = set(r.chunk_id for r in keyword_results)
         return len(semantic_ids.intersection(keyword_ids))
     
-    def _calculate_diversity_score(self, results: List[SearchResult]) -> float:
+    async def _calculate_diversity_score(self, results: List[SearchResult]) -> float:
         """Calculate diversity score for result set."""
         if len(results) <= 1:
             return 0.0
-        
+
         # Diversity based on search method coverage
         search_types = set()
         for result in results:
             search_types.update(result.search_types)
-        
+
         type_diversity = len(search_types) / 4.0  # Max 4 search types
-        
+
         # Content diversity (if embeddings available)
         content_diversity = 0.5  # Default
         if self.sentence_transformer and len(results) > 1:
             try:
                 texts = [r.text[:100] for r in results[:10]]  # Sample for performance
-                embeddings = self.sentence_transformer.encode(texts)
+                # Run blocking sentence transformer in thread pool
+                embeddings = await asyncio.to_thread(self.sentence_transformer.encode, texts)
                 
                 similarities = []
                 for i in range(len(embeddings)):

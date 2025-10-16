@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pm_master_v2/features/projects/domain/entities/risk.dart';
 import 'package:pm_master_v2/features/projects/domain/entities/project.dart';
 import 'package:pm_master_v2/features/risks/presentation/providers/aggregated_risks_provider.dart';
@@ -79,37 +78,57 @@ void main() {
       expect(find.text('Third-party API may throttle requests during peak hours'), findsNothing);
     });
 
-    testWidgets('displays severity badge with correct label - Critical', (tester) async {
+    testWidgets('displays severity badge with correct color - Critical', (tester) async {
       final criticalRisk = testRisk.copyWith(severity: RiskSeverity.critical);
       final aggregatedRisk = AggregatedRisk(risk: criticalRisk, project: testProject);
 
       await pumpTestWidget(tester, aggregatedRisk);
 
-      expect(find.text('Critical'), findsOneWidget);
+      // Verify flag icon is present for severity badge
+      expect(find.byIcon(Icons.flag), findsAtLeastNWidgets(1));
+
+      // Verify critical severity color (red) is applied to the flag icon
+      final flagIcon = tester.widget<Icon>(find.byIcon(Icons.flag).first);
+      expect(flagIcon.color, Colors.red);
     });
 
-    testWidgets('displays severity badge with correct label - High', (tester) async {
+    testWidgets('displays severity badge with correct color - High', (tester) async {
       await pumpTestWidget(tester, testAggregatedRisk);
 
-      expect(find.text('High'), findsOneWidget);
+      // Verify flag icon is present for severity badge
+      expect(find.byIcon(Icons.flag), findsAtLeastNWidgets(1));
+
+      // Verify high severity color (red.shade400) is applied to the flag icon
+      final flagIcon = tester.widget<Icon>(find.byIcon(Icons.flag).first);
+      expect(flagIcon.color, Colors.red.shade400);
     });
 
-    testWidgets('displays severity badge with correct label - Medium', (tester) async {
+    testWidgets('displays severity badge with correct color - Medium', (tester) async {
       final mediumRisk = testRisk.copyWith(severity: RiskSeverity.medium);
       final aggregatedRisk = AggregatedRisk(risk: mediumRisk, project: testProject);
 
       await pumpTestWidget(tester, aggregatedRisk);
 
-      expect(find.text('Medium'), findsOneWidget);
+      // Verify flag icon is present for severity badge
+      expect(find.byIcon(Icons.flag), findsAtLeastNWidgets(1));
+
+      // Verify medium severity color (orange) is applied to the flag icon
+      final flagIcon = tester.widget<Icon>(find.byIcon(Icons.flag).first);
+      expect(flagIcon.color, Colors.orange);
     });
 
-    testWidgets('displays severity badge with correct label - Low', (tester) async {
+    testWidgets('displays severity badge with correct color - Low', (tester) async {
       final lowRisk = testRisk.copyWith(severity: RiskSeverity.low);
       final aggregatedRisk = AggregatedRisk(risk: lowRisk, project: testProject);
 
       await pumpTestWidget(tester, aggregatedRisk);
 
-      expect(find.text('Low'), findsOneWidget);
+      // Verify flag icon is present for severity badge
+      expect(find.byIcon(Icons.flag), findsAtLeastNWidgets(1));
+
+      // Verify low severity color (green) is applied to the flag icon
+      final flagIcon = tester.widget<Icon>(find.byIcon(Icons.flag).first);
+      expect(flagIcon.color, Colors.green);
     });
 
     testWidgets('displays severity badge with flag icon', (tester) async {

@@ -17,6 +17,7 @@ class Conversation(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     project_id = Column(UUID(as_uuid=True), nullable=True)  # Can store project_id, program_id, portfolio_id, or None for org-level. No FK constraint to allow flexibility.
     organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    context_id = Column(String(255), nullable=True)  # Optional context ID for filtering (e.g., 'risk_<uuid>', 'task_<uuid>')
 
     # Conversation metadata
     title = Column(String(255), nullable=False)

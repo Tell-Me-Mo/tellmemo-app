@@ -164,8 +164,11 @@ class ApiClient {
   }
 
   // Conversations
-  Future<List<dynamic>> getConversations(String projectId) async {
-    final response = await _dio.get('/api/v1/projects/$projectId/conversations');
+  Future<List<dynamic>> getConversations(String projectId, {String? contextId}) async {
+    final response = await _dio.get(
+      '/api/v1/projects/$projectId/conversations',
+      queryParameters: contextId != null ? {'context_id': contextId} : null,
+    );
     return response.data;
   }
 
