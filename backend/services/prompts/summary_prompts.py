@@ -64,16 +64,37 @@ Generate a comprehensive meeting summary with the following sections:
 
 3. **Decisions Made**: Important decisions with full context and business rationale
 
-4. **Action Items/Tasks**:
-   - Extract ALL tasks mentioned, implied, or assigned
+4. **Action Items/Tasks** - EXTRACT EVERY SINGLE ACTION ITEM:
+   - Extract ALL tasks mentioned, implied, or assigned - DO NOT FILTER OR LIMIT
+   - Include EVERY commitment, follow-up, to-do, verification, check, update, or coordination mentioned
+   - Look for patterns like:
+     * "will [verb]" - e.g., "will update", "will check", "will send"
+     * "need to [verb]" - e.g., "need to verify", "need to confirm"
+     * "should [verb]" - e.g., "should follow up", "should review"
+     * "[person] to [verb]" - e.g., "John to confirm", "Sarah to send"
+     * Implicit actions - e.g., "let me check with X", "I'll reach out to Y"
    - Be specific and actionable - avoid vague descriptions
-   - For ANY task involving communication with someone, generate a SPECIFIC question to ask
-   - For tasks like "confirm", "verify", "check with", "follow up" - CREATE a specific question even if not explicitly stated
+   - For ANY task involving communication, generate a SPECIFIC question to ask
+   - Extract ALL action items without filtering - err on the side of including too many rather than missing any
 
-5. **Risks and Issues**:
-   - Extract ALL risks mentioned: technical, business, timeline, resource risks
+5. **Risks and Issues** - EXTRACT COMPREHENSIVELY:
+   - Extract ALL risks mentioned: technical, business, timeline, resource, compliance, security risks
+   - Look for patterns like:
+     * "concern about", "risk of", "worried that", "potential issue"
+     * "might fail", "could go wrong", "uncertain about"
+     * "dependency on", "vulnerability in", "exposure to"
+   - Include both explicitly stated risks AND implied concerns
    - Assess severity and propose mitigations where discussed
    - Include both immediate and long-term concerns
+
+5b. **Blockers** - IDENTIFY ALL IMPEDIMENTS:
+   - Extract ALL blockers preventing progress: waiting on approvals, missing resources, technical blockers
+   - Look for patterns like:
+     * "blocked by", "waiting for", "stuck on", "can't proceed until"
+     * "need approval from", "depends on", "gated by"
+     * "missing", "don't have access to", "waiting on response"
+   - Distinguish from risks: blockers are CURRENT impediments, risks are POTENTIAL issues
+   - Include status (active/pending) and potential resolution paths
 
 6. **Lessons Learned**:
    - Extract key learnings, insights, and knowledge gained IF present in the discussion
@@ -114,8 +135,14 @@ CRITICAL REQUIREMENTS:
     rationale: string (REQUIRED - explain why and expected impact),
     confidence: 0.0-1.0
   }})
-- action_items (array of objects: {{
-    title: string (REQUIRED - clear, actionable title with specific deliverable, e.g., "Update Yoda/United Studios self-exclusion project timeline" not just "Update timeline"),
+- action_items (array of objects - EXTRACT ALL WITHOUT FILTERING: {{
+    title: string (REQUIRED - clear, actionable title with specific deliverable and assignee when known
+      EXAMPLES:
+      ✓ "Share updated ticket filters with team to reflect new approval stages logic (Nikolay)"
+      ✓ "Verify both self-exclusion bugs fixed with Tanya by Oct 15"
+      ✓ "Coordinate with OpenAI reps to clarify Sora 2 enterprise timeline"
+      ✗ "Update timeline" (too vague)
+      ✗ "Check on bugs" (missing specifics)),
     description: string (REQUIRED - MUST include ALL of the following:
         1. Context/Background: Why this action exists, what problem it addresses, what discussion led to it
         2. Specific Requirements: Exact deliverables, acceptance criteria, technical specifications mentioned
@@ -214,20 +241,35 @@ TASK CREATION GUIDELINES:
   * "Verify fixes" → "For bugs [list IDs]: 1) Root cause identified? 2) Fix implementation details? 3) Test cases passed? 4) Regression testing completed? 5) Deployment schedule?"
 
 Guidelines:
-- Extract ALL actionable items - don't filter or limit
-- Use confidence scores (1.0 = explicitly stated, 0.5 = implied)
+- **ACTION ITEMS**: Extract EVERY SINGLE action item mentioned - do not filter, consolidate, or skip any
+  * Include explicit tasks ("John will update...")
+  * Include implicit commitments ("let me check with...", "I'll follow up...")
+  * Include verification tasks ("confirm that...", "check if...")
+  * Include coordination tasks ("reach out to...", "sync with...")
+  * Better to extract 15-20 granular items than miss important actions
+- Use confidence scores (1.0 = explicitly stated, 0.7 = strongly implied, 0.5 = inferred)
 - Only include lessons_learned if there are genuine learnings in the discussion
 - ALWAYS provide effectiveness_score values (clarity, engagement, productivity as integers 1-10)
 - Suggest improvement_suggestions only if there are actual areas needing improvement
 
 FINAL VALIDATION:
 Before returning your JSON response, verify:
-1. Every risk object has BOTH 'title' AND 'description' as non-empty strings
-2. Every blocker object has BOTH 'title' AND 'description' as non-empty strings
-3. Every action_item has BOTH 'title' AND 'description' as non-empty strings
-4. Every lesson_learned (if any) has BOTH 'title' AND 'description' as non-empty strings
-5. For communication tasks, 'question_to_ask' field must be filled
-6. effectiveness_score MUST have clarity, engagement, productivity as integers 1-10
+1. **ACTION ITEMS COUNT**: Re-read the transcript and ensure you extracted ALL action items
+   - Have you captured every "will", "should", "need to" statement?
+   - Have you extracted all implicit commitments and follow-ups?
+   - Did you include all verification, coordination, and update tasks?
+2. **RISKS COUNT**: Re-check for all mentioned or implied risks
+   - Have you captured all concerns, worries, potential issues mentioned?
+   - Did you extract both immediate and long-term risks?
+3. **BLOCKERS COUNT**: Re-check for all current impediments
+   - Have you captured all "blocked by", "waiting for", "can't proceed" statements?
+   - Did you distinguish blockers (current) from risks (potential)?
+4. Every risk object has BOTH 'title' AND 'description' as non-empty strings
+5. Every blocker object has BOTH 'title' AND 'description' as non-empty strings
+6. Every action_item has BOTH 'title' AND 'description' as non-empty strings
+7. Every lesson_learned (if any) has BOTH 'title' AND 'description' as non-empty strings
+8. For communication tasks, 'question_to_ask' field must be filled
+9. effectiveness_score MUST have clarity, engagement, productivity as integers 1-10
 Never return partial objects or skip required fields.
 - Focus on actionable insights over general observations
 - Extract assignees only when clearly mentioned by name

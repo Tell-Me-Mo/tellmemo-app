@@ -9,7 +9,14 @@ from services.llm.multi_llm_client import get_multi_llm_client
 from services.prompts.risks_tasks_prompts_complete import get_deduplication_prompt
 from config import get_settings
 from utils.logger import get_logger
-from utils.monitoring import monitor_operation
+
+try:
+    from langfuse.decorators import observe
+except ImportError:
+    def observe(name=None):
+        def decorator(func):
+            return func
+        return decorator
 
 logger = get_logger(__name__)
 
@@ -37,6 +44,7 @@ class RisksTasksAnalyzer:
             logger.warning("Risks/Tasks Analyzer: LLM client not available")
 
 
+    @observe(name="deduplicate_extracted_items")
     async def deduplicate_extracted_items(
         self,
         extracted_risks: List[Dict[str, Any]],

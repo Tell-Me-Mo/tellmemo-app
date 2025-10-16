@@ -16,6 +16,14 @@ from utils.monitoring import monitor_operation, track_background_task
 from utils.rq_utils import CancellationCheckpoint
 from config import get_settings
 
+try:
+    from langfuse.decorators import observe
+except ImportError:
+    def observe(name=None):
+        def decorator(func):
+            return func
+        return decorator
+
 settings = get_settings()
 
 logger = get_logger(__name__)
@@ -210,9 +218,9 @@ class ContentService:
             logger.error(f"File validation failed: {e}")
             raise
     
-    
+
     @staticmethod
-    @monitor_operation("process_content_async", "async_worker", capture_args=True)
+    @observe(name="process_content_async")
     async def process_content_async(
         session: AsyncSession,
         content_id: uuid.UUID,

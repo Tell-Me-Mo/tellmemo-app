@@ -23,7 +23,16 @@ from models.lesson_learned import LessonLearned, LessonCategory, LessonType, Les
 from models.blocker import Blocker, BlockerImpact, BlockerStatus
 from services.intelligence.risks_tasks_analyzer_service import RisksTasksAnalyzer
 from services.intelligence.semantic_deduplicator import semantic_deduplicator
+from services.item_updates_service import ItemUpdatesService
 from config import get_settings
+
+try:
+    from langfuse.decorators import observe
+except ImportError:
+    def observe(name=None):
+        def decorator(func):
+            return func
+        return decorator
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +46,7 @@ class ProjectItemsSyncService:
         self.semantic_deduplicator = semantic_deduplicator
         self.settings = get_settings()
 
+    @observe(name="sync_items_from_summary")
     async def sync_items_from_summary(
         self,
         session: AsyncSession,
@@ -299,197 +309,366 @@ class ProjectItemsSyncService:
 
         for update in status_updates:
             try:
-                # Handle both formats: new expected format and current actual format from AI
-                # Current AI format: {"type": "risk", "extracted_number": 2, "existing_title": "...", "new_status": null}
-                # Expected format: {"item_type": "risk", "existing_item_number": 2, "update_type": "status", "new_info": "..."}
+                # Handle multiple formats:
+                # 1. Semantic dedup format: {"type": "risk", "existing_item_id": UUID, "existing_title": "...", "update_type": "status", "new_info": {...}}
+                # 2. Legacy AI format: {"type": "risk", "extracted_number": 2, "existing_title": "...", "new_status": null}
+                # 3. Expected format: {"item_type": "risk", "existing_item_number": 2, "update_type": "status", "new_info": "..."}
 
                 # Get item type (handle both 'type' and 'item_type' keys)
                 item_type = (update.get('item_type') or update.get('type', '')).lower()
 
-                # Get index (handle both formats)
+                # Get existing item identifier - prefer UUID if available
+                existing_item_id = update.get('existing_item_id')  # UUID from semantic dedup
+                existing_title = update.get('existing_title', '')
+
+                # Get index (handle legacy formats)
+                existing_item_index = -1
                 if 'existing_item_number' in update:
                     existing_item_index = update.get('existing_item_number', -1) - 1  # Expected format
-                else:
-                    # For current format, we need to find by title since no index given
-                    existing_item_index = -1
 
                 # Get update type and info
                 update_type = update.get('update_type', 'status')  # Default to status
                 new_info = update.get('new_info') or update.get('new_status', '')
-                extracted_item_index = update.get('extracted_item_number') or update.get('extracted_number', -1)
-                extracted_item_index = extracted_item_index - 1 if extracted_item_index > 0 else -1
+                new_info_dict = update.get('new_info_dict', {})  # Full dict with all updates
 
-                # If we have a title but no index, try to find the item by title
-                existing_title = update.get('existing_title', '')
-
-                logger.debug(f"Processing status update: type={item_type}, update={update_type}, index={existing_item_index}, title={existing_title}")
+                logger.debug(f"Processing status update: type={item_type}, update={update_type}, id={existing_item_id}, title={existing_title}")
 
                 # Skip if no new information (this is normal for pure duplicates)
-                if not new_info and update.get('new_status') is None:
+                if not new_info and not new_info_dict and update.get('new_status') is None:
                     logger.debug(f"Skipping status update with no actual status change (duplicate item): {update}")
                     continue
 
-                if existing_item_index < 0 and not existing_title:
-                    logger.debug(f"Cannot identify existing item for status update (likely duplicate without status change): {update}")
+                if not existing_item_id and existing_item_index < 0 and not existing_title:
+                    logger.warning(f"Cannot identify existing item for status update (no ID, index, or title): {update}")
                     continue
 
                 # Get the corresponding existing item data and model
-                if item_type == 'risk' and existing_item_index >= 0 and existing_item_index < len(existing_items.get('risks', [])):
-                    existing_item_data = existing_items['risks'][existing_item_index]
+                if item_type == 'risk':
+                    # Try UUID lookup first (from semantic dedup)
+                    if existing_item_id:
+                        existing_obj = await session.get(Risk, existing_item_id)
+                        if not existing_obj:
+                            logger.warning(f"Could not find risk with ID {existing_item_id}")
+                            continue
+                    # Fall back to index-based lookup (legacy)
+                    elif existing_item_index >= 0 and existing_item_index < len(existing_items.get('risks', [])):
+                        existing_item_data = existing_items['risks'][existing_item_index]
 
-                    # Validate that the indexed item matches the expected title
-                    if existing_title and existing_item_data.get('title') != existing_title:
-                        logger.warning(
-                            f"Index mismatch for risk update: index {existing_item_index} points to "
-                            f"'{existing_item_data.get('title')}' but expected '{existing_title}'. "
-                            f"Searching by title instead."
-                        )
-                        # Try to find by title instead
-                        existing_item_data = next(
-                            (item for item in existing_items['risks'] if item.get('title') == existing_title),
-                            None
-                        )
-                        if not existing_item_data:
-                            logger.warning(f"Could not find risk with title '{existing_title}' for update")
+                        # Validate that the indexed item matches the expected title
+                        if existing_title and existing_item_data.get('title') != existing_title:
+                            logger.warning(
+                                f"Index mismatch for risk update: index {existing_item_index} points to "
+                                f"'{existing_item_data.get('title')}' but expected '{existing_title}'. "
+                                f"Searching by title instead."
+                            )
+                            # Try to find by title instead
+                            existing_item_data = next(
+                                (item for item in existing_items['risks'] if item.get('title') == existing_title),
+                                None
+                            )
+                            if not existing_item_data:
+                                logger.warning(f"Could not find risk with title '{existing_title}' for update")
+                                continue
+
+                        item_id = existing_item_data.get('id')
+                        if not item_id:
+                            logger.warning(f"No ID found for risk update: {update}")
                             continue
 
-                    item_id = existing_item_data.get('id')
-                    if not item_id:
-                        logger.warning(f"No ID found for risk update: {update}")
+                        # Fetch the actual database object
+                        existing_obj = await session.get(Risk, item_id)
+                    else:
+                        logger.warning(f"Could not locate risk for update: {update}")
                         continue
-
-                    # Fetch the actual database object
-                    existing_obj = await session.get(Risk, item_id)
                     if existing_obj:
-                        # Apply updates based on type
+                        # Build update_data dict (same pattern as manual updates)
+                        update_data = {}
+                        author_name = "AI Assistant"
+
                         if update_type == 'status' and new_info:
                             # Handle both enum and string values
                             if isinstance(new_info, str):
-                                existing_obj.status = new_info
+                                update_data['status'] = new_info
                             else:
-                                existing_obj.status = new_info.value if hasattr(new_info, 'value') else str(new_info)
+                                update_data['status'] = new_info.value if hasattr(new_info, 'value') else str(new_info)
 
                             # Set resolved_date when risk is resolved (auto-closure)
-                            if existing_obj.status == 'resolved' and not existing_obj.resolved_date:
-                                existing_obj.resolved_date = datetime.utcnow()
+                            if update_data['status'] == 'resolved' and not existing_obj.resolved_date:
+                                update_data['resolved_date'] = datetime.utcnow()
                                 logger.info(f"Risk '{existing_obj.title}' automatically closed - resolved_date set")
                         elif update_type == 'mitigation':
-                            existing_obj.mitigation = new_info or existing_obj.mitigation
+                            if new_info:
+                                update_data['mitigation'] = new_info
                         elif update_type == 'severity' and new_info:
                             # Handle both enum and string values
                             if isinstance(new_info, str):
-                                existing_obj.severity = new_info
+                                update_data['severity'] = new_info
                             else:
-                                existing_obj.severity = new_info.value if hasattr(new_info, 'value') else str(new_info)
+                                update_data['severity'] = new_info.value if hasattr(new_info, 'value') else str(new_info)
                         elif update_type == 'resolution':
-                            existing_obj.mitigation = new_info or existing_obj.mitigation
-                            existing_obj.status = 'resolved'
+                            if new_info:
+                                update_data['mitigation'] = new_info
+                            update_data['status'] = 'resolved'
                             # Set resolved_date when resolution is provided (auto-closure)
                             if not existing_obj.resolved_date:
-                                existing_obj.resolved_date = datetime.utcnow()
+                                update_data['resolved_date'] = datetime.utcnow()
                                 logger.info(f"Risk '{existing_obj.title}' automatically closed - resolved_date set")
 
-                        # Always update metadata
+                        # Skip if no actual changes (e.g. AI detected duplicate with same status)
+                        if not update_data:
+                            logger.debug(f"Skipping risk update - no actual changes detected for '{existing_obj.title}'")
+                            continue
+
+                        # Track changes using ItemUpdatesService (same as manual updates)
+                        if 'status' in update_data and update_data['status'] != existing_obj.status:
+                            await ItemUpdatesService.track_status_change(
+                                db=session,
+                                project_id=project_id,
+                                item_id=existing_obj.id,
+                                item_type='risks',
+                                old_status=existing_obj.status,
+                                new_status=update_data['status'],
+                                author_name=author_name,
+                                author_email=None
+                            )
+
+                        if 'assigned_to' in update_data and update_data['assigned_to'] != existing_obj.assigned_to:
+                            await ItemUpdatesService.track_assignment(
+                                db=session,
+                                project_id=project_id,
+                                item_id=existing_obj.id,
+                                item_type='risks',
+                                old_assignee=existing_obj.assigned_to,
+                                new_assignee=update_data['assigned_to'],
+                                author_name=author_name,
+                                author_email=None
+                            )
+
+                        # Detect and track other field changes
+                        changes = ItemUpdatesService.detect_changes(existing_obj, update_data)
+                        if changes:
+                            await ItemUpdatesService.track_field_changes(
+                                db=session,
+                                project_id=project_id,
+                                item_id=existing_obj.id,
+                                item_type='risks',
+                                changes=changes,
+                                author_name=author_name,
+                                author_email=None
+                            )
+
+                        # Apply updates to object
+                        for key, value in update_data.items():
+                            if hasattr(existing_obj, key):
+                                setattr(existing_obj, key, value)
+
                         if content_id:
                             existing_obj.source_content_id = str(content_id)
                         existing_obj.last_updated = datetime.utcnow()
                         existing_obj.updated_by = "ai"
-                        logger.info(f"Updated risk '{existing_obj.title}' with {update_type}")
+                        logger.info(f"Updated risk '{existing_obj.title}' with {list(update_data.keys())}")
 
-                elif item_type == 'blocker' and existing_item_index >= 0 and existing_item_index < len(existing_items.get('blockers', [])):
-                    existing_item_data = existing_items['blockers'][existing_item_index]
+                elif item_type == 'blocker':
+                    # Try UUID lookup first (from semantic dedup)
+                    if existing_item_id:
+                        existing_obj = await session.get(Blocker, existing_item_id)
+                        if not existing_obj:
+                            logger.warning(f"Could not find blocker with ID {existing_item_id}")
+                            continue
+                    # Fall back to index-based lookup (legacy)
+                    elif existing_item_index >= 0 and existing_item_index < len(existing_items.get('blockers', [])):
+                        existing_item_data = existing_items['blockers'][existing_item_index]
 
-                    # Validate that the indexed item matches the expected title
-                    if existing_title and existing_item_data.get('title') != existing_title:
-                        logger.warning(
-                            f"Index mismatch for blocker update: index {existing_item_index} points to "
-                            f"'{existing_item_data.get('title')}' but expected '{existing_title}'. "
-                            f"Searching by title instead."
-                        )
-                        # Try to find by title instead
-                        existing_item_data = next(
-                            (item for item in existing_items['blockers'] if item.get('title') == existing_title),
-                            None
-                        )
-                        if not existing_item_data:
-                            logger.warning(f"Could not find blocker with title '{existing_title}' for update")
+                        # Validate that the indexed item matches the expected title
+                        if existing_title and existing_item_data.get('title') != existing_title:
+                            logger.warning(
+                                f"Index mismatch for blocker update: index {existing_item_index} points to "
+                                f"'{existing_item_data.get('title')}' but expected '{existing_title}'. "
+                                f"Searching by title instead."
+                            )
+                            # Try to find by title instead
+                            existing_item_data = next(
+                                (item for item in existing_items['blockers'] if item.get('title') == existing_title),
+                                None
+                            )
+                            if not existing_item_data:
+                                logger.warning(f"Could not find blocker with title '{existing_title}' for update")
+                                continue
+
+                        item_id = existing_item_data.get('id')
+                        if not item_id:
+                            logger.warning(f"No ID found for blocker update: {update}")
                             continue
 
-                    item_id = existing_item_data.get('id')
-                    if not item_id:
-                        logger.warning(f"No ID found for blocker update: {update}")
+                        existing_obj = await session.get(Blocker, item_id)
+                    else:
+                        logger.warning(f"Could not locate blocker for update: {update}")
                         continue
-
-                    existing_obj = await session.get(Blocker, item_id)
                     if existing_obj:
+                        # Build update_data dict (same pattern as manual updates)
+                        update_data = {}
+                        author_name = "AI Assistant"
+
                         if update_type == 'status' and new_info:
                             # Handle both enum and string values
                             if isinstance(new_info, str):
-                                existing_obj.status = new_info
+                                update_data['status'] = new_info
                             else:
-                                existing_obj.status = new_info.value if hasattr(new_info, 'value') else str(new_info)
+                                update_data['status'] = new_info.value if hasattr(new_info, 'value') else str(new_info)
 
                             # Set resolved_date when blocker is resolved (auto-closure)
-                            if existing_obj.status == 'resolved' and not existing_obj.resolved_date:
-                                existing_obj.resolved_date = datetime.utcnow()
+                            if update_data['status'] == 'resolved' and not existing_obj.resolved_date:
+                                update_data['resolved_date'] = datetime.utcnow()
                                 logger.info(f"Blocker '{existing_obj.title}' automatically closed - resolved_date set")
                         elif update_type == 'resolution':
-                            existing_obj.resolution = new_info or existing_obj.resolution
-                            if new_info:  # If resolution provided, mark as resolved
-                                existing_obj.status = 'resolved'
+                            if new_info:
+                                update_data['resolution'] = new_info
+                                # If resolution provided, mark as resolved
+                                update_data['status'] = 'resolved'
                                 # Set resolved_date when resolution is provided (auto-closure)
                                 if not existing_obj.resolved_date:
-                                    existing_obj.resolved_date = datetime.utcnow()
+                                    update_data['resolved_date'] = datetime.utcnow()
                                     logger.info(f"Blocker '{existing_obj.title}' automatically closed - resolved_date set")
                         elif update_type == 'impact' and new_info:
                             # Handle both enum and string values
                             if isinstance(new_info, str):
-                                existing_obj.impact = new_info
+                                update_data['impact'] = new_info
                             else:
-                                existing_obj.impact = new_info.value if hasattr(new_info, 'value') else str(new_info)
+                                update_data['impact'] = new_info.value if hasattr(new_info, 'value') else str(new_info)
+
+                        # Skip if no actual changes (e.g. AI detected duplicate with same status)
+                        if not update_data:
+                            logger.debug(f"Skipping blocker update - no actual changes detected for '{existing_obj.title}'")
+                            continue
+
+                        # Track changes using ItemUpdatesService (same as manual updates)
+                        if 'status' in update_data and update_data['status'] != existing_obj.status:
+                            await ItemUpdatesService.track_status_change(
+                                db=session,
+                                project_id=project_id,
+                                item_id=existing_obj.id,
+                                item_type='blockers',
+                                old_status=existing_obj.status,
+                                new_status=update_data['status'],
+                                author_name=author_name,
+                                author_email=None
+                            )
+
+                        # Track assignment changes (blockers can have assigned_to or owner)
+                        if 'assigned_to' in update_data and update_data['assigned_to'] != existing_obj.assigned_to:
+                            await ItemUpdatesService.track_assignment(
+                                db=session,
+                                project_id=project_id,
+                                item_id=existing_obj.id,
+                                item_type='blockers',
+                                old_assignee=existing_obj.assigned_to,
+                                new_assignee=update_data['assigned_to'],
+                                author_name=author_name,
+                                author_email=None
+                            )
+                        elif 'owner' in update_data and update_data['owner'] != existing_obj.owner:
+                            await ItemUpdatesService.track_assignment(
+                                db=session,
+                                project_id=project_id,
+                                item_id=existing_obj.id,
+                                item_type='blockers',
+                                old_assignee=existing_obj.owner,
+                                new_assignee=update_data['owner'],
+                                author_name=author_name,
+                                author_email=None
+                            )
+
+                        # Detect and track other field changes
+                        changes = ItemUpdatesService.detect_changes(existing_obj, update_data)
+                        if changes:
+                            await ItemUpdatesService.track_field_changes(
+                                db=session,
+                                project_id=project_id,
+                                item_id=existing_obj.id,
+                                item_type='blockers',
+                                changes=changes,
+                                author_name=author_name,
+                                author_email=None
+                            )
+
+                        # Apply updates to object
+                        for key, value in update_data.items():
+                            if hasattr(existing_obj, key):
+                                setattr(existing_obj, key, value)
 
                         if content_id:
                             existing_obj.source_content_id = str(content_id)
                         existing_obj.last_updated = datetime.utcnow()
                         existing_obj.updated_by = "ai"
-                        logger.info(f"Updated blocker '{existing_obj.title}' with {update_type}")
+                        logger.info(f"Updated blocker '{existing_obj.title}' with {list(update_data.keys())}")
 
-                elif item_type == 'task' and existing_item_index >= 0 and existing_item_index < len(existing_items.get('tasks', [])):
-                    existing_item_data = existing_items['tasks'][existing_item_index]
+                elif item_type == 'task':
+                    # Try UUID lookup first (from semantic dedup)
+                    if existing_item_id:
+                        existing_obj = await session.get(Task, existing_item_id)
+                        if not existing_obj:
+                            logger.warning(f"Could not find task with ID {existing_item_id}")
+                            continue
+                    # Fall back to index-based lookup (legacy)
+                    elif existing_item_index >= 0 and existing_item_index < len(existing_items.get('tasks', [])):
+                        existing_item_data = existing_items['tasks'][existing_item_index]
 
-                    # Validate that the indexed item matches the expected title
-                    if existing_title and existing_item_data.get('title') != existing_title:
-                        logger.warning(
-                            f"Index mismatch for task update: index {existing_item_index} points to "
-                            f"'{existing_item_data.get('title')}' but expected '{existing_title}'. "
-                            f"Searching by title instead."
-                        )
-                        # Try to find by title instead
-                        existing_item_data = next(
-                            (item for item in existing_items['tasks'] if item.get('title') == existing_title),
-                            None
-                        )
-                        if not existing_item_data:
-                            logger.warning(f"Could not find task with title '{existing_title}' for update")
+                        # Validate that the indexed item matches the expected title
+                        if existing_title and existing_item_data.get('title') != existing_title:
+                            logger.warning(
+                                f"Index mismatch for task update: index {existing_item_index} points to "
+                                f"'{existing_item_data.get('title')}' but expected '{existing_title}'. "
+                                f"Searching by title instead."
+                            )
+                            # Try to find by title instead
+                            existing_item_data = next(
+                                (item for item in existing_items['tasks'] if item.get('title') == existing_title),
+                                None
+                            )
+                            if not existing_item_data:
+                                logger.warning(f"Could not find task with title '{existing_title}' for update")
+                                continue
+
+                        item_id = existing_item_data.get('id')
+                        if not item_id:
+                            logger.warning(f"No ID found for task update: {update}")
                             continue
 
-                    item_id = existing_item_data.get('id')
-                    if not item_id:
-                        logger.warning(f"No ID found for task update: {update}")
+                        existing_obj = await session.get(Task, item_id)
+                    else:
+                        logger.warning(f"Could not locate task for update: {update}")
                         continue
-
-                    existing_obj = await session.get(Task, item_id)
                     if existing_obj:
+                        # Build update_data dict (same pattern as manual updates)
+                        update_data = {}
+                        author_name = "AI Assistant"
+
                         if update_type == 'status' and new_info:
-                            # Handle both enum and string values
-                            if isinstance(new_info, str):
-                                existing_obj.status = new_info
-                            else:
-                                existing_obj.status = new_info.value if hasattr(new_info, 'value') else str(new_info)
+                            # Map invalid task statuses to valid ones
+                            task_status_mapping = {
+                                'not_started': 'todo',
+                                'pending': 'todo',
+                                'done': 'completed',
+                                'finished': 'completed',
+                                'in progress': 'in_progress',
+                                'working': 'in_progress'
+                            }
+
+                            # Normalize and validate status
+                            status_value = new_info.lower() if isinstance(new_info, str) else str(new_info).lower()
+                            status_value = task_status_mapping.get(status_value, status_value)
+
+                            # Validate against allowed values
+                            valid_task_statuses = ['todo', 'in_progress', 'blocked', 'completed', 'cancelled']
+                            if status_value not in valid_task_statuses:
+                                logger.warning(f"Invalid task status '{status_value}' (original: '{new_info}'), defaulting to 'todo'")
+                                status_value = 'todo'
+
+                            update_data['status'] = status_value
 
                             # Set completed_date when task is completed (auto-closure)
-                            if existing_obj.status == 'completed' and not existing_obj.completed_date:
-                                existing_obj.completed_date = datetime.utcnow()
+                            if status_value == 'completed' and not existing_obj.completed_date:
+                                update_data['completed_date'] = datetime.utcnow()
                                 logger.info(f"Task '{existing_obj.title}' automatically closed - completed_date set")
                         elif update_type == 'progress':
                             # Extract progress percentage if mentioned
@@ -497,74 +676,180 @@ class ProjectItemsSyncService:
                                 import re
                                 progress_match = re.search(r'(\d+)%', new_info)
                                 if progress_match:
-                                    existing_obj.progress_percentage = int(progress_match.group(1))
+                                    update_data['progress_percentage'] = int(progress_match.group(1))
                             except:
                                 pass
                             # Also update status based on progress description
                             if 'complete' in new_info.lower():
-                                existing_obj.status = 'completed'
-                                existing_obj.completed_date = datetime.utcnow()
+                                update_data['status'] = 'completed'
+                                update_data['completed_date'] = datetime.utcnow()
                             elif 'in progress' in new_info.lower() or 'started' in new_info.lower():
-                                existing_obj.status = 'in_progress'
+                                update_data['status'] = 'in_progress'
                         elif update_type == 'assignee':
-                            existing_obj.assignee = new_info or existing_obj.assignee
+                            if new_info:
+                                update_data['assignee'] = new_info
                         elif update_type == 'blocker':
-                            existing_obj.blocker_description = new_info
-                            existing_obj.status = 'blocked'
+                            update_data['blocker_description'] = new_info
+                            update_data['status'] = 'blocked'
+
+                        # Handle multi-field updates from new_info_dict
+                        if new_info_dict and isinstance(new_info_dict, dict):
+                            if 'due_date' in new_info_dict and new_info_dict['due_date']:
+                                try:
+                                    due_date_val = new_info_dict['due_date']
+                                    if isinstance(due_date_val, str):
+                                        due_date_val = datetime.fromisoformat(due_date_val.replace('Z', '+00:00')).replace(tzinfo=None)
+                                    update_data['due_date'] = due_date_val
+                                except Exception as e:
+                                    logger.warning(f"Could not parse due_date '{new_info_dict['due_date']}': {e}")
+
+                        # Skip if no actual changes (e.g. AI detected duplicate with same status)
+                        if not update_data:
+                            logger.debug(f"Skipping task update - no actual changes detected for '{existing_obj.title}'")
+                            continue
+
+                        # Track changes using ItemUpdatesService (same as manual updates)
+                        if 'status' in update_data and update_data['status'] != existing_obj.status:
+                            await ItemUpdatesService.track_status_change(
+                                db=session,
+                                project_id=project_id,
+                                item_id=existing_obj.id,
+                                item_type='tasks',
+                                old_status=existing_obj.status,
+                                new_status=update_data['status'],
+                                author_name=author_name,
+                                author_email=None
+                            )
+
+                        if 'assignee' in update_data and update_data['assignee'] != existing_obj.assignee:
+                            await ItemUpdatesService.track_assignment(
+                                db=session,
+                                project_id=project_id,
+                                item_id=existing_obj.id,
+                                item_type='tasks',
+                                old_assignee=existing_obj.assignee,
+                                new_assignee=update_data['assignee'],
+                                author_name=author_name,
+                                author_email=None
+                            )
+
+                        # Detect and track other field changes
+                        changes = ItemUpdatesService.detect_changes(existing_obj, update_data)
+                        if changes:
+                            await ItemUpdatesService.track_field_changes(
+                                db=session,
+                                project_id=project_id,
+                                item_id=existing_obj.id,
+                                item_type='tasks',
+                                changes=changes,
+                                author_name=author_name,
+                                author_email=None
+                            )
+
+                        # Apply updates to object
+                        for key, value in update_data.items():
+                            if hasattr(existing_obj, key):
+                                setattr(existing_obj, key, value)
 
                         if content_id:
                             existing_obj.source_content_id = str(content_id)
                         existing_obj.last_updated = datetime.utcnow()
                         existing_obj.updated_by = "ai"
-                        logger.info(f"Updated task '{existing_obj.title}' with {update_type}")
+                        logger.info(f"Updated task '{existing_obj.title}' with {list(update_data.keys())}")
 
-                elif item_type == 'lesson' and existing_item_index >= 0 and existing_item_index < len(existing_items.get('lessons', [])):
-                    existing_item_data = existing_items['lessons'][existing_item_index]
+                elif item_type == 'lesson':
+                    # Try UUID lookup first (from semantic dedup)
+                    if existing_item_id:
+                        existing_obj = await session.get(LessonLearned, existing_item_id)
+                        if not existing_obj:
+                            logger.warning(f"Could not find lesson with ID {existing_item_id}")
+                            continue
+                    # Fall back to index-based lookup (legacy)
+                    elif existing_item_index >= 0 and existing_item_index < len(existing_items.get('lessons', [])):
+                        existing_item_data = existing_items['lessons'][existing_item_index]
 
-                    # Validate that the indexed item matches the expected title
-                    if existing_title and existing_item_data.get('title') != existing_title:
-                        logger.warning(
-                            f"Index mismatch for lesson update: index {existing_item_index} points to "
-                            f"'{existing_item_data.get('title')}' but expected '{existing_title}'. "
-                            f"Searching by title instead."
-                        )
-                        # Try to find by title instead
-                        existing_item_data = next(
-                            (item for item in existing_items['lessons'] if item.get('title') == existing_title),
-                            None
-                        )
-                        if not existing_item_data:
-                            logger.warning(f"Could not find lesson with title '{existing_title}' for update")
+                        # Validate that the indexed item matches the expected title
+                        if existing_title and existing_item_data.get('title') != existing_title:
+                            logger.warning(
+                                f"Index mismatch for lesson update: index {existing_item_index} points to "
+                                f"'{existing_item_data.get('title')}' but expected '{existing_title}'. "
+                                f"Searching by title instead."
+                            )
+                            # Try to find by title instead
+                            existing_item_data = next(
+                                (item for item in existing_items['lessons'] if item.get('title') == existing_title),
+                                None
+                            )
+                            if not existing_item_data:
+                                logger.warning(f"Could not find lesson with title '{existing_title}' for update")
+                                continue
+
+                        item_id = existing_item_data.get('id')
+                        if not item_id:
+                            logger.warning(f"No ID found for lesson update: {update}")
                             continue
 
-                    item_id = existing_item_data.get('id')
-                    if not item_id:
-                        logger.warning(f"No ID found for lesson update: {update}")
+                        existing_obj = await session.get(LessonLearned, item_id)
+                    else:
+                        logger.warning(f"Could not locate lesson for update: {update}")
                         continue
-
-                    existing_obj = await session.get(LessonLearned, item_id)
                     if existing_obj:
+                        # Build update_data dict (same pattern as manual updates)
+                        update_data = {}
+                        author_name = "AI Assistant"
+
                         if update_type == 'recommendation':
-                            existing_obj.recommendation = new_info or existing_obj.recommendation
+                            if new_info:
+                                update_data['recommendation'] = new_info
                         elif update_type == 'impact':
-                            existing_obj.impact = new_info or existing_obj.impact
+                            if new_info:
+                                update_data['impact'] = new_info
                         elif update_type == 'context':
                             # Append new context to existing
-                            existing_obj.context = f"{existing_obj.context}\n\nUpdate: {new_info}" if existing_obj.context else new_info
+                            if new_info:
+                                update_data['context'] = f"{existing_obj.context}\n\nUpdate: {new_info}" if existing_obj.context else new_info
+
+                        # Skip if no actual changes (e.g. AI detected duplicate with no new info)
+                        if not update_data:
+                            logger.debug(f"Skipping lesson update - no actual changes detected for '{existing_obj.title}'")
+                            continue
+
+                        # Track changes using ItemUpdatesService (same as manual updates)
+                        # Note: Lessons don't have status or assignment, just field changes
+                        changes = ItemUpdatesService.detect_changes(existing_obj, update_data)
+                        if changes:
+                            await ItemUpdatesService.track_field_changes(
+                                db=session,
+                                project_id=project_id,
+                                item_id=existing_obj.id,
+                                item_type='lessons',
+                                changes=changes,
+                                author_name=author_name,
+                                author_email=None
+                            )
+
+                        # Apply updates to object
+                        for key, value in update_data.items():
+                            if hasattr(existing_obj, key):
+                                setattr(existing_obj, key, value)
 
                         existing_obj.source_content_id = str(content_id)
                         existing_obj.last_updated = datetime.utcnow()
                         existing_obj.updated_by = "ai"
-                        logger.info(f"Updated lesson '{existing_obj.title}' with {update_type}")
+                        logger.info(f"Updated lesson '{existing_obj.title}' with {list(update_data.keys())}")
 
                 else:
-                    logger.warning(f"Could not find existing item for update: type={item_type}, index={existing_item_index}")
+                    logger.warning(
+                        f"Could not find existing item for update: "
+                        f"type={item_type}, id={existing_item_id}, index={existing_item_index}, title={existing_title}"
+                    )
 
             except Exception as e:
                 logger.error(f"Error processing status update {update}: {e}")
                 # Continue processing other updates even if one fails
                 continue
 
+    @observe(name="update_project_risks")
     async def _update_project_risks(
         self,
         session: AsyncSession,
@@ -638,6 +923,7 @@ class ProjectItemsSyncService:
             except Exception as e:
                 logger.error(f"Error updating risk '{risk_data.get('title')}': {e}")
 
+    @observe(name="update_project_blockers")
     async def _update_project_blockers(
         self,
         session: AsyncSession,
@@ -721,6 +1007,7 @@ class ProjectItemsSyncService:
                 logger.error(f"[BLOCKER_DEBUG] Error updating blocker '{blocker_data.get('title')}': {e}")
                 logger.exception(f"[BLOCKER_DEBUG] Full exception details:")
 
+    @observe(name="update_project_tasks")
     async def _update_project_tasks(
         self,
         session: AsyncSession,
@@ -769,6 +1056,28 @@ class ProjectItemsSyncService:
                             logger.info(f"Found similar task via fuzzy matching: '{task_title}' matches '{task.title}'")
                             break
 
+                # Normalize task status (for both update and creation)
+                task_status_mapping = {
+                    'not_started': 'todo',
+                    'pending': 'todo',
+                    'done': 'completed',
+                    'finished': 'completed',
+                    'in progress': 'in_progress',
+                    'working': 'in_progress'
+                }
+
+                # Get and validate status
+                raw_status = task_data.get('status', 'todo')
+                if isinstance(raw_status, str):
+                    raw_status = raw_status.lower()
+                    raw_status = task_status_mapping.get(raw_status, raw_status)
+
+                # Validate against allowed values
+                valid_task_statuses = ['todo', 'in_progress', 'blocked', 'completed', 'cancelled']
+                if raw_status not in valid_task_statuses:
+                    logger.warning(f"Invalid task status '{raw_status}' from AI, defaulting to 'todo'")
+                    raw_status = 'todo'
+
                 if existing_task:
                     # Update existing task
                     existing_task.description = task_data.get('description', existing_task.description)
@@ -786,7 +1095,7 @@ class ProjectItemsSyncService:
                         project_id=project_id,
                         title=task_title,
                         description=task_data.get('description'),
-                        status='todo',  # Using TaskStatus.TODO value
+                        status=raw_status,  # Use validated status
                         priority=task_data.get('priority', task_data.get('urgency', 'medium')),
                         assignee=task_data.get('assignee'),
                         due_date=due_date,
@@ -802,6 +1111,7 @@ class ProjectItemsSyncService:
             except Exception as e:
                 logger.error(f"Error updating task '{task_title}': {e}")
 
+    @observe(name="update_project_lessons")
     async def _update_project_lessons(
         self,
         session: AsyncSession,
@@ -938,12 +1248,27 @@ class ProjectItemsSyncService:
             # Process updates as status_updates for compatibility with existing code
             if self.settings.enable_intelligent_updates:
                 for update_info in dedup_result['updates']:
+                    # Extract new_info dict - it contains the actual field updates
+                    new_info_dict = update_info.get('new_info', {})
+
+                    # Convert new_info dict to a simple value for the status update
+                    # Priority: look for common update fields
+                    new_info_value = None
+                    if update_info.get('update_type') == 'status' and 'status' in new_info_dict:
+                        new_info_value = new_info_dict['status']
+                    elif 'description' in new_info_dict:
+                        new_info_value = new_info_dict['description']
+                    elif new_info_dict:
+                        # Take the first value from the dict
+                        new_info_value = next(iter(new_info_dict.values()))
+
                     status_update = {
                         'type': item_type,
-                        'existing_item_id': update_info['existing_item_id'],
+                        'existing_item_id': update_info['existing_item_id'],  # UUID for direct lookup
                         'existing_title': update_info['existing_item_title'],
                         'update_type': update_info.get('update_type', 'content'),
-                        'new_info': update_info.get('new_info', {}),
+                        'new_info': new_info_value or new_info_dict,  # Use simple value or full dict
+                        'new_info_dict': new_info_dict,  # Preserve full dict
                         'confidence': update_info.get('confidence', 0.8)
                     }
                     result['status_updates'].append(status_update)
