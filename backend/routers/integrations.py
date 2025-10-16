@@ -313,7 +313,7 @@ async def test_integration_connection(
 
             custom_settings = config.custom_settings or {}
             provider = custom_settings.get("provider", "claude")
-            model = custom_settings.get("model", "claude-3-5-haiku-latest")
+            model = custom_settings.get("model", "claude-haiku-4-5-20251001")
 
             # Validate provider and model
             try:

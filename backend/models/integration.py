@@ -39,6 +39,8 @@ class AIProvider(str, enum.Enum):
 
 class AIModel(str, enum.Enum):
     """AI models for different providers."""
+    # Claude 4.5 models
+    CLAUDE_HAIKU_4_5 = "claude-haiku-4-5-20251001"
     # Claude 4 models
     CLAUDE_OPUS_4_1 = "claude-opus-4-1-20250514"
     CLAUDE_OPUS_4 = "claude-opus-4-20250514"
@@ -56,6 +58,7 @@ class AIModel(str, enum.Enum):
 # Mapping of models to their providers
 MODEL_PROVIDER_MAP = {
     # Claude models
+    AIModel.CLAUDE_HAIKU_4_5: AIProvider.CLAUDE,
     AIModel.CLAUDE_OPUS_4_1: AIProvider.CLAUDE,
     AIModel.CLAUDE_OPUS_4: AIProvider.CLAUDE,
     AIModel.CLAUDE_SONNET_4: AIProvider.CLAUDE,
@@ -73,6 +76,7 @@ MODEL_PROVIDER_MAP = {
 # Maps each model to its closest equivalent in the other provider
 MODEL_EQUIVALENCE_MAP = {
     # Claude → OpenAI equivalents (based on capability & cost)
+    AIModel.CLAUDE_HAIKU_4_5: AIModel.GPT_4O_MINI,      # Latest Haiku → Cost/speed optimized, similar pricing
     AIModel.CLAUDE_3_5_HAIKU: AIModel.GPT_4O_MINI,      # Cost/speed optimized, similar pricing
     AIModel.CLAUDE_3_5_SONNET: AIModel.GPT_4O,          # Balanced performance, high capability
     AIModel.CLAUDE_SONNET_4: AIModel.GPT_4O,            # Latest Sonnet → GPT-4o
@@ -80,10 +84,10 @@ MODEL_EQUIVALENCE_MAP = {
     AIModel.CLAUDE_OPUS_4_1: AIModel.GPT_4_TURBO,       # Extended context, advanced reasoning
 
     # OpenAI → Claude equivalents (reverse mapping)
-    AIModel.GPT_4O_MINI: AIModel.CLAUDE_3_5_HAIKU,      # Cost optimized
+    AIModel.GPT_4O_MINI: AIModel.CLAUDE_HAIKU_4_5,      # Cost optimized → Latest Haiku
     AIModel.GPT_4O: AIModel.CLAUDE_3_5_SONNET,          # Balanced capability
     AIModel.GPT_4_TURBO: AIModel.CLAUDE_OPUS_4,         # High capability
-    AIModel.GPT_35_TURBO: AIModel.CLAUDE_3_5_HAIKU,     # Legacy model → Haiku
+    AIModel.GPT_35_TURBO: AIModel.CLAUDE_HAIKU_4_5,     # Legacy model → Latest Haiku
 }
 
 
