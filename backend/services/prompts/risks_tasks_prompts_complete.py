@@ -65,11 +65,47 @@ SPECIFIC DUPLICATE PATTERNS TO CATCH:
 - Implementation tasks about same system: "Investigate CleanSpeak Implementation" = "Resolve CleanSpeak Implementation" = "CleanSpeak Implementation Across Studios"
 - Cross-studio/cross-team tasks: "X Across Studios" = "X Implementation Inconsistencies" = "X for Different Studios"
 
-IMPORTANT:
+COMPLETION/RESOLUTION DETECTION (Critical - applies to ALL item types):
+When analyzing duplicates, you MUST detect if the meeting content mentions completion/resolution of existing items.
+This is a PRIMARY function - detecting status changes is as important as detecting duplicates.
+
+TASKS - Automatically mark as "completed" when meeting mentions:
+- Completion keywords: "completed", "done", "finished", "delivered", "shipped", "deployed", "launched"
+- Implementation keywords: "implemented", "fixed", "built", "created", "accomplished"
+- Past tense verbs: "completed X", "finished Y", "delivered Z", "shipped the feature"
+- Confirmation phrases: "confirmed it's done", "verified completion", "deployment successful"
+- Examples:
+  • "We finished implementing the payment gateway" → Mark task as completed
+  • "Elena confirmed the transaction mapping is deployed" → Mark task as completed
+  • "The API integration is now live in production" → Mark task as completed
+
+RISKS - Automatically mark as "resolved" when meeting mentions:
+- Resolution keywords: "resolved", "mitigated", "closed", "addressed", "handled", "fixed"
+- Status phrases: "no longer a concern", "risk has passed", "issue is resolved"
+- Mitigation complete: "mitigation complete", "successfully addressed", "risk eliminated"
+- Past tense: "resolved the risk", "mitigated successfully", "addressed the concern"
+- Examples:
+  • "We resolved the API rate limiting issue" → Mark risk as resolved
+  • "The security vulnerability has been fixed" → Mark risk as resolved
+  • "Data consistency risk no longer applies" → Mark risk as resolved
+
+BLOCKERS - Automatically mark as "resolved" when meeting mentions:
+- Unblocking keywords: "unblocked", "resolved", "cleared", "removed", "fixed", "delivered"
+- Status phrases: "no longer blocking", "blocker cleared", "dependency delivered", "issue resolved"
+- Team unblocked: "team is unblocked", "can now proceed", "blocker removed"
+- Past tense: "blocker was removed", "unblocked the team", "dependency delivered"
+- Examples:
+  • "The deployment pipeline blocker is now resolved" → Mark blocker as resolved
+  • "DevOps delivered the infrastructure we needed" → Mark blocker as resolved
+  • "Database access has been granted, team is unblocked" → Mark blocker as resolved
+
+IMPORTANT RULES:
 - Blockers and risks are separate entities. A blocker should NOT be considered a duplicate of a risk even if they describe similar issues.
-- Only include items in "status_updates" if there's a clear status change mentioned in the new content (e.g., "risk X was resolved", "task Y is now in progress")
-- Do NOT include pure duplicates in status_updates - just mark them as duplicates by excluding their numbers from the unique lists
-- BE AGGRESSIVE about catching duplicates - better to merge similar items than have redundant entries
+- ALWAYS include status updates when completion/resolution is mentioned, even for pure duplicates
+- Include items in "status_updates" if there's a clear status change mentioned in the new content
+- For duplicates WITH status changes: Mark as duplicate AND add to status_updates with new_status
+- For duplicates WITHOUT status changes: Just mark as duplicate (exclude from unique lists)
+- BE AGGRESSIVE about catching both duplicates AND status changes - both are critical
 
 Return a JSON with arrays of item numbers to KEEP (not duplicates) and confidence scores for each decision:
 {{
@@ -96,9 +132,15 @@ Return a JSON with arrays of item numbers to KEEP (not duplicates) and confidenc
             "type": "risk" or "blocker" or "task" or "lesson",
             "extracted_number": number,
             "existing_title": "title of existing item being updated",
-            "new_status": "new status if mentioned (ONLY include this entry if there's an actual status change - do not include duplicates with null status)"
+            "new_status": "completed" (for tasks) or "resolved" (for risks/blockers) or "in_progress" or other valid status
         }}
     ]
+
+CRITICAL: For status_updates array:
+- ALWAYS include when completion/resolution is mentioned in the meeting
+- "new_status" must be: "completed" for tasks, "resolved" for risks/blockers
+- Include even if the extracted item is a duplicate (this triggers auto-closure)
+- Example: Meeting says "Task X is done" → Add to status_updates with "new_status": "completed"
 }}
 
 Be STRICT about duplicates - if two items address the same fundamental issue or action, mark as duplicate. Only keep truly unique items that add new value or address different concerns."""

@@ -348,6 +348,11 @@ class ProjectItemsSyncService:
                                 existing_obj.status = new_info
                             else:
                                 existing_obj.status = new_info.value if hasattr(new_info, 'value') else str(new_info)
+
+                            # Set resolved_date when risk is resolved (auto-closure)
+                            if existing_obj.status == 'resolved' and not existing_obj.resolved_date:
+                                existing_obj.resolved_date = datetime.utcnow()
+                                logger.info(f"Risk '{existing_obj.title}' automatically closed - resolved_date set")
                         elif update_type == 'mitigation':
                             existing_obj.mitigation = new_info or existing_obj.mitigation
                         elif update_type == 'severity' and new_info:
@@ -359,9 +364,14 @@ class ProjectItemsSyncService:
                         elif update_type == 'resolution':
                             existing_obj.mitigation = new_info or existing_obj.mitigation
                             existing_obj.status = 'resolved'
+                            # Set resolved_date when resolution is provided (auto-closure)
+                            if not existing_obj.resolved_date:
+                                existing_obj.resolved_date = datetime.utcnow()
+                                logger.info(f"Risk '{existing_obj.title}' automatically closed - resolved_date set")
 
                         # Always update metadata
-                        existing_obj.source_content_id = str(content_id)
+                        if content_id:
+                            existing_obj.source_content_id = str(content_id)
                         existing_obj.last_updated = datetime.utcnow()
                         existing_obj.updated_by = "ai"
                         logger.info(f"Updated risk '{existing_obj.title}' with {update_type}")
@@ -378,10 +388,19 @@ class ProjectItemsSyncService:
                                 existing_obj.status = new_info
                             else:
                                 existing_obj.status = new_info.value if hasattr(new_info, 'value') else str(new_info)
+
+                            # Set resolved_date when blocker is resolved (auto-closure)
+                            if existing_obj.status == 'resolved' and not existing_obj.resolved_date:
+                                existing_obj.resolved_date = datetime.utcnow()
+                                logger.info(f"Blocker '{existing_obj.title}' automatically closed - resolved_date set")
                         elif update_type == 'resolution':
                             existing_obj.resolution = new_info or existing_obj.resolution
                             if new_info:  # If resolution provided, mark as resolved
                                 existing_obj.status = 'resolved'
+                                # Set resolved_date when resolution is provided (auto-closure)
+                                if not existing_obj.resolved_date:
+                                    existing_obj.resolved_date = datetime.utcnow()
+                                    logger.info(f"Blocker '{existing_obj.title}' automatically closed - resolved_date set")
                         elif update_type == 'impact' and new_info:
                             # Handle both enum and string values
                             if isinstance(new_info, str):
@@ -389,7 +408,8 @@ class ProjectItemsSyncService:
                             else:
                                 existing_obj.impact = new_info.value if hasattr(new_info, 'value') else str(new_info)
 
-                        existing_obj.source_content_id = str(content_id)
+                        if content_id:
+                            existing_obj.source_content_id = str(content_id)
                         existing_obj.last_updated = datetime.utcnow()
                         existing_obj.updated_by = "ai"
                         logger.info(f"Updated blocker '{existing_obj.title}' with {update_type}")
@@ -406,6 +426,11 @@ class ProjectItemsSyncService:
                                 existing_obj.status = new_info
                             else:
                                 existing_obj.status = new_info.value if hasattr(new_info, 'value') else str(new_info)
+
+                            # Set completed_date when task is completed (auto-closure)
+                            if existing_obj.status == 'completed' and not existing_obj.completed_date:
+                                existing_obj.completed_date = datetime.utcnow()
+                                logger.info(f"Task '{existing_obj.title}' automatically closed - completed_date set")
                         elif update_type == 'progress':
                             # Extract progress percentage if mentioned
                             try:
@@ -427,7 +452,8 @@ class ProjectItemsSyncService:
                             existing_obj.blocker_description = new_info
                             existing_obj.status = 'blocked'
 
-                        existing_obj.source_content_id = str(content_id)
+                        if content_id:
+                            existing_obj.source_content_id = str(content_id)
                         existing_obj.last_updated = datetime.utcnow()
                         existing_obj.updated_by = "ai"
                         logger.info(f"Updated task '{existing_obj.title}' with {update_type}")
