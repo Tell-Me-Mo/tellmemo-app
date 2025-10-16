@@ -9,6 +9,8 @@ import '../providers/aggregated_lessons_learned_provider.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../shared/widgets/item_detail_panel.dart';
 import '../../../../shared/widgets/item_updates_tab.dart';
+import '../../../../shared/widgets/expandable_text_container.dart';
+import '../../../../shared/widgets/ai_assist_button.dart';
 import '../../../queries/presentation/widgets/ask_ai_panel.dart';
 import '../../../queries/presentation/providers/query_provider.dart';
 import '../../../projects/domain/entities/item_update.dart' as domain;
@@ -344,11 +346,73 @@ ${_buildLessonContext(lesson)}''';
     );
   }
 
+  void _openAIDialogWithFieldAssist(String fieldName, String fieldContent) {
+    if (_lesson == null) return;
+
+    final lesson = _lesson!;
+    final lessonContext = '''Context: Analyzing a lesson learned in the project.
+Lesson Title: ${lesson.title}
+${_buildLessonContext(lesson)}''';
+
+    final projectId = _selectedProjectId ?? widget.projectId!;
+    final projectName = widget.projectName ?? 'Project';
+
+    // Build the auto-submit question with the field content
+    final autoQuestion = 'Provide more detailed information and insights about the following $fieldName:\n\n$fieldContent';
+
+    try {
+      showGeneralDialog(
+        context: context,
+        barrierDismissible: false,
+        barrierColor: Colors.transparent,
+        transitionDuration: Duration.zero,
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return AskAIPanel(
+            projectId: projectId,
+            projectName: projectName,
+            contextInfo: lessonContext,
+            conversationId: 'lesson_${lesson.id}',
+            rightOffset: 0.0,
+            autoSubmitQuestion: autoQuestion,
+            onClose: () {
+              Navigator.of(context).pop();
+              ref.read(queryProvider.notifier).clearConversation();
+            },
+          );
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ref.read(notificationServiceProvider.notifier).showError(
+          'Failed to open AI assist dialog. Please try again.',
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isCreating = _lesson == null;
+
+    // Get comment count for the badge (optimized with select to only rebuild when count changes)
+    int? commentCount;
+    if (_lesson != null && _selectedProjectId != null) {
+      final params = ItemUpdatesParams(
+        projectId: _selectedProjectId!,
+        itemId: _lesson!.id,
+        itemType: 'lessons',
+      );
+      commentCount = ref.watch(
+        itemUpdatesNotifierProvider(params).select((asyncValue) =>
+          asyncValue.maybeWhen(
+            data: (updates) => updates.where((u) => u.type == domain.ItemUpdateType.comment).length,
+            orElse: () => null,
+          ),
+        ),
+      );
+    }
 
     return ItemDetailPanel(
       title: isCreating ? 'Create New Lesson' : (_lesson?.title ?? 'Lesson'),
@@ -356,6 +420,7 @@ ${_buildLessonContext(lesson)}''';
       headerIcon: Icons.lightbulb,
       headerIconColor: _lesson != null ? _getTypeColor(_lesson!.lessonType) : Colors.orange,
       onClose: () => Navigator.of(context).pop(),
+      commentCount: commentCount,
       headerActions: _isEditing ? [
         // Edit mode actions
         TextButton(
@@ -1131,16 +1196,21 @@ ${_buildLessonContext(lesson)}''';
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Description', style: theme.textTheme.labelLarge),
+              Row(
+                children: [
+                  Text('Description', style: theme.textTheme.labelLarge),
+                  const SizedBox(width: 8),
+                  AIAssistButton(
+                    onPressed: () {
+                      _openAIDialogWithFieldAssist('description', lesson.description);
+                    },
+                  ),
+                ],
+              ),
               const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(lesson.description),
+              ExpandableTextContainer(
+                text: lesson.description,
+                colorScheme: colorScheme,
               ),
             ],
           ),
@@ -1151,16 +1221,21 @@ ${_buildLessonContext(lesson)}''';
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Recommendation', style: theme.textTheme.labelLarge),
+                Row(
+                  children: [
+                    Text('Recommendation', style: theme.textTheme.labelLarge),
+                    const SizedBox(width: 8),
+                    AIAssistButton(
+                      onPressed: () {
+                        _openAIDialogWithFieldAssist('recommendation', lesson.recommendation!);
+                      },
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(lesson.recommendation!),
+                ExpandableTextContainer(
+                  text: lesson.recommendation!,
+                  colorScheme: colorScheme,
                 ),
               ],
             ),
@@ -1181,7 +1256,7 @@ ${_buildLessonContext(lesson)}''';
                     color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text(lesson.context!),
+                  child: SelectableText(lesson.context!),
                 ),
               ],
             ),
@@ -1211,7 +1286,7 @@ ${_buildLessonContext(lesson)}''';
                         children: [
                           Icon(Icons.label, size: 14, color: colorScheme.primary),
                           const SizedBox(width: 4),
-                          Text(
+                          SelectableText(
                             tag,
                             style: TextStyle(
                               color: colorScheme.primary,

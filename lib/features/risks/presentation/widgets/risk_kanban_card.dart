@@ -75,65 +75,52 @@ class RiskKanbanCard extends ConsumerWidget {
             // Header with severity and project
             Row(
               children: [
-                // Severity badge
+                // Severity badge (icon only to save space)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
                     color: severityColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.flag,
-                        size: 12,
-                        color: severityColor,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        risk.severityLabel,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: severityColor,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
+                  child: Icon(
+                    Icons.flag,
+                    size: 12,
+                    color: severityColor,
                   ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 6),
 
-                // Project badge
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: colorScheme.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.folder_outlined,
-                        size: 12,
-                        color: colorScheme.primary,
-                      ),
-                      const SizedBox(width: 4),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 80),
-                        child: Text(
-                          project.name,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: colorScheme.primary,
-                            fontWeight: FontWeight.w500,
-                            fontSize: 11,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                // Project badge with more space
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.folder_outlined,
+                          size: 12,
+                          color: colorScheme.primary,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            project.name,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: colorScheme.primary,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 11,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],

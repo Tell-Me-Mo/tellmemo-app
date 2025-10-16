@@ -10,6 +10,8 @@ import '../../../queries/presentation/providers/query_provider.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../shared/widgets/item_detail_panel.dart';
 import '../../../../shared/widgets/item_updates_tab.dart';
+import '../../../../shared/widgets/expandable_text_container.dart';
+import '../../../../shared/widgets/ai_assist_button.dart';
 import '../../domain/entities/item_update.dart' as domain;
 
 class BlockerDetailPanel extends ConsumerStatefulWidget {
@@ -535,6 +537,47 @@ ${_buildBlockerContext(_editedBlocker!)}''';
     );
   }
 
+  void _openAIDialogWithFieldAssist(String fieldName, String fieldContent) {
+    if (_editedBlocker == null) return;
+
+    final blockerContext =
+        '''Context: Analyzing a blocker in the project.
+Blocker Title: ${_editedBlocker!.title}
+${_buildBlockerContext(_editedBlocker!)}''';
+
+    // Build the auto-submit question with the field content
+    final autoQuestion = 'Provide more detailed information and insights about the following $fieldName:\n\n$fieldContent';
+
+    try {
+      showGeneralDialog(
+        context: context,
+        barrierDismissible: false,
+        barrierColor: Colors.transparent,
+        transitionDuration: Duration.zero,
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return AskAIPanel(
+            projectId: widget.projectId,
+            projectName: widget.project?.name ?? 'Project',
+            contextInfo: blockerContext,
+            conversationId: 'blocker_${_editedBlocker!.id}',
+            rightOffset: 0.0,
+            autoSubmitQuestion: autoQuestion,
+            onClose: () {
+              Navigator.of(context).pop();
+              ref.read(queryProvider.notifier).clearConversation();
+            },
+          );
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ref.read(notificationServiceProvider.notifier).showError(
+          'Failed to open AI assist dialog. Please try again.',
+        );
+      }
+    }
+  }
+
   Color _getImpactColor(BlockerImpact impact) {
     switch (impact) {
       case BlockerImpact.low:
@@ -565,6 +608,24 @@ ${_buildBlockerContext(_editedBlocker!)}''';
   Widget build(BuildContext context) {
     final isCreating = _editedBlocker == null;
 
+    // Get comment count for the badge (optimized with select to only rebuild when count changes)
+    int? commentCount;
+    if (_editedBlocker != null) {
+      final params = ItemUpdatesParams(
+        projectId: widget.projectId,
+        itemId: _editedBlocker!.id,
+        itemType: 'blockers',
+      );
+      commentCount = ref.watch(
+        itemUpdatesNotifierProvider(params).select((asyncValue) =>
+          asyncValue.maybeWhen(
+            data: (updates) => updates.where((u) => u.type == domain.ItemUpdateType.comment).length,
+            orElse: () => null,
+          ),
+        ),
+      );
+    }
+
     return ItemDetailPanel(
       title: isCreating ? 'Create New Blocker' : (_editedBlocker?.title ?? 'Blocker'),
       subtitle: widget.projectName ?? widget.project?.name ?? 'Project',
@@ -573,6 +634,7 @@ ${_buildBlockerContext(_editedBlocker!)}''';
           ? _getImpactColor(_editedBlocker!.impact)
           : Colors.red,
       onClose: () => Navigator.of(context).pop(),
+      commentCount: commentCount,
       headerActions: _isEditing
           ? [
               // Edit mode actions
@@ -976,12 +1038,24 @@ ${_buildBlockerContext(_editedBlocker!)}''';
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Description',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.1,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      'Description',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.1,
+                      ),
+                    ),
+                    if (!_isEditing && _editedBlocker != null) ...[
+                      const SizedBox(width: 8),
+                      AIAssistButton(
+                        onPressed: () {
+                          _openAIDialogWithFieldAssist('description', _editedBlocker!.description);
+                        },
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 12),
                 if (_isEditing)
@@ -1023,19 +1097,9 @@ ${_buildBlockerContext(_editedBlocker!)}''';
                     maxLines: 3,
                   )
                 else if (_editedBlocker != null)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest.withValues(
-                        alpha: 0.3,
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      _editedBlocker!.description,
-                      style: theme.textTheme.bodyMedium,
-                    ),
+                  ExpandableTextContainer(
+                    text: _editedBlocker!.description,
+                    colorScheme: colorScheme,
                   ),
               ],
             ),
@@ -1103,7 +1167,7 @@ ${_buildBlockerContext(_editedBlocker!)}''';
                         ),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Text(
+                      child: SelectableText(
                         _editedBlocker!.resolution ?? 'No resolution provided',
                         style: TextStyle(
                           color: _editedBlocker!.resolution == null
@@ -1442,7 +1506,7 @@ ${_buildBlockerContext(_editedBlocker!)}''';
                         ),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Text(
+                      child: SelectableText(
                         _editedBlocker!.dependencies ?? 'No dependencies',
                         style: TextStyle(
                           color: _editedBlocker!.dependencies == null

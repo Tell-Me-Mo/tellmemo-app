@@ -47,7 +47,7 @@ class EnhancedDecisionsWidget extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Decision text
-                Text(
+                SelectableText(
                   decision.description,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     height: 1.4,
@@ -59,7 +59,7 @@ class EnhancedDecisionsWidget extends StatelessWidget {
                     decision.rationale!.isNotEmpty &&
                     decision.rationale!.length < 100) ...[
                   const SizedBox(height: 4),
-                  Text(
+                  SelectableText(
                     decision.rationale!,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,

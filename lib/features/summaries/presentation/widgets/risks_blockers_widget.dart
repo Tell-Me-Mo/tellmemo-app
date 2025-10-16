@@ -68,7 +68,7 @@ class RisksBlockersWidget extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                SelectableText(
                   description,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     height: 1.4,
@@ -78,7 +78,7 @@ class RisksBlockersWidget extends StatelessWidget {
                 // Show mitigation if available and concise
                 if (mitigation != null && mitigation.toString().length < 150) ...[
                   const SizedBox(height: 4),
-                  Text(
+                  SelectableText(
                     mitigation.toString(),
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,

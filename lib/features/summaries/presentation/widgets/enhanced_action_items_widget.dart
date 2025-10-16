@@ -50,7 +50,7 @@ class EnhancedActionItemsWidget extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Action description
-                Text(
+                SelectableText(
                   item.description,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     height: 1.4,

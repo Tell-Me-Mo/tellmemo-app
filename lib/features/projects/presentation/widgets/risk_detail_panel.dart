@@ -11,6 +11,8 @@ import '../../../queries/presentation/providers/query_provider.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../shared/widgets/item_detail_panel.dart';
 import '../../../../shared/widgets/item_updates_tab.dart';
+import '../../../../shared/widgets/expandable_text_container.dart';
+import '../../../../shared/widgets/ai_assist_button.dart';
 import '../../domain/entities/item_update.dart' as domain;
 
 class RiskDetailPanel extends ConsumerStatefulWidget {
@@ -421,6 +423,47 @@ ${_buildRiskContext(risk)}''';
     );
   }
 
+  void _openAIDialogWithFieldAssist(String fieldName, String fieldContent) {
+    if (_risk == null || _selectedProjectId == null) return;
+
+    final risk = _risk!;
+    final riskContext = '''Context: Analyzing a risk in the project.
+Risk Title: ${risk.title}
+${_buildRiskContext(risk)}''';
+
+    // Build the auto-submit question with the field content
+    final autoQuestion = 'Provide more detailed information and insights about the following $fieldName:\n\n$fieldContent';
+
+    try {
+      showGeneralDialog(
+        context: context,
+        barrierDismissible: false,
+        barrierColor: Colors.transparent,
+        transitionDuration: Duration.zero,
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return AskAIPanel(
+            projectId: _selectedProjectId!,
+            projectName: widget.project?.name ?? 'Project',
+            contextInfo: riskContext,
+            conversationId: 'risk_${risk.id}',
+            rightOffset: 0.0,
+            autoSubmitQuestion: autoQuestion,
+            onClose: () {
+              Navigator.of(context).pop();
+              ref.read(queryProvider.notifier).clearConversation();
+            },
+          );
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ref.read(notificationServiceProvider.notifier).showError(
+          'Failed to open AI assist dialog. Please try again.',
+        );
+      }
+    }
+  }
+
   Color _getStatusColor(RiskStatus status) {
     switch (status) {
       case RiskStatus.identified:
@@ -468,12 +511,31 @@ ${_buildRiskContext(risk)}''';
       });
     }
 
+    // Get comment count for the badge (optimized with select to only rebuild when count changes)
+    int? commentCount;
+    if (_risk != null && _selectedProjectId != null) {
+      final params = ItemUpdatesParams(
+        projectId: _selectedProjectId!,
+        itemId: _risk!.id,
+        itemType: 'risks',
+      );
+      commentCount = ref.watch(
+        itemUpdatesNotifierProvider(params).select((asyncValue) =>
+          asyncValue.maybeWhen(
+            data: (updates) => updates.where((u) => u.type == domain.ItemUpdateType.comment).length,
+            orElse: () => null,
+          ),
+        ),
+      );
+    }
+
     return ItemDetailPanel(
       title: isCreating ? 'Create New Risk' : (_risk?.title ?? 'Risk'),
       subtitle: projectName,
       headerIcon: Icons.warning,
       headerIconColor: _isEditing ? Colors.orange : (_risk != null ? _getSeverityColor(_risk!.severity) : Colors.orange),
       onClose: () => Navigator.of(context).pop(),
+      commentCount: commentCount,
       headerActions: _isEditing ? [
         // Edit mode actions
         TextButton(
@@ -1217,20 +1279,41 @@ ${_buildRiskContext(risk)}''';
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Description',
-                style: theme.textTheme.labelLarge,
+              Row(
+                children: [
+                  Text(
+                    'Description',
+                    style: theme.textTheme.labelLarge,
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: Icon(
+                      Icons.auto_awesome,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    onPressed: () {
+                      _openAIDialogWithFieldAssist('description', risk.description);
+                    },
+                    tooltip: 'Ask AI for more information',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 24,
+                      minHeight: 24,
+                    ),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.green.withValues(alpha: 0.1),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color:
-                      colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(risk.description),
+              ExpandableTextContainer(
+                text: risk.description,
+                colorScheme: colorScheme,
               ),
             ],
           ),
@@ -1241,20 +1324,41 @@ ${_buildRiskContext(risk)}''';
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Mitigation Strategy',
-                  style: theme.textTheme.labelLarge,
+                Row(
+                  children: [
+                    Text(
+                      'Mitigation Strategy',
+                      style: theme.textTheme.labelLarge,
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: Icon(
+                        Icons.auto_awesome,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      onPressed: () {
+                        _openAIDialogWithFieldAssist('mitigation strategy', risk.mitigation!);
+                      },
+                      tooltip: 'Ask AI for more information',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 24,
+                        minHeight: 24,
+                      ),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.green.withValues(alpha: 0.1),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest
-                        .withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(risk.mitigation!),
+                ExpandableTextContainer(
+                  text: risk.mitigation!,
+                  colorScheme: colorScheme,
                 ),
               ],
             ),
@@ -1266,20 +1370,41 @@ ${_buildRiskContext(risk)}''';
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Impact',
-                  style: theme.textTheme.labelLarge,
+                Row(
+                  children: [
+                    Text(
+                      'Impact',
+                      style: theme.textTheme.labelLarge,
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: Icon(
+                        Icons.auto_awesome,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      onPressed: () {
+                        _openAIDialogWithFieldAssist('impact', risk.impact!);
+                      },
+                      tooltip: 'Ask AI for more information',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 24,
+                        minHeight: 24,
+                      ),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.green.withValues(alpha: 0.1),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest
-                        .withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(risk.impact!),
+                ExpandableTextContainer(
+                  text: risk.impact!,
+                  colorScheme: colorScheme,
                 ),
               ],
             ),
@@ -1351,7 +1476,7 @@ ${_buildRiskContext(risk)}''';
                               color: colorScheme.onSurfaceVariant,
                             ),
                             const SizedBox(width: 8),
-                            Text(risk.assignedTo!),
+                            Expanded(child: SelectableText(risk.assignedTo!)),
                           ],
                         ),
                       ],
@@ -1365,7 +1490,7 @@ ${_buildRiskContext(risk)}''';
                               color: colorScheme.onSurfaceVariant,
                             ),
                             const SizedBox(width: 8),
-                            Text(risk.assignedToEmail!),
+                            Expanded(child: SelectableText(risk.assignedToEmail!)),
                           ],
                         ),
                       ],

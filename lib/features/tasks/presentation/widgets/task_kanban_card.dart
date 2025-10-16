@@ -59,68 +59,52 @@ class TaskKanbanCard extends StatelessWidget {
                 // Priority and Project Row
                 Row(
                   children: [
-                    // Priority Badge
+                    // Priority Badge (icon only to save space)
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
+                      padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
                         color: TaskUIHelpers.getPriorityColor(task.priority).withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.flag,
-                            size: 12,
-                            color: TaskUIHelpers.getPriorityColor(task.priority),
-                          ),
-                          const SizedBox(width: 2),
-                          Text(
-                            task.priorityLabel,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: TaskUIHelpers.getPriorityColor(task.priority),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 10,
-                            ),
-                          ),
-                        ],
+                      child: Icon(
+                        Icons.flag,
+                        size: 12,
+                        color: TaskUIHelpers.getPriorityColor(task.priority),
                       ),
                     ),
-                    const Spacer(),
-                    // Project Badge
-                    Container(
-                      constraints: const BoxConstraints(maxWidth: 100),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: colorScheme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.folder_outlined,
-                            size: 12,
-                            color: colorScheme.primary,
-                          ),
-                          const SizedBox(width: 2),
-                          Flexible(
-                            child: Text(
-                              project.name,
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: colorScheme.primary,
-                                fontSize: 10,
-                              ),
-                              overflow: TextOverflow.ellipsis,
+                    const SizedBox(width: 6),
+                    // Project Badge with more space
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colorScheme.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.folder_outlined,
+                              size: 12,
+                              color: colorScheme.primary,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                project.name,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: colorScheme.primary,
+                                  fontSize: 10,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
