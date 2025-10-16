@@ -334,9 +334,29 @@ class ProjectItemsSyncService:
                     continue
 
                 # Get the corresponding existing item data and model
-                if item_type == 'risk' and existing_item_index < len(existing_items.get('risks', [])):
+                if item_type == 'risk' and existing_item_index >= 0 and existing_item_index < len(existing_items.get('risks', [])):
                     existing_item_data = existing_items['risks'][existing_item_index]
+
+                    # Validate that the indexed item matches the expected title
+                    if existing_title and existing_item_data.get('title') != existing_title:
+                        logger.warning(
+                            f"Index mismatch for risk update: index {existing_item_index} points to "
+                            f"'{existing_item_data.get('title')}' but expected '{existing_title}'. "
+                            f"Searching by title instead."
+                        )
+                        # Try to find by title instead
+                        existing_item_data = next(
+                            (item for item in existing_items['risks'] if item.get('title') == existing_title),
+                            None
+                        )
+                        if not existing_item_data:
+                            logger.warning(f"Could not find risk with title '{existing_title}' for update")
+                            continue
+
                     item_id = existing_item_data.get('id')
+                    if not item_id:
+                        logger.warning(f"No ID found for risk update: {update}")
+                        continue
 
                     # Fetch the actual database object
                     existing_obj = await session.get(Risk, item_id)
@@ -376,9 +396,29 @@ class ProjectItemsSyncService:
                         existing_obj.updated_by = "ai"
                         logger.info(f"Updated risk '{existing_obj.title}' with {update_type}")
 
-                elif item_type == 'blocker' and existing_item_index < len(existing_items.get('blockers', [])):
+                elif item_type == 'blocker' and existing_item_index >= 0 and existing_item_index < len(existing_items.get('blockers', [])):
                     existing_item_data = existing_items['blockers'][existing_item_index]
+
+                    # Validate that the indexed item matches the expected title
+                    if existing_title and existing_item_data.get('title') != existing_title:
+                        logger.warning(
+                            f"Index mismatch for blocker update: index {existing_item_index} points to "
+                            f"'{existing_item_data.get('title')}' but expected '{existing_title}'. "
+                            f"Searching by title instead."
+                        )
+                        # Try to find by title instead
+                        existing_item_data = next(
+                            (item for item in existing_items['blockers'] if item.get('title') == existing_title),
+                            None
+                        )
+                        if not existing_item_data:
+                            logger.warning(f"Could not find blocker with title '{existing_title}' for update")
+                            continue
+
                     item_id = existing_item_data.get('id')
+                    if not item_id:
+                        logger.warning(f"No ID found for blocker update: {update}")
+                        continue
 
                     existing_obj = await session.get(Blocker, item_id)
                     if existing_obj:
@@ -414,9 +454,29 @@ class ProjectItemsSyncService:
                         existing_obj.updated_by = "ai"
                         logger.info(f"Updated blocker '{existing_obj.title}' with {update_type}")
 
-                elif item_type == 'task' and existing_item_index < len(existing_items.get('tasks', [])):
+                elif item_type == 'task' and existing_item_index >= 0 and existing_item_index < len(existing_items.get('tasks', [])):
                     existing_item_data = existing_items['tasks'][existing_item_index]
+
+                    # Validate that the indexed item matches the expected title
+                    if existing_title and existing_item_data.get('title') != existing_title:
+                        logger.warning(
+                            f"Index mismatch for task update: index {existing_item_index} points to "
+                            f"'{existing_item_data.get('title')}' but expected '{existing_title}'. "
+                            f"Searching by title instead."
+                        )
+                        # Try to find by title instead
+                        existing_item_data = next(
+                            (item for item in existing_items['tasks'] if item.get('title') == existing_title),
+                            None
+                        )
+                        if not existing_item_data:
+                            logger.warning(f"Could not find task with title '{existing_title}' for update")
+                            continue
+
                     item_id = existing_item_data.get('id')
+                    if not item_id:
+                        logger.warning(f"No ID found for task update: {update}")
+                        continue
 
                     existing_obj = await session.get(Task, item_id)
                     if existing_obj:
@@ -458,9 +518,29 @@ class ProjectItemsSyncService:
                         existing_obj.updated_by = "ai"
                         logger.info(f"Updated task '{existing_obj.title}' with {update_type}")
 
-                elif item_type == 'lesson' and existing_item_index < len(existing_items.get('lessons', [])):
+                elif item_type == 'lesson' and existing_item_index >= 0 and existing_item_index < len(existing_items.get('lessons', [])):
                     existing_item_data = existing_items['lessons'][existing_item_index]
+
+                    # Validate that the indexed item matches the expected title
+                    if existing_title and existing_item_data.get('title') != existing_title:
+                        logger.warning(
+                            f"Index mismatch for lesson update: index {existing_item_index} points to "
+                            f"'{existing_item_data.get('title')}' but expected '{existing_title}'. "
+                            f"Searching by title instead."
+                        )
+                        # Try to find by title instead
+                        existing_item_data = next(
+                            (item for item in existing_items['lessons'] if item.get('title') == existing_title),
+                            None
+                        )
+                        if not existing_item_data:
+                            logger.warning(f"Could not find lesson with title '{existing_title}' for update")
+                            continue
+
                     item_id = existing_item_data.get('id')
+                    if not item_id:
+                        logger.warning(f"No ID found for lesson update: {update}")
+                        continue
 
                     existing_obj = await session.get(LessonLearned, item_id)
                     if existing_obj:
