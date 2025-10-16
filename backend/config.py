@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     
     # Claude API Configuration
     anthropic_api_key: str = Field(default="", env="ANTHROPIC_API_KEY")
-    llm_model: str = Field(default="claude-haiku-4-5-20251001", env="LLM_MODEL")
+    llm_model: str = Field(default="claude-3-5-haiku-latest", env="LLM_MODEL")  # Switched back from 4.5 due to JSON formatting issues
     max_tokens: int = Field(default=4096, env="MAX_TOKENS")
     temperature: float = Field(default=0.7, env="TEMPERATURE")
 
