@@ -22,6 +22,8 @@ from models.task import Task, TaskStatus, TaskPriority
 from models.lesson_learned import LessonLearned, LessonCategory, LessonType, LessonLearnedImpact
 from models.blocker import Blocker, BlockerImpact, BlockerStatus
 from services.intelligence.risks_tasks_analyzer_service import RisksTasksAnalyzer
+from services.intelligence.semantic_deduplicator import semantic_deduplicator
+from config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +34,8 @@ class ProjectItemsSyncService:
     def __init__(self):
         """Initialize the service."""
         self.analyzer = RisksTasksAnalyzer()
+        self.semantic_deduplicator = semantic_deduplicator
+        self.settings = get_settings()
 
     async def sync_items_from_summary(
         self,
@@ -72,17 +76,25 @@ class ProjectItemsSyncService:
             # Get existing project items for deduplication
             existing_items = await self._get_existing_project_items(session, project_id)
 
-            # Deduplicate using AI
-            deduplicated_items = await self.analyzer.deduplicate_extracted_items(
-                extracted_risks=extracted_items['risks'],
-                extracted_blockers=extracted_items['blockers'],
-                extracted_tasks=extracted_items['tasks'],
-                extracted_lessons=extracted_items['lessons'],
-                existing_risks=existing_items['risks'],
-                existing_blockers=existing_items['blockers'],
-                existing_tasks=existing_items['tasks'],
-                existing_lessons=existing_items['lessons']
-            )
+            # Use semantic deduplication if enabled, otherwise fall back to AI-only
+            if self.settings.enable_semantic_deduplication:
+                logger.info("Using semantic deduplication with embeddings + AI")
+                deduplicated_items = await self._semantic_deduplicate_items(
+                    extracted_items, existing_items
+                )
+            else:
+                logger.info("Using legacy AI-only deduplication")
+                # Legacy AI-only deduplication
+                deduplicated_items = await self.analyzer.deduplicate_extracted_items(
+                    extracted_risks=extracted_items['risks'],
+                    extracted_blockers=extracted_items['blockers'],
+                    extracted_tasks=extracted_items['tasks'],
+                    extracted_lessons=extracted_items['lessons'],
+                    existing_risks=existing_items['risks'],
+                    existing_blockers=existing_items['blockers'],
+                    existing_tasks=existing_items['tasks'],
+                    existing_lessons=existing_items['lessons']
+                )
 
             # Process status updates first (update existing items with new info)
             status_updates = deduplicated_items.get('status_updates', [])
@@ -330,12 +342,20 @@ class ProjectItemsSyncService:
                     existing_obj = await session.get(Risk, item_id)
                     if existing_obj:
                         # Apply updates based on type
-                        if update_type == 'status':
-                            existing_obj.status = new_info or existing_obj.status
+                        if update_type == 'status' and new_info:
+                            # Handle both enum and string values
+                            if isinstance(new_info, str):
+                                existing_obj.status = new_info
+                            else:
+                                existing_obj.status = new_info.value if hasattr(new_info, 'value') else str(new_info)
                         elif update_type == 'mitigation':
                             existing_obj.mitigation = new_info or existing_obj.mitigation
-                        elif update_type == 'severity':
-                            existing_obj.severity = new_info or existing_obj.severity
+                        elif update_type == 'severity' and new_info:
+                            # Handle both enum and string values
+                            if isinstance(new_info, str):
+                                existing_obj.severity = new_info
+                            else:
+                                existing_obj.severity = new_info.value if hasattr(new_info, 'value') else str(new_info)
                         elif update_type == 'resolution':
                             existing_obj.mitigation = new_info or existing_obj.mitigation
                             existing_obj.status = 'resolved'
@@ -352,14 +372,22 @@ class ProjectItemsSyncService:
 
                     existing_obj = await session.get(Blocker, item_id)
                     if existing_obj:
-                        if update_type == 'status':
-                            existing_obj.status = new_info or existing_obj.status
+                        if update_type == 'status' and new_info:
+                            # Handle both enum and string values
+                            if isinstance(new_info, str):
+                                existing_obj.status = new_info
+                            else:
+                                existing_obj.status = new_info.value if hasattr(new_info, 'value') else str(new_info)
                         elif update_type == 'resolution':
                             existing_obj.resolution = new_info or existing_obj.resolution
                             if new_info:  # If resolution provided, mark as resolved
                                 existing_obj.status = 'resolved'
-                        elif update_type == 'impact':
-                            existing_obj.impact = new_info or existing_obj.impact
+                        elif update_type == 'impact' and new_info:
+                            # Handle both enum and string values
+                            if isinstance(new_info, str):
+                                existing_obj.impact = new_info
+                            else:
+                                existing_obj.impact = new_info.value if hasattr(new_info, 'value') else str(new_info)
 
                         existing_obj.source_content_id = str(content_id)
                         existing_obj.last_updated = datetime.utcnow()
@@ -372,8 +400,12 @@ class ProjectItemsSyncService:
 
                     existing_obj = await session.get(Task, item_id)
                     if existing_obj:
-                        if update_type == 'status':
-                            existing_obj.status = new_info or existing_obj.status
+                        if update_type == 'status' and new_info:
+                            # Handle both enum and string values
+                            if isinstance(new_info, str):
+                                existing_obj.status = new_info
+                            else:
+                                existing_obj.status = new_info.value if hasattr(new_info, 'value') else str(new_info)
                         elif update_type == 'progress':
                             # Extract progress percentage if mentioned
                             try:
@@ -492,7 +524,8 @@ class ProjectItemsSyncService:
                         ai_generated="true",
                         ai_confidence=risk_data.get('confidence', 0.8),
                         source_content_id=str(content_id),
-                        updated_by="ai"
+                        updated_by="ai",
+                        title_embedding=risk_data.get('title_embedding')  # Store embedding
                     )
                     session.add(new_risk)
 
@@ -568,7 +601,8 @@ class ProjectItemsSyncService:
                         ai_generated="true",
                         ai_confidence=blocker_data.get('confidence', 0.8),
                         source_content_id=str(content_id),
-                        updated_by="ai"
+                        updated_by="ai",
+                        title_embedding=blocker_data.get('title_embedding')  # Store embedding
                     )
                     session.add(new_blocker)
                     logger.debug(f"[BLOCKER_DEBUG] Added new blocker to session: {new_blocker.title}")
@@ -654,7 +688,8 @@ class ProjectItemsSyncService:
                         ai_generated="true",
                         ai_confidence=task_data.get('confidence', 0.8),
                         source_content_id=str(content_id),
-                        updated_by="ai"  # Use updated_by instead of created_by
+                        updated_by="ai",  # Use updated_by instead of created_by
+                        title_embedding=task_data.get('title_embedding')  # Store embedding
                     )
                     session.add(new_task)
 
@@ -741,12 +776,159 @@ class ProjectItemsSyncService:
                         ai_generated="true",
                         ai_confidence=lesson_data.get('confidence', 0.8),
                         source_content_id=str(content_id),
-                        updated_by="ai"  # Use updated_by instead of created_by
+                        updated_by="ai",  # Use updated_by instead of created_by
+                        title_embedding=lesson_data.get('title_embedding')  # Store embedding
                     )
                     session.add(new_lesson)
 
             except Exception as e:
                 logger.error(f"Error updating lesson '{lesson_data.get('title')}': {e}")
+
+
+    async def _semantic_deduplicate_items(
+        self,
+        extracted_items: Dict[str, List],
+        existing_items: Dict[str, List]
+    ) -> Dict[str, Any]:
+        """
+        Perform semantic deduplication using embeddings + AI.
+
+        Returns deduplicated items in the same format as the legacy AI-only deduplication.
+        """
+        result = {
+            'risks': [],
+            'blockers': [],
+            'tasks': [],
+            'lessons_learned': [],
+            'status_updates': []
+        }
+
+        # Process each item type
+        item_types = [
+            ('risks', 'risk'),
+            ('blockers', 'blocker'),
+            ('tasks', 'task'),
+            ('lessons', 'lesson')
+        ]
+
+        for items_key, item_type in item_types:
+            new_items = extracted_items.get(items_key, [])
+            existing = existing_items.get(items_key, [])
+
+            if not new_items:
+                continue
+
+            # Run semantic deduplication
+            dedup_result = await self.semantic_deduplicator.deduplicate_items(
+                item_type=item_type,
+                new_items=new_items,
+                existing_items=existing
+            )
+
+            # Add unique items to result
+            result_key = items_key if items_key != 'lessons' else 'lessons_learned'
+            result[result_key] = dedup_result['unique_items']
+
+            # Process updates as status_updates for compatibility with existing code
+            if self.settings.enable_intelligent_updates:
+                for update_info in dedup_result['updates']:
+                    status_update = {
+                        'type': item_type,
+                        'existing_item_id': update_info['existing_item_id'],
+                        'existing_title': update_info['existing_item_title'],
+                        'update_type': update_info.get('update_type', 'content'),
+                        'new_info': update_info.get('new_info', {}),
+                        'confidence': update_info.get('confidence', 0.8)
+                    }
+                    result['status_updates'].append(status_update)
+
+            logger.info(
+                f"Semantic dedup for {item_type}: "
+                f"{len(dedup_result['unique_items'])} unique, "
+                f"{len(dedup_result['updates'])} updates, "
+                f"{len(dedup_result['exact_duplicates'])} skipped"
+            )
+
+        return result
+
+    async def _apply_intelligent_update(
+        self,
+        session: AsyncSession,
+        project_id: uuid.UUID,
+        content_id: uuid.UUID,
+        item_type: str,
+        update_info: Dict[str, Any]
+    ) -> None:
+        """
+        Apply intelligent update to an existing item.
+        Handles updates extracted from duplicates during semantic deduplication.
+        """
+        existing_id = update_info['existing_item_id']
+        new_info = update_info.get('new_info', {})
+        update_type = update_info.get('update_type', 'content')
+
+        # Get the model class
+        if item_type == 'risk':
+            from models.risk import Risk
+            model_class = Risk
+        elif item_type == 'task':
+            from models.task import Task
+            model_class = Task
+        elif item_type == 'blocker':
+            from models.blocker import Blocker
+            model_class = Blocker
+        elif item_type == 'lesson':
+            from models.lesson_learned import LessonLearned
+            model_class = LessonLearned
+        else:
+            logger.warning(f"Unknown item type for update: {item_type}")
+            return
+
+        # Fetch existing item
+        existing_obj = await session.get(model_class, existing_id)
+
+        if not existing_obj:
+            logger.warning(f"Could not find {item_type} with ID {existing_id} for update")
+            return
+
+        # Apply updates based on type
+        if update_type == 'status' and 'status' in new_info:
+            existing_obj.status = new_info['status']
+            logger.info(f"Updated {item_type} '{existing_obj.title}' status to {new_info['status']}")
+
+        elif update_type == 'content':
+            # Update description if changed
+            if 'description' in new_info and new_info['description']:
+                if self.settings.append_updates_to_description:
+                    # Append new info
+                    existing_desc = existing_obj.description or ""
+                    existing_obj.description = f"{existing_desc}\n\nUpdate: {new_info['description']}"
+                else:
+                    # Replace
+                    existing_obj.description = new_info['description']
+
+            # Type-specific content updates
+            if item_type == 'risk' and 'mitigation' in new_info:
+                existing_obj.mitigation = new_info['mitigation']
+            elif item_type == 'blocker' and 'resolution' in new_info:
+                existing_obj.resolution = new_info['resolution']
+                if new_info['resolution']:  # If resolution added, might be resolved
+                    if 'status' in new_info:
+                        existing_obj.status = new_info['status']
+            elif item_type == 'task' and 'assignee' in new_info:
+                existing_obj.assignee = new_info['assignee']
+            elif item_type == 'lesson' and 'recommendation' in new_info:
+                existing_obj.recommendation = new_info['recommendation']
+
+        # Update metadata
+        existing_obj.source_content_id = str(content_id)
+        existing_obj.last_updated = datetime.utcnow()
+        existing_obj.updated_by = "ai"
+
+        logger.info(
+            f"Applied intelligent update to {item_type} '{existing_obj.title}': "
+            f"type={update_type}, confidence={update_info.get('confidence', 0.8):.2f}"
+        )
 
 
 # Singleton instance

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, Enum, Text, Float, Integer
+from sqlalchemy import Column, String, DateTime, ForeignKey, Enum, Text, Float, Integer, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from db.database import Base
@@ -48,6 +48,7 @@ class Task(Base):
     ai_generated = Column(String(5), default="false")  # 'true' or 'false'
     ai_confidence = Column(Float)  # Confidence score from Claude
     source_content_id = Column(UUID(as_uuid=True), ForeignKey('content.id'))  # Link to content that triggered this task
+    title_embedding = Column(JSON, nullable=True)  # Embedding vector for semantic deduplication (768 dimensions)
 
     # Dependencies
     depends_on_risk_id = Column(UUID(as_uuid=True), ForeignKey('risks.id'))  # Task might be created to mitigate a risk
@@ -68,8 +69,8 @@ class Task(Base):
             "project_id": str(self.project_id),
             "title": self.title,
             "description": self.description,
-            "status": self.status.value if self.status else None,
-            "priority": self.priority.value if self.priority else None,
+            "status": self.status.value if hasattr(self.status, 'value') else self.status if self.status else None,
+            "priority": self.priority.value if hasattr(self.priority, 'value') else self.priority if self.priority else None,
             "assignee": self.assignee,
             "due_date": self.due_date.isoformat() if self.due_date else None,
             "completed_date": self.completed_date.isoformat() if self.completed_date else None,
@@ -82,5 +83,6 @@ class Task(Base):
             "depends_on_risk_id": str(self.depends_on_risk_id) if self.depends_on_risk_id else None,
             "created_date": self.created_date.isoformat() if self.created_date else None,
             "last_updated": self.last_updated.isoformat() if self.last_updated else None,
-            "updated_by": self.updated_by
+            "updated_by": self.updated_by,
+            "title_embedding": self.title_embedding
         }

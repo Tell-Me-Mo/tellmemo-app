@@ -151,6 +151,14 @@ class Settings(BaseSettings):
     engagement_threshold_low: float = Field(default=0.25, env="ENGAGEMENT_THRESHOLD_LOW")
     min_confidence_for_decisions: float = Field(default=0.7, env="MIN_CONFIDENCE_FOR_DECISIONS")
     min_confidence_for_actions: float = Field(default=0.6, env="MIN_CONFIDENCE_FOR_ACTIONS")
+
+    # Semantic Deduplication Configuration
+    enable_semantic_deduplication: bool = Field(default=True, env="ENABLE_SEMANTIC_DEDUPLICATION")
+    semantic_similarity_high_threshold: float = Field(default=0.85, env="SEMANTIC_SIMILARITY_HIGH_THRESHOLD")  # High similarity = likely duplicate
+    semantic_similarity_medium_threshold: float = Field(default=0.75, env="SEMANTIC_SIMILARITY_MEDIUM_THRESHOLD")  # Medium similarity = needs AI review
+    semantic_dedup_use_ai_fallback: bool = Field(default=True, env="SEMANTIC_DEDUP_USE_AI_FALLBACK")  # Use AI for medium-similarity items
+    enable_intelligent_updates: bool = Field(default=True, env="ENABLE_INTELLIGENT_UPDATES")  # Extract updates from duplicates
+    append_updates_to_description: bool = Field(default=True, env="APPEND_UPDATES_TO_DESCRIPTION")  # Append vs replace descriptions
     
     # Enhanced RAG Strategy
     rag_auto_strategy_selection: bool = Field(default=True, env="RAG_AUTO_STRATEGY_SELECTION")
