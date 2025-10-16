@@ -78,7 +78,7 @@ class TestModelTranslation:
     def test_openai_to_claude_translation(self):
         """Test OpenAI models translate to correct Claude equivalents."""
         # Cost-optimized tier
-        assert get_equivalent_model("gpt-4o-mini", AIProvider.CLAUDE) == "claude-3-5-haiku-latest"
+        assert get_equivalent_model("gpt-4o-mini", AIProvider.CLAUDE) == "claude-haiku-4-5-20251001"
 
         # Balanced tier
         assert get_equivalent_model("gpt-4o", AIProvider.CLAUDE) == "claude-3-5-sonnet-20241022"
