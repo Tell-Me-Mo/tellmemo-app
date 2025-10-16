@@ -73,18 +73,21 @@ class ProjectItemsSyncService:
         try:
             # Extract items from summary data
             extracted_items = self._extract_items_from_summary(summary_data)
+            logger.info(f"[SYNC] Starting sync for project {project_id}, content {content_id}")
+            logger.info(f"[SYNC] Extracted items: {len(extracted_items['risks'])} risks, {len(extracted_items['blockers'])} blockers, {len(extracted_items['tasks'])} tasks, {len(extracted_items['lessons'])} lessons")
 
             # Get existing project items for deduplication
             existing_items = await self._get_existing_project_items(session, project_id)
+            logger.info(f"[SYNC] Existing items: {len(existing_items['risks'])} risks, {len(existing_items['blockers'])} blockers, {len(existing_items['tasks'])} tasks, {len(existing_items['lessons'])} lessons")
 
             # Use semantic deduplication if enabled, otherwise fall back to AI-only
             if self.settings.enable_semantic_deduplication:
-                logger.info("Using semantic deduplication with embeddings + AI")
+                logger.info("[SYNC] Using semantic deduplication with embeddings + AI")
                 deduplicated_items = await self._semantic_deduplicate_items(
                     extracted_items, existing_items
                 )
             else:
-                logger.info("Using legacy AI-only deduplication")
+                logger.info("[SYNC] Using legacy AI-only deduplication")
                 # Legacy AI-only deduplication
                 deduplicated_items = await self.analyzer.deduplicate_extracted_items(
                     extracted_risks=extracted_items['risks'],
@@ -96,6 +99,14 @@ class ProjectItemsSyncService:
                     existing_tasks=existing_items['tasks'],
                     existing_lessons=existing_items['lessons']
                 )
+
+            # LOG: Deduplication summary
+            logger.info(f"[SYNC] After deduplication:")
+            logger.info(f"[SYNC]   Unique risks: {len(deduplicated_items.get('risks', []))} (filtered {len(extracted_items['risks']) - len(deduplicated_items.get('risks', []))})")
+            logger.info(f"[SYNC]   Unique blockers: {len(deduplicated_items.get('blockers', []))} (filtered {len(extracted_items['blockers']) - len(deduplicated_items.get('blockers', []))})")
+            logger.info(f"[SYNC]   Unique tasks: {len(deduplicated_items.get('tasks', []))} (filtered {len(extracted_items['tasks']) - len(deduplicated_items.get('tasks', []))})")
+            logger.info(f"[SYNC]   Unique lessons: {len(deduplicated_items.get('lessons_learned', []))} (filtered {len(extracted_items['lessons']) - len(deduplicated_items.get('lessons_learned', []))})")
+            logger.info(f"[SYNC]   Status updates: {len(deduplicated_items.get('status_updates', []))}")
 
             # Process status updates first (update existing items with new info)
             status_updates = deduplicated_items.get('status_updates', [])
@@ -157,12 +168,15 @@ class ProjectItemsSyncService:
                 for blocker in saved_blockers:
                     logger.debug(f"[BLOCKER_DEBUG] - Blocker in DB: {blocker.title} (ID: {blocker.id})")
 
-            logger.info(
-                f"Project items sync complete for content {content_id}: "
-                f"{result['risks_synced']} risks, {result['blockers_synced']} blockers, "
-                f"{result['tasks_synced']} tasks, {result['lessons_synced']} lessons, "
-                f"{result['status_updates_processed']} status updates"
-            )
+            logger.info(f"[SYNC] ========== SYNC COMPLETE ==========")
+            logger.info(f"[SYNC] Content: {content_id}")
+            logger.info(f"[SYNC] Results:")
+            logger.info(f"[SYNC]   Risks synced: {result['risks_synced']}")
+            logger.info(f"[SYNC]   Blockers synced: {result['blockers_synced']}")
+            logger.info(f"[SYNC]   Tasks synced: {result['tasks_synced']}")
+            logger.info(f"[SYNC]   Lessons synced: {result['lessons_synced']}")
+            logger.info(f"[SYNC]   Status updates: {result['status_updates_processed']}")
+            logger.info(f"[SYNC] ====================================")
 
         except Exception as e:
             logger.error(f"Failed to sync project items: {e}")

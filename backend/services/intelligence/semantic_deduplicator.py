@@ -68,13 +68,15 @@ class SemanticDeduplicator:
 
         if not self.enable_semantic_dedup:
             # Semantic deduplication disabled - return all as unique
-            logger.info(f"Semantic deduplication disabled, treating all {len(new_items)} items as unique")
+            logger.info(f"[SEMANTIC_DEDUP] Disabled, treating all {len(new_items)} {item_type}s as unique")
             return {
                 'unique_items': new_items,
                 'updates': [],
                 'exact_duplicates': [],
                 'duplicate_analysis': {}
             }
+
+        logger.info(f"[SEMANTIC_DEDUP] Starting semantic deduplication for {len(new_items)} new {item_type}s against {len(existing_items)} existing")
 
         # Step 1: Generate embeddings for new items
         # Combine title + description for better semantic matching
@@ -163,11 +165,20 @@ class SemanticDeduplicator:
         actual_updates = [u for u in updates if u.get('has_new_info')]
         exact_duplicates = [u for u in updates if not u.get('has_new_info')]
 
-        logger.info(
-            f"Deduplication results for {item_type}: "
-            f"{len(unique_items)} unique, {len(actual_updates)} updates, "
-            f"{len(exact_duplicates)} exact duplicates"
-        )
+        # LOG: Detailed results
+        logger.info(f"[SEMANTIC_DEDUP] Deduplication complete for {item_type}:")
+        logger.info(f"[SEMANTIC_DEDUP]   Unique items: {len(unique_items)}")
+        logger.info(f"[SEMANTIC_DEDUP]   Items with updates: {len(actual_updates)}")
+        logger.info(f"[SEMANTIC_DEDUP]   Exact duplicates: {len(exact_duplicates)}")
+        logger.info(f"[SEMANTIC_DEDUP]   Total processed: {len(new_items)}")
+
+        # LOG: Sample items in each category
+        if unique_items:
+            logger.debug(f"[SEMANTIC_DEDUP] Sample unique {item_type}s: {[item.get('title', 'N/A')[:50] for item in unique_items[:2]]}")
+        if actual_updates:
+            logger.debug(f"[SEMANTIC_DEDUP] Sample updated {item_type}s: {[u.get('existing_item_title', 'N/A')[:50] for u in actual_updates[:2]]}")
+        if exact_duplicates:
+            logger.debug(f"[SEMANTIC_DEDUP] Sample duplicate {item_type}s: {[u.get('existing_item_title', 'N/A')[:50] for u in exact_duplicates[:2]]}")
 
         return {
             'unique_items': unique_items,

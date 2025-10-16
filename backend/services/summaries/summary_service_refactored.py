@@ -1497,6 +1497,27 @@ class SummaryService:
                 json_end = response_text.rindex("}") + 1
                 json_str = response_text[json_start:json_end]
                 data = json.loads(json_str)
+
+                # LOG: Summary of extracted items from Claude
+                logger.info(f"[EXTRACTION] Claude response parsed successfully for '{content_title}'")
+                logger.info(f"[EXTRACTION] Summary text length: {len(data.get('summary_text', ''))}")
+                logger.info(f"[EXTRACTION] Key points: {len(data.get('key_points', []))}")
+                logger.info(f"[EXTRACTION] Decisions: {len(data.get('decisions', []))}")
+                logger.info(f"[EXTRACTION] Action items (raw): {len(data.get('action_items', []))}")
+                logger.info(f"[EXTRACTION] Risks: {len(data.get('risks', []))}")
+                logger.info(f"[EXTRACTION] Blockers: {len(data.get('blockers', []))}")
+                logger.info(f"[EXTRACTION] Lessons learned: {len(data.get('lessons_learned', []))}")
+                logger.info(f"[EXTRACTION] Participants: {len(data.get('participants', []))}")
+
+                # LOG: Sample of extracted items for debugging
+                if data.get('action_items'):
+                    logger.debug(f"[EXTRACTION] Sample action items (first 2): {data.get('action_items')[:2]}")
+                if data.get('risks'):
+                    logger.debug(f"[EXTRACTION] Sample risks (first 2): {data.get('risks')[:2]}")
+                if data.get('blockers'):
+                    logger.debug(f"[EXTRACTION] Sample blockers (first 2): {data.get('blockers')[:2]}")
+                if data.get('lessons_learned'):
+                    logger.debug(f"[EXTRACTION] Sample lessons (first 2): {data.get('lessons_learned')[:2]}")
                 
                 # Process action items to ensure they have the expected structure
                 action_items = data.get("action_items", [])
@@ -1593,7 +1614,14 @@ class SummaryService:
                             "status": "not_started",
                             "follow_up_required": False
                         })
-                
+
+                # LOG: Summary of processed action items
+                logger.info(f"[EXTRACTION] Processed action items: {len(processed_action_items)} (from {len(action_items)} raw)")
+                low_conf_items = [item for item in processed_action_items if item.get('confidence', 1.0) < 0.5]
+                if low_conf_items:
+                    logger.warning(f"[EXTRACTION] {len(low_conf_items)} action items with low confidence (<0.5)")
+                    logger.debug(f"[EXTRACTION] Low confidence items: {low_conf_items}")
+
                 # Process decisions to ensure they have the expected structure
                 decisions = data.get("decisions", [])
                 logger.info(f"Raw decisions from Claude: {decisions}")
