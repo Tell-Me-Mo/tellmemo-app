@@ -17,10 +17,8 @@ from db.database import init_database, close_database
 from db.multi_tenant_vector_store import multi_tenant_vector_store
 from services.rag.embedding_service import init_embedding_service
 from services.scheduling.scheduler_service import scheduler_service
-from services.observability.langfuse_service import langfuse_service
 from services.scheduler.digest_scheduler import digest_scheduler
 from services.llm.multi_llm_client import get_multi_llm_client
-from middleware.langfuse_middleware import add_langfuse_middleware
 from middleware.auth_middleware import AuthMiddleware
 
 settings = get_settings()
@@ -191,13 +189,6 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Error shutting down digest scheduler: {e}")
 
-    # Shutdown Langfuse
-    try:
-        langfuse_service.shutdown()
-        logger.info("Langfuse service shutdown complete")
-    except Exception as e:
-        logger.error(f"Error shutting down Langfuse: {e}")
-
     await close_database()
     await multi_tenant_vector_store.close()
 
@@ -225,9 +216,6 @@ app.add_middleware(
 
 # Add Authentication middleware
 app.add_middleware(AuthMiddleware)
-
-# Add Langfuse monitoring middleware
-add_langfuse_middleware(app)
 
 
 @app.exception_handler(Exception)

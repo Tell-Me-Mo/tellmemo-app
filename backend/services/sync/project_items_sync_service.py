@@ -26,14 +26,6 @@ from services.intelligence.semantic_deduplicator import semantic_deduplicator
 from services.item_updates_service import ItemUpdatesService
 from config import get_settings
 
-try:
-    from langfuse.decorators import observe
-except ImportError:
-    def observe(name=None):
-        def decorator(func):
-            return func
-        return decorator
-
 logger = logging.getLogger(__name__)
 
 
@@ -46,7 +38,6 @@ class ProjectItemsSyncService:
         self.semantic_deduplicator = semantic_deduplicator
         self.settings = get_settings()
 
-    @observe(name="sync_items_from_summary")
     async def sync_items_from_summary(
         self,
         session: AsyncSession,
@@ -849,7 +840,6 @@ class ProjectItemsSyncService:
                 # Continue processing other updates even if one fails
                 continue
 
-    @observe(name="update_project_risks")
     async def _update_project_risks(
         self,
         session: AsyncSession,
@@ -923,7 +913,6 @@ class ProjectItemsSyncService:
             except Exception as e:
                 logger.error(f"Error updating risk '{risk_data.get('title')}': {e}")
 
-    @observe(name="update_project_blockers")
     async def _update_project_blockers(
         self,
         session: AsyncSession,
@@ -1007,7 +996,6 @@ class ProjectItemsSyncService:
                 logger.error(f"[BLOCKER_DEBUG] Error updating blocker '{blocker_data.get('title')}': {e}")
                 logger.exception(f"[BLOCKER_DEBUG] Full exception details:")
 
-    @observe(name="update_project_tasks")
     async def _update_project_tasks(
         self,
         session: AsyncSession,
@@ -1111,7 +1099,6 @@ class ProjectItemsSyncService:
             except Exception as e:
                 logger.error(f"Error updating task '{task_title}': {e}")
 
-    @observe(name="update_project_lessons")
     async def _update_project_lessons(
         self,
         session: AsyncSession,

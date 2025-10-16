@@ -45,7 +45,6 @@ import torch
 
 from config import get_settings
 from utils.logger import get_logger
-from utils.monitoring import monitor_operation, MonitoringContext
 
 settings = get_settings()
 logger = get_logger(__name__)
@@ -89,8 +88,7 @@ class EmbeddingService:
             logger.info(f"Embedding service initialized with model: {self.model_name}")
             logger.info(f"MRL enabled: {self.enable_mrl}, dimensions: {self.mrl_dimensions}")
             logger.info(f"Multilingual enabled: {self.enable_multilingual}")
-    
-    @monitor_operation("get_embedding_model", "embedding")
+
     async def get_model(self) -> SentenceTransformer:
         """
         Get or download the embedding model.
@@ -250,10 +248,9 @@ class EmbeddingService:
         
         # Enable eval mode for inference
         model.eval()
-        
+
         return model
-    
-    @monitor_operation("generate_single_embedding", "embedding", capture_result=False)
+
     async def generate_embedding(
         self,
         text: str,
@@ -295,7 +292,6 @@ class EmbeddingService:
             logger.error(f"Failed to generate embedding for text (length: {len(text) if text else 0}): {e}")
             raise
 
-    @monitor_operation("generate_embedding_mrl", "embedding", capture_result=False)
     async def generate_embedding_mrl(
         self,
         text: str,
@@ -363,7 +359,6 @@ class EmbeddingService:
         else:
             return 'en'  # Default to English
 
-    @monitor_operation("generate_embeddings_batch", "embedding", capture_args=True)
     async def generate_embeddings_batch(
         self,
         texts: List[str],
@@ -432,8 +427,7 @@ class EmbeddingService:
         except Exception as e:
             logger.error(f"Failed to generate batch embeddings: {e}")
             raise
-    
-    @monitor_operation("generate_chunk_embeddings", "embedding", capture_args=True)
+
     async def generate_embeddings_for_chunks(
         self,
         chunks: List[Dict[str, Any]],

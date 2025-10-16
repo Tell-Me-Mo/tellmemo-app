@@ -1,4 +1,4 @@
-"""Enhanced RAG service refactored with proper Langfuse v3 context managers."""
+"""Enhanced RAG service refactored."""
 
 import asyncio
 import time
@@ -16,7 +16,6 @@ from models.project import Project
 from db.database import get_db
 from db.multi_tenant_vector_store import multi_tenant_vector_store
 from services.rag.embedding_service import embedding_service
-from services.observability.langfuse_service import langfuse_service
 from services.rag.multi_query_retrieval import (
     multi_query_retrieval_service, MultiQueryResults, QueryIntent
 )
@@ -45,7 +44,7 @@ class RAGStrategy(Enum):
 
 
 class EnhancedRAGService:
-    """Enhanced service for intelligent retrieval-augmented generation with Langfuse v3 context managers."""
+    """Enhanced service for intelligent retrieval-augmented generation."""
 
     def __init__(self):
         # Enhanced retrieval parameters
@@ -128,7 +127,7 @@ class EnhancedRAGService:
         strategy: RAGStrategy = RAGStrategy.AUTO,
         organization_id: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Execute enhanced RAG query with proper Langfuse v3 context managers."""
+        """Execute enhanced RAG query."""
         start_time = time.time()
 
         # Detect if this is a context-enhanced query from conversation
@@ -141,78 +140,25 @@ class EnhancedRAGService:
             strategy = self._select_optimal_strategy(question)
             logger.info(f"Auto-selected strategy: {strategy.value}")
 
-        # Check if Langfuse client supports context managers
-        langfuse_client = langfuse_service.client
-        if not langfuse_client or not hasattr(langfuse_client, 'start_as_current_span'):
-            # Fallback to simpler implementation without context managers
-            return await self._query_project_fallback(project_id, question, user_id, strategy)
-
         try:
-            # Use Langfuse v3 context manager for proper span nesting
-            with langfuse_client.start_as_current_span(
-                name="enhanced_rag_query",
-                input={
-                    "project_id": project_id,
-                    "question": question[:500],  # Truncate for logging
-                    "strategy": strategy.value,
-                    "query_type": self._classify_query_type(question),
-                    "is_context_enhanced": is_context_enhanced
-                },
-                metadata={
-                    "user_id": user_id,
-                    "project_id": project_id,
-                    "question_length": len(question),
-                    "context_enhanced": is_context_enhanced
-                },
-                version="2.0.0"
-            ) as trace_span:
+            # Execute strategy-specific retrieval and generation
+            config = self.strategy_configs[strategy]
 
-                # Execute strategy-specific retrieval and generation
-                config = self.strategy_configs[strategy]
+            if strategy == RAGStrategy.BASIC:
+                result = await self._execute_basic_rag(project_id, question, config)
+            elif strategy == RAGStrategy.MULTI_QUERY:
+                result = await self._execute_multi_query_rag(project_id, question, config)
+            elif strategy == RAGStrategy.HYBRID_SEARCH:
+                result = await self._execute_hybrid_search_rag(project_id, question, config)
+            elif strategy == RAGStrategy.INTELLIGENT:
+                result = await self._execute_intelligent_rag(project_id, question, config)
+            else:
+                raise ValueError(f"Unknown strategy: {strategy}")
 
-                if strategy == RAGStrategy.BASIC:
-                    result = await self._execute_basic_rag(project_id, question, config)
-                elif strategy == RAGStrategy.MULTI_QUERY:
-                    result = await self._execute_multi_query_rag(project_id, question, config)
-                elif strategy == RAGStrategy.HYBRID_SEARCH:
-                    result = await self._execute_hybrid_search_rag(project_id, question, config)
-                elif strategy == RAGStrategy.INTELLIGENT:
-                    result = await self._execute_intelligent_rag(project_id, question, config)
-                else:
-                    raise ValueError(f"Unknown strategy: {strategy}")
-
-                # Calculate total response time
-                total_time = int((time.time() - start_time) * 1000)
-                result['response_time_ms'] = total_time
-                result['strategy_used'] = strategy.value
-
-                # Update span with final output
-                if hasattr(trace_span, 'update'):
-                    trace_span.update(
-                        output={
-                            "answer_preview": result['answer'][:200] + "..." if len(result['answer']) > 200 else result['answer'],
-                            "sources": result.get('sources', []),
-                            "strategy": strategy.value,
-                            "total_chunks": result.get('chunks_retrieved', 0),
-                            "confidence": result.get('confidence', 0),
-                            "response_time_ms": total_time,
-                            "token_count": result.get('token_count', 0),
-                            "cost_usd": result.get('cost', 0.0),
-                            "retrieval_quality": result.get('retrieval_quality', {}),
-                            "intelligence_insights": result.get('intelligence_insights', {})
-                        }
-                    )
-
-                # Add confidence score
-                if hasattr(trace_span, 'score'):
-                    trace_span.score(
-                        name="enhanced_confidence",
-                        value=result.get('confidence', 0),
-                        comment=f"Enhanced confidence score for {strategy.value} strategy"
-                    )
-
-            # Flush Langfuse events
-            langfuse_service.flush()
+            # Calculate total response time
+            total_time = int((time.time() - start_time) * 1000)
+            result['response_time_ms'] = total_time
+            result['strategy_used'] = strategy.value
 
             logger.info(f"Enhanced RAG query completed using {strategy.value} in {total_time}ms")
             return result
@@ -261,63 +207,17 @@ class EnhancedRAGService:
             strategy = self._select_optimal_strategy(question)
             logger.info(f"Auto-selected strategy for multi-project query: {strategy.value}")
 
-        # Check if Langfuse client supports context managers
-        langfuse_client = langfuse_service.client
-        if not langfuse_client or not hasattr(langfuse_client, 'start_as_current_span'):
-            return await self._query_multiple_projects_fallback(project_ids, question, user_id, strategy)
-
         try:
-            with langfuse_client.start_as_current_span(
-                name="multi_project_rag_query",
-                input={
-                    "project_ids": project_ids,
-                    "project_count": len(project_ids),
-                    "question": question[:500],
-                    "strategy": strategy.value,
-                    "query_type": self._classify_query_type(question),
-                    "is_context_enhanced": is_context_enhanced
-                },
-                metadata={
-                    "user_id": user_id,
-                    "project_count": len(project_ids),
-                    "question_length": len(question)
-                },
-                version="2.0.0"
-            ) as trace_span:
+            # Execute unified retrieval across all projects
+            config = self.strategy_configs[strategy]
+            result = await self._execute_unified_multi_project_search(
+                project_ids, question, config, strategy
+            )
 
-                # Execute unified retrieval across all projects
-                config = self.strategy_configs[strategy]
-                result = await self._execute_unified_multi_project_search(
-                    project_ids, question, config, strategy
-                )
-
-                # Calculate total response time
-                total_time = int((time.time() - start_time) * 1000)
-                result['response_time_ms'] = total_time
-                result['strategy_used'] = strategy.value
-
-                # Update span with final output
-                if hasattr(trace_span, 'update'):
-                    trace_span.update(
-                        output={
-                            "answer_preview": result['answer'][:200] + "..." if len(result['answer']) > 200 else result['answer'],
-                            "sources_by_project": result.get('sources_by_project', {}),
-                            "strategy": strategy.value,
-                            "total_chunks": result.get('chunks_retrieved', 0),
-                            "confidence": result.get('confidence', 0),
-                            "response_time_ms": total_time,
-                            "projects_with_results": result.get('projects_with_results', 0)
-                        }
-                    )
-
-                if hasattr(trace_span, 'score'):
-                    trace_span.score(
-                        name="multi_project_confidence",
-                        value=result.get('confidence', 0),
-                        comment=f"Confidence for {len(project_ids)} projects using {strategy.value}"
-                    )
-
-            langfuse_service.flush()
+            # Calculate total response time
+            total_time = int((time.time() - start_time) * 1000)
+            result['response_time_ms'] = total_time
+            result['strategy_used'] = strategy.value
 
             logger.info(f"Multi-project RAG query completed for {len(project_ids)} projects in {total_time}ms")
             return result
@@ -370,65 +270,47 @@ class EnhancedRAGService:
         question: str,
         config: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Execute basic 3-step RAG process with context managers."""
-        langfuse_client = langfuse_service.client
-        
-        # Generate embedding with nested span
-        with langfuse_client.start_as_current_span(
-            name="basic_embedding_generation",
-            input={"question": question[:200]}
-        ) as embed_span:
-            query_embedding = await embedding_service.generate_embedding(question)
-            if hasattr(embed_span, 'update'):
-                embed_span.update(output={"embedding_size": len(query_embedding)})
-        
-        # Perform vector search with nested span
-        chunks = []
-        with langfuse_client.start_as_current_span(
-            name="basic_vector_search",
-            input={"max_chunks": config['max_chunks']}
-        ) as search_span:
-            # Get organization_id using cache
-            organization_id = await self._get_organization_id(project_id)
+        """Execute basic 3-step RAG process."""
+        # Generate embedding
+        query_embedding = await embedding_service.generate_embedding(question)
 
-            # Use two-stage MRL search if enabled for better quality
-            settings = get_settings()
-            if settings.enable_mrl and settings.rag_use_two_stage_search:
-                results = await multi_tenant_vector_store.search_vectors_two_stage(
-                    organization_id=organization_id,
-                    query_vector=query_embedding,
-                    initial_limit=config['max_chunks'] * 3,  # Get more candidates
-                    final_limit=config['max_chunks'],
-                    score_threshold=self.similarity_threshold,
-                    filter_dict={"project_id": project_id}
-                )
-            else:
-                results = await multi_tenant_vector_store.search_vectors(
-                    organization_id=organization_id,
-                    query_vector=query_embedding,
-                    limit=config['max_chunks'],
-                    score_threshold=self.similarity_threshold,
-                    filter_dict={"project_id": project_id}
-                )
-            
-            for result in results:
-                chunk_data = {
-                    'id': result['id'],
-                    'text': result['payload'].get('text', ''),
-                    'title': result['payload'].get('title', ''),
-                    'score': result['score']
-                }
-                chunks.append(chunk_data)
-            
-            if hasattr(search_span, 'update'):
-                search_span.update(output={
-                    "chunks_retrieved": len(chunks),
-                    "avg_score": sum(c['score'] for c in chunks) / len(chunks) if chunks else 0
-                })
-        
+        # Perform vector search
+        chunks = []
+        # Get organization_id using cache
+        organization_id = await self._get_organization_id(project_id)
+
+        # Use two-stage MRL search if enabled for better quality
+        settings = get_settings()
+        if settings.enable_mrl and settings.rag_use_two_stage_search:
+            results = await multi_tenant_vector_store.search_vectors_two_stage(
+                organization_id=organization_id,
+                query_vector=query_embedding,
+                initial_limit=config['max_chunks'] * 3,  # Get more candidates
+                final_limit=config['max_chunks'],
+                score_threshold=self.similarity_threshold,
+                filter_dict={"project_id": project_id}
+            )
+        else:
+            results = await multi_tenant_vector_store.search_vectors(
+                organization_id=organization_id,
+                query_vector=query_embedding,
+                limit=config['max_chunks'],
+                score_threshold=self.similarity_threshold,
+                filter_dict={"project_id": project_id}
+            )
+
+        for result in results:
+            chunk_data = {
+                'id': result['id'],
+                'text': result['payload'].get('text', ''),
+                'title': result['payload'].get('title', ''),
+                'score': result['score']
+            }
+            chunks.append(chunk_data)
+
         # Generate response
         response = await self._generate_response(question, chunks, "basic")
-        
+
         return {
             'answer': response['answer'],
             'sources': response['sources'],
@@ -448,44 +330,28 @@ class EnhancedRAGService:
         question: str,
         config: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Execute multi-query RAG with context managers."""
-        langfuse_client = langfuse_service.client
-        
+        """Execute multi-query RAG."""
         chunks = []
         multi_results = None
-        
-        with langfuse_client.start_as_current_span(
-            name="multi_query_retrieval",
-            input={"question": question[:200], "max_results": config['max_chunks']}
-        ) as multi_span:
-            # Use multi-query retrieval service
-            multi_results = await multi_query_retrieval_service.retrieve_with_multi_query(
-                question, project_id, config['max_chunks']
-            )
-            
-            # Convert results to standard format
-            for result in multi_results.deduplicated_results:
-                chunk_data = {
-                    'id': result.chunk_id,
-                    'text': result.text,
-                    'title': result.metadata.get('title', ''),
-                    'score': result.score
-                }
-                chunks.append(chunk_data)
-            
-            if hasattr(multi_span, 'update'):
-                multi_span.update(
-                    output={
-                        "chunks_retrieved": len(chunks),
-                        "query_variations": multi_results.total_queries_executed,
-                        "diversity_score": multi_results.result_diversity_score,
-                        "coverage_score": multi_results.coverage_score
-                    }
-                )
-        
+
+        # Use multi-query retrieval service
+        multi_results = await multi_query_retrieval_service.retrieve_with_multi_query(
+            question, project_id, config['max_chunks']
+        )
+
+        # Convert results to standard format
+        for result in multi_results.deduplicated_results:
+            chunk_data = {
+                'id': result.chunk_id,
+                'text': result.text,
+                'title': result.metadata.get('title', ''),
+                'score': result.score
+            }
+            chunks.append(chunk_data)
+
         # Generate response
         response = await self._generate_response(question, chunks, "multi_query")
-        
+
         return {
             'answer': response['answer'],
             'sources': response['sources'],
@@ -513,45 +379,28 @@ class EnhancedRAGService:
         question: str,
         config: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Execute hybrid search RAG with context managers."""
-        langfuse_client = langfuse_service.client
-        
+        """Execute hybrid search RAG."""
         chunks = []
         search_pipeline = None
-        
-        with langfuse_client.start_as_current_span(
-            name="hybrid_search_retrieval",
-            input={"question": question[:200], "max_results": config['max_chunks']}
-        ) as hybrid_span:
-            # Use hybrid search service
-            search_pipeline = await hybrid_search_service.hybrid_search(
-                question, project_id, self.hybrid_config
-            )
-            
-            # Convert results to standard format
-            for result in search_pipeline.final_results:
-                chunk_data = {
-                    'id': result.chunk_id,
-                    'text': result.text,
-                    'title': result.metadata.get('title', ''),
-                    'score': result.final_score
-                }
-                chunks.append(chunk_data)
-            
-            if hasattr(hybrid_span, 'update'):
-                hybrid_span.update(
-                    output={
-                        "chunks_retrieved": len(chunks),
-                        "semantic_results": search_pipeline.semantic_result_count,
-                        "keyword_results": search_pipeline.keyword_result_count,
-                        "result_overlap": search_pipeline.overlap_count,
-                        "diversity_score": search_pipeline.diversity_score
-                    }
-                )
-        
+
+        # Use hybrid search service
+        search_pipeline = await hybrid_search_service.hybrid_search(
+            question, project_id, self.hybrid_config
+        )
+
+        # Convert results to standard format
+        for result in search_pipeline.final_results:
+            chunk_data = {
+                'id': result.chunk_id,
+                'text': result.text,
+                'title': result.metadata.get('title', ''),
+                'score': result.final_score
+            }
+            chunks.append(chunk_data)
+
         # Generate response
         response = await self._generate_response(question, chunks, "hybrid_search")
-        
+
         return {
             'answer': response['answer'],
             'sources': response['sources'],
@@ -582,116 +431,83 @@ class EnhancedRAGService:
         This performs a single vector search with OR filter for all project IDs,
         then generates a unified answer from the results.
         """
-        langfuse_client = langfuse_service.client
+        # Generate embedding
+        query_embedding = await embedding_service.generate_embedding(question)
 
-        with langfuse_client.start_as_current_span(
-            name="unified_multi_project_search",
-            input={
-                "project_count": len(project_ids),
-                "question": question[:200],
-                "strategy": strategy.value
+        # Get organization_id from first project
+        organization_id = await self._get_organization_id(project_ids[0])
+
+        # Perform parallel vector search across all projects
+        # Search all projects in parallel and merge results by relevance score
+        settings = get_settings()
+
+        # Increase max_chunks proportionally to number of projects
+        max_chunks_per_project = config['max_chunks']
+        max_total_chunks = min(max_chunks_per_project * len(project_ids), 50)
+
+        # Define search function for each project
+        async def search_project(project_id: str):
+            try:
+                if settings.enable_mrl and settings.rag_use_two_stage_search:
+                    return await multi_tenant_vector_store.search_vectors_two_stage(
+                        organization_id=organization_id,
+                        query_vector=query_embedding,
+                        initial_limit=max_chunks_per_project * 3,
+                        final_limit=max_chunks_per_project,
+                        score_threshold=self.similarity_threshold,
+                        filter_dict={"project_id": project_id}
+                    )
+                else:
+                    return await multi_tenant_vector_store.search_vectors(
+                        organization_id=organization_id,
+                        query_vector=query_embedding,
+                        limit=max_chunks_per_project,
+                        score_threshold=self.similarity_threshold,
+                        filter_dict={"project_id": project_id}
+                    )
+            except Exception as e:
+                logger.warning(f"Failed to search project {project_id}: {e}")
+                return []
+
+        # Search all projects in parallel using asyncio.gather
+        logger.info(f"Searching {len(project_ids)} projects in parallel")
+        search_tasks = [search_project(pid) for pid in project_ids]
+        project_results_list = await asyncio.gather(*search_tasks)
+
+        # Flatten and collect all results
+        all_search_results = []
+        for project_results in project_results_list:
+            all_search_results.extend(project_results)
+
+        logger.info(f"Collected {len(all_search_results)} total chunks from all projects")
+
+        # Sort all results by score and take top N
+        all_search_results.sort(key=lambda x: x['score'], reverse=True)
+        results = all_search_results[:max_total_chunks]
+
+        # Group results by project
+        chunks_by_project = {}
+        all_chunks = []
+
+        for result in results:
+            chunk_project_id = result['payload'].get('project_id', '')
+            chunk_data = {
+                'id': result['id'],
+                'text': result['payload'].get('text', ''),
+                'title': result['payload'].get('title', ''),
+                'score': result['score'],
+                'project_id': chunk_project_id
             }
-        ) as search_span:
+            all_chunks.append(chunk_data)
 
-            # Generate embedding
-            with langfuse_client.start_as_current_span(
-                name="multi_project_embedding"
-            ) as embed_span:
-                query_embedding = await embedding_service.generate_embedding(question)
-                if hasattr(embed_span, 'update'):
-                    embed_span.update(output={"embedding_size": len(query_embedding)})
+            if chunk_project_id not in chunks_by_project:
+                chunks_by_project[chunk_project_id] = []
+            chunks_by_project[chunk_project_id].append(chunk_data)
 
-            # Get organization_id from first project
-            organization_id = await self._get_organization_id(project_ids[0])
-
-            # Perform parallel vector search across all projects
-            # Search all projects in parallel and merge results by relevance score
-            with langfuse_client.start_as_current_span(
-                name="parallel_multi_project_search"
-            ) as vec_search_span:
-                settings = get_settings()
-
-                # Increase max_chunks proportionally to number of projects
-                max_chunks_per_project = config['max_chunks']
-                max_total_chunks = min(max_chunks_per_project * len(project_ids), 50)
-
-                # Define search function for each project
-                async def search_project(project_id: str):
-                    try:
-                        if settings.enable_mrl and settings.rag_use_two_stage_search:
-                            return await multi_tenant_vector_store.search_vectors_two_stage(
-                                organization_id=organization_id,
-                                query_vector=query_embedding,
-                                initial_limit=max_chunks_per_project * 3,
-                                final_limit=max_chunks_per_project,
-                                score_threshold=self.similarity_threshold,
-                                filter_dict={"project_id": project_id}
-                            )
-                        else:
-                            return await multi_tenant_vector_store.search_vectors(
-                                organization_id=organization_id,
-                                query_vector=query_embedding,
-                                limit=max_chunks_per_project,
-                                score_threshold=self.similarity_threshold,
-                                filter_dict={"project_id": project_id}
-                            )
-                    except Exception as e:
-                        logger.warning(f"Failed to search project {project_id}: {e}")
-                        return []
-
-                # Search all projects in parallel using asyncio.gather
-                logger.info(f"Searching {len(project_ids)} projects in parallel")
-                search_tasks = [search_project(pid) for pid in project_ids]
-                project_results_list = await asyncio.gather(*search_tasks)
-
-                # Flatten and collect all results
-                all_search_results = []
-                for project_results in project_results_list:
-                    all_search_results.extend(project_results)
-
-                logger.info(f"Collected {len(all_search_results)} total chunks from all projects")
-
-                # Sort all results by score and take top N
-                all_search_results.sort(key=lambda x: x['score'], reverse=True)
-                results = all_search_results[:max_total_chunks]
-
-                # Group results by project
-                chunks_by_project = {}
-                all_chunks = []
-
-                for result in results:
-                    chunk_project_id = result['payload'].get('project_id', '')
-                    chunk_data = {
-                        'id': result['id'],
-                        'text': result['payload'].get('text', ''),
-                        'title': result['payload'].get('title', ''),
-                        'score': result['score'],
-                        'project_id': chunk_project_id
-                    }
-                    all_chunks.append(chunk_data)
-
-                    if chunk_project_id not in chunks_by_project:
-                        chunks_by_project[chunk_project_id] = []
-                    chunks_by_project[chunk_project_id].append(chunk_data)
-
-                if hasattr(vec_search_span, 'update'):
-                    vec_search_span.update(output={
-                        "total_chunks": len(all_chunks),
-                        "projects_with_results": len(chunks_by_project),
-                        "avg_score": sum(c['score'] for c in all_chunks) / len(all_chunks) if all_chunks else 0
-                    })
-
-            # Generate unified response
-            response = await self._generate_unified_multi_project_response(
-                question, all_chunks, chunks_by_project, strategy.value
-            )
-
-            if hasattr(search_span, 'update'):
-                search_span.update(output={
-                    "chunks_retrieved": len(all_chunks),
-                    "projects_with_results": len(chunks_by_project),
-                    "answer_length": len(response['answer'])
-                })
+        # Generate unified response
+        response = await self._generate_unified_multi_project_response(
+            question, all_chunks, chunks_by_project, strategy.value
+        )
 
         return {
             'answer': response['answer'],
@@ -750,49 +566,27 @@ class EnhancedRAGService:
         }
 
         # Generate with Claude
-        langfuse_client = langfuse_service.client
-        if self.llm_client.is_available() and langfuse_client:
-            with langfuse_client.start_as_current_generation(
-                name=f"multi_project_generation_{strategy}",
-                model=self.llm_model,
-                model_parameters={
-                    "max_tokens": self.max_tokens,
-                    "temperature": self.temperature
-                },
-                input=self._build_multi_project_prompt(question, context, len(chunks_by_project))
-            ) as gen_span:
-                try:
-                    response = await self.llm_client.create_message(
-                        prompt=self._build_multi_project_prompt(question, context, len(chunks_by_project)),
-                        model=self.llm_model,
-                        max_tokens=self.max_tokens,
-                        temperature=self.temperature
-                    )
+        if self.llm_client.is_available():
+            try:
+                response = await self.llm_client.create_message(
+                    prompt=self._build_multi_project_prompt(question, context, len(chunks_by_project)),
+                    model=self.llm_model,
+                    max_tokens=self.max_tokens,
+                    temperature=self.temperature
+                )
 
-                    answer = response.content[0].text
-                    token_usage = {
-                        'input_tokens': response.usage.input_tokens,
-                        'output_tokens': response.usage.output_tokens
-                    }
-                    cost = self._calculate_cost(token_usage)
+                answer = response.content[0].text
+                token_usage = {
+                    'input_tokens': response.usage.input_tokens,
+                    'output_tokens': response.usage.output_tokens
+                }
+                cost = self._calculate_cost(token_usage)
 
-                    if hasattr(gen_span, 'update'):
-                        gen_span.update(
-                            output=answer,
-                            usage={
-                                "input": token_usage['input_tokens'],
-                                "output": token_usage['output_tokens'],
-                                "total": token_usage['input_tokens'] + token_usage['output_tokens'],
-                                "unit": "TOKENS"
-                            },
-                            metadata={"cost_usd": cost, "projects_queried": len(chunks_by_project)}
-                        )
-
-                except Exception as e:
-                    logger.error(f"Multi-project Claude API call failed: {e}")
-                    answer = self._generate_multi_project_placeholder(question, sorted_chunks, chunks_by_project)
-                    token_usage = {'input_tokens': 0, 'output_tokens': 0}
-                    cost = 0.0
+            except Exception as e:
+                logger.error(f"Multi-project Claude API call failed: {e}")
+                answer = self._generate_multi_project_placeholder(question, sorted_chunks, chunks_by_project)
+                token_usage = {'input_tokens': 0, 'output_tokens': 0}
+                cost = 0.0
         else:
             answer = self._generate_multi_project_placeholder(question, sorted_chunks, chunks_by_project)
             token_usage = {'input_tokens': 0, 'output_tokens': 0}
@@ -849,26 +643,6 @@ Provide a clear, unified answer based on the relevant information found."""
 
         return "\n".join(response_parts)
 
-    async def _query_multiple_projects_fallback(
-        self,
-        project_ids: List[str],
-        question: str,
-        user_id: Optional[str],
-        strategy: RAGStrategy
-    ) -> Dict[str, Any]:
-        """Fallback implementation for multi-project query without Langfuse."""
-        return {
-            'answer': "Langfuse context managers not available for multi-project query.",
-            'sources': [],
-            'sources_by_project': {},
-            'confidence': 0.0,
-            'chunks_retrieved': 0,
-            'projects_with_results': 0,
-            'token_count': 0,
-            'cost': 0.0,
-            'strategy_used': strategy.value,
-            'response_time_ms': 0
-        }
 
     async def _execute_intelligent_rag(
         self,
@@ -876,74 +650,39 @@ Provide a clear, unified answer based on the relevant information found."""
         question: str,
         config: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Execute intelligent RAG with context managers."""
-        langfuse_client = langfuse_service.client
+        """Execute intelligent RAG."""
+        # Step 1: Hybrid search retrieval
+        search_pipeline = await hybrid_search_service.hybrid_search(
+            question, project_id, self.hybrid_config
+        )
 
-        with langfuse_client.start_as_current_span(
-            name="intelligent_rag_processing",
-            input={"question": question[:200], "max_results": config['max_chunks']}
-        ) as intel_span:
-            
-            # Step 1: Hybrid search retrieval
-            with langfuse_client.start_as_current_span(
-                name="intelligent_hybrid_search"
-            ) as search_span:
-                search_pipeline = await hybrid_search_service.hybrid_search(
-                    question, project_id, self.hybrid_config
-                )
-                
-                if hasattr(search_span, 'update'):
-                    search_span.update(
-                        output={"results_count": len(search_pipeline.final_results)}
-                    )
-            
-            # Step 2: Apply meeting intelligence
-            intelligence_insights = {}
-            with langfuse_client.start_as_current_span(
-                name="extract_meeting_intelligence"
-            ) as intel_extract_span:
-                try:
-                    intelligence_insights = await self._extract_contextual_intelligence(
-                        search_pipeline.final_results, question
-                    )
-                    if hasattr(intel_extract_span, 'update'):
-                        intel_extract_span.update(
-                            output={"insights_extracted": bool(intelligence_insights)}
-                        )
-                except Exception as e:
-                    logger.warning(f"Meeting intelligence extraction failed: {e}")
-                    if hasattr(intel_extract_span, 'update'):
-                        intel_extract_span.update(
-                            output={"error": str(e)}
-                        )
-            
-            # Convert results to standard format
-            chunks = []
-            for result in search_pipeline.final_results:
-                chunk_data = {
-                    'id': result.chunk_id,
-                    'text': result.text,
-                    'title': result.metadata.get('title', ''),
-                    'score': result.final_score,
-                    'search_types': [st.value for st in result.search_types] if hasattr(result, 'search_types') else [],
-                    'matched_keywords': getattr(result, 'matched_keywords', [])
-                }
-                chunks.append(chunk_data)
-            
-            if hasattr(intel_span, 'update'):
-                intel_span.update(
-                    output={
-                        "chunks_retrieved": len(chunks),
-                        "intelligence_extracted": bool(intelligence_insights),
-                        "search_quality": search_pipeline.diversity_score
-                    }
-                )
-        
+        # Step 2: Apply meeting intelligence
+        intelligence_insights = {}
+        try:
+            intelligence_insights = await self._extract_contextual_intelligence(
+                search_pipeline.final_results, question
+            )
+        except Exception as e:
+            logger.warning(f"Meeting intelligence extraction failed: {e}")
+
+        # Convert results to standard format
+        chunks = []
+        for result in search_pipeline.final_results:
+            chunk_data = {
+                'id': result.chunk_id,
+                'text': result.text,
+                'title': result.metadata.get('title', ''),
+                'score': result.final_score,
+                'search_types': [st.value for st in result.search_types] if hasattr(result, 'search_types') else [],
+                'matched_keywords': getattr(result, 'matched_keywords', [])
+            }
+            chunks.append(chunk_data)
+
         # Generate enhanced response
         response = await self._generate_intelligent_response(
             question, chunks, intelligence_insights
         )
-        
+
         return {
             'answer': response['answer'],
             'sources': response['sources'],
@@ -985,51 +724,29 @@ Provide a clear, unified answer based on the relevant information found."""
             sources.add(chunk['title'])
         
         context = "\n\n".join(context_parts)
-        
+
         # Generate with Claude
-        langfuse_client = langfuse_service.client
-        if self.llm_client.is_available() and langfuse_client:
-            with langfuse_client.start_as_current_generation(
-                name=f"claude_generation_{strategy}",
-                model=self.llm_model,
-                model_parameters={
-                    "max_tokens": self.max_tokens,
-                    "temperature": self.temperature
-                },
-                input=self._build_prompt(question, context, strategy)
-            ) as gen_span:
-                try:
-                    response = await self.llm_client.create_message(
-                        prompt=self._build_prompt(question, context, strategy),
-                        model=self.llm_model,
-                        max_tokens=self.max_tokens,
-                        temperature=self.temperature
-                    )
-                    
-                    answer = response.content[0].text
-                    token_usage = {
-                        'input_tokens': response.usage.input_tokens,
-                        'output_tokens': response.usage.output_tokens
-                    }
-                    cost = self._calculate_cost(token_usage)
-                    
-                    if hasattr(gen_span, 'update'):
-                        gen_span.update(
-                            output=answer,
-                            usage={
-                                "input": token_usage['input_tokens'],
-                                "output": token_usage['output_tokens'],
-                                "total": token_usage['input_tokens'] + token_usage['output_tokens'],
-                                "unit": "TOKENS"
-                            },
-                            metadata={"cost_usd": cost}
-                        )
-                    
-                except Exception as e:
-                    logger.error(f"Claude API call failed: {e}")
-                    answer = self._generate_placeholder_response(question, context, chunks, strategy)
-                    token_usage = {'input_tokens': 0, 'output_tokens': 0}
-                    cost = 0.0
+        if self.llm_client.is_available():
+            try:
+                response = await self.llm_client.create_message(
+                    prompt=self._build_prompt(question, context, strategy),
+                    model=self.llm_model,
+                    max_tokens=self.max_tokens,
+                    temperature=self.temperature
+                )
+
+                answer = response.content[0].text
+                token_usage = {
+                    'input_tokens': response.usage.input_tokens,
+                    'output_tokens': response.usage.output_tokens
+                }
+                cost = self._calculate_cost(token_usage)
+
+            except Exception as e:
+                logger.error(f"Claude API call failed: {e}")
+                answer = self._generate_placeholder_response(question, context, chunks, strategy)
+                token_usage = {'input_tokens': 0, 'output_tokens': 0}
+                cost = 0.0
         else:
             answer = self._generate_placeholder_response(question, context, chunks, strategy)
             token_usage = {'input_tokens': 0, 'output_tokens': 0}
@@ -1090,56 +807,31 @@ Provide a clear, unified answer based on the relevant information found."""
             sources.add(chunk['title'])
         
         context = "\n\n".join(context_parts)
-        
+
         # Generate with Claude
-        langfuse_client = langfuse_service.client
-        if self.llm_client.is_available() and langfuse_client:
-            with langfuse_client.start_as_current_generation(
-                name="claude_intelligent_generation",
-                model=self.llm_model,
-                model_parameters={
-                    "max_tokens": self.max_tokens,
-                    "temperature": self.temperature * 0.9
-                },
-                input=self._build_intelligent_prompt(question, context, intelligence_insights)
-            ) as gen_span:
-                try:
-                    response = await self.llm_client.create_message(
-                        prompt=self._build_intelligent_prompt(question, context, intelligence_insights),
-                        model=self.llm_model,
-                        max_tokens=self.max_tokens,
-                        temperature=self.temperature * 0.9
-                    )
-                    
-                    answer = response.content[0].text
-                    token_usage = {
-                        'input_tokens': response.usage.input_tokens,
-                        'output_tokens': response.usage.output_tokens
-                    }
-                    cost = self._calculate_cost(token_usage)
-                    
-                    if hasattr(gen_span, 'update'):
-                        gen_span.update(
-                            output=answer,
-                            usage={
-                                "input": token_usage['input_tokens'],
-                                "output": token_usage['output_tokens'],
-                                "total": token_usage['input_tokens'] + token_usage['output_tokens'],
-                                "unit": "TOKENS"
-                            },
-                            metadata={
-                                "cost_usd": cost,
-                                "intelligence_features": list(intelligence_insights.keys())
-                            }
-                        )
-                    
-                except Exception as e:
-                    logger.error(f"Intelligent Claude API call failed: {e}")
-                    answer = self._generate_intelligent_placeholder_response(
-                        question, context, chunks, intelligence_insights
-                    )
-                    token_usage = {'input_tokens': 0, 'output_tokens': 0}
-                    cost = 0.0
+        if self.llm_client.is_available():
+            try:
+                response = await self.llm_client.create_message(
+                    prompt=self._build_intelligent_prompt(question, context, intelligence_insights),
+                    model=self.llm_model,
+                    max_tokens=self.max_tokens,
+                    temperature=self.temperature * 0.9
+                )
+
+                answer = response.content[0].text
+                token_usage = {
+                    'input_tokens': response.usage.input_tokens,
+                    'output_tokens': response.usage.output_tokens
+                }
+                cost = self._calculate_cost(token_usage)
+
+            except Exception as e:
+                logger.error(f"Intelligent Claude API call failed: {e}")
+                answer = self._generate_intelligent_placeholder_response(
+                    question, context, chunks, intelligence_insights
+                )
+                token_usage = {'input_tokens': 0, 'output_tokens': 0}
+                cost = 0.0
         else:
             answer = self._generate_intelligent_placeholder_response(
                 question, context, chunks, intelligence_insights
@@ -1395,27 +1087,6 @@ Provide a clear, unified answer based on the relevant information found."""
         
         return "\n".join(response_parts)
     
-    async def _query_project_fallback(
-        self,
-        project_id: str,
-        question: str,
-        user_id: Optional[str],
-        strategy: RAGStrategy
-    ) -> Dict[str, Any]:
-        """Fallback implementation without context managers."""
-        # This would be the original implementation
-        # For brevity, returning a simple response
-        return {
-            'answer': "Langfuse context managers not available. Using fallback implementation.",
-            'sources': [],
-            'confidence': 0.0,
-            'chunks_retrieved': 0,
-            'token_count': 0,
-            'cost': 0.0,
-            'strategy_used': strategy.value,
-            'response_time_ms': 0
-        }
-
 
 # Global enhanced service instance
 enhanced_rag_service = EnhancedRAGService()

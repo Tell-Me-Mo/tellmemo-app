@@ -10,14 +10,6 @@ from services.rag.embedding_service import embedding_service
 from services.llm.multi_llm_client import get_multi_llm_client
 from config import get_settings
 
-try:
-    from langfuse.decorators import observe
-except ImportError:
-    def observe(name=None):
-        def decorator(func):
-            return func
-        return decorator
-
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
@@ -44,7 +36,6 @@ class SemanticDeduplicator:
         self.enable_semantic_dedup = getattr(settings, 'enable_semantic_deduplication', True)
         self.use_ai_fallback = getattr(settings, 'semantic_dedup_use_ai_fallback', True)
 
-    @observe(name="semantic_deduplicate_items")
     async def deduplicate_items(
         self,
         item_type: str,  # 'risk', 'task', 'blocker', 'lesson'

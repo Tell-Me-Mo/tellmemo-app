@@ -23,7 +23,6 @@ import soundfile as sf
 from faster_whisper import WhisperModel
 import torch
 
-from utils.monitoring import monitor_operation, monitor_sync_operation, monitor_batch_operation, MonitoringContext
 
 logger = logging.getLogger(__name__)
 
@@ -68,16 +67,7 @@ class WhisperTranscriptionService:
             self.compute_type = "int8"  # Best for regular CPU
             
         logger.info(f"Initializing Whisper model: {model_size} on {self.device}")
-
-        with MonitoringContext(
-            "whisper_model_initialization",
-            metadata={
-                "model_size": model_size,
-                "device": self.device,
-                "compute_type": self.compute_type
-            }
-        ) as ctx:
-            try:
+        try:
                 # Load model from HuggingFace (will use cached version if available)
                 self.model = WhisperModel(
                     model_size,
@@ -86,10 +76,8 @@ class WhisperTranscriptionService:
                     download_root="./models/whisper",
                     local_files_only=False  # Allow download from HuggingFace if not cached
                 )
-
                 logger.info(f"Model '{model_size}' loaded successfully")
-                ctx.update(output={"model_loaded": True, "model": model_size})
-            except Exception as e:
+        except Exception as e:
                 logger.error(f"Failed to load model '{model_size}': {e}")
                 raise
         
@@ -98,8 +86,7 @@ class WhisperTranscriptionService:
     def is_model_loaded(self) -> bool:
         """Check if the Whisper model is loaded and ready."""
         return hasattr(self, 'model') and self.model is not None
-        
-    @monitor_operation("transcribe_audio_file", "transcription", capture_args=True, capture_result=True)
+
     async def transcribe_audio_file(
         self,
         audio_path: str,
@@ -161,8 +148,7 @@ class WhisperTranscriptionService:
         except Exception as e:
             logger.error(f"Transcription error: {e}")
             raise
-            
-    @monitor_sync_operation("transcribe_file_sync", "transcription")
+
     def _transcribe_file_sync(
         self,
         audio_path: str,
@@ -267,8 +253,7 @@ class WhisperTranscriptionService:
             "duration": info.duration,
             "transcription_options": info.transcription_options,
         }
-        
-    @monitor_operation("transcribe_audio_buffer", "transcription", capture_args=False, capture_result=True)
+
     async def transcribe_audio_buffer(
         self,
         audio_buffer: bytes,
@@ -317,8 +302,7 @@ class WhisperTranscriptionService:
         finally:
             # Clean up temporary file
             Path(temp_path).unlink(missing_ok=True)
-            
-    @monitor_batch_operation("transcribe_stream", batch_size=10, operation_type="streaming")
+
     async def transcribe_stream(
         self,
         audio_chunks: asyncio.Queue,

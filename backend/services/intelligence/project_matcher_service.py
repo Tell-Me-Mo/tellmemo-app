@@ -14,7 +14,6 @@ from services.prompts.project_matcher_prompts import (
 )
 from config import get_settings
 from utils.logger import get_logger
-from utils.monitoring import monitor_operation
 
 logger = get_logger(__name__)
 
@@ -35,8 +34,7 @@ class ProjectMatcherService:
 
         if not self.llm_client.is_available():
             logger.warning("Project Matcher: LLM client not available")
-    
-    @monitor_operation("match_transcript_to_project", "ai_matching")
+
     async def match_transcript_to_project(
         self,
         session: AsyncSession,
@@ -242,8 +240,7 @@ class ProjectMatcherService:
         # Sort by frequency and return top keywords
         sorted_words = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)
         return [word for word, _ in sorted_words[:15]]
-    
-    @monitor_operation("claude_project_matching", "llm_call", capture_args=True, capture_result=True)
+
     async def _ask_claude_for_match(
         self,
         project_context: str,

@@ -10,7 +10,6 @@ from sqlalchemy.orm import selectinload
 from models.project import Project, ProjectMember, ProjectStatus
 from services.activity.activity_service import ActivityService
 from utils.logger import get_logger, sanitize_for_log
-from utils.monitoring import monitor_operation
 
 logger = get_logger(__name__)
 
@@ -19,7 +18,6 @@ class ProjectService:
     """Service class for project-related operations."""
     
     @staticmethod
-    @monitor_operation("create_project", "database", capture_args=True)
     async def create_project(
         session: AsyncSession,
         name: str,

@@ -12,22 +12,6 @@ from openai import AsyncOpenAI
 from sqlalchemy.ext.asyncio import AsyncSession
 
 try:
-    from langfuse.decorators import observe, langfuse_context
-    LANGFUSE_AVAILABLE = True
-except ImportError:
-    LANGFUSE_AVAILABLE = False
-    def observe(name=None):
-        def decorator(func):
-            return func
-        return decorator
-
-    class DummyLangfuseContext:
-        def update_current_observation(self, **kwargs):
-            pass
-
-    langfuse_context = DummyLangfuseContext()
-
-try:
     from purgatory import AsyncCircuitBreakerFactory
     from purgatory.domain.model import OpenedState
     PURGATORY_AVAILABLE = True
@@ -145,15 +129,6 @@ class ClaudeProviderClient(BaseProviderClient):
 
         response = await self.client.messages.create(**api_params)
 
-        if LANGFUSE_AVAILABLE and hasattr(response, 'usage'):
-            langfuse_context.update_current_observation(
-                usage={
-                    "input": response.usage.input_tokens,
-                    "output": response.usage.output_tokens,
-                    "unit": "TOKENS"
-                }
-            )
-
         return response
 
     async def create_conversation(
@@ -178,15 +153,6 @@ class ClaudeProviderClient(BaseProviderClient):
         }
 
         response = await self.client.messages.create(**api_params)
-
-        if LANGFUSE_AVAILABLE and hasattr(response, 'usage'):
-            langfuse_context.update_current_observation(
-                usage={
-                    "input": response.usage.input_tokens,
-                    "output": response.usage.output_tokens,
-                    "unit": "TOKENS"
-                }
-            )
 
         return response
 
@@ -248,15 +214,6 @@ class OpenAIProviderClient(BaseProviderClient):
             **kwargs
         )
 
-        if LANGFUSE_AVAILABLE and hasattr(response, 'usage'):
-            langfuse_context.update_current_observation(
-                usage={
-                    "input": response.usage.prompt_tokens,
-                    "output": response.usage.completion_tokens,
-                    "unit": "TOKENS"
-                }
-            )
-
         # Wrap OpenAI response to match Claude-like interface
         return self._wrap_openai_response(response)
 
@@ -280,15 +237,6 @@ class OpenAIProviderClient(BaseProviderClient):
             temperature=temperature,
             **kwargs
         )
-
-        if LANGFUSE_AVAILABLE and hasattr(response, 'usage'):
-            langfuse_context.update_current_observation(
-                usage={
-                    "input": response.usage.prompt_tokens,
-                    "output": response.usage.completion_tokens,
-                    "unit": "TOKENS"
-                }
-            )
 
         return self._wrap_openai_response(response)
 
@@ -921,7 +869,6 @@ class MultiProviderLLMClient:
             logger.error(f"Unknown provider: {provider}")
             return None
 
-    @observe(name="multi_llm_create_message")
     async def create_message(
         self,
         prompt: str,
@@ -1000,20 +947,6 @@ class MultiProviderLLMClient:
                 f"(reason: {metadata.get('fallback_reason')})"
             )
 
-            # Update Langfuse metadata if available
-            if LANGFUSE_AVAILABLE:
-                langfuse_context.update_current_observation(
-                    metadata={
-                        "fallback_triggered": True,
-                        "primary_provider": metadata.get("provider_used"),
-                        "fallback_provider": self.secondary_provider_name,
-                        "fallback_reason": metadata.get("fallback_reason"),
-                        "fallback_model": metadata.get("fallback_model"),
-                        "attempts": metadata.get("attempts", []),  # Full attempts array for debugging
-                        "attempt_count": len(metadata.get("attempts", []))
-                    }
-                )
-
         return response
 
     async def create_conversation(
@@ -1085,20 +1018,6 @@ class MultiProviderLLMClient:
                 f"⚠️  Fallback used: {metadata.get('primary_model')} → {metadata.get('fallback_model')} "
                 f"(reason: {metadata.get('fallback_reason')})"
             )
-
-            # Update Langfuse metadata if available
-            if LANGFUSE_AVAILABLE:
-                langfuse_context.update_current_observation(
-                    metadata={
-                        "fallback_triggered": True,
-                        "primary_provider": metadata.get("provider_used"),
-                        "fallback_provider": self.secondary_provider_name,
-                        "fallback_reason": metadata.get("fallback_reason"),
-                        "fallback_model": metadata.get("fallback_model"),
-                        "attempts": metadata.get("attempts", []),  # Full attempts array for debugging
-                        "attempt_count": len(metadata.get("attempts", []))
-                    }
-                )
 
         return response
 
