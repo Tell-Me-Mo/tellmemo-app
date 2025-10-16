@@ -126,14 +126,26 @@ CRITICAL REQUIREMENTS:
     urgency: "high"/"medium"/"low",
     priority: "low"/"medium"/"high"/"urgent",
     due_date: ISO date string or null (MUST be {current_year} or later, format: YYYY-MM-DD),
-    assignee: string or null,
+    assignee: string or null (EXTRACT AGGRESSIVELY - use these patterns:
+      • EXPLICIT: "John will...", "assigned to Sarah", "Bob is responsible", "Alice will verify"
+      • IMPLICIT: "I'll do X", "Let me handle Y", "I can take care of Z" → identify speaker from context and use their actual name
+      • CONTEXTUAL: Task mentions person's name → assign to that person; "follow up with Tom" → assign to Tom
+      • Match speaker context: If speaker says "I will...", extract their actual name from the meeting context
+      • ONLY leave null if truly no assignee mentioned or implied
+      • Better to assign based on reasonable inference than leave empty
+      Use participant names extracted above),
     dependencies: array,
     status: "not_started",
     follow_up_required: boolean,
     question_to_ask: string or null (REQUIRED for any communication task - be ULTRA-SPECIFIC, e.g., "Can you confirm that both self-exclusion bugs (cross-game exclusion and one-time login issue) are fixed in build 2.3.1 and provide test results?" not just "Is it fixed?"),
     confidence: 0.0-1.0
   }})
-- participants (array of strings: extracted from the meeting)
+- participants (array of strings: Extract ALL participant ACTUAL NAMES from the meeting:
+    • Look for self-introductions: "This is Bob", "Alice here", "My name is Tom"
+    • Look for references: "As Sarah mentioned", "I agree with John"
+    • Use conversation context and speaking patterns to identify real names
+    • Return REAL NAMES (e.g., "Bob Smith", "Alice Johnson"), NOT "Speaker 1" or "Speaker 2"
+    • Extract all participants mentioned or actively speaking in the meeting)
 - lessons_learned (array of objects - only include if genuinely present in discussion: {{
     title: string (REQUIRED - brief lesson title, max 100 chars. NEVER leave empty),
     description: string (REQUIRED - detailed lesson description. NEVER leave empty),
