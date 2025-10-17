@@ -27,13 +27,16 @@ def mock_settings():
     settings = Mock(spec=Settings)
     settings.anthropic_api_key = "test-claude-key"
     settings.openai_api_key = "test-openai-key"
+    settings.deepseek_api_key = "test-deepseek-key"
     settings.enable_llm_fallback = True
-    settings.fallback_provider = "openai"
+    settings.primary_llm_provider = "claude"
+    settings.primary_llm_model = "claude-3-5-haiku-latest"
+    settings.fallback_llm_provider = "openai"
+    settings.fallback_llm_model = "gpt-5-mini"
     settings.primary_provider_max_retries = 2
     settings.fallback_provider_max_retries = 3
     settings.fallback_on_overload = True
     settings.fallback_on_rate_limit = False
-    settings.llm_model = "claude-3-5-haiku-latest"
     settings.max_tokens = 4096
     settings.temperature = 0.7
     settings.api_env = "test"
@@ -67,20 +70,24 @@ class TestModelTranslation:
     def test_claude_to_openai_translation(self):
         """Test Claude models translate to correct OpenAI equivalents."""
         # Cost-optimized tier
-        assert get_equivalent_model("claude-3-5-haiku-latest", AIProvider.OPENAI) == "gpt-4o-mini"
+        assert get_equivalent_model("claude-3-5-haiku-latest", AIProvider.OPENAI) == "gpt-5-mini"
 
-        # Balanced tier
-        assert get_equivalent_model("claude-3-5-sonnet-20241022", AIProvider.OPENAI) == "gpt-4o"
+        # Balanced tier (Claude 3.5 Sonnet → GPT-5)
+        assert get_equivalent_model("claude-3-5-sonnet-20241022", AIProvider.OPENAI) == "gpt-5"
 
-        # High-capability tier
-        assert get_equivalent_model("claude-opus-4-20250514", AIProvider.OPENAI) == "gpt-4o"
+        # High-capability tier (Claude Opus 4 → GPT-5)
+        assert get_equivalent_model("claude-opus-4-20250514", AIProvider.OPENAI) == "gpt-5"
 
     def test_openai_to_claude_translation(self):
         """Test OpenAI models translate to correct Claude equivalents."""
-        # Cost-optimized tier
-        assert get_equivalent_model("gpt-4o-mini", AIProvider.CLAUDE) == "claude-3-5-haiku-latest"
+        # Cost-optimized tier (GPT-5 Mini → Claude Haiku 4.5)
+        assert get_equivalent_model("gpt-5-mini", AIProvider.CLAUDE) == "claude-haiku-4-5-20251001"
 
-        # Balanced tier
+        # Balanced tier (GPT-5 → Claude Sonnet 4)
+        assert get_equivalent_model("gpt-5", AIProvider.CLAUDE) == "claude-sonnet-4-20250514"
+
+        # Legacy GPT-4 mapping
+        assert get_equivalent_model("gpt-4o-mini", AIProvider.CLAUDE) == "claude-haiku-4-5-20251001"
         assert get_equivalent_model("gpt-4o", AIProvider.CLAUDE) == "claude-3-5-sonnet-20241022"
 
     def test_unknown_model_returns_none(self):
@@ -169,7 +176,7 @@ class TestProviderCascade:
         assert metadata["fallback_reason"] == "overloaded"
         assert metadata["provider_used"] == "OpenAI"
         assert metadata["primary_model"] == "claude-3-5-haiku-latest"
-        assert metadata["fallback_model"] == "gpt-4o-mini"  # Translated model
+        assert metadata["fallback_model"] == "gpt-5-mini"  # Translated model
         assert len(metadata["attempts"]) == 2  # Primary + fallback
 
         # Verify both were called
@@ -178,7 +185,7 @@ class TestProviderCascade:
 
         # Verify OpenAI was called with translated model
         openai_call_args = mock_openai_client.create_message.call_args
-        assert openai_call_args[1]["model"] == "gpt-4o-mini"
+        assert openai_call_args[1]["model"] == "gpt-5-mini"
 
     @pytest.mark.asyncio
     async def test_fallback_disabled_raises_error(self, mock_settings, mock_claude_client, mock_openai_client):

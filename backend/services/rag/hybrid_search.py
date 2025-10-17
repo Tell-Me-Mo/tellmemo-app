@@ -12,7 +12,6 @@ import json
 from sentence_transformers import SentenceTransformer, CrossEncoder
 
 from utils.logger import get_logger, sanitize_for_log
-from utils.monitoring import monitor_operation, MonitoringContext
 from services.rag.embedding_service import embedding_service
 from services.rag.multi_query_retrieval import (
     MultiQueryResults, RetrievalResult, QueryAnalysis, QueryIntent,
@@ -146,34 +145,25 @@ class HybridSearchService:
     
     def _initialize_models(self):
         """Initialize ML models for hybrid search."""
-        with MonitoringContext(
-            "initialize_hybrid_search_models",
-            metadata={"service": "hybrid_search"}
-        ) as ctx:
+        try:
+            # Load sentence transformer for semantic search
             try:
-                # Load sentence transformer for semantic search
-                try:
-                    self.sentence_transformer = SentenceTransformer(self.settings.sentence_transformer_model)
-                    logger.info("Loaded SentenceTransformer for hybrid search")
-                    ctx.update(output={"sentence_transformer_loaded": True})
-                except Exception as e:
-                    logger.warning(f"Failed to load SentenceTransformer: {e}")
-                    ctx.update(output={"sentence_transformer_loaded": False, "error": str(e)})
-
-                # Load cross-encoder for re-ranking
-                try:
-                    self.cross_encoder = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-2-v2')
-                    logger.info("Loaded CrossEncoder for result re-ranking")
-                    ctx.update(output={"cross_encoder_loaded": True})
-                except Exception as e:
-                    logger.warning(f"Failed to load CrossEncoder: {e}")
-                    self.cross_encoder = None
-                    ctx.update(output={"cross_encoder_loaded": False, "error": str(e)})
-
+                self.sentence_transformer = SentenceTransformer(self.settings.sentence_transformer_model)
+                logger.info("Loaded SentenceTransformer for hybrid search")
             except Exception as e:
-                logger.error(f"Failed to initialize hybrid search models: {e}")
+                logger.warning(f"Failed to load SentenceTransformer: {e}")
+
+            # Load cross-encoder for re-ranking
+            try:
+                self.cross_encoder = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-2-v2')
+                logger.info("Loaded CrossEncoder for result re-ranking")
+            except Exception as e:
+                logger.warning(f"Failed to load CrossEncoder: {e}")
+                self.cross_encoder = None
+
+        except Exception as e:
+            logger.error(f"Failed to initialize hybrid search models: {e}")
     
-    @monitor_operation("hybrid_search", "search", capture_args=True, capture_result=True)
     async def hybrid_search(
         self,
         query: str,
@@ -258,7 +248,6 @@ class HybridSearchService:
             # Fallback to semantic search only
             return await self._fallback_search(query, project_id)
     
-    @monitor_operation("semantic_search_hybrid", "search", capture_args=False, capture_result=True)
     async def _semantic_search(self, query: str, project_id: str) -> List[SearchResult]:
         """Perform semantic vector search with MRL optimization."""
         try:
@@ -366,7 +355,6 @@ class HybridSearchService:
         logger.debug(f"Standard semantic search retrieved {len(search_results)} results")
         return search_results[:self.config.max_results_per_method]
     
-    @monitor_operation("keyword_search_bm25", "search", capture_args=False, capture_result=True)
     async def _keyword_search(self, query: str, project_id: str) -> List[SearchResult]:
         """Perform keyword-based search using BM25 scoring."""
         try:
@@ -576,7 +564,6 @@ class HybridSearchService:
         
         return matched_keywords, positions
     
-    @monitor_operation("merge_search_results", "search", capture_args=False, capture_result=True)
     async def _merge_results(
         self,
         semantic_results: List[SearchResult],
@@ -704,7 +691,6 @@ class HybridSearchService:
 
         return min(bonus, 0.3)  # Cap bonus at 30% (reduced from 50%)
     
-    @monitor_operation("cross_encoder_rerank", "search", capture_args=False, capture_result=True)
     async def _cross_encoder_rerank(
         self,
         results: List[SearchResult],
@@ -751,7 +737,6 @@ class HybridSearchService:
                 result.final_score = result.hybrid_score
             return results
     
-    @monitor_operation("optimize_final_results", "search", capture_args=False, capture_result=True)
     async def _optimize_final_results(
         self,
         results: List[SearchResult],

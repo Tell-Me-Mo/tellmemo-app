@@ -29,7 +29,6 @@ from qdrant_client.http.exceptions import ResponseHandlingException, UnexpectedR
 
 from config import get_settings
 from utils.logger import get_logger, sanitize_for_log
-from utils.monitoring import monitor_operation, MonitoringContext
 
 settings = get_settings()
 logger = get_logger(__name__)
@@ -327,7 +326,6 @@ class MultiTenantVectorStore:
             logger.error(f"Failed to list organization collections: {e}")
             return []
 
-    @monitor_operation("insert_vectors", "vector", capture_args=True)
     async def insert_vectors(
         self,
         organization_id: str,
@@ -373,7 +371,6 @@ class MultiTenantVectorStore:
             logger.error(f"Failed to insert vectors: {e}")
             raise
 
-    @monitor_operation("search_vectors", "vector", capture_args=True)
     async def search_vectors(
         self,
         organization_id: str,
@@ -483,7 +480,6 @@ class MultiTenantVectorStore:
             logger.error(f"Failed to search vectors: {e}")
             raise
 
-    @monitor_operation("search_vectors_two_stage", "vector", capture_args=True)
     async def search_vectors_two_stage(
         self,
         organization_id: str,
@@ -675,7 +671,6 @@ class MultiTenantVectorStore:
             logger.info(f"📌 Returning {len(final_results)} results from Stage 1 fallback")
             return final_results
 
-    @monitor_operation("delete_vectors", "vector", capture_args=True)
     async def delete_vectors(
         self,
         organization_id: str,

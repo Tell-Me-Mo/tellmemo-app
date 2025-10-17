@@ -8,7 +8,6 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime
 import re
 
-from utils.monitoring import monitor_operation, monitor_sync_operation
 
 logger = logging.getLogger(__name__)
 
@@ -24,13 +23,7 @@ class FirefliesService:
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
         }
-    
-    @monitor_operation(
-        operation_name="get_meeting_transcription",
-        operation_type="external_api",
-        capture_args=True,
-        capture_result=True
-    )
+
     async def get_meeting_transcription(self, meeting_id: str) -> Dict[str, Any]:
         """
         Fetch meeting transcription data from Fireflies API
@@ -132,13 +125,7 @@ class FirefliesService:
         except Exception as e:
             logger.error(f"Error fetching Fireflies transcript: {sanitize_for_log(str(e))}")
             raise
-    
-    @monitor_operation(
-        operation_name="fetch_transcript_from_url",
-        operation_type="external_api",
-        capture_args=False,
-        capture_result=False
-    )
+
     async def _fetch_transcript_from_url(self, transcript_url: str) -> str:
         """
         Fetch transcript content from Fireflies transcript URL
@@ -165,13 +152,7 @@ class FirefliesService:
         except Exception as e:
             logger.error(f"Failed to fetch transcript from URL: {sanitize_for_log(str(e))}")
             return ""
-    
-    @monitor_operation(
-        operation_name="format_meeting_data",
-        operation_type="parsing",
-        capture_args=False,
-        capture_result=True
-    )
+
     async def _format_meeting_data(self, transcript_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Format raw Fireflies API response into standardized format
@@ -242,11 +223,7 @@ class FirefliesService:
             "summary": transcript_data.get("summary", {}),
             "raw_transcript": transcript_text
         }
-    
-    @monitor_sync_operation(
-        operation_name="format_transcript_with_speakers",
-        operation_type="parsing"
-    )
+
     def _format_transcript_with_speakers(
         self,
         sentences: list,
@@ -338,13 +315,7 @@ class FirefliesService:
         # Add date to title
         date_str = date.strftime("%B %d, %Y")
         return f"{title} - {date_str}"
-    
-    @monitor_operation(
-        operation_name="test_connection",
-        operation_type="external_api",
-        capture_args=False,
-        capture_result=True
-    )
+
     async def test_connection(self) -> bool:
         """
         Test the API connection with Fireflies

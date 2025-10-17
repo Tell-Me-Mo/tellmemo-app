@@ -15,7 +15,6 @@ from cryptography.hazmat.backends import default_backend
 from models.integration import Integration, IntegrationType, IntegrationStatus
 from config import get_settings
 from utils.logger import get_logger
-from utils.monitoring import monitor_operation
 
 logger = get_logger(__name__)
 
@@ -44,7 +43,7 @@ class IntegrationService:
         )
         key = base64.urlsafe_b64encode(kdf.derive(secret.encode()))
         return key
-    
+
     def _encrypt_value(self, value: Optional[str]) -> Optional[str]:
         """Encrypt a sensitive value."""
         if not value:
@@ -67,8 +66,7 @@ class IntegrationService:
             # If decryption fails, assume it's unencrypted (development mode)
             logger.warning("Failed to decrypt value - assuming unencrypted")
             return encrypted_value
-    
-    @monitor_operation("get_integration", "database")
+
     async def get_integration(
         self,
         session: AsyncSession,
@@ -87,8 +85,7 @@ class IntegrationService:
         except Exception as e:
             logger.error(f"Failed to get integration {integration_type}: {e}")
             raise
-    
-    @monitor_operation("list_integrations", "database")
+
     async def list_integrations(
         self,
         session: AsyncSession,
@@ -105,8 +102,7 @@ class IntegrationService:
         except Exception as e:
             logger.error(f"Failed to list integrations: {e}")
             raise
-    
-    @monitor_operation("connect_integration", "database")
+
     async def connect_integration(
         self,
         session: AsyncSession,
@@ -166,8 +162,7 @@ class IntegrationService:
         except Exception as e:
             logger.error(f"Failed to connect integration {integration_type}: {e}")
             raise
-    
-    @monitor_operation("disconnect_integration", "database")
+
     async def disconnect_integration(
         self,
         session: AsyncSession,
@@ -193,8 +188,7 @@ class IntegrationService:
         except Exception as e:
             logger.error(f"Failed to disconnect integration {integration_type}: {e}")
             raise
-    
-    @monitor_operation("update_sync_time", "database")
+
     async def update_sync_time(
         self,
         session: AsyncSession,
@@ -216,8 +210,7 @@ class IntegrationService:
         except Exception as e:
             logger.error(f"Failed to update sync time for {integration_type}: {e}")
             raise
-    
-    @monitor_operation("get_integration_config", "database")
+
     async def get_integration_config(
         self,
         session: AsyncSession,
@@ -244,8 +237,7 @@ class IntegrationService:
         except Exception as e:
             logger.error(f"Failed to get config for {integration_type}: {e}")
             raise
-    
-    @monitor_operation("set_integration_error", "database")
+
     async def set_integration_error(
         self,
         session: AsyncSession,
@@ -271,7 +263,6 @@ class IntegrationService:
             logger.error(f"Failed to set error for {integration_type}: {e}")
             raise
 
-    @monitor_operation("get_integration_config_by_webhook_id", "database")
     async def get_integration_config_by_webhook_id(
         self,
         session: AsyncSession,

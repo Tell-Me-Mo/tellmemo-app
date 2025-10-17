@@ -12,7 +12,6 @@ import spacy
 from sentence_transformers import SentenceTransformer
 
 from utils.logger import get_logger
-from utils.monitoring import monitor_operation, monitor_sync_operation, MonitoringContext
 from services.transcription.transcript_parser import transcript_parser, ParsedTranscript
 
 logger = get_logger(__name__)
@@ -165,12 +164,6 @@ class AdvancedTranscriptProcessor:
             self.nlp_model = None
             self.sentence_transformer = None
     
-    @monitor_operation(
-        operation_name="process_transcript",
-        operation_type="parsing",
-        capture_args=True,
-        capture_result=True
-    )
     async def process_transcript(
         self,
         transcript_content: str,
@@ -258,12 +251,6 @@ class AdvancedTranscriptProcessor:
             logger.error(f"Advanced transcript processing failed: {e}")
             raise
     
-    @monitor_operation(
-        operation_name="extract_speaker_turns",
-        operation_type="parsing",
-        capture_args=False,
-        capture_result=True
-    )
     async def _extract_speaker_turns(self, parsed: ParsedTranscript) -> List[SpeakerTurn]:
         """Extract and analyze speaker turns."""
         turns = []
@@ -306,12 +293,6 @@ class AdvancedTranscriptProcessor:
         logger.debug(f"Extracted {len(turns)} speaker turns")
         return turns
     
-    @monitor_operation(
-        operation_name="perform_topic_segmentation",
-        operation_type="analysis",
-        capture_args=False,
-        capture_result=True
-    )
     async def _perform_topic_segmentation(self, speaker_turns: List[SpeakerTurn]) -> List[TopicSegment]:
         """Perform semantic topic segmentation."""
         if not speaker_turns or not self.sentence_transformer:
@@ -477,12 +458,6 @@ class AdvancedTranscriptProcessor:
             semantic_score=0.8  # Default score
         )
     
-    @monitor_operation(
-        operation_name="extract_decision_points",
-        operation_type="analysis",
-        capture_args=False,
-        capture_result=True
-    )
     async def _extract_decision_points(
         self,
         speaker_turns: List[SpeakerTurn],
@@ -534,12 +509,6 @@ class AdvancedTranscriptProcessor:
         logger.debug(f"Extracted {len(decisions)} decision points")
         return decisions
     
-    @monitor_operation(
-        operation_name="extract_action_items",
-        operation_type="analysis",
-        capture_args=False,
-        capture_result=True
-    )
     async def _extract_action_items(
         self,
         speaker_turns: List[SpeakerTurn],
@@ -677,12 +646,6 @@ class AdvancedTranscriptProcessor:
         logger.debug(f"Mapped {len(relationships)} temporal relationships")
         return relationships
     
-    @monitor_operation(
-        operation_name="analyze_participant_engagement",
-        operation_type="analysis",
-        capture_args=False,
-        capture_result=True
-    )
     async def _analyze_participant_engagement(
         self,
         speaker_turns: List[SpeakerTurn],

@@ -7,7 +7,6 @@ from config import get_settings
 from utils.logger import get_logger
 from db.database import db_manager
 from db.multi_tenant_vector_store import multi_tenant_vector_store
-from services.observability.langfuse_service import langfuse_service
 
 settings = get_settings()
 router = APIRouter()
@@ -61,8 +60,7 @@ async def health_check():
                 "port": settings.qdrant_port,
                 "collection": settings.qdrant_collection,
                 **qdrant_info
-            },
-            "langfuse": await langfuse_service.check_health()
+            }
         }
         
         # Overall status is healthy only if all critical services are healthy

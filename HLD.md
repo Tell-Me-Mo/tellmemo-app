@@ -364,26 +364,76 @@ Standalone Projects (no parent)
 
 **Features:**
 - Manual CRUD for risks and tasks
-- AI-assisted extraction (basic)
+- AI-assisted extraction from meeting summaries
+- **Intelligent semantic deduplication** (embedding-based + AI)
 - Assignment to team members
 - Status tracking
 - Blocker management
+- Automatic update extraction from duplicates
 
 **Risk Fields:**
 - Title, description, severity, status
 - Assigned to, mitigation plan
 - Organization and project scope
+- Title embedding (768-dim vector for deduplication)
 
 **Task Fields:**
 - Title, description, status, priority
 - Assigned to, due date
 - Question to ask (context field)
 - Linked blockers
+- Title embedding (768-dim vector for deduplication)
+
+**Semantic Deduplication System:**
+
+**Problem Solved:**
+- Prevents duplicate risks/tasks/blockers/lessons with similar meanings
+- Example: "AI Tool Adoption Risk" vs "AI Tool Proliferation" are detected as duplicates
+
+**Technology:**
+- **Hybrid Approach**: Embedding similarity (fast, deterministic) + AI analysis (nuanced)
+- **Similarity Thresholds**:
+  - High (≥0.85): Likely duplicate, check for updates
+  - Medium (0.75-0.85): AI reviews for duplicate detection
+  - Low (<0.75): Unique item
+- **Embedding Model**: EmbeddingGemma (768 dimensions)
+- **AI Model**: Claude Haiku 4.5 (for update extraction)
+
+**Intelligent Updates:**
+- Extracts meaningful updates from duplicates instead of just skipping
+- Status changes, new mitigation info, progress updates
+- Appends updates to existing items (configurable)
+- Preserves information history
+
+**Performance:**
+- Embeddings cached in database (generated once)
+- Fast cosine similarity matching (~1ms per comparison)
+- AI analysis only for medium/high similarity cases (~30% of items)
+- Batch processing for efficiency
+
+**Configuration:**
+```env
+ENABLE_SEMANTIC_DEDUPLICATION=true  # Enable/disable system
+SEMANTIC_SIMILARITY_HIGH_THRESHOLD=0.85  # High similarity threshold
+SEMANTIC_SIMILARITY_MEDIUM_THRESHOLD=0.75  # Medium similarity threshold
+SEMANTIC_DEDUP_USE_AI_FALLBACK=true  # Use AI for edge cases
+ENABLE_INTELLIGENT_UPDATES=true  # Extract updates from duplicates
+APPEND_UPDATES_TO_DESCRIPTION=true  # Append vs replace
+```
+
+**Results:**
+- Reduces semantic duplicates from ~37 pairs to <10 (expected)
+- Improves data quality and reduces clutter
+- Automatic update application saves manual work
 
 **Database Tables:**
-- `risks` - Risk tracking
-- `tasks` - Task tracking
-- `blockers` - Task blockers
+- `risks` - Risk tracking (with title_embedding)
+- `tasks` - Task tracking (with title_embedding)
+- `blockers` - Blocker tracking (with title_embedding)
+
+**Services:**
+- `semantic_deduplicator.py` - Core deduplication engine
+- `project_items_sync_service.py` - Integration with content processing
 
 ### 8. Lessons Learned
 

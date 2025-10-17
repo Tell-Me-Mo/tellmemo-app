@@ -280,8 +280,7 @@ if due_date and isinstance(due_date, str):
 #### Problem
 Tasks marked as complete in meeting transcripts **are NOT auto-closed**:
 - Only **1 task out of 30** marked as completed (3.3%)
-- Likely manually closed by user, not auto-detected
-- Meetings with "DONE-" prefix suggest completed work, but tasks remain open
+- It was manually closed by user, not auto-detected
 
 #### Code Analysis
 **No auto-closure logic exists in codebase:**

@@ -12,7 +12,6 @@ from models.content import Content, ContentType
 from models.project import Project
 from services.activity.activity_service import ActivityService
 from utils.logger import get_logger
-from utils.monitoring import monitor_operation, track_background_task
 from utils.rq_utils import CancellationCheckpoint
 from config import get_settings
 
@@ -210,9 +209,8 @@ class ContentService:
             logger.error(f"File validation failed: {e}")
             raise
     
-    
+
     @staticmethod
-    @monitor_operation("process_content_async", "async_worker", capture_args=True)
     async def process_content_async(
         session: AsyncSession,
         content_id: uuid.UUID,
@@ -630,7 +628,6 @@ class ContentService:
     # See services/project_items_sync_service.py for the new implementation
 
     @staticmethod
-    @monitor_operation("trigger_async_processing", "async_worker")
     async def trigger_async_processing(
         content_id: uuid.UUID,
         job_metadata: Optional[Dict[str, Any]] = None
@@ -676,7 +673,6 @@ class ContentService:
         return rq_job.id
 
     @staticmethod
-    @track_background_task("process_content_background", {"task_type": "content_processing"})
     async def _process_in_background(
         content_id: uuid.UUID,
         job_id: Optional[str] = None

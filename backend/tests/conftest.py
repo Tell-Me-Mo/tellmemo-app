@@ -602,6 +602,48 @@ def mock_llm_client():
             response.usage = mock_usage
             return response
 
+        # Semantic deduplication AI analysis response
+        if 'duplicate detection' in prompt.lower() or 'semantically similar' in prompt.lower():
+            # Return a proper analysis structure matching what the service expects
+            response = Mock()
+            # Parse to determine how many pairs there are
+            import re
+            pair_matches = re.findall(r'Pair (\d+):', prompt)
+            num_pairs = len(pair_matches)
+
+            # Generate analysis for each pair
+            analysis_items = []
+            for i in range(num_pairs):
+                # Check if the pair mentions keywords that suggest duplicate or unique
+                pair_section_start = prompt.find(f'Pair {i}:')
+                pair_section_end = prompt.find(f'Pair {i+1}:') if i < num_pairs - 1 else len(prompt)
+                pair_text = prompt[pair_section_start:pair_section_end].lower()
+
+                # Simple heuristic: if titles share 2+ words, likely duplicate
+                existing_title = re.search(r'existing.*?title:\s*([^\n]+)', pair_text, re.IGNORECASE)
+                new_title = re.search(r'new.*?title:\s*([^\n]+)', pair_text, re.IGNORECASE)
+
+                is_similar = False
+                if existing_title and new_title:
+                    existing_words = set(existing_title.group(1).lower().split())
+                    new_words = set(new_title.group(1).lower().split())
+                    common_words = existing_words & new_words
+                    is_similar = len(common_words) >= 2
+
+                analysis_items.append({
+                    "index": i,
+                    "is_duplicate": is_similar,
+                    "has_new_info": is_similar,  # If duplicate, assume it has updates
+                    "update_type": "status" if is_similar else None,
+                    "new_info": {"status": "updated"} if is_similar else {},
+                    "confidence": 0.85 if is_similar else 0.3,
+                    "reasoning": "Items refer to same concept with updates" if is_similar else "Different topics"
+                })
+
+            response.content = [Mock(text='{"analysis": ' + str(analysis_items).replace("'", '"').replace('True', 'true').replace('False', 'false').replace('None', 'null') + '}')]
+            response.usage = mock_usage
+            return response
+
         # Default summary response
         response = Mock()
         response.content = [Mock(text='{"subject": "Test Meeting Summary", "body": "This is a test summary generated for testing purposes.", "key_points": ["Point 1", "Point 2", "Point 3"], "action_items": [{"title": "Action 1", "assignee": "Test User", "due_date": "2025-10-14"}], "decisions": [{"title": "Decision 1", "description": "Test decision"}], "risks": [], "blockers": [], "lessons_learned": []}')]
@@ -622,6 +664,10 @@ def mock_llm_client():
         # Patch project_matcher_service's llm_client
         from services.intelligence.project_matcher_service import project_matcher_service
         project_matcher_service.llm_client = mock_client
+
+        # Patch semantic_deduplicator's llm_client
+        from services.intelligence.semantic_deduplicator import semantic_deduplicator
+        semantic_deduplicator.llm_client = mock_client
 
         yield mock_client
 
@@ -705,3 +751,101 @@ async def mock_redis_cache():
     # Restore original state
     redis_cache._client = original_client
     redis_cache._is_available = original_is_available
+
+
+@pytest.fixture(scope="function", autouse=True)
+def mock_embedding_service():
+    """
+    Mock the embedding service to prevent downloading HuggingFace models during tests.
+
+    This fixture automatically mocks the EmbeddingService for all tests,
+    preventing accidental downloads of the embeddinggemma-300m model.
+
+    Returns deterministic 768-dimensional embeddings for testing with some semantic similarity.
+    """
+    import numpy as np
+    import re
+    from services.rag.embedding_service import embedding_service
+
+    def text_to_simple_embedding(text: str, normalize: bool = True):
+        """
+        Generate a simple embedding that captures basic text similarity.
+
+        This creates embeddings where similar words/topics produce similar vectors.
+        """
+        # Normalize text
+        text_lower = text.lower()
+
+        # Extract key words (very simple tokenization)
+        words = re.findall(r'\b\w+\b', text_lower)
+
+        # Create base embedding from hash
+        hash_val = hash(text) % (2**32)
+        np.random.seed(hash_val)
+        base_embedding = np.random.randn(768).astype(np.float32) * 0.3  # Smaller magnitude
+
+        # Add components based on common words to create similarity
+        # This makes texts with same words more similar
+        word_contribution = np.zeros(768, dtype=np.float32)
+        for word in words:
+            word_hash = hash(word) % (2**32)
+            np.random.seed(word_hash)
+            word_vec = np.random.randn(768).astype(np.float32) * 0.1
+            word_contribution += word_vec
+
+        # Combine base and word contribution
+        embedding = base_embedding + word_contribution
+
+        if normalize:
+            norm = np.linalg.norm(embedding)
+            if norm > 0:
+                embedding = embedding / norm
+
+        return embedding
+
+    async def mock_generate_embedding(text: str, normalize: bool = True):
+        """Generate a deterministic fake embedding based on text."""
+        embedding = text_to_simple_embedding(text, normalize)
+        return embedding.tolist()
+
+    async def mock_generate_embeddings_batch(
+        texts: list,
+        batch_size: int = 32,
+        normalize: bool = True,
+        show_progress: bool = False
+    ):
+        """Generate fake embeddings for a batch of texts."""
+        embeddings = []
+        for text in texts:
+            embedding = await mock_generate_embedding(text, normalize)
+            embeddings.append(embedding)
+        return embeddings
+
+    # Store original methods
+    original_generate_embedding = embedding_service.generate_embedding
+    original_generate_embeddings_batch = embedding_service.generate_embeddings_batch
+    original_get_model = embedding_service.get_model
+
+    # Mock the methods
+    embedding_service.generate_embedding = mock_generate_embedding
+    embedding_service.generate_embeddings_batch = mock_generate_embeddings_batch
+
+    # Mock get_model to avoid downloading
+    async def mock_get_model():
+        # Return a mock model object
+        mock_model = Mock()
+        mock_model.encode = lambda texts, **kwargs: np.random.randn(len(texts) if isinstance(texts, list) else 1, 768)
+        return mock_model
+
+    embedding_service.get_model = mock_get_model
+
+    # Mark model as loaded
+    embedding_service._model = Mock()
+
+    yield embedding_service
+
+    # Restore original methods
+    embedding_service.generate_embedding = original_generate_embedding
+    embedding_service.generate_embeddings_batch = original_generate_embeddings_batch
+    embedding_service.get_model = original_get_model
+    embedding_service._model = None

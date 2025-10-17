@@ -13,7 +13,6 @@ from db.database import get_db
 from models.project import Project, ProjectStatus
 from services.summaries.summary_service_refactored import SummaryService
 from utils.logger import get_logger
-from utils.monitoring import monitor_operation
 
 logger = get_logger(__name__)
 
@@ -25,13 +24,7 @@ class SchedulerService:
         """Initialize the scheduler service."""
         self.summary_service = SummaryService()
         logger.info("Scheduler service initialized (manual triggers only)")
-    
-    @monitor_operation(
-        operation_name="generate_project_weekly_report",
-        operation_type="general",
-        capture_args=True,
-        capture_result=False
-    )
+
     async def _generate_project_weekly_report(
         self,
         session: AsyncSession,
@@ -75,13 +68,7 @@ class SchedulerService:
         except Exception as e:
             logger.error(f"Failed to generate weekly report for project {project.id}: {e}")
             raise
-    
-    @monitor_operation(
-        operation_name="trigger_weekly_report",
-        operation_type="general",
-        capture_args=True,
-        capture_result=True
-    )
+
     async def trigger_weekly_report(
         self,
         project_id: str,

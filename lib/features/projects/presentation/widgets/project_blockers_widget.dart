@@ -758,9 +758,7 @@ class ProjectBlockersWidget extends ConsumerWidget {
           initiallyInEditMode: true,
         );
       },
-    ).then((_) {
-      ref.invalidate(blockersNotifierProvider(projectId));
-    });
+    );
   }
 
   void _showBlockerDetails(BuildContext context, WidgetRef ref, Blocker blocker) {
@@ -776,9 +774,7 @@ class ProjectBlockersWidget extends ConsumerWidget {
           project: project,
         );
       },
-    ).then((_) {
-      ref.invalidate(blockersNotifierProvider(projectId));
-    });
+    );
   }
 
   Color _getImpactColor(BlockerImpact impact) {

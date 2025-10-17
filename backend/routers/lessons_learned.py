@@ -14,7 +14,6 @@ from models.user import User
 from models.lesson_learned import LessonLearned, LessonCategory, LessonType, LessonLearnedImpact
 from models.project import Project
 from utils.logger import get_logger, sanitize_for_log
-from utils.monitoring import monitor_operation
 from pydantic import BaseModel
 from datetime import datetime
 from services.item_updates_service import ItemUpdatesService
@@ -68,7 +67,6 @@ class LessonLearnedResponse(BaseModel):
 
 
 @router.get("/projects/{project_id}/lessons-learned", response_model=List[LessonLearnedResponse])
-@monitor_operation("get_project_lessons_learned", "api")
 async def get_project_lessons_learned(
     project_id: UUID,
     category: Optional[str] = Query(None),
@@ -137,7 +135,6 @@ async def get_project_lessons_learned(
 
 
 @router.post("/projects/{project_id}/lessons-learned", response_model=LessonLearnedResponse)
-@monitor_operation("create_lesson_learned", "api")
 async def create_lesson_learned(
     project_id: UUID,
     lesson_data: LessonLearnedCreate,
@@ -220,7 +217,6 @@ async def create_lesson_learned(
 
 
 @router.put("/lessons-learned/{lesson_id}", response_model=LessonLearnedResponse)
-@monitor_operation("update_lesson_learned", "api")
 async def update_lesson_learned(
     lesson_id: UUID,
     lesson_data: LessonLearnedUpdate,
@@ -318,7 +314,6 @@ async def update_lesson_learned(
 
 
 @router.delete("/lessons-learned/{lesson_id}")
-@monitor_operation("delete_lesson_learned", "api")
 async def delete_lesson_learned(
     lesson_id: UUID,
     current_user: User = Depends(get_current_user),
@@ -357,7 +352,6 @@ async def delete_lesson_learned(
 
 
 @router.post("/projects/{project_id}/lessons-learned/batch")
-@monitor_operation("batch_create_lessons_learned", "api")
 async def batch_create_lessons_learned(
     project_id: UUID,
     lessons_data: List[dict],
@@ -441,7 +435,6 @@ class ItemUpdateCreate(PydanticBase):
 
 
 @router.get("/projects/{project_id}/lessons/{lesson_id}/updates")
-@monitor_operation("get_lesson_updates", "api")
 async def get_lesson_updates(
     project_id: UUID,
     lesson_id: UUID,
@@ -486,7 +479,6 @@ async def get_lesson_updates(
 
 
 @router.post("/projects/{project_id}/lessons/{lesson_id}/updates")
-@monitor_operation("create_lesson_update", "api")
 async def create_lesson_update(
     project_id: UUID,
     lesson_id: UUID,

@@ -11,7 +11,6 @@ from sqlalchemy.pool import NullPool
 
 from config import get_settings
 from utils.logger import get_logger
-from utils.monitoring import monitor_operation, MonitoringContext
 
 settings = get_settings()
 logger = get_logger(__name__)
@@ -101,8 +100,7 @@ class DatabaseManager:
                         raise
         
         return self._pg_pool
-    
-    @monitor_operation("close_pg_pool", "database")
+
     async def close_pg_pool(self):
         """Close the asyncpg connection pool."""
         if self._pg_pool:
@@ -131,15 +129,13 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Failed to get PostgreSQL version: {e}")
             return "Unknown"
-    
-    @monitor_operation("execute_raw_query", "database")
+
     async def execute_raw_query(self, query: str, *args):
         """Execute a raw SQL query using asyncpg."""
         pool = await self.init_pg_pool()
         async with pool.acquire() as connection:
             return await connection.fetch(query, *args)
-    
-    @monitor_operation("execute_raw_command", "database")
+
     async def execute_raw_command(self, command: str, *args):
         """Execute a raw SQL command using asyncpg."""
         pool = await self.init_pg_pool()
@@ -153,8 +149,7 @@ class DatabaseManager:
         async with pool.acquire() as connection:
             async with connection.transaction():
                 yield connection
-    
-    @monitor_operation("close_database_connections", "database")
+
     async def close(self):
         """Close all database connections."""
         await self.close_pg_pool()

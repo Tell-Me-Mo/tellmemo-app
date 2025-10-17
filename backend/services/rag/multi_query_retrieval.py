@@ -12,7 +12,6 @@ import spacy
 from sentence_transformers import SentenceTransformer
 
 from utils.logger import get_logger, sanitize_for_log
-from utils.monitoring import monitor_operation, monitor_sync_operation, MonitoringContext
 from services.rag.embedding_service import embedding_service
 from db.multi_tenant_vector_store import multi_tenant_vector_store
 from models.project import Project
@@ -203,13 +202,7 @@ class MultiQueryRetrievalService:
                 
         except Exception as e:
             logger.error(f"Failed to initialize models for multi-query retrieval: {e}")
-    
-    @monitor_operation(
-        operation_name="multi_query_retrieval",
-        operation_type="search",
-        capture_args=True,
-        capture_result=True
-    )
+
     async def retrieve_with_multi_query(
         self,
         query: str,
@@ -283,13 +276,7 @@ class MultiQueryRetrievalService:
             logger.error(f"Multi-query retrieval failed: {e}")
             # Fallback to simple retrieval
             return await self._fallback_retrieval(query, project_id, max_results)
-    
-    @monitor_operation(
-        operation_name="query_analysis",
-        operation_type="analysis",
-        capture_args=False,
-        capture_result=True
-    )
+
     async def _analyze_query(self, query: str) -> QueryAnalysis:
         """Analyze query to determine intent, extract entities, and identify complexity."""
         # Classify intent
@@ -321,11 +308,7 @@ class MultiQueryRetrievalService:
             complexity_score=complexity_score,
             requires_decomposition=requires_decomposition
         )
-    
-    @monitor_sync_operation(
-        operation_name="intent_classification",
-        operation_type="analysis"
-    )
+
     def _classify_intent(self, query: str) -> Tuple[QueryIntent, float]:
         """Classify query intent using pattern matching."""
         query_lower = query.lower()
@@ -500,13 +483,7 @@ class MultiQueryRetrievalService:
         base_score += connector_count * 0.1
         
         return min(base_score, 1.0)
-    
-    @monitor_operation(
-        operation_name="query_variation_generation",
-        operation_type="analysis",
-        capture_args=False,
-        capture_result=True
-    )
+
     async def _generate_query_variations(self, analysis: QueryAnalysis) -> List[QueryVariation]:
         """Generate multiple query variations for comprehensive retrieval."""
         variations = []
@@ -693,15 +670,9 @@ class MultiQueryRetrievalService:
                         keywords=group
                     )
                     variations.append(variation)
-        
+
         return variations[:2]  # Limit decompositions
-    
-    @monitor_operation(
-        operation_name="single_query_execution",
-        operation_type="search",
-        capture_args=False,
-        capture_result=True
-    )
+
     async def _execute_single_query(
         self,
         variation: QueryVariation,
@@ -816,13 +787,7 @@ class MultiQueryRetrievalService:
             )
         
         return factors
-    
-    @monitor_operation(
-        operation_name="result_deduplication",
-        operation_type="analysis",
-        capture_args=False,
-        capture_result=True
-    )
+
     async def _deduplicate_results(
         self,
         results: List[RetrievalResult]
