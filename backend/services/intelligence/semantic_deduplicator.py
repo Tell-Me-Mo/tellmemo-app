@@ -346,9 +346,10 @@ class SemanticDeduplicator:
         prompt = self._build_update_extraction_prompt(item_type, potential_duplicates)
 
         try:
+            # Use configured model (should be Haiku for speed/cost optimization)
             response = await self.llm_client.create_message(
                 prompt=prompt,
-                model=settings.llm_model,
+                model=None,  # Use multi-provider client's configured model
                 max_tokens=4096,
                 temperature=0.1
             )
@@ -363,6 +364,7 @@ class SemanticDeduplicator:
                 raise Exception("LLM response has no content")
 
             import json
+            import re
             response_text = response.content[0].text
 
             if not response_text or not response_text.strip():
@@ -371,8 +373,25 @@ class SemanticDeduplicator:
 
             logger.debug(f"LLM response text (first 500 chars): {response_text[:500]}")
 
-            # Parse JSON directly (we asked for pure JSON in the prompt)
-            parsed = json.loads(response_text.strip())
+            # Clean markdown code blocks if present (Claude often returns ```json ... ``` format)
+            cleaned_text = response_text.strip()
+
+            # Remove markdown code blocks
+            if cleaned_text.startswith('```'):
+                # Extract JSON from ```json ... ``` or ``` ... ```
+                match = re.search(r'```(?:json)?\s*\n?(.*?)```', cleaned_text, re.DOTALL)
+                if match:
+                    cleaned_text = match.group(1).strip()
+                    logger.debug("Removed markdown code block wrapper from LLM response")
+
+            # Parse JSON
+            try:
+                parsed = json.loads(cleaned_text)
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON parse error: {e}")
+                logger.error(f"Cleaned text (first 1000 chars): {cleaned_text[:1000]}")
+                raise
+
             ai_analysis = parsed.get('analysis', [])
 
             # Process AI analysis
@@ -472,7 +491,12 @@ IMPORTANT INSTRUCTIONS:
 - New mitigation/resolution info = meaningful update (has_new_info=true)
 - Only include fields in new_info that actually changed
 
-Return ONLY valid JSON (no markdown, no code blocks, no explanations - just pure JSON):
+CRITICAL OUTPUT FORMAT REQUIREMENT:
+Your response must be ONLY the JSON object below. Do NOT wrap it in markdown code blocks (```json or ```).
+Do NOT add any explanatory text before or after the JSON.
+Start your response with {{ and end with }}.
+
+Expected JSON format:
 {{
   "analysis": [
     {{

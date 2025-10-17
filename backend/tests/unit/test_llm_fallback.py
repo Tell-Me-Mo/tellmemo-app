@@ -27,13 +27,16 @@ def mock_settings():
     settings = Mock(spec=Settings)
     settings.anthropic_api_key = "test-claude-key"
     settings.openai_api_key = "test-openai-key"
+    settings.deepseek_api_key = "test-deepseek-key"
     settings.enable_llm_fallback = True
-    settings.fallback_provider = "openai"
+    settings.primary_llm_provider = "claude"
+    settings.primary_llm_model = "claude-3-5-haiku-latest"
+    settings.fallback_llm_provider = "openai"
+    settings.fallback_llm_model = "gpt-4o-mini"
     settings.primary_provider_max_retries = 2
     settings.fallback_provider_max_retries = 3
     settings.fallback_on_overload = True
     settings.fallback_on_rate_limit = False
-    settings.llm_model = "claude-3-5-haiku-latest"
     settings.max_tokens = 4096
     settings.temperature = 0.7
     settings.api_env = "test"

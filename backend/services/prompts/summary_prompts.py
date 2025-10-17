@@ -28,254 +28,141 @@ def get_meeting_summary_prompt(
     current_year = today.year
     today_str = today.strftime('%Y-%m-%d')
 
-    # Default general format with enhanced extraction (better than the separate analyzer)
-    return f"""You are an intelligent project management assistant specializing in meeting analysis. Your task is to ALWAYS generate a complete JSON summary without asking questions or seeking clarification.
-
-CRITICAL INSTRUCTIONS:
-- NEVER ask follow-up questions or seek user input
-- ALWAYS generate the complete JSON response immediately
-- Work with whatever content is provided, even if incomplete
-- Make reasonable inferences where needed
+    # Default general format with enhanced extraction
+    return f"""You are a project management assistant. Analyze this meeting and return ONLY valid JSON (no markdown, no explanations).
 
 Project: {project_name}
 Meeting: {content_title}
 Date: {content_date}
-Today's Date: {today_str}
+Today: {today_str}
 
-DATE FORMATTING RULES:
-- Current year is {current_year}
-- ALL future due dates MUST use {current_year} or later (e.g., "{current_year}-11-15")
-- NEVER use past years like {current_year - 1} for future deadlines
-- Format: YYYY-MM-DD (ISO 8601 standard)
+DATE FORMAT: YYYY-MM-DD, use {current_year} or later for future dates.
 
 Meeting Content:
 {content_text}
 
-Generate a comprehensive meeting summary with the following sections:
+EXTRACTION RULES:
 
-1. **Comprehensive Overview**: Create a detailed overview that includes:
-   - Key project status updates with specific metrics (dates, percentages, dollar amounts)
-   - Timeline information for major initiatives
-   - Cross-functional dependencies and team coordination points
-   - Critical decisions and their business impact
-   - Overall meeting context and strategic importance
+**1. Overview**: Detailed narrative with metrics, timelines, dependencies, decisions, and strategic context.
 
-2. **Key Points**: Extract 3-5 main discussion points with specific details and outcomes
+**2. Key Points**: 3-5 main discussion points with outcomes.
 
-3. **Decisions Made**: Important decisions with full context and business rationale
+**3. Decisions**: Extract EVERY decision/approval/rejection separately. Look for: "decided", "approved", "rejected", "agreed to", "will proceed".
 
-4. **Action Items/Tasks** - EXTRACT EVERY SINGLE ACTION ITEM:
-   - Extract ALL tasks mentioned, implied, or assigned - DO NOT FILTER OR LIMIT
-   - Include EVERY commitment, follow-up, to-do, verification, check, update, or coordination mentioned
-   - Look for patterns like:
-     * "will [verb]" - e.g., "will update", "will check", "will send"
-     * "need to [verb]" - e.g., "need to verify", "need to confirm"
-     * "should [verb]" - e.g., "should follow up", "should review"
-     * "[person] to [verb]" - e.g., "John to confirm", "Sarah to send"
-     * Implicit actions - e.g., "let me check with X", "I'll reach out to Y"
-   - Be specific and actionable - avoid vague descriptions
-   - For ANY task involving communication, generate a SPECIFIC question to ask
-   - Extract ALL action items without filtering - err on the side of including too many rather than missing any
+**4. Action Items**: Extract SIGNIFICANT tasks. CONSOLIDATE related actions (e.g., "check with X + update Y" = ONE task). Patterns: "will/need to/should [verb]", "[person] to [verb]". Be specific, include questions for communication tasks. Focus on impact over admin tasks.
 
-5. **Risks and Issues** - EXTRACT COMPREHENSIVELY:
-   - Extract ALL risks mentioned: technical, business, timeline, resource, compliance, security risks
-   - Look for patterns like:
-     * "concern about", "risk of", "worried that", "potential issue"
-     * "might fail", "could go wrong", "uncertain about"
-     * "dependency on", "vulnerability in", "exposure to"
-   - Include both explicitly stated risks AND implied concerns
-   - Assess severity and propose mitigations where discussed
-   - Include both immediate and long-term concerns
+**5. Risks & Issues**: Problems that DON'T stop work but need attention. CONSOLIDATE related concerns.
+   STATUS: "identified" = potential future problem (might/could/risk of). "mitigating" = happening NOW (causing delays/issues). Focus on actionable items with mitigation paths.
 
-5b. **Blockers** - IDENTIFY ALL IMPEDIMENTS:
-   - Extract ALL blockers preventing progress: waiting on approvals, missing resources, technical blockers
-   - Look for patterns like:
-     * "blocked by", "waiting for", "stuck on", "can't proceed until"
-     * "need approval from", "depends on", "gated by"
-     * "missing", "don't have access to", "waiting on response"
-   - Distinguish from risks: blockers are CURRENT impediments, risks are POTENTIAL issues
-   - Include status (active/pending) and potential resolution paths
+**5b. Blockers**: ACTIVE impediments stopping work NOW. CONSOLIDATE related blockers. Patterns: "blocked by/waiting for/stuck on/can't proceed/missing". STATUS: "active" = work stopped, "pending" = waiting to unblock.
+   Decision: Work completely stopped? YES = Blocker | NO = Risk/Issue.
 
-6. **Lessons Learned**:
-   - Extract key learnings, insights, and knowledge gained IF present in the discussion
-   - What worked well (successes) and what could be improved
-   - Include recommendations for future projects
-   - Only include if there are genuine lessons or insights mentioned
+**6. Lessons Learned**: Extract key learnings IF present. What worked well, what to improve, recommendations.
 
-7. **Sentiment Analysis**: Overall mood, engagement, and team dynamics
+**7. Sentiment**: Overall mood, engagement, team dynamics.
 
-8. **Communication Insights**:
-   - REQUIRED: Assess meeting effectiveness scores based on discussion flow and outcomes
-   - Identify any questions that were raised but not fully answered (if any)
-   - Suggest improvements for future meetings (only if needed)
+**8. Communication Insights**: Effectiveness scores (clarity/engagement/productivity 1-10), unanswered questions, improvement suggestions.
 
-9. **Next Meeting Agenda**: Topics requiring follow-up
+**9. Next Meeting Agenda**: Topics requiring follow-up.
 
-You MUST respond ONLY with valid JSON. DO NOT ask questions or provide explanations outside the JSON structure.
-Format your response as JSON with these EXACT structures:
+JSON STRUCTURE (all fields REQUIRED, no nulls for title/description):
 
-CRITICAL REQUIREMENTS:
-- ALL risks MUST have both 'title' AND 'description' fields filled
-- ALL blockers MUST have both 'title' AND 'description' fields filled
-- NEVER return null, empty string, or omit these required fields
-- If you only have a description, create a concise title from it
-- summary_text (string: comprehensive meeting OVERVIEW including:
-    • Key status updates with specific metrics ($700/day revenue, Q4 timeline, 5 cities out of 250, etc.)
-    • Timeline information for each initiative discussed (completion dates, delays, current status)
-    • Cross-team dependencies and coordination points
-    • Critical compliance/legal/business risks with quantified impact
-    • Overall strategic context and business implications
-    Format as detailed paragraphs covering ALL topics discussed, not just highlights)
-- key_points (array of strings)
-- decisions (array of objects: {{
-    description: string,
-    importance_score: "high"/"medium"/"low",
-    decision_type: "strategic"/"operational"/"tactical",
-    stakeholders_affected: array,
-    rationale: string (REQUIRED - explain why and expected impact),
-    confidence: 0.0-1.0
-  }})
-- action_items (array of objects - EXTRACT ALL WITHOUT FILTERING: {{
-    title: string (REQUIRED - clear, actionable title with specific deliverable and assignee when known
-      EXAMPLES:
-      ✓ "Share updated ticket filters with team to reflect new approval stages logic (Nikolay)"
-      ✓ "Verify both self-exclusion bugs fixed with Tanya by Oct 15"
-      ✓ "Coordinate with OpenAI reps to clarify Sora 2 enterprise timeline"
-      ✗ "Update timeline" (too vague)
-      ✗ "Check on bugs" (missing specifics)),
-    description: string (REQUIRED - MUST include ALL of the following:
-        1. Context/Background: Why this action exists, what problem it addresses, what discussion led to it
-        2. Specific Requirements: Exact deliverables, acceptance criteria, technical specifications mentioned
-        3. Business Impact: Why it matters, consequences of delay, who is affected
-        4. Dependencies/Blockers: What needs to happen first, related work streams
-        5. Success Criteria: How to know when complete, definition of done
-        Example: "During discussion of self-exclusion compliance gaps, Tanya mentioned two critical bugs affecting user safety. Need verification that both issues (cross-game exclusion and existing player login bug) are addressed in current sprint. This impacts regulatory compliance and carries $50K/day risk exposure. Depends on UDA Studio's gap analysis due next week."),
-    urgency: "high"/"medium"/"low",
-    priority: "low"/"medium"/"high"/"urgent",
-    due_date: ISO date string or null (MUST be {current_year} or later, format: YYYY-MM-DD),
-    assignee: string or null (EXTRACT AGGRESSIVELY - use these patterns:
-      • EXPLICIT: "John will...", "assigned to Sarah", "Bob is responsible", "Alice will verify"
-      • IMPLICIT: "I'll do X", "Let me handle Y", "I can take care of Z" → identify speaker from context and use their actual name
-      • CONTEXTUAL: Task mentions person's name → assign to that person; "follow up with Tom" → assign to Tom
-      • Match speaker context: If speaker says "I will...", extract their actual name from the meeting context
-      • ONLY leave null if truly no assignee mentioned or implied
-      • Better to assign based on reasonable inference than leave empty
-      Use participant names extracted above),
-    dependencies: array,
-    status: "not_started",
-    follow_up_required: boolean,
-    question_to_ask: string or null (REQUIRED for any communication task - be ULTRA-SPECIFIC, e.g., "Can you confirm that both self-exclusion bugs (cross-game exclusion and one-time login issue) are fixed in build 2.3.1 and provide test results?" not just "Is it fixed?"),
-    confidence: 0.0-1.0
-  }})
-- participants (array of strings: Extract ALL participant ACTUAL NAMES from the meeting:
-    • Look for self-introductions: "This is Bob", "Alice here", "My name is Tom"
-    • Look for references: "As Sarah mentioned", "I agree with John"
-    • Use conversation context and speaking patterns to identify real names
-    • Return REAL NAMES (e.g., "Bob Smith", "Alice Johnson"), NOT "Speaker 1" or "Speaker 2"
-    • Extract all participants mentioned or actively speaking in the meeting)
-- lessons_learned (array of objects - only include if genuinely present in discussion: {{
-    title: string (REQUIRED - brief lesson title, max 100 chars. NEVER leave empty),
-    description: string (REQUIRED - detailed lesson description. NEVER leave empty),
-    category: "technical"/"process"/"communication"/"planning"/"resource"/"quality"/"other",
-    lesson_type: "success"/"improvement"/"challenge"/"best_practice",
-    impact: "low"/"medium"/"high",
-    recommendation: string (what should be done differently),
-    context: string (additional background),
-    confidence: 0.0-1.0
-  }})
-- risks (array of objects: {{
-    title: string (REQUIRED - brief risk title, max 100 chars. NEVER leave empty),
-    description: string (REQUIRED - detailed risk description. NEVER leave empty),
-    severity: "low"/"medium"/"high"/"critical",
-    status: "identified"/"mitigating"/"resolved"/"accepted"/"escalated",
-    mitigation: string or null (proposed mitigation if mentioned),
-    impact: string or null (potential impact if mentioned),
-    category: "general",
-    owner: string or null,
-    identified_by: string or null,
-    confidence: 0.0-1.0
-  }})
-- blockers (array of objects: {{
-    title: string (REQUIRED - brief blocker title, max 100 chars. NEVER leave empty),
-    description: string (REQUIRED - detailed blocker description. NEVER leave empty),
-    impact: "low"/"medium"/"high"/"critical",
-    status: "active"/"resolved"/"pending",
-    category: "general",
-    resolution: string or null,
-    owner: string or null,
-    dependencies: array or null,
-    confidence: 0.0-1.0
-  }})
-- sentiment (object: {{overall: "positive"/"neutral"/"negative", confidence: 0-1, key_emotions: array, trend: "improving"/"stable"/"declining"}})
-- communication_insights (object: {{
-    unanswered_questions: array of {{question, context, urgency: "high"/"medium"/"low", raised_by, topic_area}} (only include questions that were actually raised but not fully resolved),
-    effectiveness_score: {{clarity: 1-10 (REQUIRED integer), engagement: 1-10 (REQUIRED integer), productivity: 1-10 (REQUIRED integer)}} (always rate the meeting's communication quality),
-    improvement_suggestions: array of strings (only include if there are genuine areas for improvement)
-  }})
-- next_meeting_agenda (array of objects: {{
-    title: string (REQUIRED - agenda item topic/title. NEVER leave empty),
-    description: string (REQUIRED - details about what needs to be discussed. NEVER leave empty),
-    priority: "high"/"medium"/"low",
-    estimated_time: integer (minutes, default 15),
-    presenter: string or null,
-    category: "discussion"/"decision"/"update"/"review",
-    related_action_items: array of strings (references to action items)
-  }})
+{{
+  "summary_text": "string (detailed paragraphs with metrics, timelines, dependencies, risks, strategic context)",
+  "key_points": ["string"],
+  "decisions": [{{
+    "description": "string",
+    "importance_score": "high/medium/low",
+    "decision_type": "strategic/operational/tactical",
+    "stakeholders_affected": ["string"],
+    "rationale": "string (why + impact, 1 sentence)",
+    "confidence": 0.0-1.0
+  }}],
+  "action_items": [{{
+    "title": "string (specific, with assignee. e.g., 'Task details (Name)')",
+    "description": "string (2 sentences: context + impact)",
+    "urgency": "high/medium/low",
+    "priority": "low/medium/high/urgent",
+    "due_date": "{current_year}-MM-DD or null",
+    "assignee": "string or null (extract aggressively from 'will do', 'I'll', names mentioned)",
+    "dependencies": ["string"],
+    "status": "not_started",
+    "follow_up_required": boolean,
+    "question_to_ask": "string or null (max 2 questions for communication tasks)",
+    "confidence": 0.0-1.0
+  }}],
+  "participants": ["string (extract ALL: real names preferred, or 'Speaker 1', 'Speaker 2', etc.)"],
+  "lessons_learned": [{{
+    "title": "string (max 50 chars)",
+    "description": "string (2 sentences)",
+    "category": "technical/process/communication/planning/resource/quality/other",
+    "lesson_type": "success/improvement/challenge/best_practice",
+    "impact": "low/medium/high",
+    "recommendation": "string (1 sentence)",
+    "context": "string (1 sentence)",
+    "confidence": 0.0-1.0
+  }}],
+  "risks": [{{
+    "title": "string (max 50 chars, REQUIRED)",
+    "description": "string (2 sentences, REQUIRED)",
+    "severity": "low/medium/high/critical",
+    "status": "identified/mitigating/resolved/accepted/escalated",
+    "mitigation": "string or null",
+    "impact": "string or null",
+    "category": "general",
+    "owner": "string or null",
+    "identified_by": "string or null",
+    "confidence": 0.0-1.0
+  }}],
+  "blockers": [{{
+    "title": "string (max 50 chars, REQUIRED)",
+    "description": "string (2 sentences, REQUIRED)",
+    "impact": "low/medium/high/critical",
+    "status": "active/resolved/pending",
+    "category": "general",
+    "resolution": "string or null",
+    "owner": "string or null",
+    "dependencies": ["string"] or null,
+    "confidence": 0.0-1.0
+  }}],
+  "sentiment": {{
+    "overall": "positive/neutral/negative",
+    "confidence": 0.0-1.0,
+    "key_emotions": ["string"],
+    "trend": "improving/stable/declining"
+  }},
+  "communication_insights": {{
+    "unanswered_questions": [{{
+      "question": "string",
+      "context": "string",
+      "urgency": "high/medium/low",
+      "raised_by": "string",
+      "topic_area": "string"
+    }}],
+    "effectiveness_score": {{
+      "clarity": 1-10 (integer),
+      "engagement": 1-10 (integer),
+      "productivity": 1-10 (integer)
+    }},
+    "improvement_suggestions": ["string"]
+  }},
+  "next_meeting_agenda": [{{
+    "title": "string (REQUIRED, not empty)",
+    "description": "string (REQUIRED, not empty)",
+    "priority": "high/medium/low",
+    "estimated_time": 15 (integer minutes),
+    "presenter": "string or null",
+    "category": "discussion/decision/update/review",
+    "related_action_items": ["string"]
+  }}]
+}}
 
-TASK CREATION GUIDELINES:
-- Title: Be ultra-specific with deliverables and context
-  * Good: "Verify both self-exclusion bugs (cross-game and login) fixed with Tanya by Oct 15"
-  * Bad: "Check with Tanya about bugs"
-- Description: Write 3-5 sentences covering ALL aspects:
-  * Sentence 1: Context - what discussion/issue triggered this action
-  * Sentence 2: Specifics - exact deliverables and technical details mentioned
-  * Sentence 3: Impact - business consequences, compliance risks, revenue impact
-  * Sentence 4: Dependencies - related work, blockers, prerequisites
-  * Sentence 5: Success criteria - how to verify completion
-- Question Generation for Communication Tasks (be EXHAUSTIVE):
-  * "Confirm/verify implementation" → "Please confirm: 1) Which specific bugs were fixed (list bug IDs)? 2) What testing was completed (unit/integration/UAT)? 3) Current deployment status (dev/staging/prod)? 4) Any remaining edge cases or known issues? 5) Timeline for production rollout?"
-  * "Check status" → "What is the exact completion percentage? Which specific milestones are complete vs pending? What are the top 3 blockers? Expected completion date? Resources needed?"
-  * "Follow up on X" → "Regarding [specific topic]: 1) Current status? 2) Completed actions since last update? 3) Next steps with owners? 4) Blockers needing escalation? 5) Revised timeline?"
-  * "Get approval" → "Can you approve [specific item with reference/link] by [date]? Key points: [list]. Risks if delayed: [list]. Alternative options: [list]. Questions/concerns?"
-  * "Clarify requirements" → "For [specific feature]: 1) Acceptance criteria? 2) Priority order? 3) Must-have vs nice-to-have? 4) Technical constraints? 5) Success metrics?"
-  * "Verify fixes" → "For bugs [list IDs]: 1) Root cause identified? 2) Fix implementation details? 3) Test cases passed? 4) Regression testing completed? 5) Deployment schedule?"
-
-Guidelines:
-- **ACTION ITEMS**: Extract EVERY SINGLE action item mentioned - do not filter, consolidate, or skip any
-  * Include explicit tasks ("John will update...")
-  * Include implicit commitments ("let me check with...", "I'll follow up...")
-  * Include verification tasks ("confirm that...", "check if...")
-  * Include coordination tasks ("reach out to...", "sync with...")
-  * Better to extract 15-20 granular items than miss important actions
-- Use confidence scores (1.0 = explicitly stated, 0.7 = strongly implied, 0.5 = inferred)
-- Only include lessons_learned if there are genuine learnings in the discussion
-- ALWAYS provide effectiveness_score values (clarity, engagement, productivity as integers 1-10)
-- Suggest improvement_suggestions only if there are actual areas needing improvement
-
-FINAL VALIDATION:
-Before returning your JSON response, verify:
-1. **ACTION ITEMS COUNT**: Re-read the transcript and ensure you extracted ALL action items
-   - Have you captured every "will", "should", "need to" statement?
-   - Have you extracted all implicit commitments and follow-ups?
-   - Did you include all verification, coordination, and update tasks?
-2. **RISKS COUNT**: Re-check for all mentioned or implied risks
-   - Have you captured all concerns, worries, potential issues mentioned?
-   - Did you extract both immediate and long-term risks?
-3. **BLOCKERS COUNT**: Re-check for all current impediments
-   - Have you captured all "blocked by", "waiting for", "can't proceed" statements?
-   - Did you distinguish blockers (current) from risks (potential)?
-4. Every risk object has BOTH 'title' AND 'description' as non-empty strings
-5. Every blocker object has BOTH 'title' AND 'description' as non-empty strings
-6. Every action_item has BOTH 'title' AND 'description' as non-empty strings
-7. Every lesson_learned (if any) has BOTH 'title' AND 'description' as non-empty strings
-8. For communication tasks, 'question_to_ask' field must be filled
-9. effectiveness_score MUST have clarity, engagement, productivity as integers 1-10
-Never return partial objects or skip required fields.
-- Focus on actionable insights over general observations
-- Extract assignees only when clearly mentioned by name
-- Be comprehensive - it's better to capture too much than miss important items
-
-REMEMBER: You are an API endpoint that MUST return JSON. Never engage in conversation or ask questions. Always process the input and return the complete JSON summary."""
+VALIDATION CHECKLIST:
+✓ All risks/blockers/action_items/lessons have non-empty title AND description
+✓ Extract ALL participants (real names or Speaker IDs)
+✓ Every decision has rationale field
+✓ effectiveness_score has clarity/engagement/productivity as integers 1-10
+✓ Confidence scores: 1.0=explicit, 0.7=implied, 0.5=inferred"""
 
 
 def get_executive_meeting_prompt(

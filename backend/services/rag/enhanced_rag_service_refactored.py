@@ -88,7 +88,8 @@ class EnhancedRAGService:
         
         # Initialize LLM configuration
         settings = get_settings()
-        self.llm_model = settings.llm_model
+        # Use multi-provider client's configured model (PRIMARY_LLM_MODEL)
+        self.llm_model = None
         self.max_tokens = settings.max_tokens
         self.temperature = settings.temperature
 

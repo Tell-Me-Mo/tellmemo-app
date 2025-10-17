@@ -47,7 +47,9 @@ class SummaryService:
     def __init__(self):
         """Initialize the summary service with configuration."""
         settings = get_settings()
-        self.llm_model = settings.llm_model
+        # DEPRECATED: settings.llm_model is kept for backward compatibility
+        # The multi-provider client now uses PRIMARY_LLM_MODEL from settings
+        self.llm_model = None  # Let multi-provider client determine the model
         self.max_tokens = settings.max_tokens
         self.temperature = settings.temperature
 
@@ -1452,12 +1454,27 @@ class SummaryService:
             output_tokens = response.usage.output_tokens
             total_tokens = input_tokens + output_tokens
             cost = self._calculate_cost(input_tokens, output_tokens)
-            
-            # Parse structured response
-            logger.info(f"DEBUG: Raw Claude response (first 500 chars): {response_text[:500]}")
+
+            # Parse structured response with detailed logging
+            logger.info(f"DEBUG: Full GPT-5 response length: {len(response_text)} chars")
+            logger.info(f"DEBUG: Full GPT-5 response:\n{response_text}")
+
             summary_data = self._parse_claude_response(response_text, content_type, content_title)
             logger.info(f"DEBUG: Parsed summary_data keys: {summary_data.keys()}")
-            logger.info(f"DEBUG: Lessons learned in parsed data: {summary_data.get('lessons_learned', 'NOT FOUND')}")
+
+            # Log extracted counts
+            logger.info(f"DEBUG: Extracted action_items count: {len(summary_data.get('action_items', []))}")
+            logger.info(f"DEBUG: Extracted decisions count: {len(summary_data.get('decisions', []))}")
+            logger.info(f"DEBUG: Extracted risks count: {len(summary_data.get('risks', []))}")
+            logger.info(f"DEBUG: Extracted blockers count: {len(summary_data.get('blockers', []))}")
+            logger.info(f"DEBUG: Extracted lessons_learned count: {len(summary_data.get('lessons_learned', []))}")
+            logger.info(f"DEBUG: Extracted participants count: {len(summary_data.get('participants', []))}")
+
+            # Log first action item if exists
+            if summary_data.get('action_items'):
+                logger.info(f"DEBUG: First action item: {summary_data['action_items'][0]}")
+            else:
+                logger.warning("DEBUG: NO ACTION ITEMS EXTRACTED!")
             summary_data["token_count"] = total_tokens
             summary_data["cost_usd"] = cost
 

@@ -35,6 +35,7 @@ class AIProvider(str, enum.Enum):
     """AI/LLM providers for AI Brain integration."""
     CLAUDE = "claude"
     OPENAI = "openai"
+    DEEPSEEK = "deepseek"
 
 
 class AIModel(str, enum.Enum):
@@ -48,11 +49,18 @@ class AIModel(str, enum.Enum):
     # Claude 3.5 models
     CLAUDE_3_5_SONNET = "claude-3-5-sonnet-20241022"
     CLAUDE_3_5_HAIKU = "claude-3-5-haiku-latest"
-    # OpenAI models
+    # OpenAI GPT-5 models (Released August 2025)
+    GPT_5 = "gpt-5"
+    GPT_5_MINI = "gpt-5-mini"
+    GPT_5_NANO = "gpt-5-nano"
+    # OpenAI GPT-4 models
     GPT_4O = "gpt-4o"
     GPT_4O_MINI = "gpt-4o-mini"
     GPT_4_TURBO = "gpt-4-turbo"
     GPT_35_TURBO = "gpt-3.5-turbo"
+    # DeepSeek models
+    DEEPSEEK_V3_2_EXP = "deepseek-chat"
+    DEEPSEEK_REASONER = "deepseek-reasoner"
 
 
 # Mapping of models to their providers
@@ -64,11 +72,18 @@ MODEL_PROVIDER_MAP = {
     AIModel.CLAUDE_SONNET_4: AIProvider.CLAUDE,
     AIModel.CLAUDE_3_5_SONNET: AIProvider.CLAUDE,
     AIModel.CLAUDE_3_5_HAIKU: AIProvider.CLAUDE,
-    # OpenAI models
+    # OpenAI GPT-5 models
+    AIModel.GPT_5: AIProvider.OPENAI,
+    AIModel.GPT_5_MINI: AIProvider.OPENAI,
+    AIModel.GPT_5_NANO: AIProvider.OPENAI,
+    # OpenAI GPT-4 models
     AIModel.GPT_4O: AIProvider.OPENAI,
     AIModel.GPT_4O_MINI: AIProvider.OPENAI,
     AIModel.GPT_4_TURBO: AIProvider.OPENAI,
     AIModel.GPT_35_TURBO: AIProvider.OPENAI,
+    # DeepSeek models
+    AIModel.DEEPSEEK_V3_2_EXP: AIProvider.DEEPSEEK,
+    AIModel.DEEPSEEK_REASONER: AIProvider.DEEPSEEK,
 }
 
 
@@ -76,18 +91,30 @@ MODEL_PROVIDER_MAP = {
 # Maps each model to its closest equivalent in the other provider
 MODEL_EQUIVALENCE_MAP = {
     # Claude → OpenAI equivalents (based on capability & cost)
-    AIModel.CLAUDE_HAIKU_4_5: AIModel.GPT_4O_MINI,      # Latest Haiku → Cost/speed optimized, similar pricing
-    AIModel.CLAUDE_3_5_HAIKU: AIModel.GPT_4O_MINI,      # Cost/speed optimized, similar pricing
-    AIModel.CLAUDE_3_5_SONNET: AIModel.GPT_4O,          # Balanced performance, high capability
-    AIModel.CLAUDE_SONNET_4: AIModel.GPT_4O,            # Latest Sonnet → GPT-4o
-    AIModel.CLAUDE_OPUS_4: AIModel.GPT_4O,              # High capability flagship
-    AIModel.CLAUDE_OPUS_4_1: AIModel.GPT_4_TURBO,       # Extended context, advanced reasoning
+    AIModel.CLAUDE_HAIKU_4_5: AIModel.GPT_5_MINI,       # Latest Haiku → GPT-5 Mini (cost/speed optimized)
+    AIModel.CLAUDE_3_5_HAIKU: AIModel.GPT_5_MINI,       # Cost/speed optimized
+    AIModel.CLAUDE_3_5_SONNET: AIModel.GPT_5,           # Balanced performance → GPT-5
+    AIModel.CLAUDE_SONNET_4: AIModel.GPT_5,             # Latest Sonnet → GPT-5
+    AIModel.CLAUDE_OPUS_4: AIModel.GPT_5,               # High capability flagship → GPT-5
+    AIModel.CLAUDE_OPUS_4_1: AIModel.GPT_5,             # Extended context, advanced reasoning → GPT-5
 
-    # OpenAI → Claude equivalents (reverse mapping)
+    # OpenAI GPT-5 → Claude equivalents
+    AIModel.GPT_5: AIModel.CLAUDE_SONNET_4,             # GPT-5 → Claude Sonnet 4 (flagship to flagship)
+    AIModel.GPT_5_MINI: AIModel.CLAUDE_HAIKU_4_5,       # GPT-5 Mini → Latest Haiku (cost optimized)
+    AIModel.GPT_5_NANO: AIModel.CLAUDE_HAIKU_4_5,       # GPT-5 Nano → Latest Haiku (smallest)
+
+    # OpenAI GPT-4 → Claude equivalents (legacy support)
     AIModel.GPT_4O_MINI: AIModel.CLAUDE_HAIKU_4_5,      # Cost optimized → Latest Haiku
     AIModel.GPT_4O: AIModel.CLAUDE_3_5_SONNET,          # Balanced capability
     AIModel.GPT_4_TURBO: AIModel.CLAUDE_OPUS_4,         # High capability
     AIModel.GPT_35_TURBO: AIModel.CLAUDE_HAIKU_4_5,     # Legacy model → Latest Haiku
+
+    # DeepSeek → OpenAI equivalents (prefer GPT-5 for new deployments)
+    AIModel.DEEPSEEK_V3_2_EXP: AIModel.GPT_5,           # DeepSeek V3.2 → GPT-5 (balanced capability)
+    AIModel.DEEPSEEK_REASONER: AIModel.GPT_5,           # DeepSeek Reasoner → GPT-5 (advanced reasoning)
+
+    # DeepSeek → Claude equivalents (will try these if OpenAI not available)
+    # Note: These are secondary fallbacks, handled by the cascade logic
 }
 
 

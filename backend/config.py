@@ -34,16 +34,31 @@ class Settings(BaseSettings):
     
     # Claude API Configuration
     anthropic_api_key: str = Field(default="", env="ANTHROPIC_API_KEY")
-    llm_model: str = Field(default="claude-3-5-haiku-latest", env="LLM_MODEL")  # Switched back from 4.5 due to JSON formatting issues
-    max_tokens: int = Field(default=4096, env="MAX_TOKENS")
+
+    # Global LLM settings (applies to all providers)
+    # Increased from 4096 to 8192 to accommodate Claude 4.5 Haiku's more detailed responses
+    # (Claude 4.5 Haiku generates more comprehensive summaries with action items, risks, etc.)
+    max_tokens: int = Field(default=8192, env="MAX_TOKENS")
     temperature: float = Field(default=0.7, env="TEMPERATURE")
 
     # OpenAI API Configuration
     openai_api_key: str = Field(default="", env="OPENAI_API_KEY")
 
+    # DeepSeek API Configuration
+    deepseek_api_key: str = Field(default="", env="DEEPSEEK_API_KEY")
+
+    # LLM Provider Configuration
+    # Primary provider: which provider to use first (claude, openai, or deepseek)
+    primary_llm_provider: str = Field(default="deepseek", env="PRIMARY_LLM_PROVIDER")
+    # Primary model: which model to use for the primary provider
+    primary_llm_model: str = Field(default="deepseek-chat", env="PRIMARY_LLM_MODEL")
+    # Fallback provider: which provider to fallback to if primary fails (claude, openai, or deepseek)
+    fallback_llm_provider: str = Field(default="openai", env="FALLBACK_LLM_PROVIDER")
+    # Fallback model: which model to use for the fallback provider
+    fallback_llm_model: str = Field(default="gpt-4o", env="FALLBACK_LLM_MODEL")
+
     # LLM Fallback Configuration
     enable_llm_fallback: bool = Field(default=True, env="ENABLE_LLM_FALLBACK")
-    fallback_provider: str = Field(default="openai", env="FALLBACK_PROVIDER")  # "openai" or "claude"
     primary_provider_max_retries: int = Field(default=2, env="PRIMARY_PROVIDER_MAX_RETRIES")
     fallback_provider_max_retries: int = Field(default=3, env="FALLBACK_PROVIDER_MAX_RETRIES")
     fallback_on_overload: bool = Field(default=True, env="FALLBACK_ON_OVERLOAD")  # Fallback on 529/503

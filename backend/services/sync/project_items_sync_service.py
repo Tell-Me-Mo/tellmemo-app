@@ -38,6 +38,28 @@ class ProjectItemsSyncService:
         self.semantic_deduplicator = semantic_deduplicator
         self.settings = get_settings()
 
+    def _extract_target_status(self, status_value: str) -> str:
+        """
+        Extract target status from AI-generated status transitions.
+
+        AI sometimes returns status transitions like "resolved → active" or "old_status -> new_status".
+        This function extracts just the target (new) status.
+
+        Args:
+            status_value: Status string that may contain a transition arrow
+
+        Returns:
+            The target status (after the arrow) or the original value if no arrow found
+        """
+        if isinstance(status_value, str):
+            # Handle both → and -> arrows
+            if '→' in status_value or '->' in status_value:
+                # Extract the target status (after the arrow)
+                target = status_value.split('→')[-1].split('->')[-1].strip()
+                logger.debug(f"Extracted target status '{target}' from transition '{status_value}'")
+                return target
+        return status_value
+
     async def sync_items_from_summary(
         self,
         session: AsyncSession,
@@ -393,7 +415,9 @@ class ProjectItemsSyncService:
                         if update_type == 'status' and new_info:
                             # Handle both enum and string values
                             if isinstance(new_info, str):
-                                update_data['status'] = new_info
+                                # Extract target status from transitions like "resolved → active"
+                                status_value = self._extract_target_status(new_info)
+                                update_data['status'] = status_value
                             else:
                                 update_data['status'] = new_info.value if hasattr(new_info, 'value') else str(new_info)
 
@@ -517,7 +541,9 @@ class ProjectItemsSyncService:
                         if update_type == 'status' and new_info:
                             # Handle both enum and string values
                             if isinstance(new_info, str):
-                                update_data['status'] = new_info
+                                # Extract target status from transitions like "resolved → active"
+                                status_value = self._extract_target_status(new_info)
+                                update_data['status'] = status_value
                             else:
                                 update_data['status'] = new_info.value if hasattr(new_info, 'value') else str(new_info)
 
@@ -659,8 +685,11 @@ class ProjectItemsSyncService:
                                 'working': 'in_progress'
                             }
 
-                            # Normalize and validate status
-                            status_value = new_info.lower() if isinstance(new_info, str) else str(new_info).lower()
+                            # Extract target status from transitions, then normalize and validate
+                            if isinstance(new_info, str):
+                                status_value = self._extract_target_status(new_info).lower()
+                            else:
+                                status_value = str(new_info).lower()
                             status_value = task_status_mapping.get(status_value, status_value)
 
                             # Validate against allowed values
@@ -1210,8 +1239,12 @@ class ProjectItemsSyncService:
         """
         Perform semantic deduplication using embeddings + AI.
 
+        Runs deduplication for all item types in parallel for performance.
+
         Returns deduplicated items in the same format as the legacy AI-only deduplication.
         """
+        import asyncio
+
         result = {
             'risks': [],
             'blockers': [],
@@ -1228,12 +1261,14 @@ class ProjectItemsSyncService:
             ('lessons', 'lesson')
         ]
 
-        for items_key, item_type in item_types:
+        # Create deduplication tasks for parallel execution
+        async def deduplicate_item_type(items_key: str, item_type: str):
+            """Helper to deduplicate a single item type."""
             new_items = extracted_items.get(items_key, [])
             existing = existing_items.get(items_key, [])
 
             if not new_items:
-                continue
+                return items_key, item_type, None
 
             # Run semantic deduplication
             dedup_result = await self.semantic_deduplicator.deduplicate_items(
@@ -1241,6 +1276,21 @@ class ProjectItemsSyncService:
                 new_items=new_items,
                 existing_items=existing
             )
+
+            return items_key, item_type, dedup_result
+
+        # Run all deduplication tasks in parallel
+        logger.info("[SYNC] Running deduplication for all item types in parallel...")
+        dedup_tasks = [
+            deduplicate_item_type(items_key, item_type)
+            for items_key, item_type in item_types
+        ]
+        dedup_results = await asyncio.gather(*dedup_tasks)
+
+        # Process results
+        for items_key, item_type, dedup_result in dedup_results:
+            if dedup_result is None:
+                continue
 
             # Add unique items to result
             result_key = items_key if items_key != 'lessons' else 'lessons_learned'

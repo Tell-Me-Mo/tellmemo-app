@@ -24,7 +24,8 @@ class ProjectMatcherService:
     def __init__(self):
         """Initialize the project matcher service."""
         settings = get_settings()
-        self.llm_model = settings.llm_model or "claude-3-5-haiku-20241022"
+        # Use multi-provider client's configured model (PRIMARY_LLM_MODEL)
+        self.llm_model = None
 
         # Confidence threshold for matching to existing projects
         self.min_confidence_for_match = 0.7  # Require 70% confidence to match existing project

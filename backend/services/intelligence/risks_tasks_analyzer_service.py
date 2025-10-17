@@ -19,7 +19,8 @@ class RisksTasksAnalyzer:
     def __init__(self, deduplication_confidence_threshold: float = 0.7):
         """Initialize the service."""
         settings = get_settings()
-        self.llm_model = settings.llm_model or "claude-3-5-haiku-20241022"
+        # Use multi-provider client's configured model (PRIMARY_LLM_MODEL)
+        self.llm_model = None
 
         # Configuration
         self.min_content_length = 300  # Lower threshold for risks/tasks
