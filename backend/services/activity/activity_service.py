@@ -9,7 +9,6 @@ from uuid import UUID
 from models.activity import Activity, ActivityType
 from models.project import Project
 from utils.logger import get_logger, sanitize_for_log
-from utils.monitoring import monitor_operation, monitor_sync_operation
 
 logger = get_logger(__name__)
 
@@ -18,12 +17,6 @@ class ActivityService:
     """Service for managing project activities."""
     
     @staticmethod
-    @monitor_operation(
-        operation_name="create_activity",
-        operation_type="database",
-        capture_args=True,
-        capture_result=False
-    )
     async def create_activity(
         db: AsyncSession,
         project_id: UUID,
@@ -60,12 +53,6 @@ class ActivityService:
             raise
     
     @staticmethod
-    @monitor_operation(
-        operation_name="get_project_activities",
-        operation_type="database",
-        capture_args=True,
-        capture_result=True
-    )
     async def get_project_activities(
         db: AsyncSession,
         project_id: UUID,
@@ -113,12 +100,6 @@ class ActivityService:
             raise
     
     @staticmethod
-    @monitor_operation(
-        operation_name="get_recent_activities",
-        operation_type="database",
-        capture_args=True,
-        capture_result=True
-    )
     async def get_recent_activities(
         db: AsyncSession,
         project_ids: List[UUID],
@@ -288,12 +269,6 @@ class ActivityService:
         )
     
     @staticmethod
-    @monitor_operation(
-        operation_name="delete_project_activities",
-        operation_type="database",
-        capture_args=True,
-        capture_result=True
-    )
     async def delete_project_activities(
         db: AsyncSession,
         project_id: UUID,

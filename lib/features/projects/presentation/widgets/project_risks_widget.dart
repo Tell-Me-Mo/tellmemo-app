@@ -335,9 +335,7 @@ class ProjectRisksWidget extends ConsumerWidget {
           initiallyInEditMode: true,
         );
       },
-    ).then((_) {
-      ref.invalidate(risksNotifierProvider(projectId));
-    });
+    );
   }
 
   void _showRiskDetails(BuildContext context, WidgetRef ref, Risk risk) {
@@ -349,9 +347,7 @@ class ProjectRisksWidget extends ConsumerWidget {
       pageBuilder: (context, animation, secondaryAnimation) {
         return RiskDetailPanel(projectId: projectId, risk: risk);
       },
-    ).then((_) {
-      ref.invalidate(risksNotifierProvider(projectId));
-    });
+    );
   }
 
   Color _getSeverityColor(RiskSeverity severity) {

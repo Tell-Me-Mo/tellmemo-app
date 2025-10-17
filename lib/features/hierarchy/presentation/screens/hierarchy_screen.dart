@@ -1855,7 +1855,10 @@ class _HierarchyScreenState extends ConsumerState<HierarchyScreen> {
           ),
         ),
       ),
-    );
+    ).then((_) {
+      // Refresh the hierarchy after dialog closes
+      ref.invalidate(hierarchyStateProvider(includeArchived: _includeArchived));
+    });
   }
 
   void _showCreateProjectDialogForPortfolio(String portfolioId) {

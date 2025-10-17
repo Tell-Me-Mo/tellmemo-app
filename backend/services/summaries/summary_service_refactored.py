@@ -1,4 +1,4 @@
-"""Summary generation service refactored with Langfuse v3 context managers."""
+"""Summary generation service."""
 
 import uuid
 import time
@@ -28,7 +28,6 @@ from models.content import Content
 from models.project import Project
 from models.program import Program
 from models.portfolio import Portfolio
-from services.observability.langfuse_service import langfuse_service
 from services.activity.activity_service import ActivityService
 from services.llm.multi_llm_client import get_multi_llm_client
 from services.prompts.summary_prompts import (
@@ -43,12 +42,14 @@ structured_logger = SummaryGenerationLogger(__name__)
 
 
 class SummaryService:
-    """Service for generating meeting and weekly summaries using Claude API with proper Langfuse v3 integration."""
+    """Service for generating meeting and weekly summaries using Claude API."""
 
     def __init__(self):
         """Initialize the summary service with configuration."""
         settings = get_settings()
-        self.llm_model = settings.llm_model
+        # DEPRECATED: settings.llm_model is kept for backward compatibility
+        # The multi-provider client now uses PRIMARY_LLM_MODEL from settings
+        self.llm_model = None  # Let multi-provider client determine the model
         self.max_tokens = settings.max_tokens
         self.temperature = settings.temperature
 
@@ -86,7 +87,7 @@ class SummaryService:
         rq_job=None,
         format_type: str = "general"
     ) -> Dict[str, Any]:
-        """Generate a meeting summary with proper Langfuse v3 context managers."""
+        """Generate a meeting summary."""
         start_time = time.time()
         correlation_id = get_correlation_id()
 
@@ -99,247 +100,165 @@ class SummaryService:
             correlation_id=correlation_id
         )
 
-        # Get Langfuse client (will be NoOpClient if disabled)
-        langfuse_client = langfuse_service.client
-
         try:
-            # Use Langfuse v3 context manager for proper span nesting
-            # If Langfuse is disabled, this will be a no-op context manager
-            with langfuse_client.start_as_current_span(
-                name="generate_meeting_summary",
-                input={
-                    "project_id": str(project_id),
-                    "content_id": str(content_id),
-                    "created_by": created_by
-                },
-                metadata={
-                    "summary_type": "meeting"
-                },
-                version="2.0.0"
-            ) as trace_span:
-                
-                # Update progress: Starting summary generation (91%)
-                self._update_rq_job_progress(rq_job, 91.0, "Starting summary generation")
-                
-                # Validate project exists
-                project = None
-                with langfuse_client.start_as_current_span(
-                    name="validate_project"
-                ) as validate_span:
-                    with structured_logger.timer("validate_project", correlation_id=correlation_id):
-                        project_result = await session.execute(
-                            select(Project).where(Project.id == project_id)
-                        )
-                        project = project_result.scalar_one_or_none()
-                        if not project:
-                            structured_logger.error(
-                                f"Project {project_id} not found",
-                                correlation_id=correlation_id,
-                                project_id=str(project_id)
-                            )
-                            raise ValueError(f"Project {project_id} not found")
-                        structured_logger.info(
-                            f"Found project: {project.name}",
-                            correlation_id=correlation_id,
-                            project_name=project.name
-                        )
-                    
-                    if hasattr(validate_span, 'update'):
-                        validate_span.update(
-                            output={"project_name": project.name}
-                        )
-                
-                # Update progress: Fetching content (92%)
-                self._update_rq_job_progress(rq_job, 92.0, "Fetching content for summary")
-                
-                # Get content to summarize
-                content = None
-                with langfuse_client.start_as_current_span(
-                    name="fetch_content"
-                ) as content_span:
-                    with structured_logger.timer("fetch_content", correlation_id=correlation_id):
-                        content_result = await session.execute(
-                        select(Content).where(
-                            and_(Content.id == content_id, Content.project_id == project_id)
-                        )
+            # Update progress: Starting summary generation (91%)
+            self._update_rq_job_progress(rq_job, 91.0, "Starting summary generation")
+
+            # Validate project exists
+            project = None
+            with structured_logger.timer("validate_project", correlation_id=correlation_id):
+                project_result = await session.execute(
+                    select(Project).where(Project.id == project_id)
+                )
+                project = project_result.scalar_one_or_none()
+                if not project:
+                    structured_logger.error(
+                        f"Project {project_id} not found",
+                        correlation_id=correlation_id,
+                        project_id=str(project_id)
                     )
-                        content = content_result.scalar_one_or_none()
-                        if not content:
-                            structured_logger.error(
-                                f"Content {content_id} not found in project {project_id}",
-                                correlation_id=correlation_id,
-                                content_id=str(content_id),
-                                project_id=str(project_id)
-                            )
-                            raise ValueError(f"Content {content_id} not found in project {project_id}")
-                        structured_logger.info(
-                            f"Found content: {content.title}",
-                            correlation_id=correlation_id,
-                            content_title=content.title,
-                            content_length=len(content.content) if content.content else 0
-                        )
-                    
-                    if hasattr(content_span, 'update'):
-                        content_span.update(
-                            output={
-                                "content_title": content.title,
-                                "content_length": len(content.content)
-                            }
-                        )
-                
-                # Update progress: Generating summary with AI (93%)
-                self._update_rq_job_progress(rq_job, 93.0, "Analyzing with AI")
-                
-                # Generate summary using Claude API
-                llm_start = time.time()
+                    raise ValueError(f"Project {project_id} not found")
                 structured_logger.info(
-                    "Starting LLM generation",
+                    f"Found project: {project.name}",
                     correlation_id=correlation_id,
-                    model=self.llm_model,
-                    format_type=format_type
+                    project_name=project.name
                 )
-                summary_data = await self._generate_claude_summary_with_context(
-                    content_type="meeting",
-                    project_name=project.name,
+
+            # Update progress: Fetching content (92%)
+            self._update_rq_job_progress(rq_job, 92.0, "Fetching content for summary")
+
+            # Get content to summarize
+            content = None
+            with structured_logger.timer("fetch_content", correlation_id=correlation_id):
+                content_result = await session.execute(
+                    select(Content).where(
+                        and_(Content.id == content_id, Content.project_id == project_id)
+                    )
+                )
+                content = content_result.scalar_one_or_none()
+                if not content:
+                    structured_logger.error(
+                        f"Content {content_id} not found in project {project_id}",
+                        correlation_id=correlation_id,
+                        content_id=str(content_id),
+                        project_id=str(project_id)
+                    )
+                    raise ValueError(f"Content {content_id} not found in project {project_id}")
+                structured_logger.info(
+                    f"Found content: {content.title}",
+                    correlation_id=correlation_id,
                     content_title=content.title,
-                    content_text=content.content,
-                    content_date=content.date,
-                    rq_job=rq_job,
-                    format_type=format_type
+                    content_length=len(content.content) if content.content else 0
                 )
-                llm_duration = (time.time() - llm_start) * 1000
-                structured_logger.info(
-                    "LLM generation completed",
-                    correlation_id=correlation_id,
-                    duration_ms=llm_duration,
-                    token_count=summary_data.get("token_count", 0)
-                )
-                
-                # Update progress: Processing AI response (97%)
-                self._update_rq_job_progress(rq_job, 97.0, "Extracting insights")
-                
-                # Process Claude's extracted intelligence (sentiment, risks, blockers)
+
+            # Update progress: Generating summary with AI (93%)
+            self._update_rq_job_progress(rq_job, 93.0, "Analyzing with AI")
+
+            # Generate summary using Claude API
+            llm_start = time.time()
+            structured_logger.info(
+                "Starting LLM generation",
+                correlation_id=correlation_id,
+                model=self.llm_model,
+                format_type=format_type
+            )
+            summary_data = await self._generate_claude_summary_with_context(
+                content_type="meeting",
+                project_name=project.name,
+                content_title=content.title,
+                content_text=content.content,
+                content_date=content.date,
+                rq_job=rq_job,
+                format_type=format_type
+            )
+            llm_duration = (time.time() - llm_start) * 1000
+            structured_logger.info(
+                "LLM generation completed",
+                correlation_id=correlation_id,
+                duration_ms=llm_duration,
+                token_count=summary_data.get("token_count", 0)
+            )
+
+            # Update progress: Processing AI response (97%)
+            self._update_rq_job_progress(rq_job, 97.0, "Extracting insights")
+
+            # Process Claude's extracted intelligence (sentiment, risks, blockers)
+            sentiment_data = None
+            risks_blockers_data = None
+            try:
+                # Process sentiment analysis from Claude's response
+                sentiment_data = self._process_claude_sentiment(summary_data)
+                if sentiment_data:
+                    logger.info(f"Processed Claude-extracted sentiment: {sentiment_data.get('overall', 'unknown')}")
+
+                # Process risks and blockers from Claude's response
+                risks_blockers_data = self._process_claude_risks_blockers(summary_data)
+                if risks_blockers_data:
+                    logger.info(f"Processed Claude-extracted risks and blockers: {len(risks_blockers_data.get('risks', []))} risks, {len(risks_blockers_data.get('blockers', []))} blockers")
+            except Exception as e:
+                logger.warning(f"Claude intelligence processing failed: {e}")
                 sentiment_data = None
                 risks_blockers_data = None
-                with langfuse_client.start_as_current_span(
-                    name="process_claude_intelligence"
-                ) as intelligence_span:
-                    try:
-                        # Process sentiment analysis from Claude's response
-                        sentiment_data = self._process_claude_sentiment(summary_data)
-                        if sentiment_data:
-                            logger.info(f"Processed Claude-extracted sentiment: {sentiment_data.get('overall', 'unknown')}")
-                        
-                        # Process risks and blockers from Claude's response
-                        risks_blockers_data = self._process_claude_risks_blockers(summary_data)
-                        if risks_blockers_data:
-                            logger.info(f"Processed Claude-extracted risks and blockers: {len(risks_blockers_data.get('risks', []))} risks, {len(risks_blockers_data.get('blockers', []))} blockers")
-                        
-                        if hasattr(intelligence_span, 'update'):
-                            intelligence_span.update(
-                                output={
-                                    "sentiment_analysis": sentiment_data,
-                                    "risks_blockers": risks_blockers_data
-                                }
-                            )
-                    except Exception as e:
-                        logger.warning(f"Claude intelligence processing failed: {e}")
-                        sentiment_data = None
-                        risks_blockers_data = None
-                
-                # Update progress: Saving summary (98%)
-                self._update_rq_job_progress(rq_job, 98.0, "Saving summary")
-                
-                # Create summary record
-                summary = None
-                with langfuse_client.start_as_current_span(
-                    name="save_summary"
-                ) as save_span:
-                    # Log communication insights before saving
-                    comm_insights = summary_data.get("communication_insights", {})
-                    logger.info(f"Communication insights to save: {comm_insights}")
 
-                    # DEBUG: Log lessons learned extraction
-                    lessons_learned_data = summary_data.get("lessons_learned", [])
-                    logger.info(f"DEBUG: Lessons learned from Claude response: {lessons_learned_data}")
-                    logger.info(f"DEBUG: Number of lessons learned: {len(lessons_learned_data)}")
-                    if lessons_learned_data:
-                        logger.info(f"DEBUG: First lesson learned: {lessons_learned_data[0] if lessons_learned_data else 'None'}")
+            # Update progress: Saving summary (98%)
+            self._update_rq_job_progress(rq_job, 98.0, "Saving summary")
 
-                    summary = Summary(
-                        id=uuid.uuid4(),
-                        organization_id=project.organization_id,  # Add organization_id from project
-                        project_id=project_id,
-                        content_id=content_id,
-                        summary_type=SummaryType.MEETING,
-                        subject=content.title + " - Meeting Summary",
-                        body=summary_data["summary_text"],
-                        key_points=summary_data.get("key_points", []),
-                        action_items=summary_data.get("action_items", []),
-                        decisions=summary_data.get("decisions", []),
-                        lessons_learned=lessons_learned_data,
-                        sentiment_analysis=sentiment_data,
-                        risks=risks_blockers_data.get("risks", []) if risks_blockers_data else [],
-                        blockers=risks_blockers_data.get("blockers", []) if risks_blockers_data else [],
-                        communication_insights=comm_insights,
-                        next_meeting_agenda=summary_data.get("next_meeting_agenda", []),
-                        created_by=created_by,
-                        token_count=summary_data.get("token_count", 0),
-                        generation_time_ms=int((time.time() - start_time) * 1000),
-                        format=format_type
-                    )
-                    
-                    session.add(summary)
-                    await session.flush()
-                    
-                    # Log activity for meeting summary generation
-                    await ActivityService.log_summary_generated(
-                        db=session,
-                        project_id=project_id,
-                        summary_type="meeting",
-                        summary_subject=summary.subject,
-                        user_name=created_by or "system",
-                        user_id=created_by_id
-                    )
-                    
-                    await session.commit()
-                    
-                    if hasattr(save_span, 'update'):
-                        save_span.update(
-                            output={"summary_id": str(summary.id)}
-                        )
-                
-                # Calculate total time
-                total_time = time.time() - start_time
-                
-                # Update trace span with final output
-                if hasattr(trace_span, 'update'):
-                    trace_span.update(
-                        output={
-                            "summary_id": str(summary.id),
-                            "summary_preview": summary_data["summary_text"][:200] + "...",
-                            "key_points_count": len(summary_data.get("key_points", [])),
-                            "action_items_count": len(summary_data.get("action_items", [])),
-                            "decisions_count": len(summary_data.get("decisions", [])),
-                            "total_time_s": total_time,
-                            "token_count": summary_data.get("token_count", 0),
-                            "cost_usd": summary_data.get("cost_usd", 0.0)
-                        }
-                    )
-                
-                # Add cost score
-                if hasattr(trace_span, 'score'):
-                    trace_span.score(
-                        name="cost_usd",
-                        value=summary_data.get("cost_usd", 0.0),
-                        comment="Cost for meeting summary generation"
-                    )
-            
+            # Create summary record
+            summary = None
+            # Log communication insights before saving
+            comm_insights = summary_data.get("communication_insights", {})
+            logger.info(f"Communication insights to save: {comm_insights}")
+
+            # DEBUG: Log lessons learned extraction
+            lessons_learned_data = summary_data.get("lessons_learned", [])
+            logger.info(f"DEBUG: Lessons learned from Claude response: {lessons_learned_data}")
+            logger.info(f"DEBUG: Number of lessons learned: {len(lessons_learned_data)}")
+            if lessons_learned_data:
+                logger.info(f"DEBUG: First lesson learned: {lessons_learned_data[0] if lessons_learned_data else 'None'}")
+
+            summary = Summary(
+                id=uuid.uuid4(),
+                organization_id=project.organization_id,  # Add organization_id from project
+                project_id=project_id,
+                content_id=content_id,
+                summary_type=SummaryType.MEETING,
+                subject=content.title + " - Meeting Summary",
+                body=summary_data["summary_text"],
+                key_points=summary_data.get("key_points", []),
+                action_items=summary_data.get("action_items", []),
+                decisions=summary_data.get("decisions", []),
+                lessons_learned=lessons_learned_data,
+                sentiment_analysis=sentiment_data,
+                risks=risks_blockers_data.get("risks", []) if risks_blockers_data else [],
+                blockers=risks_blockers_data.get("blockers", []) if risks_blockers_data else [],
+                communication_insights=comm_insights,
+                next_meeting_agenda=summary_data.get("next_meeting_agenda", []),
+                created_by=created_by,
+                token_count=summary_data.get("token_count", 0),
+                generation_time_ms=int((time.time() - start_time) * 1000),
+                format=format_type
+            )
+
+            session.add(summary)
+            await session.flush()
+
+            # Log activity for meeting summary generation
+            await ActivityService.log_summary_generated(
+                db=session,
+                project_id=project_id,
+                summary_type="meeting",
+                summary_subject=summary.subject,
+                user_name=created_by or "system",
+                user_id=created_by_id
+            )
+
+            await session.commit()
+
+            # Calculate total time
+            total_time = time.time() - start_time
+
             # Update progress: Finalizing (99%)
             self._update_rq_job_progress(rq_job, 99.0, "Finalizing")
-            
-            # Flush Langfuse events
-            langfuse_service.flush()
             
             logger.info(f"Meeting summary generated for content {content_id} in {total_time:.2f}s")
             
@@ -377,231 +296,170 @@ class SummaryService:
         rq_job=None,
         format_type: str = "general"
     ) -> Dict[str, Any]:
-        """Generate a project summary with proper Langfuse v3 context managers."""
+        """Generate a project summary."""
         start_time = time.time()
-        
-        # Get Langfuse client (will be NoOpClient if disabled)
-        langfuse_client = langfuse_service.client
 
         try:
             # Use provided week_end or default to 7 days after start
             if week_end is None:
                 week_end = week_start + timedelta(days=7)
 
-            # Use Langfuse v3 context manager
-            # If Langfuse is disabled, this will be a no-op context manager
-            with langfuse_client.start_as_current_span(
-                name="generate_project_summary",
-                input={
-                    "project_id": str(project_id),
-                    "week_start": week_start.isoformat(),
-                    "week_end": week_end.isoformat(),
-                    "created_by": created_by
-                },
-                metadata={
-                    "summary_type": "project"
-                },
-                version="2.0.0"
-            ) as trace_span:
-                
-                # Validate project
-                project = None
-                with langfuse_client.start_as_current_span(
-                    name="validate_project"
-                ) as validate_span:
-                    project_result = await session.execute(
-                        select(Project).where(Project.id == project_id)
+            # Validate project
+            project = None
+            project_result = await session.execute(
+                select(Project).where(Project.id == project_id)
+            )
+            project = project_result.scalar_one_or_none()
+            if not project:
+                raise ValueError(f"Project {project_id} not found")
+
+            # Get meeting summaries for the week (not full content)
+            summaries = []
+            contents_map = {}
+            # Fetch meeting summaries with their associated content info
+            summary_result = await session.execute(
+                select(Summary, Content).join(Content).where(
+                    and_(
+                        Summary.project_id == project_id,
+                        Summary.summary_type == SummaryType.MEETING,
+                        Content.date >= week_start,
+                        Content.date < week_end
                     )
-                    project = project_result.scalar_one_or_none()
-                    if not project:
-                        raise ValueError(f"Project {project_id} not found")
-                    
-                    if hasattr(validate_span, 'update'):
-                        validate_span.update(
-                            output={"project_name": project.name}
-                        )
-                
-                # Get meeting summaries for the week (not full content)
-                summaries = []
-                contents_map = {}
-                with langfuse_client.start_as_current_span(
-                    name="fetch_project_summaries"
-                ) as fetch_span:
-                    # Fetch meeting summaries with their associated content info
-                    summary_result = await session.execute(
-                        select(Summary, Content).join(Content).where(
-                            and_(
-                                Summary.project_id == project_id,
-                                Summary.summary_type == SummaryType.MEETING,
-                                Content.date >= week_start,
-                                Content.date < week_end
-                            )
-                        ).order_by(Content.date)
-                    )
-                    results = summary_result.all()
-                    
-                    for summary, content in results:
-                        summaries.append(summary)
-                        contents_map[str(summary.id)] = {
-                            'title': content.title,
-                            'date': content.date.isoformat() if content.date else None,
-                            'content_type': content.content_type
-                        }
-                    
-                    if hasattr(fetch_span, 'update'):
-                        fetch_span.update(
-                            output={
-                                "summary_count": len(summaries),
-                                "total_chars": sum(len(s.body) for s in summaries)
-                            }
-                        )
-                
-                if not summaries:
-                    logger.warning(f"No meeting summaries found for project {sanitize_for_log(project_id)} for period starting {sanitize_for_log(week_start)}")
-                    raise ValueError(
-                        f"No meeting summaries available for project '{project.name}' in the specified date range. "
-                        f"Please upload meeting content and generate meeting summaries first."
-                    )
-                
-                # Build comprehensive data structure with ALL fields from meeting summaries
-                meeting_data_for_claude = []
-                for summary in summaries:
-                    content_info = contents_map.get(str(summary.id), {})
-                    
-                    # Create a comprehensive meeting data object with ALL available fields
-                    meeting_obj = {
-                        "meeting_title": content_info.get('title', summary.subject),
-                        "meeting_date": content_info.get('date', summary.created_at.isoformat()),
-                        "summary_text": summary.body,
-                        "key_points": summary.key_points or [],
-                        "action_items": summary.action_items or [],
-                        "decisions": summary.decisions or [],
-                        "lessons_learned": summary.lessons_learned or [],
-                        "sentiment_analysis": summary.sentiment_analysis or {},
-                        "risks": summary.risks or [],
-                        "blockers": summary.blockers or [],
-                        "communication_insights": summary.communication_insights or {},
-                        "next_meeting_agenda": summary.next_meeting_agenda or [],
-                        "metadata": {
-                            "summary_id": str(summary.id),
-                            "content_id": str(summary.content_id) if summary.content_id else None,
-                            "generated_at": summary.created_at.isoformat(),
-                            "token_count": summary.token_count,
-                            "generation_time_ms": summary.generation_time_ms
-                        }
-                    }
-                    meeting_data_for_claude.append(meeting_obj)
-                
-                # Create structured input for Claude with ALL meeting data
-                import json
-                combined_text = json.dumps({
-                    "week_start": week_start.isoformat(),
-                    "week_end": week_end.isoformat(),
-                    "project_name": project.name,
-                    "meeting_count": len(summaries),
-                    "meetings": meeting_data_for_claude
-                }, indent=2)
-                
-                # Generate summary using Claude API
-                summary_data = await self._generate_claude_summary_with_context(
-                    content_type="project",
-                    project_name=project.name,
-                    content_title=f"Week of {week_start.strftime('%Y-%m-%d')}",
-                    content_text=combined_text,
-                    content_date=week_start,
-                    additional_context={
-                        "meeting_count": len(summaries),
-                        "meeting_titles": [contents_map.get(str(s.id), {}).get('title', s.subject) for s in summaries],
-                        "structured_data": meeting_data_for_claude
-                    },
-                    rq_job=rq_job,
-                    format_type=format_type
-                )
-                
-                # Process enhanced fields for weekly summary
-                sentiment_data = summary_data.get("sentiment", {})
-                if sentiment_data:
-                    sentiment_data = {
-                        "overall": sentiment_data.get("overall", "neutral"),
-                        "confidence": sentiment_data.get("confidence", 0.0),
-                        "key_emotions": sentiment_data.get("key_emotions", []),
-                        "trend": sentiment_data.get("trend", "stable")
-                    }
-                
-                risks_blockers_data = {
-                    "risks": summary_data.get("risks", []),
-                    "blockers": summary_data.get("blockers", []),
-                    "mitigation_strategies": []
+                ).order_by(Content.date)
+            )
+            results = summary_result.all()
+
+            for summary, content in results:
+                summaries.append(summary)
+                contents_map[str(summary.id)] = {
+                    'title': content.title,
+                    'date': content.date.isoformat() if content.date else None,
+                    'content_type': content.content_type
                 }
-                
-                comm_insights = summary_data.get("communication_insights", {})
-                
-                # Create summary record
-                summary = None
-                with langfuse_client.start_as_current_span(
-                    name="save_project_summary"
-                ) as save_span:
-                    summary = Summary(
-                        id=uuid.uuid4(),
-                        organization_id=project.organization_id,  # Add organization_id from project
-                        project_id=project_id,
-                        summary_type=SummaryType.PROJECT,
-                        subject=f"Project Summary - {week_start.strftime('%Y-%m-%d')}",
-                        body=summary_data["summary_text"],
-                        key_points=summary_data.get("key_points", []),
-                        action_items=summary_data.get("action_items", []),
-                        decisions=summary_data.get("decisions", []),
-                        lessons_learned=summary_data.get("lessons_learned", []),
-                        sentiment_analysis=sentiment_data,
-                        risks=risks_blockers_data.get("risks", []) if risks_blockers_data else [],
-                        blockers=risks_blockers_data.get("blockers", []) if risks_blockers_data else [],
-                        communication_insights=comm_insights,
-                        next_meeting_agenda=summary_data.get("next_meeting_agenda", []),
-                        created_by=created_by,
-                        date_range_start=week_start,
-                        date_range_end=week_end,
-                        token_count=summary_data.get("token_count", 0),
-                        generation_time_ms=int((time.time() - start_time) * 1000),
-                        format=format_type
-                    )
-                    
-                    session.add(summary)
-                    await session.flush()
-                    
-                    # Log activity for project summary generation
-                    await ActivityService.log_summary_generated(
-                        db=session,
-                        project_id=project_id,
-                        summary_type="project",
-                        summary_subject=summary.subject,
-                        user_name=created_by or "system",
-                        user_id=created_by_id
-                    )
-                    
-                    await session.commit()
-                    
-                    if hasattr(save_span, 'update'):
-                        save_span.update(
-                            output={"summary_id": str(summary.id)}
-                        )
-                
-                # Calculate total time
-                total_time = time.time() - start_time
-                
-                # Update trace span
-                if hasattr(trace_span, 'update'):
-                    trace_span.update(
-                        output={
-                            "summary_id": str(summary.id),
-                            "meeting_count": len(summaries),
-                            "total_time_s": total_time,
-                            "token_count": summary_data.get("token_count", 0),
-                            "cost_usd": summary_data.get("cost_usd", 0.0)
-                        }
-                    )
-            
-            # Flush Langfuse events
-            langfuse_service.flush()
+
+            if not summaries:
+                logger.warning(f"No meeting summaries found for project {sanitize_for_log(project_id)} for period starting {sanitize_for_log(week_start)}")
+                raise ValueError(
+                    f"No meeting summaries available for project '{project.name}' in the specified date range. "
+                    f"Please upload meeting content and generate meeting summaries first."
+                )
+
+            # Build comprehensive data structure with ALL fields from meeting summaries
+            meeting_data_for_claude = []
+            for summary in summaries:
+                content_info = contents_map.get(str(summary.id), {})
+
+                # Create a comprehensive meeting data object with ALL available fields
+                meeting_obj = {
+                    "meeting_title": content_info.get('title', summary.subject),
+                    "meeting_date": content_info.get('date', summary.created_at.isoformat()),
+                    "summary_text": summary.body,
+                    "key_points": summary.key_points or [],
+                    "action_items": summary.action_items or [],
+                    "decisions": summary.decisions or [],
+                    "lessons_learned": summary.lessons_learned or [],
+                    "sentiment_analysis": summary.sentiment_analysis or {},
+                    "risks": summary.risks or [],
+                    "blockers": summary.blockers or [],
+                    "communication_insights": summary.communication_insights or {},
+                    "next_meeting_agenda": summary.next_meeting_agenda or [],
+                    "metadata": {
+                        "summary_id": str(summary.id),
+                        "content_id": str(summary.content_id) if summary.content_id else None,
+                        "generated_at": summary.created_at.isoformat(),
+                        "token_count": summary.token_count,
+                        "generation_time_ms": summary.generation_time_ms
+                    }
+                }
+                meeting_data_for_claude.append(meeting_obj)
+
+            # Create structured input for Claude with ALL meeting data
+            import json
+            combined_text = json.dumps({
+                "week_start": week_start.isoformat(),
+                "week_end": week_end.isoformat(),
+                "project_name": project.name,
+                "meeting_count": len(summaries),
+                "meetings": meeting_data_for_claude
+            }, indent=2)
+
+            # Generate summary using Claude API
+            summary_data = await self._generate_claude_summary_with_context(
+                content_type="project",
+                project_name=project.name,
+                content_title=f"Week of {week_start.strftime('%Y-%m-%d')}",
+                content_text=combined_text,
+                content_date=week_start,
+                additional_context={
+                    "meeting_count": len(summaries),
+                    "meeting_titles": [contents_map.get(str(s.id), {}).get('title', s.subject) for s in summaries],
+                    "structured_data": meeting_data_for_claude
+                },
+                rq_job=rq_job,
+                format_type=format_type
+            )
+
+            # Process enhanced fields for weekly summary
+            sentiment_data = summary_data.get("sentiment", {})
+            if sentiment_data:
+                sentiment_data = {
+                    "overall": sentiment_data.get("overall", "neutral"),
+                    "confidence": sentiment_data.get("confidence", 0.0),
+                    "key_emotions": sentiment_data.get("key_emotions", []),
+                    "trend": sentiment_data.get("trend", "stable")
+                }
+
+            risks_blockers_data = {
+                "risks": summary_data.get("risks", []),
+                "blockers": summary_data.get("blockers", []),
+                "mitigation_strategies": []
+            }
+
+            comm_insights = summary_data.get("communication_insights", {})
+
+            # Create summary record
+            summary = None
+            summary = Summary(
+                id=uuid.uuid4(),
+                organization_id=project.organization_id,  # Add organization_id from project
+                project_id=project_id,
+                summary_type=SummaryType.PROJECT,
+                subject=f"Project Summary - {week_start.strftime('%Y-%m-%d')}",
+                body=summary_data["summary_text"],
+                key_points=summary_data.get("key_points", []),
+                action_items=summary_data.get("action_items", []),
+                decisions=summary_data.get("decisions", []),
+                lessons_learned=summary_data.get("lessons_learned", []),
+                sentiment_analysis=sentiment_data,
+                risks=risks_blockers_data.get("risks", []) if risks_blockers_data else [],
+                blockers=risks_blockers_data.get("blockers", []) if risks_blockers_data else [],
+                communication_insights=comm_insights,
+                next_meeting_agenda=summary_data.get("next_meeting_agenda", []),
+                created_by=created_by,
+                date_range_start=week_start,
+                date_range_end=week_end,
+                token_count=summary_data.get("token_count", 0),
+                generation_time_ms=int((time.time() - start_time) * 1000),
+                format=format_type
+            )
+
+            session.add(summary)
+            await session.flush()
+
+            # Log activity for project summary generation
+            await ActivityService.log_summary_generated(
+                db=session,
+                project_id=project_id,
+                summary_type="project",
+                summary_subject=summary.subject,
+                user_name=created_by or "system",
+                user_id=created_by_id
+            )
+
+            await session.commit()
+
+            # Calculate total time
+            total_time = time.time() - start_time
             
             logger.info(f"Project summary generated for period {sanitize_for_log(week_start)} in {total_time:.2f}s")
             
@@ -1536,13 +1394,11 @@ class SummaryService:
         rq_job=None,
         format_type: str = "general"
     ) -> Dict[str, Any]:
-        """Generate summary using Claude API with Langfuse context managers."""
-        langfuse_client = langfuse_service.client
-        
+        """Generate summary using Claude API."""
         if not self.llm_client.is_available():
             logger.error("LLM client not available - cannot generate summary")
             raise ValueError("AI service is not configured. Please check your API settings.")
-        
+
         try:
             # Build prompt based on summary type using imported functions
             if content_type == "meeting":
@@ -1583,71 +1439,42 @@ class SummaryService:
                     additional_context.get("meeting_titles", []) if additional_context else [],
                     format_type=format_type
                 )
-            
+
             # Update progress: Making API call (94%)
             self._update_rq_job_progress(rq_job, 94.0, "Calling Claude AI")
-            
-            # Generate with Claude using context manager
-            if langfuse_client and hasattr(langfuse_client, 'start_as_current_generation'):
-                with langfuse_client.start_as_current_generation(
-                    name=f"claude_{content_type}_summary",
-                    model=self.llm_model,
-                    model_parameters={
-                        "max_tokens": self.max_tokens,
-                        "temperature": self.temperature
-                    },
-                    input=prompt[:2000]  # Truncate for logging
-                ) as gen_span:
-                    # Make API call to Claude with retry logic
-                    response = await self._call_claude_api_with_retry(prompt)
-                    
-                    # Update progress: Processing API response (96%)
-                    self._update_rq_job_progress(rq_job, 96.0, "Processing AI response")
-                    
-                    response_text = response.content[0].text
-                    
-                    # Calculate token usage and cost
-                    input_tokens = response.usage.input_tokens
-                    output_tokens = response.usage.output_tokens
-                    total_tokens = input_tokens + output_tokens
-                    cost = self._calculate_cost(input_tokens, output_tokens)
-                    
-                    # Update generation span
-                    if hasattr(gen_span, 'update'):
-                        gen_span.update(
-                            output=response_text[:500],  # Truncate for logging
-                            usage={
-                                "input": input_tokens,
-                                "output": output_tokens,
-                                "total": total_tokens,
-                                "unit": "TOKENS"
-                            },
-                            metadata={
-                                "cost_usd": cost,
-                                "content_type": content_type
-                            }
-                        )
-            else:
-                # Update progress: Making API call (94%)
-                self._update_rq_job_progress(rq_job, 94.0, "Calling Claude AI")
 
-                # Fallback without context manager but with retry logic
-                response = await self._call_claude_api_with_retry(prompt)
+            # Make API call to Claude with retry logic
+            response = await self._call_claude_api_with_retry(prompt)
 
-                # Update progress: Processing API response (96%)
-                self._update_rq_job_progress(rq_job, 96.0, "Processing AI response")
-                
-                response_text = response.content[0].text
-                input_tokens = response.usage.input_tokens
-                output_tokens = response.usage.output_tokens
-                total_tokens = input_tokens + output_tokens
-                cost = self._calculate_cost(input_tokens, output_tokens)
-            
-            # Parse structured response
-            logger.info(f"DEBUG: Raw Claude response (first 500 chars): {response_text[:500]}")
+            # Update progress: Processing API response (96%)
+            self._update_rq_job_progress(rq_job, 96.0, "Processing AI response")
+
+            response_text = response.content[0].text
+            input_tokens = response.usage.input_tokens
+            output_tokens = response.usage.output_tokens
+            total_tokens = input_tokens + output_tokens
+            cost = self._calculate_cost(input_tokens, output_tokens)
+
+            # Parse structured response with detailed logging
+            logger.info(f"DEBUG: Full GPT-5 response length: {len(response_text)} chars")
+            logger.info(f"DEBUG: Full GPT-5 response:\n{response_text}")
+
             summary_data = self._parse_claude_response(response_text, content_type, content_title)
             logger.info(f"DEBUG: Parsed summary_data keys: {summary_data.keys()}")
-            logger.info(f"DEBUG: Lessons learned in parsed data: {summary_data.get('lessons_learned', 'NOT FOUND')}")
+
+            # Log extracted counts
+            logger.info(f"DEBUG: Extracted action_items count: {len(summary_data.get('action_items', []))}")
+            logger.info(f"DEBUG: Extracted decisions count: {len(summary_data.get('decisions', []))}")
+            logger.info(f"DEBUG: Extracted risks count: {len(summary_data.get('risks', []))}")
+            logger.info(f"DEBUG: Extracted blockers count: {len(summary_data.get('blockers', []))}")
+            logger.info(f"DEBUG: Extracted lessons_learned count: {len(summary_data.get('lessons_learned', []))}")
+            logger.info(f"DEBUG: Extracted participants count: {len(summary_data.get('participants', []))}")
+
+            # Log first action item if exists
+            if summary_data.get('action_items'):
+                logger.info(f"DEBUG: First action item: {summary_data['action_items'][0]}")
+            else:
+                logger.warning("DEBUG: NO ACTION ITEMS EXTRACTED!")
             summary_data["token_count"] = total_tokens
             summary_data["cost_usd"] = cost
 
@@ -1687,6 +1514,27 @@ class SummaryService:
                 json_end = response_text.rindex("}") + 1
                 json_str = response_text[json_start:json_end]
                 data = json.loads(json_str)
+
+                # LOG: Summary of extracted items from Claude
+                logger.info(f"[EXTRACTION] Claude response parsed successfully for '{content_title}'")
+                logger.info(f"[EXTRACTION] Summary text length: {len(data.get('summary_text', ''))}")
+                logger.info(f"[EXTRACTION] Key points: {len(data.get('key_points', []))}")
+                logger.info(f"[EXTRACTION] Decisions: {len(data.get('decisions', []))}")
+                logger.info(f"[EXTRACTION] Action items (raw): {len(data.get('action_items', []))}")
+                logger.info(f"[EXTRACTION] Risks: {len(data.get('risks', []))}")
+                logger.info(f"[EXTRACTION] Blockers: {len(data.get('blockers', []))}")
+                logger.info(f"[EXTRACTION] Lessons learned: {len(data.get('lessons_learned', []))}")
+                logger.info(f"[EXTRACTION] Participants: {len(data.get('participants', []))}")
+
+                # LOG: Sample of extracted items for debugging
+                if data.get('action_items'):
+                    logger.debug(f"[EXTRACTION] Sample action items (first 2): {data.get('action_items')[:2]}")
+                if data.get('risks'):
+                    logger.debug(f"[EXTRACTION] Sample risks (first 2): {data.get('risks')[:2]}")
+                if data.get('blockers'):
+                    logger.debug(f"[EXTRACTION] Sample blockers (first 2): {data.get('blockers')[:2]}")
+                if data.get('lessons_learned'):
+                    logger.debug(f"[EXTRACTION] Sample lessons (first 2): {data.get('lessons_learned')[:2]}")
                 
                 # Process action items to ensure they have the expected structure
                 action_items = data.get("action_items", [])
@@ -1783,7 +1631,14 @@ class SummaryService:
                             "status": "not_started",
                             "follow_up_required": False
                         })
-                
+
+                # LOG: Summary of processed action items
+                logger.info(f"[EXTRACTION] Processed action items: {len(processed_action_items)} (from {len(action_items)} raw)")
+                low_conf_items = [item for item in processed_action_items if item.get('confidence', 1.0) < 0.5]
+                if low_conf_items:
+                    logger.warning(f"[EXTRACTION] {len(low_conf_items)} action items with low confidence (<0.5)")
+                    logger.debug(f"[EXTRACTION] Low confidence items: {low_conf_items}")
+
                 # Process decisions to ensure they have the expected structure
                 decisions = data.get("decisions", [])
                 logger.info(f"Raw decisions from Claude: {decisions}")

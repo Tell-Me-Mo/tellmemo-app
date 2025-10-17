@@ -12,22 +12,6 @@ from openai import AsyncOpenAI
 from sqlalchemy.ext.asyncio import AsyncSession
 
 try:
-    from langfuse.decorators import observe, langfuse_context
-    LANGFUSE_AVAILABLE = True
-except ImportError:
-    LANGFUSE_AVAILABLE = False
-    def observe(name=None):
-        def decorator(func):
-            return func
-        return decorator
-
-    class DummyLangfuseContext:
-        def update_current_observation(self, **kwargs):
-            pass
-
-    langfuse_context = DummyLangfuseContext()
-
-try:
     from purgatory import AsyncCircuitBreakerFactory
     from purgatory.domain.model import OpenedState
     PURGATORY_AVAILABLE = True
@@ -145,15 +129,6 @@ class ClaudeProviderClient(BaseProviderClient):
 
         response = await self.client.messages.create(**api_params)
 
-        if LANGFUSE_AVAILABLE and hasattr(response, 'usage'):
-            langfuse_context.update_current_observation(
-                usage={
-                    "input": response.usage.input_tokens,
-                    "output": response.usage.output_tokens,
-                    "unit": "TOKENS"
-                }
-            )
-
         return response
 
     async def create_conversation(
@@ -178,15 +153,6 @@ class ClaudeProviderClient(BaseProviderClient):
         }
 
         response = await self.client.messages.create(**api_params)
-
-        if LANGFUSE_AVAILABLE and hasattr(response, 'usage'):
-            langfuse_context.update_current_observation(
-                usage={
-                    "input": response.usage.input_tokens,
-                    "output": response.usage.output_tokens,
-                    "unit": "TOKENS"
-                }
-            )
 
         return response
 
@@ -240,22 +206,26 @@ class OpenAIProviderClient(BaseProviderClient):
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
 
-        response = await self.client.chat.completions.create(
-            model=model,
-            messages=messages,
-            max_tokens=max_tokens,
-            temperature=temperature,
+        # GPT-5 models have specific API requirements:
+        # 1. Use max_completion_tokens instead of max_tokens
+        # 2. Only support temperature=1 (default)
+        api_params = {
+            "model": model,
+            "messages": messages,
             **kwargs
-        )
+        }
 
-        if LANGFUSE_AVAILABLE and hasattr(response, 'usage'):
-            langfuse_context.update_current_observation(
-                usage={
-                    "input": response.usage.prompt_tokens,
-                    "output": response.usage.completion_tokens,
-                    "unit": "TOKENS"
-                }
-            )
+        if model.startswith(("gpt-5", "o1")):
+            # GPT-5/o1 models use max_completion_tokens and only support temperature=1
+            api_params["max_completion_tokens"] = max_tokens
+            # Omit temperature parameter to use default (1)
+            # GPT-5 mini only supports temperature=1
+        else:
+            # Standard OpenAI models (GPT-4, GPT-3.5, etc.)
+            api_params["max_tokens"] = max_tokens
+            api_params["temperature"] = temperature
+
+        response = await self.client.chat.completions.create(**api_params)
 
         # Wrap OpenAI response to match Claude-like interface
         return self._wrap_openai_response(response)
@@ -273,22 +243,25 @@ class OpenAIProviderClient(BaseProviderClient):
         if not self.client:
             return None
 
-        response = await self.client.chat.completions.create(
-            model=model,
-            messages=messages,
-            max_tokens=max_tokens,
-            temperature=temperature,
+        # GPT-5 models have specific API requirements:
+        # 1. Use max_completion_tokens instead of max_tokens
+        # 2. Only support temperature=1 (default)
+        api_params = {
+            "model": model,
+            "messages": messages,
             **kwargs
-        )
+        }
 
-        if LANGFUSE_AVAILABLE and hasattr(response, 'usage'):
-            langfuse_context.update_current_observation(
-                usage={
-                    "input": response.usage.prompt_tokens,
-                    "output": response.usage.completion_tokens,
-                    "unit": "TOKENS"
-                }
-            )
+        if model.startswith(("gpt-5", "o1")):
+            # GPT-5/o1 models use max_completion_tokens and only support temperature=1
+            api_params["max_completion_tokens"] = max_tokens
+            # Omit temperature parameter to use default (1)
+        else:
+            # Standard OpenAI models (GPT-4, GPT-3.5, etc.)
+            api_params["max_tokens"] = max_tokens
+            api_params["temperature"] = temperature
+
+        response = await self.client.chat.completions.create(**api_params)
 
         return self._wrap_openai_response(response)
 
@@ -299,11 +272,158 @@ class OpenAIProviderClient(BaseProviderClient):
             def __init__(self, text):
                 self.text = text
 
+        class WrappedUsage:
+            def __init__(self, openai_usage):
+                # Normalize OpenAI usage to Claude naming:
+                # OpenAI: prompt_tokens, completion_tokens
+                # Claude: input_tokens, output_tokens
+                self.input_tokens = openai_usage.prompt_tokens
+                self.output_tokens = openai_usage.completion_tokens
+                # Keep original attributes for compatibility
+                self.prompt_tokens = openai_usage.prompt_tokens
+                self.completion_tokens = openai_usage.completion_tokens
+
         class WrappedResponse:
             def __init__(self, openai_response):
                 self.content = [WrappedContent(openai_response.choices[0].message.content)]
-                self.usage = openai_response.usage
+                self.usage = WrappedUsage(openai_response.usage)
                 self._raw = openai_response
+
+        return WrappedResponse(response)
+
+
+class DeepSeekProviderClient(BaseProviderClient):
+    """DeepSeek provider client (OpenAI-compatible API)."""
+
+    def __init__(self, api_key: str, settings: Settings):
+        self.api_key = api_key
+        self.settings = settings
+        self.client = self._initialize_client()
+
+    def _initialize_client(self) -> Optional[AsyncOpenAI]:
+        """Initialize the DeepSeek client using OpenAI-compatible API."""
+        if not self.api_key:
+            return None
+
+        try:
+            # DeepSeek uses OpenAI-compatible API
+            # Correct base URL according to DeepSeek docs: https://api-docs.deepseek.com/
+            if self.settings.api_env == "development":
+                # In development, disable SSL verification and allow redirects
+                http_client = httpx.AsyncClient(
+                    verify=False,
+                    follow_redirects=True,
+                    timeout=30.0
+                )
+                client = AsyncOpenAI(
+                    api_key=self.api_key,
+                    base_url="https://api.deepseek.com/v1",
+                    http_client=http_client
+                )
+            else:
+                # In production, follow redirects but keep SSL enabled
+                http_client = httpx.AsyncClient(
+                    follow_redirects=True,
+                    timeout=30.0
+                )
+                client = AsyncOpenAI(
+                    api_key=self.api_key,
+                    base_url="https://api.deepseek.com/v1",
+                    http_client=http_client
+                )
+            return client
+        except Exception as e:
+            logger.error(f"Failed to initialize DeepSeek client: {str(e)}")
+            return None
+
+    def is_available(self) -> bool:
+        return self.client is not None
+
+    async def create_message(
+        self,
+        prompt: str,
+        *,
+        model: str,
+        max_tokens: int,
+        temperature: float,
+        system: Optional[str] = None,
+        **kwargs
+    ) -> Optional[Any]:
+        """Create a message using DeepSeek API."""
+        if not self.client:
+            return None
+
+        messages = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+
+        response = await self.client.chat.completions.create(
+            model=model,
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            **kwargs
+        )
+
+        # Wrap DeepSeek response to match Claude-like interface
+        return self._wrap_deepseek_response(response)
+
+    async def create_conversation(
+        self,
+        messages: List[Dict[str, str]],
+        *,
+        model: str,
+        max_tokens: int,
+        temperature: float,
+        **kwargs
+    ) -> Optional[Any]:
+        """Create a conversation with DeepSeek."""
+        if not self.client:
+            return None
+
+        response = await self.client.chat.completions.create(
+            model=model,
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            **kwargs
+        )
+
+        return self._wrap_deepseek_response(response)
+
+    def _wrap_deepseek_response(self, response):
+        """Wrap DeepSeek response to match Claude-like interface."""
+        # Check if response is already wrapped or is an error
+        if isinstance(response, str):
+            logger.error(f"DeepSeek API returned unexpected string response: {response[:200]}")
+            raise ValueError(f"DeepSeek API error: {response}")
+
+        # Create a Claude-like response structure
+        class WrappedContent:
+            def __init__(self, text):
+                self.text = text
+
+        class WrappedUsage:
+            def __init__(self, deepseek_usage):
+                # Normalize DeepSeek usage to Claude naming:
+                # DeepSeek (OpenAI-compatible): prompt_tokens, completion_tokens
+                # Claude: input_tokens, output_tokens
+                self.input_tokens = deepseek_usage.prompt_tokens
+                self.output_tokens = deepseek_usage.completion_tokens
+                # Keep original attributes for compatibility
+                self.prompt_tokens = deepseek_usage.prompt_tokens
+                self.completion_tokens = deepseek_usage.completion_tokens
+
+        class WrappedResponse:
+            def __init__(self, deepseek_response):
+                try:
+                    self.content = [WrappedContent(deepseek_response.choices[0].message.content)]
+                    self.usage = WrappedUsage(deepseek_response.usage)
+                    self._raw = deepseek_response
+                except (AttributeError, IndexError) as e:
+                    logger.error(f"Failed to parse DeepSeek response: {e}, response type: {type(deepseek_response)}")
+                    raise
 
         return WrappedResponse(response)
 
@@ -382,6 +502,8 @@ class ProviderCascade:
             target_provider = AIProvider.OPENAI
         elif isinstance(self.fallback_client, ClaudeProviderClient):
             target_provider = AIProvider.CLAUDE
+        elif isinstance(self.fallback_client, DeepSeekProviderClient):
+            target_provider = AIProvider.DEEPSEEK
         else:
             logger.warning(f"Unknown fallback client type: {type(self.fallback_client)}")
             return None
@@ -728,7 +850,7 @@ class MultiProviderLLMClient:
 
         # Store fallback configuration from environment
         self.fallback_provider = None
-        self.fallback_model = settings.llm_model
+        self.fallback_model = settings.primary_llm_model  # Use primary model as default
         self.fallback_max_tokens = settings.max_tokens
         self.fallback_temperature = settings.temperature
 
@@ -752,47 +874,64 @@ class MultiProviderLLMClient:
         Initialize primary and fallback providers from environment variables.
 
         Strategy:
-        - Primary provider is determined by which API key is set (Claude by default)
-        - Fallback provider is the opposite provider (if both keys are configured)
-        - If FALLBACK_PROVIDER is explicitly set, use that configuration
+        - Use PRIMARY_LLM_PROVIDER and FALLBACK_LLM_PROVIDER configuration
+        - If not set, fallback to legacy behavior (Claude as primary)
+        - Support claude, openai, and deepseek providers
         """
         has_claude = bool(self.settings.anthropic_api_key)
         has_openai = bool(self.settings.openai_api_key)
+        has_deepseek = bool(self.settings.deepseek_api_key)
 
-        # Determine primary provider based on configuration
-        # By default, Claude is primary (backward compatibility)
-        if has_claude:
-            self.primary_provider_client = ClaudeProviderClient(
-                self.settings.anthropic_api_key,
-                self.settings
-            )
-            self.primary_provider_name = "Claude"
-            logger.info("Primary provider: Claude (initialized from environment)")
+        # Map provider names to their configuration
+        provider_map = {
+            "claude": (has_claude, self.settings.anthropic_api_key, ClaudeProviderClient, "Claude"),
+            "openai": (has_openai, self.settings.openai_api_key, OpenAIProviderClient, "OpenAI"),
+            "deepseek": (has_deepseek, self.settings.deepseek_api_key, DeepSeekProviderClient, "DeepSeek"),
+        }
 
-            # Set Claude as fallback for backward compatibility
-            self.fallback_provider = self.primary_provider_client
-
-        # If OpenAI is also available, set it as fallback
-        if has_openai and self.settings.enable_llm_fallback:
-            if self.settings.fallback_provider.lower() == "openai":
-                self.secondary_provider_client = OpenAIProviderClient(
-                    self.settings.openai_api_key,
+        # Initialize primary provider
+        primary_name = self.settings.primary_llm_provider.lower()
+        if primary_name in provider_map:
+            has_key, api_key, client_class, display_name = provider_map[primary_name]
+            if has_key:
+                self.primary_provider_client = client_class(api_key, self.settings)
+                self.primary_provider_name = display_name
+                self.fallback_provider = self.primary_provider_client  # For backward compatibility
+                self.fallback_model = self.settings.primary_llm_model
+                logger.info(f"Primary provider: {display_name} (model: {self.settings.primary_llm_model})")
+            else:
+                logger.warning(f"Primary provider {display_name} configured but API key not found")
+        else:
+            logger.warning(f"Unknown primary provider: {primary_name}. Using legacy configuration.")
+            # Fallback to legacy behavior
+            if has_claude:
+                self.primary_provider_client = ClaudeProviderClient(
+                    self.settings.anthropic_api_key,
                     self.settings
                 )
-                self.secondary_provider_name = "OpenAI"
-                logger.info("Fallback provider: OpenAI (initialized from environment)")
-            elif not has_claude:
-                # No Claude, use OpenAI as primary
-                self.primary_provider_client = OpenAIProviderClient(
-                    self.settings.openai_api_key,
-                    self.settings
-                )
-                self.primary_provider_name = "OpenAI"
+                self.primary_provider_name = "Claude"
                 self.fallback_provider = self.primary_provider_client
-                logger.info("Primary provider: OpenAI (Claude not configured)")
+                logger.info("Primary provider: Claude (legacy mode)")
 
-        if not has_claude and not has_openai:
-            logger.warning("No LLM provider API keys configured in environment")
+        # Initialize fallback provider (if enabled)
+        if self.settings.enable_llm_fallback:
+            fallback_name = self.settings.fallback_llm_provider.lower()
+            if fallback_name in provider_map:
+                has_key, api_key, client_class, display_name = provider_map[fallback_name]
+                if has_key and fallback_name != primary_name:  # Don't use same provider as primary
+                    self.secondary_provider_client = client_class(api_key, self.settings)
+                    self.secondary_provider_name = display_name
+                    logger.info(f"Fallback provider: {display_name} (model: {self.settings.fallback_llm_model})")
+                elif has_key and fallback_name == primary_name:
+                    logger.warning(f"Fallback provider {display_name} is same as primary - fallback disabled")
+                else:
+                    logger.warning(f"Fallback provider {display_name} configured but API key not found")
+            else:
+                logger.warning(f"Unknown fallback provider: {fallback_name}")
+
+        # Final check
+        if not self.primary_provider_client:
+            logger.error("No primary LLM provider could be initialized - check API keys")
 
     @classmethod
     def get_instance(cls, settings: Optional[Settings] = None) -> 'MultiProviderLLMClient':
@@ -917,11 +1056,12 @@ class MultiProviderLLMClient:
             return ClaudeProviderClient(api_key, self.settings)
         elif provider == AIProvider.OPENAI:
             return OpenAIProviderClient(api_key, self.settings)
+        elif provider == AIProvider.DEEPSEEK:
+            return DeepSeekProviderClient(api_key, self.settings)
         else:
             logger.error(f"Unknown provider: {provider}")
             return None
 
-    @observe(name="multi_llm_create_message")
     async def create_message(
         self,
         prompt: str,
@@ -969,6 +1109,8 @@ class MultiProviderLLMClient:
             provider_name = "Claude"
         elif isinstance(provider_client, OpenAIProviderClient):
             provider_name = "OpenAI"
+        elif isinstance(provider_client, DeepSeekProviderClient):
+            provider_name = "DeepSeek"
         else:
             provider_name = "Unknown"
 
@@ -999,20 +1141,6 @@ class MultiProviderLLMClient:
                 f"⚠️  Fallback used: {metadata.get('primary_model')} → {metadata.get('fallback_model')} "
                 f"(reason: {metadata.get('fallback_reason')})"
             )
-
-            # Update Langfuse metadata if available
-            if LANGFUSE_AVAILABLE:
-                langfuse_context.update_current_observation(
-                    metadata={
-                        "fallback_triggered": True,
-                        "primary_provider": metadata.get("provider_used"),
-                        "fallback_provider": self.secondary_provider_name,
-                        "fallback_reason": metadata.get("fallback_reason"),
-                        "fallback_model": metadata.get("fallback_model"),
-                        "attempts": metadata.get("attempts", []),  # Full attempts array for debugging
-                        "attempt_count": len(metadata.get("attempts", []))
-                    }
-                )
 
         return response
 
@@ -1056,6 +1184,8 @@ class MultiProviderLLMClient:
             provider_name = "Claude"
         elif isinstance(provider_client, OpenAIProviderClient):
             provider_name = "OpenAI"
+        elif isinstance(provider_client, DeepSeekProviderClient):
+            provider_name = "DeepSeek"
         else:
             provider_name = "Unknown"
 
@@ -1085,20 +1215,6 @@ class MultiProviderLLMClient:
                 f"⚠️  Fallback used: {metadata.get('primary_model')} → {metadata.get('fallback_model')} "
                 f"(reason: {metadata.get('fallback_reason')})"
             )
-
-            # Update Langfuse metadata if available
-            if LANGFUSE_AVAILABLE:
-                langfuse_context.update_current_observation(
-                    metadata={
-                        "fallback_triggered": True,
-                        "primary_provider": metadata.get("provider_used"),
-                        "fallback_provider": self.secondary_provider_name,
-                        "fallback_reason": metadata.get("fallback_reason"),
-                        "fallback_model": metadata.get("fallback_model"),
-                        "attempts": metadata.get("attempts", []),  # Full attempts array for debugging
-                        "attempt_count": len(metadata.get("attempts", []))
-                    }
-                )
 
         return response
 

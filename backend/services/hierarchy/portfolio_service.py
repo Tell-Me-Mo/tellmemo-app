@@ -10,16 +10,14 @@ from models.portfolio import Portfolio
 from models.program import Program
 from models.project import Project
 from utils.logger import get_logger
-from utils.monitoring import monitor_operation, monitor_sync_operation
 
 logger = get_logger(__name__)
 
 
 class PortfolioService:
     """Service class for portfolio operations."""
-    
+
     @staticmethod
-    @monitor_operation("create_portfolio", "database", capture_args=True, capture_result=True)
     async def create_portfolio(
         session: AsyncSession,
         name: str,
@@ -59,9 +57,8 @@ class PortfolioService:
         
         logger.info(f"Created portfolio: {portfolio.name} (ID: {portfolio.id})")
         return portfolio
-    
+
     @staticmethod
-    @monitor_operation("get_portfolio", "database", capture_args=True, capture_result=False)
     async def get_portfolio(
         session: AsyncSession,
         portfolio_id: UUID
@@ -84,9 +81,8 @@ class PortfolioService:
             .where(Portfolio.id == portfolio_id)
         )
         return result.scalars().first()
-    
+
     @staticmethod
-    @monitor_operation("list_portfolios", "database", capture_args=False, capture_result=True)
     async def list_portfolios(
         session: AsyncSession,
         include_counts: bool = True
@@ -109,9 +105,8 @@ class PortfolioService:
         portfolios = result.scalars().all()
         
         return list(portfolios)
-    
+
     @staticmethod
-    @monitor_operation("update_portfolio", "database", capture_args=True, capture_result=False)
     async def update_portfolio(
         session: AsyncSession,
         portfolio_id: UUID,
@@ -157,9 +152,8 @@ class PortfolioService:
         
         logger.info(f"Updated portfolio: {portfolio.name} (ID: {portfolio.id})")
         return portfolio
-    
+
     @staticmethod
-    @monitor_operation("delete_portfolio", "database", capture_args=True, capture_result=True)
     async def delete_portfolio(
         session: AsyncSession,
         portfolio_id: UUID,
@@ -217,9 +211,8 @@ class PortfolioService:
         
         logger.info(f"Deleted portfolio: {portfolio.name} (ID: {portfolio.id})")
         return True
-    
+
     @staticmethod
-    @monitor_operation("get_portfolio_statistics", "analysis", capture_args=True, capture_result=True)
     async def get_portfolio_statistics(
         session: AsyncSession,
         portfolio_id: UUID

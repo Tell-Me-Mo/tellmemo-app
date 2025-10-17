@@ -13,16 +13,14 @@ from services.hierarchy.portfolio_service import PortfolioService
 from services.hierarchy.program_service import ProgramService
 from services.hierarchy.project_service import ProjectService
 from utils.logger import get_logger, sanitize_for_log
-from utils.monitoring import monitor_operation, monitor_sync_operation, MonitoringContext
 
 logger = get_logger(__name__)
 
 
 class HierarchyService:
     """Service for managing the hierarchical organization of portfolios, programs, and projects."""
-    
+
     @staticmethod
-    @monitor_operation("get_full_hierarchy", "database", capture_args=True, capture_result=True)
     async def get_full_hierarchy(
         session: AsyncSession,
         include_archived: bool = False
@@ -180,9 +178,8 @@ class HierarchyService:
             'updated_at': project.updated_at.isoformat(),
             'member_count': len(project.members) if project.members else 0
         }
-    
+
     @staticmethod
-    @monitor_operation("move_hierarchy_item", "database", capture_args=True, capture_result=True)
     async def move_item(
         session: AsyncSession,
         item_id: UUID,
@@ -217,9 +214,8 @@ class HierarchyService:
             )
         else:
             raise ValueError(f"Invalid item type: {item_type}")
-    
+
     @staticmethod
-    @monitor_operation("move_project", "database", capture_args=True, capture_result=False)
     async def _move_project(
         session: AsyncSession,
         project_id: UUID,
@@ -317,9 +313,8 @@ class HierarchyService:
             'message': f'Project "{project_name}" moved successfully',
             'item': formatted_project
         }
-    
+
     @staticmethod
-    @monitor_operation("move_program", "database", capture_args=True, capture_result=False)
     async def _move_program(
         session: AsyncSession,
         program_id: UUID,
@@ -405,9 +400,8 @@ class HierarchyService:
                 'updated_at': program_updated
             }
         }
-    
+
     @staticmethod
-    @monitor_operation("bulk_move_items", "database", capture_args=True, capture_result=True)
     async def bulk_move_items(
         session: AsyncSession,
         items: List[Dict[str, Any]],
@@ -457,9 +451,8 @@ class HierarchyService:
                 logger.error(f"Failed to move item {sanitize_for_log(item['id'])} ({sanitize_for_log(item['type'])}): {e}")
         
         return results
-    
+
     @staticmethod
-    @monitor_operation("get_hierarchy_path", "database", capture_args=True, capture_result=True)
     async def get_hierarchy_path(
         session: AsyncSession,
         item_id: UUID,

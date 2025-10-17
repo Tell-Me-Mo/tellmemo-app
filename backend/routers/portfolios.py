@@ -809,10 +809,10 @@ async def query_portfolio(
                     aggregated_chunks=top_chunks
                 )
 
-                # Get LLM analysis
+                # Get LLM analysis (uses configured PRIMARY_LLM_MODEL)
                 message = await llm_client.create_message(
                     prompt=prompt,
-                    model=settings.llm_model,
+                    model=None,  # Use multi-provider client's configured model
                     max_tokens=settings.max_tokens,
                     temperature=settings.temperature
                 )

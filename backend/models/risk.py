@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, Enum, Text, Float
+from sqlalchemy import Column, String, DateTime, ForeignKey, Enum, Text, Float, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from db.database import Base
@@ -41,6 +41,7 @@ class Risk(Base):
     ai_generated = Column(String(5), default="false")  # 'true' or 'false'
     ai_confidence = Column(Float)  # Confidence score from Claude
     source_content_id = Column(UUID(as_uuid=True), ForeignKey('content.id'))  # Link to content that triggered this risk
+    title_embedding = Column(JSON, nullable=True)  # Embedding vector for semantic deduplication (768 dimensions)
 
     # Assignment fields
     assigned_to = Column(String(100))
@@ -62,8 +63,8 @@ class Risk(Base):
             "project_id": str(self.project_id),
             "title": self.title,
             "description": self.description,
-            "severity": self.severity.value if self.severity else None,
-            "status": self.status.value if self.status else None,
+            "severity": self.severity.value if hasattr(self.severity, 'value') else self.severity if self.severity else None,
+            "status": self.status.value if hasattr(self.status, 'value') else self.status if self.status else None,
             "mitigation": self.mitigation,
             "impact": self.impact,
             "probability": self.probability,
@@ -75,5 +76,6 @@ class Risk(Base):
             "identified_date": self.identified_date.isoformat() if self.identified_date else None,
             "resolved_date": self.resolved_date.isoformat() if self.resolved_date else None,
             "last_updated": self.last_updated.isoformat() if self.last_updated else None,
-            "updated_by": self.updated_by
+            "updated_by": self.updated_by,
+            "title_embedding": self.title_embedding
         }

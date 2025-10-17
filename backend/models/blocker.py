@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, Enum, Text, Float
+from sqlalchemy import Column, String, DateTime, ForeignKey, Enum, Text, Float, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from db.database import Base
@@ -46,6 +46,7 @@ class Blocker(Base):
     ai_generated = Column(String(5), default="false")  # 'true' or 'false'
     ai_confidence = Column(Float)  # Confidence score from Claude
     source_content_id = Column(UUID(as_uuid=True), ForeignKey('content.id'))  # Link to content that triggered this blocker
+    title_embedding = Column(JSON, nullable=True)  # Embedding vector for semantic deduplication (768 dimensions)
 
     # Assignment fields
     assigned_to = Column(String(100))  # User ID or name
@@ -66,8 +67,8 @@ class Blocker(Base):
             "project_id": str(self.project_id),
             "title": self.title,
             "description": self.description,
-            "impact": self.impact.value if self.impact else None,
-            "status": self.status.value if self.status else None,
+            "impact": self.impact.value if hasattr(self.impact, 'value') else self.impact if self.impact else None,
+            "status": self.status.value if hasattr(self.status, 'value') else self.status if self.status else None,
             "resolution": self.resolution,
             "category": self.category,
             "owner": self.owner,
@@ -82,5 +83,6 @@ class Blocker(Base):
             "assigned_to_email": self.assigned_to_email,
             "identified_date": self.identified_date.isoformat() if self.identified_date else None,
             "last_updated": self.last_updated.isoformat() if self.last_updated else None,
-            "updated_by": self.updated_by
+            "updated_by": self.updated_by,
+            "title_embedding": self.title_embedding
         }

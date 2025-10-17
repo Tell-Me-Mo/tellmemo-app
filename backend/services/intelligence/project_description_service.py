@@ -13,7 +13,6 @@ from services.prompts.project_description_prompts import (
 )
 from config import get_settings
 from utils.logger import get_logger
-from utils.monitoring import monitor_operation
 
 logger = get_logger(__name__)
 
@@ -24,7 +23,8 @@ class ProjectDescriptionAnalyzer:
     def __init__(self):
         """Initialize the service."""
         settings = get_settings()
-        self.llm_model = settings.llm_model or "claude-3-5-haiku-20241022"
+        # Use multi-provider client's configured model (PRIMARY_LLM_MODEL)
+        self.llm_model = None
 
         # Configuration
         self.min_content_length = 500  # Minimum content length to trigger analysis
@@ -133,7 +133,6 @@ class ProjectDescriptionAnalyzer:
         sorted_words = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)
         return [word for word, _ in sorted_words[:20]]
 
-    @monitor_operation("claude_description_analysis", "llm_call", capture_args=True, capture_result=True)
     async def analyze_for_description_update(
         self,
         current_description: str,

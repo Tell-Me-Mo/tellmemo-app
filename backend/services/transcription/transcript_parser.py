@@ -8,7 +8,6 @@ from datetime import datetime
 import logging
 
 from utils.logger import get_logger
-from utils.monitoring import monitor_sync_operation, MonitoringContext
 
 logger = get_logger(__name__)
 
@@ -38,8 +37,7 @@ class TranscriptParser:
             'speakers',
             'messages'
         ]
-        
-    @monitor_sync_operation("parse_transcript", "parsing")
+
     def parse_transcript(self, content: str, title: str = "Meeting Transcript") -> ParsedTranscript:
         """
         Parse transcript content and extract structured information.
@@ -102,8 +100,7 @@ class TranscriptParser:
         
         matches = sum(1 for pattern in patterns if re.search(pattern, content, re.MULTILINE | re.IGNORECASE))
         return matches >= 3  # Need at least 3 structured patterns
-    
-    @monitor_sync_operation("parse_json_transcript", "parsing")
+
     def _parse_json_transcript(self, content: str, title: str) -> ParsedTranscript:
         """Parse JSON-formatted transcript."""
         try:
@@ -219,8 +216,7 @@ class TranscriptParser:
         except Exception as e:
             logger.error(f"Failed to parse JSON transcript: {e}")
             raise
-    
-    @monitor_sync_operation("parse_structured_text", "parsing")
+
     def _parse_structured_text(self, content: str, title: str) -> ParsedTranscript:
         """Parse structured text transcript (with clear sections)."""
         sections = self._split_into_sections(content)
@@ -299,8 +295,7 @@ class TranscriptParser:
             raw_content=content,
             format_type='structured_text'
         )
-    
-    @monitor_sync_operation("parse_plain_text", "parsing")
+
     def _parse_plain_text(self, content: str, title: str) -> ParsedTranscript:
         """Parse plain text transcript."""
         # For plain text, create a single dialogue entry

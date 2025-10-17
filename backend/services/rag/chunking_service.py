@@ -6,7 +6,6 @@ from dataclasses import dataclass
 
 from config import get_settings
 from utils.logger import get_logger
-from utils.monitoring import monitor_operation, monitor_sync_operation
 
 settings = get_settings()
 logger = get_logger(__name__)
@@ -68,10 +67,6 @@ class ChunkingService:
             f"overlap={self.overlap_words}, preserve_sentences={self.preserve_sentences}"
         )
     
-    @monitor_sync_operation(
-        operation_name="chunk_text",
-        operation_type="parsing"
-    )
     def chunk_text(
         self,
         text: str,
@@ -317,10 +312,6 @@ class ChunkingService:
         
         return sentences
     
-    @monitor_sync_operation(
-        operation_name="chunk_by_sentences",
-        operation_type="parsing"
-    )
     def _chunk_by_sentences(
         self,
         text: str,
@@ -401,10 +392,6 @@ class ChunkingService:
         logger.info(f"Created {len(chunks)} chunks from {len(sentences)} sentences")
         return chunks
     
-    @monitor_sync_operation(
-        operation_name="chunk_by_words",
-        operation_type="parsing"
-    )
     def _chunk_by_words(
         self,
         text: str,
@@ -487,10 +474,6 @@ class ChunkingService:
             end_sentence=end_sentence
         )
     
-    @monitor_sync_operation(
-        operation_name="calculate_optimal_chunk_size",
-        operation_type="analysis"
-    )
     def calculate_optimal_chunk_size(
         self,
         text: str,

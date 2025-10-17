@@ -14,7 +14,6 @@ from sentence_transformers import SentenceTransformer
 import numpy as np
 
 from utils.logger import get_logger
-from utils.monitoring import monitor_operation, monitor_sync_operation, MonitoringContext
 from services.transcription.advanced_transcript_parser import (
     AdvancedTranscriptAnalysis, SpeakerTurn, TopicSegment,
     DecisionPoint, ActionItem, MeetingOutcome,
@@ -299,12 +298,6 @@ class MeetingIntelligenceService:
         # Initialize models
         self._initialize_models()
     
-    @monitor_operation(
-        operation_name="analyze_meeting",
-        operation_type="analysis",
-        capture_args=True,
-        capture_result=True
-    )
     async def analyze_meeting(
         self,
         meeting_text: str,
@@ -539,12 +532,6 @@ class MeetingIntelligenceService:
         except Exception as e:
             logger.error(f"Failed to initialize meeting intelligence models: {e}")
     
-    @monitor_operation(
-        operation_name="analyze_meeting_intelligence",
-        operation_type="analysis",
-        capture_args=True,
-        capture_result=True
-    )
     async def analyze_meeting_intelligence(
         self,
         transcript_content: str,
@@ -656,12 +643,6 @@ class MeetingIntelligenceService:
             logger.error(f"Meeting intelligence analysis failed: {e}")
             raise
     
-    @monitor_operation(
-        operation_name="analyze_participants",
-        operation_type="analysis",
-        capture_args=False,
-        capture_result=True
-    )
     async def _analyze_participants(
         self,
         analysis: AdvancedTranscriptAnalysis
@@ -747,12 +728,6 @@ class MeetingIntelligenceService:
         logger.debug(f"Analyzed {len(insights)} participants")
         return insights
     
-    @monitor_operation(
-        operation_name="analyze_themes",
-        operation_type="analysis",
-        capture_args=False,
-        capture_result=True
-    )
     async def _analyze_themes(
         self,
         analysis: AdvancedTranscriptAnalysis
@@ -821,12 +796,6 @@ class MeetingIntelligenceService:
         logger.debug(f"Analyzed {len(insights)} themes")
         return insights
     
-    @monitor_operation(
-        operation_name="enhance_decision_analysis",
-        operation_type="analysis",
-        capture_args=False,
-        capture_result=True
-    )
     async def _enhance_decision_analysis(
         self,
         decision_points: List[DecisionPoint],
@@ -893,12 +862,6 @@ class MeetingIntelligenceService:
         logger.debug(f"Enhanced analysis for {len(insights)} decisions")
         return insights
     
-    @monitor_operation(
-        operation_name="enhance_action_analysis",
-        operation_type="analysis",
-        capture_args=False,
-        capture_result=True
-    )
     async def _enhance_action_analysis(
         self,
         action_items: List[ActionItem],
@@ -962,12 +925,6 @@ class MeetingIntelligenceService:
         logger.debug(f"Enhanced analysis for {len(insights)} actions")
         return insights
     
-    @monitor_operation(
-        operation_name="analyze_meeting_dynamics",
-        operation_type="analysis",
-        capture_args=False,
-        capture_result=True
-    )
     async def _analyze_meeting_dynamics(
         self,
         analysis: AdvancedTranscriptAnalysis

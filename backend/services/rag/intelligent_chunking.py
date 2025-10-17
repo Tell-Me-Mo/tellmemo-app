@@ -11,7 +11,6 @@ from sentence_transformers import SentenceTransformer
 import numpy as np
 
 from utils.logger import get_logger
-from utils.monitoring import monitor_sync_operation, monitor_operation, MonitoringContext
 from services.transcription.advanced_transcript_parser import (
     AdvancedTranscriptAnalysis, SpeakerTurn, TopicSegment, 
     DecisionPoint, ActionItem, advanced_transcript_processor
@@ -162,8 +161,7 @@ class IntelligentChunkingService:
         except Exception as e:
             logger.warning(f"Failed to initialize SentenceTransformer: {e}")
             self.sentence_transformer = None
-    
-    @monitor_operation("chunk_meeting_content", "chunking", capture_args=True)
+
     async def chunk_meeting_content(
         self,
         transcript_analysis: AdvancedTranscriptAnalysis,
@@ -223,8 +221,7 @@ class IntelligentChunkingService:
             logger.error(f"Intelligent chunking failed: {e}")
             # Fallback to basic chunking
             return await self._fallback_chunking(transcript_analysis)
-    
-    @monitor_operation("chunk_by_speaker_turns", "chunking")
+
     async def _chunk_by_speaker_turns(
         self, 
         analysis: AdvancedTranscriptAnalysis
@@ -270,8 +267,7 @@ class IntelligentChunkingService:
         
         logger.debug(f"Created {len(chunks)} speaker-turn chunks")
         return chunks
-    
-    @monitor_operation("chunk_by_topics", "chunking")
+
     async def _chunk_by_topics(
         self, 
         analysis: AdvancedTranscriptAnalysis
@@ -294,8 +290,7 @@ class IntelligentChunkingService:
         
         logger.debug(f"Created {len(chunks)} topic-based chunks")
         return chunks
-    
-    @monitor_operation("chunk_by_content_type", "chunking")
+
     async def _chunk_by_content_type(
         self, 
         analysis: AdvancedTranscriptAnalysis
@@ -324,8 +319,7 @@ class IntelligentChunkingService:
         
         logger.debug(f"Created {len(chunks)} content-type chunks")
         return chunks
-    
-    @monitor_operation("detect_semantic_boundaries", "chunking")
+
     async def _detect_semantic_boundaries(
         self,
         analysis: AdvancedTranscriptAnalysis,
@@ -378,8 +372,7 @@ class IntelligentChunkingService:
         except Exception as e:
             logger.error(f"Semantic boundary detection failed: {e}")
             return base_chunks
-    
-    @monitor_operation("merge_and_optimize_chunks", "chunking")
+
     async def _merge_and_optimize_chunks(
         self,
         chunks: List[IntelligentChunk],
@@ -446,8 +439,7 @@ class IntelligentChunkingService:
         
         logger.debug(f"Added sliding windows: {len(windowed_chunks)} total chunks")
         return windowed_chunks
-    
-    @monitor_operation("score_and_validate_chunks", "chunking")
+
     async def _score_and_validate_chunks(
         self,
         chunks: List[IntelligentChunk],

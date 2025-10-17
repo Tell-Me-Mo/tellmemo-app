@@ -9,7 +9,6 @@ from services.llm.multi_llm_client import get_multi_llm_client
 from services.prompts.risks_tasks_prompts_complete import get_deduplication_prompt
 from config import get_settings
 from utils.logger import get_logger
-from utils.monitoring import monitor_operation
 
 logger = get_logger(__name__)
 
@@ -20,7 +19,8 @@ class RisksTasksAnalyzer:
     def __init__(self, deduplication_confidence_threshold: float = 0.7):
         """Initialize the service."""
         settings = get_settings()
-        self.llm_model = settings.llm_model or "claude-3-5-haiku-20241022"
+        # Use multi-provider client's configured model (PRIMARY_LLM_MODEL)
+        self.llm_model = None
 
         # Configuration
         self.min_content_length = 300  # Lower threshold for risks/tasks
@@ -35,7 +35,6 @@ class RisksTasksAnalyzer:
 
         if not self.llm_client.is_available():
             logger.warning("Risks/Tasks Analyzer: LLM client not available")
-
 
     async def deduplicate_extracted_items(
         self,
@@ -68,7 +67,13 @@ class RisksTasksAnalyzer:
         try:
             # If no extracted items, return empty
             if not extracted_risks and not extracted_blockers and not extracted_tasks and not extracted_lessons:
+                logger.info("[DEDUP] No extracted items to deduplicate")
                 return {"risks": [], "blockers": [], "tasks": [], "lessons_learned": []}
+
+            # LOG: Input summary
+            logger.info(f"[DEDUP] Starting deduplication:")
+            logger.info(f"[DEDUP]   Extracted: {len(extracted_risks)} risks, {len(extracted_blockers)} blockers, {len(extracted_tasks)} tasks, {len(extracted_lessons)} lessons")
+            logger.info(f"[DEDUP]   Existing: {len(existing_risks)} risks, {len(existing_blockers)} blockers, {len(existing_tasks)} tasks, {len(existing_lessons)} lessons")
 
             # Format existing items for Claude
             existing_risks_text = ""
@@ -153,7 +158,7 @@ class RisksTasksAnalyzer:
             )
 
             response_text = response.content[0].text
-            logger.debug(f"Claude deduplication response: {response_text}")
+            logger.debug(f"[DEDUP] Claude deduplication response: {response_text[:500]}...")
 
             # Parse response
             import json
@@ -189,14 +194,43 @@ class RisksTasksAnalyzer:
                 # Log confidence threshold overrides
                 total_overrides = len(risk_confidence_overrides) + len(blocker_confidence_overrides) + len(task_confidence_overrides) + len(lesson_confidence_overrides)
                 if total_overrides > 0:
-                    logger.info(f"Confidence threshold override: kept {total_overrides} items marked as duplicates with low confidence")
+                    logger.info(f"[DEDUP] Confidence threshold override: kept {total_overrides} items marked as duplicates with low confidence")
+                    for override in (risk_confidence_overrides + blocker_confidence_overrides + task_confidence_overrides + lesson_confidence_overrides):
+                        logger.debug(f"[DEDUP]   Override #{override['item_number']}: confidence={override['confidence']:.2f}, reason={override['reason']}")
 
-                logger.info(
-                    f"AI deduplication: {len(unique_risks)}/{len(extracted_risks)} risks, "
-                    f"{len(unique_blockers)}/{len(extracted_blockers)} blockers, "
-                    f"{len(unique_tasks)}/{len(extracted_tasks)} tasks, "
-                    f"{len(unique_lessons)}/{len(extracted_lessons)} lessons are unique"
-                )
+                # LOG: Deduplication results
+                logger.info(f"[DEDUP] Deduplication complete:")
+                logger.info(f"[DEDUP]   Risks: {len(unique_risks)}/{len(extracted_risks)} unique ({len(extracted_risks) - len(unique_risks)} filtered)")
+                logger.info(f"[DEDUP]   Blockers: {len(unique_blockers)}/{len(extracted_blockers)} unique ({len(extracted_blockers) - len(unique_blockers)} filtered)")
+                logger.info(f"[DEDUP]   Tasks: {len(unique_tasks)}/{len(extracted_tasks)} unique ({len(extracted_tasks) - len(unique_tasks)} filtered)")
+                logger.info(f"[DEDUP]   Lessons: {len(unique_lessons)}/{len(extracted_lessons)} unique ({len(extracted_lessons) - len(unique_lessons)} filtered)")
+
+                # LOG: Filtered items details
+                filtered_risk_nums = [i for i in range(1, len(extracted_risks) + 1) if i not in unique_risk_nums]
+                filtered_blocker_nums = [i for i in range(1, len(extracted_blockers) + 1) if i not in unique_blocker_nums]
+                filtered_task_nums = [i for i in range(1, len(extracted_tasks) + 1) if i not in unique_task_nums]
+                filtered_lesson_nums = [i for i in range(1, len(extracted_lessons) + 1) if i not in unique_lesson_nums]
+
+                if filtered_risk_nums:
+                    logger.info(f"[DEDUP] Filtered risk numbers: {filtered_risk_nums}")
+                    for num in filtered_risk_nums[:3]:  # Log first 3
+                        if num <= len(extracted_risks):
+                            logger.debug(f"[DEDUP]   Filtered risk #{num}: {extracted_risks[num-1].get('title', 'N/A')}")
+                if filtered_blocker_nums:
+                    logger.info(f"[DEDUP] Filtered blocker numbers: {filtered_blocker_nums}")
+                    for num in filtered_blocker_nums[:3]:
+                        if num <= len(extracted_blockers):
+                            logger.debug(f"[DEDUP]   Filtered blocker #{num}: {extracted_blockers[num-1].get('title', 'N/A')}")
+                if filtered_task_nums:
+                    logger.info(f"[DEDUP] Filtered task numbers: {filtered_task_nums}")
+                    for num in filtered_task_nums[:3]:
+                        if num <= len(extracted_tasks):
+                            logger.debug(f"[DEDUP]   Filtered task #{num}: {extracted_tasks[num-1].get('title', 'N/A')}")
+                if filtered_lesson_nums:
+                    logger.info(f"[DEDUP] Filtered lesson numbers: {filtered_lesson_nums}")
+                    for num in filtered_lesson_nums[:3]:
+                        if num <= len(extracted_lessons):
+                            logger.debug(f"[DEDUP]   Filtered lesson #{num}: {extracted_lessons[num-1].get('title', 'N/A')}")
 
                 return {
                     "risks": unique_risks,

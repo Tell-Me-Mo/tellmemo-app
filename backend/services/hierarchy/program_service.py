@@ -10,16 +10,14 @@ from models.portfolio import Portfolio
 from models.program import Program
 from models.project import Project
 from utils.logger import get_logger
-from utils.monitoring import monitor_operation, monitor_sync_operation
 
 logger = get_logger(__name__)
 
 
 class ProgramService:
     """Service class for program operations."""
-    
+
     @staticmethod
-    @monitor_operation("create_program", "database", capture_args=True, capture_result=True)
     async def create_program(
         session: AsyncSession,
         name: str,
@@ -74,9 +72,8 @@ class ProgramService:
         
         logger.info(f"Created program: {program.name} (ID: {program.id}) in portfolio {portfolio_id}")
         return program
-    
+
     @staticmethod
-    @monitor_operation("get_program", "database", capture_args=True, capture_result=False)
     async def get_program(
         session: AsyncSession,
         program_id: UUID
@@ -99,9 +96,8 @@ class ProgramService:
             .where(Program.id == program_id)
         )
         return result.scalars().first()
-    
+
     @staticmethod
-    @monitor_operation("list_programs", "database", capture_args=True, capture_result=True)
     async def list_programs(
         session: AsyncSession,
         portfolio_id: Optional[UUID] = None
@@ -127,9 +123,8 @@ class ProgramService:
         programs = result.scalars().all()
         
         return list(programs)
-    
+
     @staticmethod
-    @monitor_operation("update_program", "database", capture_args=True, capture_result=False)
     async def update_program(
         session: AsyncSession,
         program_id: UUID,
@@ -195,9 +190,8 @@ class ProgramService:
         
         logger.info(f"Updated program: {program.name} (ID: {program.id})")
         return program
-    
+
     @staticmethod
-    @monitor_operation("delete_program", "database", capture_args=True, capture_result=True)
     async def delete_program(
         session: AsyncSession,
         program_id: UUID,
@@ -241,9 +235,8 @@ class ProgramService:
         
         logger.info(f"Deleted program: {program.name} (ID: {program.id})")
         return True
-    
+
     @staticmethod
-    @monitor_operation("move_projects_to_program", "database", capture_args=True, capture_result=True)
     async def move_projects_to_program(
         session: AsyncSession,
         program_id: UUID,
@@ -287,9 +280,8 @@ class ProgramService:
         
         logger.info(f"Moved {moved_count} projects to program {program.name}")
         return moved_count
-    
+
     @staticmethod
-    @monitor_operation("get_program_statistics", "analysis", capture_args=True, capture_result=True)
     async def get_program_statistics(
         session: AsyncSession,
         program_id: UUID
