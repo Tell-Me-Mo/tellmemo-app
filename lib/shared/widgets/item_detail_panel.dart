@@ -111,6 +111,173 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
     return spacedActions;
   }
 
+  /// Builds mobile-friendly actions menu from headerActions
+  /// Converts all action widgets into a single PopupMenuButton for mobile view
+  Widget _buildMobileActionsMenu(BuildContext context, List<Widget> actions) {
+    final theme = Theme.of(context);
+
+    return PopupMenuButton<VoidCallback>(
+      icon: const Icon(Icons.more_vert, size: 20),
+      tooltip: 'Actions',
+      offset: const Offset(0, 45),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      elevation: 8,
+      onSelected: (callback) => callback(),
+      itemBuilder: (BuildContext context) {
+        final menuItems = <PopupMenuEntry<VoidCallback>>[];
+
+        for (int i = 0; i < actions.length; i++) {
+          final action = actions[i];
+
+          // Skip SizedBox and Container (spacers/dividers)
+          if (action is SizedBox && action.width != null) continue;
+
+          // Handle Container dividers - convert to PopupMenuDivider
+          if (action is Container && action.constraints == null) {
+            menuItems.add(const PopupMenuDivider());
+            continue;
+          }
+
+          PopupMenuItem<VoidCallback>? menuItem;
+
+          // Convert TextButton to menu item
+          if (action is TextButton) {
+            final textButton = action;
+            final child = textButton.child;
+            final onPressed = textButton.onPressed;
+
+            if (child is Text && onPressed != null) {
+              menuItem = PopupMenuItem<VoidCallback>(
+                value: onPressed,
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.close,
+                      size: 20,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(child.data ?? 'Cancel'),
+                  ],
+                ),
+              );
+            }
+          }
+
+          // Convert FilledButton to menu item
+          else if (action is FilledButton) {
+            final filledButton = action;
+            IconData? iconData;
+            String? labelText;
+            VoidCallback? onPressed = filledButton.onPressed;
+
+            // Extract icon and label from FilledButton.icon
+            if (filledButton.child is Row) {
+              final row = filledButton.child as Row;
+              for (var child in row.children) {
+                if (child is Icon) {
+                  iconData = child.icon;
+                } else if (child is Text) {
+                  labelText = child.data;
+                }
+              }
+            }
+
+            if (labelText != null) {
+              menuItem = PopupMenuItem<VoidCallback>(
+                value: onPressed ?? () {},
+                enabled: onPressed != null,
+                child: Row(
+                  children: [
+                    Icon(
+                      iconData ?? Icons.save,
+                      size: 20,
+                      color: onPressed != null
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.38),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      labelText,
+                      style: TextStyle(
+                        color: onPressed != null
+                            ? null
+                            : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.38),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+          }
+
+          // Convert IconButton to menu item
+          else if (action is IconButton) {
+            final iconButton = action;
+            final icon = iconButton.icon;
+            final tooltip = iconButton.tooltip ?? '';
+            final onPressed = iconButton.onPressed;
+
+            IconData? iconData;
+            if (icon is Icon) {
+              iconData = icon.icon;
+            }
+
+            if (iconData != null && tooltip.isNotEmpty) {
+              menuItem = PopupMenuItem<VoidCallback>(
+                value: onPressed ?? () {},
+                enabled: onPressed != null,
+                child: Row(
+                  children: [
+                    Icon(
+                      iconData,
+                      size: 20,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(tooltip),
+                  ],
+                ),
+              );
+            }
+          }
+
+          // Convert PopupMenuButton to nested menu items
+          else if (action is PopupMenuButton) {
+            // For nested PopupMenuButton, we extract its items
+            // This handles the "More actions" menu case
+            final popupButton = action as PopupMenuButton<String>;
+            final items = popupButton.itemBuilder(context);
+
+            for (var item in items) {
+              if (item is PopupMenuItem<String>) {
+                final popupItem = item;
+                menuItems.add(
+                  PopupMenuItem<VoidCallback>(
+                    value: () => popupButton.onSelected?.call(popupItem.value!),
+                    enabled: popupItem.enabled,
+                    child: popupItem.child!,
+                  ),
+                );
+              } else if (item is PopupMenuDivider) {
+                menuItems.add(item);
+              }
+            }
+            continue;
+          }
+
+          if (menuItem != null) {
+            menuItems.add(menuItem);
+          }
+        }
+
+        return menuItems;
+      },
+    );
+  }
+
   /// Builds a single segmented tab button
   Widget _buildSegmentedTab({
     required BuildContext context,
@@ -197,12 +364,28 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
     if (!isMobile) return title;
 
     // In mobile view, simplify titles by removing "Create New" or "Create" prefix
+    String processedTitle = title;
     if (title.startsWith('Create New ')) {
-      return title.replaceFirst('Create New ', 'New ');
+      processedTitle = title.replaceFirst('Create New ', 'New ');
     } else if (title.startsWith('Create ')) {
-      return title.replaceFirst('Create ', 'New ');
+      processedTitle = title.replaceFirst('Create ', 'New ');
     }
-    return title;
+
+    // Truncate long titles for mobile (max 70 characters for 2 lines)
+    // Since we allow maxLines: 2, we can show more content before truncating
+    // This allows titles to use the available vertical space efficiently
+    const int maxMobileLength = 70;
+    if (processedTitle.length > maxMobileLength) {
+      // Find the last space before the cutoff to avoid breaking words
+      int cutoff = maxMobileLength;
+      int lastSpace = processedTitle.lastIndexOf(' ', maxMobileLength);
+      if (lastSpace > maxMobileLength - 20) { // Only use word boundary if it's reasonable
+        cutoff = lastSpace;
+      }
+      return '${processedTitle.substring(0, cutoff).trim()}...';
+    }
+
+    return processedTitle;
   }
 
   @override
@@ -311,12 +494,18 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      _getDisplayTitle(widget.title, screenInfo.isMobile),
-                                      style:
-                                          theme.textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                        letterSpacing: -0.2,
+                                    Tooltip(
+                                      message: widget.title, // Show full title on hover/long press
+                                      waitDuration: const Duration(milliseconds: 500),
+                                      child: Text(
+                                        _getDisplayTitle(widget.title, screenInfo.isMobile),
+                                        style:
+                                            theme.textTheme.titleMedium?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                          letterSpacing: -0.2,
+                                        ),
+                                        maxLines: 2, // Allow 2 lines for better mobile readability
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                     const SizedBox(height: 3),
@@ -336,12 +525,16 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
                                 ),
                               ),
                               // Header Actions with proper spacing
-                              if (widget.headerActions != null) ...[
+                              if (widget.headerActions != null && widget.headerActions!.isNotEmpty) ...[
                                 const SizedBox(width: 8),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: _buildSpacedActions(widget.headerActions!),
-                                ),
+                                // Mobile: Show 3-dot menu, Desktop: Show all actions
+                                if (screenInfo.isMobile)
+                                  _buildMobileActionsMenu(context, widget.headerActions!)
+                                else
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: _buildSpacedActions(widget.headerActions!),
+                                  ),
                               ],
                               const SizedBox(width: 4),
                               IconButton(
