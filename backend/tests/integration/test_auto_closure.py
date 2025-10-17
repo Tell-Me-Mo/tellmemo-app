@@ -101,7 +101,7 @@ class TestTaskAutoClosure:
             'status_updates': [
                 {
                     'type': 'task',
-                    'extracted_number': 1,
+                    'existing_item_number': 1,
                     'existing_title': 'Implement Payment Gateway',
                     'new_status': 'completed'
                 }
@@ -157,7 +157,7 @@ class TestTaskAutoClosure:
             'status_updates': [
                 {
                     'type': 'task',
-                    'extracted_number': 1,
+                    'existing_item_number': 1,
                     'existing_title': 'Implement Payment Gateway',
                     'new_status': 'completed'
                 }
@@ -205,7 +205,7 @@ class TestRiskAutoClosure:
             'status_updates': [
                 {
                     'type': 'risk',
-                    'extracted_number': 1,
+                    'existing_item_number': 1,
                     'existing_title': 'API Rate Limiting Issue',
                     'new_status': 'resolved'
                 }
@@ -255,7 +255,7 @@ class TestRiskAutoClosure:
             'status_updates': [
                 {
                     'type': 'risk',
-                    'extracted_number': 1,
+                    'existing_item_number': 1,
                     'existing_title': 'API Rate Limiting Issue',
                     'update_type': 'resolution',
                     'new_info': 'Implemented caching layer to reduce API calls'
@@ -306,7 +306,7 @@ class TestBlockerAutoClosure:
             'status_updates': [
                 {
                     'type': 'blocker',
-                    'extracted_number': 1,
+                    'existing_item_number': 1,
                     'existing_title': 'Database Access Blocker',
                     'new_status': 'resolved'
                 }
@@ -355,7 +355,7 @@ class TestBlockerAutoClosure:
             'status_updates': [
                 {
                     'type': 'blocker',
-                    'extracted_number': 1,
+                    'existing_item_number': 1,
                     'existing_title': 'Database Access Blocker',
                     'update_type': 'resolution',
                     'new_info': 'DevOps provided database credentials'
@@ -407,19 +407,19 @@ class TestMultipleItemsAutoClosure:
             'status_updates': [
                 {
                     'type': 'task',
-                    'extracted_number': 1,
+                    'existing_item_number': 1,
                     'existing_title': 'Implement Payment Gateway',
                     'new_status': 'completed'
                 },
                 {
                     'type': 'risk',
-                    'extracted_number': 1,
+                    'existing_item_number': 1,
                     'existing_title': 'API Rate Limiting Issue',
                     'new_status': 'resolved'
                 },
                 {
                     'type': 'blocker',
-                    'extracted_number': 1,
+                    'existing_item_number': 1,
                     'existing_title': 'Database Access Blocker',
                     'new_status': 'resolved'
                 }
