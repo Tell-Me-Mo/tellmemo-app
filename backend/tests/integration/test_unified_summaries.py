@@ -198,7 +198,7 @@ class TestGenerateSummary:
         authenticated_org_client: AsyncClient,
         test_project: Project
     ):
-        """Test generating a project summary returns error when no content exists."""
+        """Test generating a project summary queues a background job."""
         # Arrange
         date_start = (datetime.utcnow() - timedelta(days=7)).isoformat()
         date_end = datetime.utcnow().isoformat()
@@ -219,10 +219,13 @@ class TestGenerateSummary:
         )
 
         # Assert
-        # NOTE: Current implementation returns 500 when no meeting summaries exist
-        # This is expected behavior - project summaries aggregate from meeting summaries
-        assert response.status_code == 500
-        assert "No meeting summaries" in response.json()["detail"]
+        # NOTE: Changed behavior - project summaries are now queued as background jobs
+        # Returns 200 with job_id for tracking, not 500 error
+        assert response.status_code == 200
+        data = response.json()
+        assert "job_id" in data
+        assert data["status"] == "processing"
+        assert "queued successfully" in data["message"]
 
     @pytest.mark.asyncio
     async def test_generate_program_summary_success(
@@ -230,7 +233,7 @@ class TestGenerateSummary:
         authenticated_org_client: AsyncClient,
         test_program: Program
     ):
-        """Test generating a program summary returns error when no project summaries exist."""
+        """Test generating a program summary queues a background job."""
         # Arrange
         request_data = {
             "entity_type": "program",
@@ -246,10 +249,13 @@ class TestGenerateSummary:
         )
 
         # Assert
-        # NOTE: Current implementation returns 500 when no project summaries exist
-        # This is expected behavior - program summaries aggregate from project summaries
-        assert response.status_code == 500
-        assert "No project summaries" in response.json()["detail"]
+        # NOTE: Changed behavior - program summaries are now queued as background jobs
+        # Returns 200 with job_id for tracking, not 500 error
+        assert response.status_code == 200
+        data = response.json()
+        assert "job_id" in data
+        assert data["status"] == "processing"
+        assert "queued successfully" in data["message"]
 
     @pytest.mark.asyncio
     async def test_generate_portfolio_summary_success(
@@ -257,7 +263,7 @@ class TestGenerateSummary:
         authenticated_org_client: AsyncClient,
         test_portfolio: Portfolio
     ):
-        """Test generating a portfolio summary returns error when no project summaries exist."""
+        """Test generating a portfolio summary queues a background job."""
         # Arrange
         request_data = {
             "entity_type": "portfolio",
@@ -273,10 +279,13 @@ class TestGenerateSummary:
         )
 
         # Assert
-        # NOTE: Current implementation returns 500 when no project summaries exist
-        # This is expected behavior - portfolio summaries aggregate from project summaries
-        assert response.status_code == 500
-        assert "No project summaries" in response.json()["detail"]
+        # NOTE: Changed behavior - portfolio summaries are now queued as background jobs
+        # Returns 200 with job_id for tracking, not 500 error
+        assert response.status_code == 200
+        data = response.json()
+        assert "job_id" in data
+        assert data["status"] == "processing"
+        assert "queued successfully" in data["message"]
 
     @pytest.mark.asyncio
     async def test_generate_summary_invalid_entity_id(
