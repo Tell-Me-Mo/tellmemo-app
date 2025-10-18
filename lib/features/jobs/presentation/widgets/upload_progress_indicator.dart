@@ -175,22 +175,40 @@ class UploadProgressIndicator extends ConsumerWidget {
                             ),
                             if ((job.status == JobStatus.processing && job.stepDescription != null) ||
                                 job.status == JobStatus.failed)
-                              Text(
-                                job.status == JobStatus.failed
-                                    ? _getErrorMessage(job)
-                                    : job.stepDescription!,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  fontSize: 12,
-                                  color: job.status == JobStatus.failed
-                                      ? Colors.red[700]
-                                      : theme.textTheme.bodySmall?.color?.withValues(alpha: 0.7),
-                                  fontWeight: job.status == JobStatus.failed
-                                      ? FontWeight.w500
-                                      : FontWeight.normal,
-                                  height: 1.2,
-                                ),
-                                maxLines: job.status == JobStatus.failed ? 2 : 1,
-                                overflow: TextOverflow.ellipsis,
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    job.status == JobStatus.failed
+                                        ? _getErrorMessage(job)
+                                        : job.stepDescription!,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      fontSize: 12,
+                                      color: job.status == JobStatus.failed
+                                          ? Colors.red[700]
+                                          : theme.textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                                      fontWeight: job.status == JobStatus.failed
+                                          ? FontWeight.w500
+                                          : FontWeight.normal,
+                                      height: 1.2,
+                                    ),
+                                    maxLines: job.status == JobStatus.failed ? 2 : 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  if (job.status == JobStatus.processing && _shouldShowTimeEstimate(job))
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 2),
+                                      child: Text(
+                                        '⏱ Takes 1-2 min',
+                                        style: theme.textTheme.bodySmall?.copyWith(
+                                          fontSize: 11,
+                                          color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5),
+                                          height: 1.0,
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
                           ],
                         ),
@@ -382,12 +400,18 @@ class UploadProgressIndicator extends ConsumerWidget {
   }
 
 
+  bool _shouldShowTimeEstimate(JobModel job) {
+    // Show time estimate for summary generation jobs
+    return job.jobType == JobType.projectSummary ||
+           job.jobType == JobType.meetingSummary;
+  }
+
   String _getJobTitle(JobModel job) {
     // Check if this is a Fireflies import job
     if (job.metadata['source'] == 'fireflies') {
       return job.metadata['title'] ?? 'Fireflies Meeting Import';
     }
-    
+
     // Check for other special job types
     switch (job.jobType) {
       case JobType.projectSummary:

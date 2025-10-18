@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added (October 2025)
 
+#### UI/UX Improvements (PR #76 - 2025-10-18)
+- **Time Expectation Messages**: Added "This usually takes 1-2 minutes" messaging during summary generation
+  - Clear time expectations in summary generation modal dialog
+  - Compact "⏱ Takes 1-2 min" message in bottom overlay progress indicator
+  - Smart conditional rendering only for summary generation jobs
+  - Theme-aware, non-intrusive design
+- **Mobile UX Enhancements**: Sticky bottom action bar for mobile edit/create modes
+- **Enhanced Item Detail Panels**: Improved mobile support across task, risk, blocker, and lesson panels
+
 #### Email Digest System (PR #54 - 2025-10-12)
 - SendGrid integration for automated email delivery
 - User email preferences management (digest frequency, content types)
@@ -101,6 +110,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+#### UI/UX (PR #76 - 2025-10-18)
+- **Tasks & Lessons Screens**: Fixed tab highlighting and hid mobile navigation for cleaner mobile UX
+- **Risks Screen**: Removed redundant Critical filter chip from navigation
+- **Summary Generation Dialog**: Refactored for better error handling and user feedback
+- **Navigation**: Improved filter displays and interactions across multiple screens
+
+#### Backend (PR #76 - 2025-10-18)
+- **Summary Service**: Refactored summary generation service with enhanced error handling
+- **WebSocket Jobs**: Improved job status updates and progress tracking
+- **Queue Configuration**: Enhanced RQ queue configuration for better reliability
+
 #### Architecture
 - Migrated from custom job service to Redis Queue (RQ) for background task processing (PR #40)
 - Migrated from SnackBar to centralized NotificationService across entire app (PR #53)
@@ -137,6 +157,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - JWT-based email unsubscribe tokens (90-day expiration)
 
 ### Fixed
+
+#### Frontend (PR #76 - 2025-10-18)
+- **Test Fixes**: Fixed failing tests in lessons_learned_screen_v2_test.dart and query_provider_test.dart
+  - Fixed category tabs test to account for mobile layout behavior (11 tests passing)
+  - Fixed createNewSession test to match backend session ID assignment behavior (27 tests passing)
+- **Ask AI Panel**: Eliminated duplicate conversation history entries
+- **Query Provider**: Refactored to reduce code complexity (113 lines removed, 38 added)
+- **Mobile Layout**: Fixed tab highlighting and navigation issues on mobile viewports
 
 #### Backend
 - Language validation and improved error handling in transcription API (PR #39)
@@ -350,6 +378,8 @@ If you're upgrading from an earlier version or different setup:
 
 This changelog is based on the following merged pull requests:
 
+- PR #76: UI improvements and test fixes (in progress)
+- PR #75: Comprehensive documentation improvements for HLD, CHANGELOG, and README
 - PR #74: Mobile UX improvements for item detail panels
 - PR #73: Quality improvements for meeting upload processing
 - PR #72: Enhanced right panel UX with text selection and truncation

@@ -64,6 +64,12 @@ class Settings(BaseSettings):
     fallback_on_overload: bool = Field(default=True, env="FALLBACK_ON_OVERLOAD")  # Fallback on 529/503
     fallback_on_rate_limit: bool = Field(default=False, env="FALLBACK_ON_RATE_LIMIT")  # Don't fallback on 429 by default
 
+    # Manual Summary Generation LLM Configuration
+    # Override LLM settings for manual summary generation (project/program/portfolio summaries)
+    manual_summary_llm_provider: str = Field(default="claude", env="MANUAL_SUMMARY_LLM_PROVIDER")
+    manual_summary_llm_model: str = Field(default="claude-3-5-haiku-latest", env="MANUAL_SUMMARY_LLM_MODEL")
+    manual_summary_max_tokens: int = Field(default=8192, env="MANUAL_SUMMARY_MAX_TOKENS")  # Claude 3.5 Haiku limit
+
     # Circuit Breaker Configuration
     enable_circuit_breaker: bool = Field(default=True, env="ENABLE_CIRCUIT_BREAKER")
     circuit_breaker_failure_threshold: int = Field(default=5, env="CIRCUIT_BREAKER_FAILURE_THRESHOLD")  # Open circuit after N consecutive failures

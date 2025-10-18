@@ -175,7 +175,6 @@ class SummaryGenerationNotifier extends StateNotifier<SummaryGenerationState> {
     DateTime? dateRangeEnd,
     String format = 'general',
     String? createdBy,
-    bool useJob = false,
   }) async {
     state = state.copyWith(
       isGenerating: true,
@@ -199,7 +198,6 @@ class SummaryGenerationNotifier extends StateNotifier<SummaryGenerationState> {
         dateRangeEnd: dateRangeEnd,
         format: format,
         createdBy: createdBy,
-        useJob: useJob,
       );
 
       state = state.copyWith(progress: 0.5);
@@ -208,11 +206,10 @@ class SummaryGenerationNotifier extends StateNotifier<SummaryGenerationState> {
 
       // Response received from unified summary API
 
-      // Check if it's a job response
-      if (useJob && response is Map<String, dynamic> && response.containsKey('summary_id')) {
-        // For job-based generation, the summary_id field contains the job_id
-        final jobId = response['summary_id'] as String;
-        // Job-based summary generation initiated
+      // Manual summaries (project/program/portfolio) always return job_id
+      if (response is Map<String, dynamic> && response.containsKey('job_id')) {
+        // Job-based generation - return job ID
+        final jobId = response['job_id'] as String;
 
         state = state.copyWith(
           isGenerating: false,
@@ -221,8 +218,8 @@ class SummaryGenerationNotifier extends StateNotifier<SummaryGenerationState> {
         );
 
         return jobId; // Return job ID for tracking
-      } else {
-        // Direct generation - parse summary
+      } else if (response is Map<String, dynamic> && response.containsKey('summary_id')) {
+        // Meeting summary (direct generation during upload)
         state = state.copyWith(progress: 0.8);
 
         try {

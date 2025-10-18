@@ -274,7 +274,7 @@ class _ProjectProcessingJobsProviderElement
   String get projectId => (origin as ProjectProcessingJobsProvider).projectId;
 }
 
-String _$processingJobsHash() => r'0ad9909133055be4af45d198ff4475ea5e593d4d';
+String _$processingJobsHash() => r'65924180f2cdbee5ffbf80a2ea25138c0977ceb1';
 
 /// See also [ProcessingJobs].
 @ProviderFor(ProcessingJobs)

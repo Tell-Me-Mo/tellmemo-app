@@ -635,6 +635,7 @@ ${_buildBlockerContext(_editedBlocker!)}''';
           : Colors.red,
       onClose: () => Navigator.of(context).pop(),
       commentCount: commentCount,
+      showMobileBottomBar: _isEditing, // Show bottom bar in edit/create mode
       headerActions: _isEditing
           ? [
               // Edit mode actions

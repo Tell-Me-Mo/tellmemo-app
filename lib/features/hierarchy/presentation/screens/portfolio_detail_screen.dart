@@ -2082,7 +2082,7 @@ class _PortfolioDetailScreenState extends ConsumerState<PortfolioDetailScreen> {
   }
 
   void _showPortfolioSummaryDialog(BuildContext context, Portfolio portfolio) async {
-    final result = await showDialog<SummaryModel>(
+    showDialog(
       context: context,
       builder: (dialogContext) => SummaryGenerationDialog(
         entityType: 'portfolio',
@@ -2095,7 +2095,7 @@ class _PortfolioDetailScreenState extends ConsumerState<PortfolioDetailScreen> {
         }) async {
           try {
             final response = await DioClient.instance.post(
-              '/api/v1/summaries/generate',
+              '/api/v1/unified-summaries/generate',
               data: {
                 'entity_type': 'portfolio',
                 'entity_id': portfolio.id,
@@ -2104,16 +2104,18 @@ class _PortfolioDetailScreenState extends ConsumerState<PortfolioDetailScreen> {
                 'date_range_end': endDate.toIso8601String(),
                 'format': format,
                 'created_by': 'User',
-                'use_job': false,
+                'use_job': true, // ✅ Enable job-based generation
               },
             );
 
-            // Parse the response to a SummaryModel if successful
-            if (response.data != null) {
+            // Extract jobId from response
+            final jobId = response.data['job_id'] as String?;
+            if (jobId != null) {
               _refreshSummaries();
-              return SummaryModel.fromJson(response.data);
             }
-            return null;
+
+            // Return jobId to dialog (dialog handles subscription and navigation)
+            return jobId;
           } catch (e) {
             throw Exception('Failed to generate summary: $e');
           }
@@ -2121,19 +2123,6 @@ class _PortfolioDetailScreenState extends ConsumerState<PortfolioDetailScreen> {
         onUploadContent: null, // Can be implemented if needed
       ),
     );
-
-    if (result != null && mounted) {
-      // Refresh the summaries list first
-      _refreshSummaries();
-
-      // Wait a moment for the UI to update
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      // Navigate to the summary detail screen
-      if (mounted) {
-        context.push('/summaries/${result.id}');
-      }
-    }
   }
 
   String _formatFullDate(DateTime date) {

@@ -68,13 +68,17 @@ class QueryNotifier extends StateNotifier<QueryState> {
       state = state.copyWith(
         conversation: [],
         activeConversationId: null,
+        activeSessionId: null,  // Clear active session
         currentEntityId: projectId,
         currentEntityType: entityType,
         currentContextId: contextId,
       );
     } else {
-      // Same entity, just update tracking
+      // Same entity, just update tracking but clear active session for fresh start
       state = state.copyWith(
+        conversation: [],
+        activeConversationId: null,
+        activeSessionId: null,  // Clear active session for fresh start
         currentEntityId: projectId,
         currentEntityType: entityType,
         currentContextId: contextId,
@@ -129,10 +133,7 @@ class QueryNotifier extends StateNotifier<QueryState> {
       currentContextId: contextId,
     );
 
-    // Create new session if none exists
-    if (state.activeSessionId == null) {
-      await createNewSession(projectId);
-    }
+    // No need to create session ID here - backend will provide it
 
     // Log query asked
     final startTime = DateTime.now();
@@ -211,18 +212,40 @@ class QueryNotifier extends StateNotifier<QueryState> {
           .take(10)
           .toList();
 
-      // Store conversation_id for future follow-up queries
+      // Use the backend conversation_id as our session ID
+      // This eliminates the need for temporary IDs and complex syncing
+      final newSessionId = conversationId ?? state.activeSessionId;
+
       state = state.copyWith(
         isLoading: false,
         conversation: updatedConversation,
         queryHistory: updatedHistory,
         pendingQuestion: null,
-        activeConversationId: conversationId, // Store backend conversation ID
+        activeConversationId: conversationId,
+        activeSessionId: newSessionId, // Use backend ID directly
       );
 
-      // Auto-save conversation after successful query
-      if (state.activeSessionId != null) {
-        await _saveCurrentSession(projectId);
+      // Update local sessions list with the new/updated conversation
+      if (newSessionId != null) {
+        final title = question.length > 50 ? '${question.substring(0, 50)}...' : question;
+        final session = ConversationSession(
+          id: newSessionId,
+          title: title,
+          createdAt: DateTime.now(),
+          items: updatedConversation,
+          lastAccessedAt: DateTime.now(),
+        );
+
+        final sessions = [...state.sessions];
+        final existingIndex = sessions.indexWhere((s) => s.id == newSessionId);
+
+        if (existingIndex >= 0) {
+          sessions[existingIndex] = session;
+        } else {
+          sessions.insert(0, session);
+        }
+
+        state = state.copyWith(sessions: sessions);
       }
     } catch (e) {
       // Log query failed
@@ -264,25 +287,17 @@ class QueryNotifier extends StateNotifier<QueryState> {
   }
 
   Future<void> createNewSession(String projectId) async {
-    // Save current session if it has content
-    if (state.conversation.isNotEmpty && state.activeSessionId != null) {
-      await _saveCurrentSession(projectId);
-    }
-
-    final sessionId = DateTime.now().millisecondsSinceEpoch.toString();
+    // Simply clear the current conversation
+    // New session ID will be assigned by backend when user sends first message
     state = state.copyWith(
       conversation: [],
       error: null,
-      activeSessionId: sessionId,
+      activeSessionId: null,
+      activeConversationId: null,
     );
   }
 
   Future<void> switchToSession(String projectId, String sessionId) async {
-    // Save current session first
-    if (state.conversation.isNotEmpty && state.activeSessionId != null) {
-      await _saveCurrentSession(projectId);
-    }
-
     // Find and load the requested session
     final session = state.sessions.firstWhere(
       (s) => s.id == sessionId,
@@ -297,101 +312,11 @@ class QueryNotifier extends StateNotifier<QueryState> {
     state = state.copyWith(
       conversation: session.items,
       activeSessionId: sessionId,
+      activeConversationId: sessionId, // Backend conversation ID is the same
       error: null,
     );
   }
 
-  Future<void> _saveCurrentSession(String projectId) async {
-    if (state.activeSessionId == null || state.conversation.isEmpty) return;
-
-    try {
-      final title = state.conversation.first.question.length > 50
-          ? '${state.conversation.first.question.substring(0, 50)}...'
-          : state.conversation.first.question;
-
-      final messages = state.conversation.map((item) => {
-        'question': item.question,
-        'answer': item.answer,
-        'sources': item.sources,
-        'confidence': item.confidence,
-        'timestamp': item.timestamp.toUtc().toIso8601String(),  // Convert to UTC before sending
-        'isAnswerPending': item.isAnswerPending,
-      }).toList();
-
-      // Check if session exists in backend
-      final existingIndex = state.sessions.indexWhere((s) => s.id == state.activeSessionId);
-
-      if (existingIndex >= 0) {
-        // Update existing conversation
-        await _apiService.client.updateConversation(
-          projectId,
-          state.activeSessionId!,
-          {
-            'title': title,
-            'messages': messages,
-            if (state.currentContextId != null) 'context_id': state.currentContextId,
-          },
-        );
-      } else {
-        // Create new conversation
-        final response = await _apiService.client.createConversation(
-          projectId,
-          {
-            'title': title,
-            'messages': messages,
-            if (state.currentContextId != null) 'context_id': state.currentContextId,
-          },
-        );
-
-        // Update the activeSessionId with the backend ID
-        state = state.copyWith(activeSessionId: response['id']);
-      }
-
-      // Update local sessions
-      final session = ConversationSession(
-        id: state.activeSessionId!,
-        title: title,
-        createdAt: DateTime.now(),
-        items: state.conversation,
-        lastAccessedAt: DateTime.now(),
-      );
-
-      final sessions = [...state.sessions];
-      final localIndex = sessions.indexWhere((s) => s.id == session.id);
-
-      if (localIndex >= 0) {
-        sessions[localIndex] = session;
-      } else {
-        sessions.insert(0, session);
-      }
-
-      state = state.copyWith(sessions: sessions);
-    } catch (e) {
-      // If save fails, still update local state
-      final title = state.conversation.first.question.length > 50
-          ? '${state.conversation.first.question.substring(0, 50)}...'
-          : state.conversation.first.question;
-
-      final session = ConversationSession(
-        id: state.activeSessionId!,
-        title: title,
-        createdAt: DateTime.now(),
-        items: state.conversation,
-        lastAccessedAt: DateTime.now(),
-      );
-
-      final sessions = [...state.sessions];
-      final existingIndex = sessions.indexWhere((s) => s.id == session.id);
-
-      if (existingIndex >= 0) {
-        sessions[existingIndex] = session;
-      } else {
-        sessions.insert(0, session);
-      }
-
-      state = state.copyWith(sessions: sessions);
-    }
-  }
 
   Future<void> deleteSession(String projectId, String sessionId) async {
     try {
