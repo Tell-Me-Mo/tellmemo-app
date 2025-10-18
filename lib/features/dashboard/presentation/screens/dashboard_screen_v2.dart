@@ -1898,28 +1898,29 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
           required DateTime endDate,
         }) async {
           try {
-            await ref.read(summaryGenerationProvider.notifier).generateSummary(
+            // Request job-based generation - returns jobId
+            final jobId = await ref.read(summaryGenerationProvider.notifier).generateSummary(
               projectId: project.id,
               type: SummaryType.project,
               startDate: startDate,
               endDate: endDate,
-              useJob: false,
               format: format,
             );
 
-            final generatedSummary = ref.read(summaryGenerationProvider).generatedSummary;
+            // Register job for background tracking (for provider refresh)
+            if (jobId != null) {
+              await ref.read(processingJobsProvider.notifier).addJob(
+                jobId: jobId,
+                contentId: null,
+                projectId: project.id,
+              );
 
-            if (generatedSummary != null && context.mounted) {
-              // Navigate to the summary detail page
-              context.push('/summaries/${generatedSummary.id}');
-
-              ref.read(notificationServiceProvider.notifier).showSuccess('Summary generated successfully!');
-
-              // Refresh summaries list
+              // Refresh providers when complete
               ref.invalidate(projectSummariesProvider(project.id));
             }
 
-            return generatedSummary;
+            // Return jobId to dialog (dialog will handle subscription and navigation)
+            return jobId;
           } catch (e) {
             if (context.mounted) {
               ref.read(notificationServiceProvider.notifier).showError('Failed to generate summary: ${e.toString()}');

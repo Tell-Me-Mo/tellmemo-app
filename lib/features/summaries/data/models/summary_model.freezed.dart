@@ -3277,8 +3277,6 @@ mixin _$SummaryRequest {
   DateTime? get dateRangeEnd => throw _privateConstructorUsedError;
   @JsonKey(name: 'created_by')
   String? get createdBy => throw _privateConstructorUsedError;
-  @JsonKey(name: 'use_job')
-  bool get useJob => throw _privateConstructorUsedError;
   @JsonKey(name: 'format')
   String get format => throw _privateConstructorUsedError;
 
@@ -3305,7 +3303,6 @@ abstract class $SummaryRequestCopyWith<$Res> {
     @JsonKey(name: 'date_range_start') DateTime? dateRangeStart,
     @JsonKey(name: 'date_range_end') DateTime? dateRangeEnd,
     @JsonKey(name: 'created_by') String? createdBy,
-    @JsonKey(name: 'use_job') bool useJob,
     @JsonKey(name: 'format') String format,
   });
 }
@@ -3330,7 +3327,6 @@ class _$SummaryRequestCopyWithImpl<$Res, $Val extends SummaryRequest>
     Object? dateRangeStart = freezed,
     Object? dateRangeEnd = freezed,
     Object? createdBy = freezed,
-    Object? useJob = null,
     Object? format = null,
   }) {
     return _then(
@@ -3355,10 +3351,6 @@ class _$SummaryRequestCopyWithImpl<$Res, $Val extends SummaryRequest>
                 ? _value.createdBy
                 : createdBy // ignore: cast_nullable_to_non_nullable
                       as String?,
-            useJob: null == useJob
-                ? _value.useJob
-                : useJob // ignore: cast_nullable_to_non_nullable
-                      as bool,
             format: null == format
                 ? _value.format
                 : format // ignore: cast_nullable_to_non_nullable
@@ -3384,7 +3376,6 @@ abstract class _$$SummaryRequestImplCopyWith<$Res>
     @JsonKey(name: 'date_range_start') DateTime? dateRangeStart,
     @JsonKey(name: 'date_range_end') DateTime? dateRangeEnd,
     @JsonKey(name: 'created_by') String? createdBy,
-    @JsonKey(name: 'use_job') bool useJob,
     @JsonKey(name: 'format') String format,
   });
 }
@@ -3408,7 +3399,6 @@ class __$$SummaryRequestImplCopyWithImpl<$Res>
     Object? dateRangeStart = freezed,
     Object? dateRangeEnd = freezed,
     Object? createdBy = freezed,
-    Object? useJob = null,
     Object? format = null,
   }) {
     return _then(
@@ -3433,10 +3423,6 @@ class __$$SummaryRequestImplCopyWithImpl<$Res>
             ? _value.createdBy
             : createdBy // ignore: cast_nullable_to_non_nullable
                   as String?,
-        useJob: null == useJob
-            ? _value.useJob
-            : useJob // ignore: cast_nullable_to_non_nullable
-                  as bool,
         format: null == format
             ? _value.format
             : format // ignore: cast_nullable_to_non_nullable
@@ -3455,7 +3441,6 @@ class _$SummaryRequestImpl implements _SummaryRequest {
     @JsonKey(name: 'date_range_start') this.dateRangeStart,
     @JsonKey(name: 'date_range_end') this.dateRangeEnd,
     @JsonKey(name: 'created_by') this.createdBy,
-    @JsonKey(name: 'use_job') this.useJob = false,
     @JsonKey(name: 'format') this.format = 'general',
   });
 
@@ -3478,15 +3463,12 @@ class _$SummaryRequestImpl implements _SummaryRequest {
   @JsonKey(name: 'created_by')
   final String? createdBy;
   @override
-  @JsonKey(name: 'use_job')
-  final bool useJob;
-  @override
   @JsonKey(name: 'format')
   final String format;
 
   @override
   String toString() {
-    return 'SummaryRequest(type: $type, contentId: $contentId, dateRangeStart: $dateRangeStart, dateRangeEnd: $dateRangeEnd, createdBy: $createdBy, useJob: $useJob, format: $format)';
+    return 'SummaryRequest(type: $type, contentId: $contentId, dateRangeStart: $dateRangeStart, dateRangeEnd: $dateRangeEnd, createdBy: $createdBy, format: $format)';
   }
 
   @override
@@ -3503,7 +3485,6 @@ class _$SummaryRequestImpl implements _SummaryRequest {
                 other.dateRangeEnd == dateRangeEnd) &&
             (identical(other.createdBy, createdBy) ||
                 other.createdBy == createdBy) &&
-            (identical(other.useJob, useJob) || other.useJob == useJob) &&
             (identical(other.format, format) || other.format == format));
   }
 
@@ -3516,7 +3497,6 @@ class _$SummaryRequestImpl implements _SummaryRequest {
     dateRangeStart,
     dateRangeEnd,
     createdBy,
-    useJob,
     format,
   );
 
@@ -3544,7 +3524,6 @@ abstract class _SummaryRequest implements SummaryRequest {
     @JsonKey(name: 'date_range_start') final DateTime? dateRangeStart,
     @JsonKey(name: 'date_range_end') final DateTime? dateRangeEnd,
     @JsonKey(name: 'created_by') final String? createdBy,
-    @JsonKey(name: 'use_job') final bool useJob,
     @JsonKey(name: 'format') final String format,
   }) = _$SummaryRequestImpl;
 
@@ -3566,9 +3545,6 @@ abstract class _SummaryRequest implements SummaryRequest {
   @override
   @JsonKey(name: 'created_by')
   String? get createdBy;
-  @override
-  @JsonKey(name: 'use_job')
-  bool get useJob;
   @override
   @JsonKey(name: 'format')
   String get format;

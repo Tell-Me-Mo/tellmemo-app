@@ -40,8 +40,6 @@ mixin _$UnifiedSummaryRequest {
   String get format => throw _privateConstructorUsedError;
   @JsonKey(name: 'created_by')
   String? get createdBy => throw _privateConstructorUsedError;
-  @JsonKey(name: 'use_job')
-  bool get useJob => throw _privateConstructorUsedError;
 
   /// Serializes this UnifiedSummaryRequest to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -73,7 +71,6 @@ abstract class $UnifiedSummaryRequestCopyWith<$Res> {
     DateTime? dateRangeEnd,
     String format,
     @JsonKey(name: 'created_by') String? createdBy,
-    @JsonKey(name: 'use_job') bool useJob,
   });
 }
 
@@ -103,7 +100,6 @@ class _$UnifiedSummaryRequestCopyWithImpl<
     Object? dateRangeEnd = freezed,
     Object? format = null,
     Object? createdBy = freezed,
-    Object? useJob = null,
   }) {
     return _then(
       _value.copyWith(
@@ -139,10 +135,6 @@ class _$UnifiedSummaryRequestCopyWithImpl<
                 ? _value.createdBy
                 : createdBy // ignore: cast_nullable_to_non_nullable
                       as String?,
-            useJob: null == useJob
-                ? _value.useJob
-                : useJob // ignore: cast_nullable_to_non_nullable
-                      as bool,
           )
           as $Val,
     );
@@ -171,7 +163,6 @@ abstract class _$$UnifiedSummaryRequestImplCopyWith<$Res>
     DateTime? dateRangeEnd,
     String format,
     @JsonKey(name: 'created_by') String? createdBy,
-    @JsonKey(name: 'use_job') bool useJob,
   });
 }
 
@@ -198,7 +189,6 @@ class __$$UnifiedSummaryRequestImplCopyWithImpl<$Res>
     Object? dateRangeEnd = freezed,
     Object? format = null,
     Object? createdBy = freezed,
-    Object? useJob = null,
   }) {
     return _then(
       _$UnifiedSummaryRequestImpl(
@@ -234,10 +224,6 @@ class __$$UnifiedSummaryRequestImplCopyWithImpl<$Res>
             ? _value.createdBy
             : createdBy // ignore: cast_nullable_to_non_nullable
                   as String?,
-        useJob: null == useJob
-            ? _value.useJob
-            : useJob // ignore: cast_nullable_to_non_nullable
-                  as bool,
       ),
     );
   }
@@ -259,7 +245,6 @@ class _$UnifiedSummaryRequestImpl implements _UnifiedSummaryRequest {
     this.dateRangeEnd,
     this.format = 'general',
     @JsonKey(name: 'created_by') this.createdBy,
-    @JsonKey(name: 'use_job') this.useJob = false,
   });
 
   factory _$UnifiedSummaryRequestImpl.fromJson(Map<String, dynamic> json) =>
@@ -291,13 +276,10 @@ class _$UnifiedSummaryRequestImpl implements _UnifiedSummaryRequest {
   @override
   @JsonKey(name: 'created_by')
   final String? createdBy;
-  @override
-  @JsonKey(name: 'use_job')
-  final bool useJob;
 
   @override
   String toString() {
-    return 'UnifiedSummaryRequest(entityType: $entityType, entityId: $entityId, summaryType: $summaryType, contentId: $contentId, dateRangeStart: $dateRangeStart, dateRangeEnd: $dateRangeEnd, format: $format, createdBy: $createdBy, useJob: $useJob)';
+    return 'UnifiedSummaryRequest(entityType: $entityType, entityId: $entityId, summaryType: $summaryType, contentId: $contentId, dateRangeStart: $dateRangeStart, dateRangeEnd: $dateRangeEnd, format: $format, createdBy: $createdBy)';
   }
 
   @override
@@ -319,8 +301,7 @@ class _$UnifiedSummaryRequestImpl implements _UnifiedSummaryRequest {
                 other.dateRangeEnd == dateRangeEnd) &&
             (identical(other.format, format) || other.format == format) &&
             (identical(other.createdBy, createdBy) ||
-                other.createdBy == createdBy) &&
-            (identical(other.useJob, useJob) || other.useJob == useJob));
+                other.createdBy == createdBy));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -335,7 +316,6 @@ class _$UnifiedSummaryRequestImpl implements _UnifiedSummaryRequest {
     dateRangeEnd,
     format,
     createdBy,
-    useJob,
   );
 
   /// Create a copy of UnifiedSummaryRequest
@@ -370,7 +350,6 @@ abstract class _UnifiedSummaryRequest implements UnifiedSummaryRequest {
     final DateTime? dateRangeEnd,
     final String format,
     @JsonKey(name: 'created_by') final String? createdBy,
-    @JsonKey(name: 'use_job') final bool useJob,
   }) = _$UnifiedSummaryRequestImpl;
 
   factory _UnifiedSummaryRequest.fromJson(Map<String, dynamic> json) =
@@ -401,9 +380,6 @@ abstract class _UnifiedSummaryRequest implements UnifiedSummaryRequest {
   @override
   @JsonKey(name: 'created_by')
   String? get createdBy;
-  @override
-  @JsonKey(name: 'use_job')
-  bool get useJob;
 
   /// Create a copy of UnifiedSummaryRequest
   /// with the given fields replaced by the non-null parameter values.

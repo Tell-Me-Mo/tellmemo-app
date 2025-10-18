@@ -1,16 +1,20 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../data/services/content_availability_service.dart';
 import '../../data/models/summary_model.dart';
 import 'content_availability_indicator.dart';
 import '../../../../core/services/firebase_analytics_service.dart';
+import '../../../jobs/domain/models/job_model.dart';
+import '../../../jobs/presentation/providers/job_websocket_provider.dart';
 
-class SummaryGenerationDialog extends StatefulWidget {
+class SummaryGenerationDialog extends ConsumerStatefulWidget {
   final String entityType; // 'project', 'program', or 'portfolio'
   final String entityId;
   final String entityName;
-  final Future<SummaryModel?> Function({
+  final Future<String?> Function({ // Changed return type to String? (jobId)
     required String format,
     required DateTime startDate,
     required DateTime endDate,
@@ -27,10 +31,10 @@ class SummaryGenerationDialog extends StatefulWidget {
   });
 
   @override
-  State<SummaryGenerationDialog> createState() => _SummaryGenerationDialogState();
+  ConsumerState<SummaryGenerationDialog> createState() => _SummaryGenerationDialogState();
 }
 
-class _SummaryGenerationDialogState extends State<SummaryGenerationDialog> {
+class _SummaryGenerationDialogState extends ConsumerState<SummaryGenerationDialog> {
   // State variables
   bool _isCheckingAvailability = true;
   bool _isUpdatingAvailability = false; // Separate flag for updates
@@ -54,6 +58,10 @@ class _SummaryGenerationDialogState extends State<SummaryGenerationDialog> {
   Timer? _timeoutTimer;
   Timer? _progressTimer;
 
+  // Job tracking for real progress
+  String? _currentJobId;
+  StreamSubscription<JobModel>? _jobSubscription;
+
   // Format descriptions
   final Map<String, String> _formatDescriptions = {
     'general': 'Comprehensive summary with all details',
@@ -73,6 +81,7 @@ class _SummaryGenerationDialogState extends State<SummaryGenerationDialog> {
     _timeoutTimer?.cancel();
     _progressTimer?.cancel();
     _debounceTimer?.cancel();
+    _jobSubscription?.cancel();
     super.dispose();
   }
 
@@ -155,8 +164,8 @@ class _SummaryGenerationDialogState extends State<SummaryGenerationDialog> {
   Future<void> _generateSummary() async {
     setState(() {
       _isGenerating = true;
-      _generationStatus = 'Initializing...';
-      _generationProgress = 0.1;
+      _generationStatus = 'Queueing summary generation...';
+      _generationProgress = 0.0;
       _generationError = null;
     });
 
@@ -169,55 +178,51 @@ class _SummaryGenerationDialogState extends State<SummaryGenerationDialog> {
       format: _selectedFormat,
     );
 
-    // Start progress simulation
-    _startProgressSimulation();
-
-    // Set timeout timer (60 seconds)
-    _timeoutTimer = Timer(const Duration(seconds: 60), () {
-      if (_isGenerating) {
+    // Set timeout timer (30 seconds for job registration only)
+    _timeoutTimer = Timer(const Duration(seconds: 30), () {
+      if (_isGenerating && _currentJobId == null) {
         _handleTimeout();
       }
     });
 
     try {
-      final summary = await widget.onGenerate(
+      // Call onGenerate which returns jobId (not summary)
+      final jobId = await widget.onGenerate(
         format: _selectedFormat,
         startDate: _startDate,
         endDate: _endDate,
       );
 
       _timeoutTimer?.cancel();
-      _progressTimer?.cancel();
 
-      if (summary != null) {
-        // Log summary generation completed
-        final generationTime = DateTime.now().difference(startTime).inMilliseconds;
-        await FirebaseAnalyticsService().logSummaryGenerationCompleted(
-          entityType: widget.entityType,
-          entityId: widget.entityId,
-          summaryType: 'custom',
-          summaryId: summary.id,
-          generationTime: generationTime,
-        );
+      if (jobId != null) {
+        // Job successfully queued - subscribe to real-time updates
+        _currentJobId = jobId;
 
         setState(() {
-          _isGenerating = false;
-          _generationProgress = 1.0;
-          _generationStatus = 'Summary generated successfully!';
+          _generationStatus = 'Job queued. Starting generation...';
+          _generationProgress = 0.05;
         });
 
-        // Close dialog with success
-        Future.delayed(const Duration(seconds: 1), () {
-          if (mounted) {
-            Navigator.of(context).pop(summary);
-          }
-        });
+        // Log that job was queued
+        await FirebaseAnalyticsService().logEvent(
+          name: 'summary_generation_job_queued',
+          parameters: {
+            'entity_type': widget.entityType,
+            'entity_id': widget.entityId,
+            'format': _selectedFormat,
+            'job_id': jobId,
+          },
+        );
+
+        // Subscribe to WebSocket job updates
+        await _subscribeToJobUpdates(jobId, startTime);
       } else {
-        throw Exception('Failed to generate summary');
+        // Shouldn't happen with job-based flow, but handle gracefully
+        throw Exception('No job ID returned from generation request');
       }
     } catch (e) {
       _timeoutTimer?.cancel();
-      _progressTimer?.cancel();
 
       // Log summary generation failed
       await FirebaseAnalyticsService().logSummaryGenerationFailed(
@@ -233,7 +238,7 @@ class _SummaryGenerationDialogState extends State<SummaryGenerationDialog> {
       if (shouldRetry && _retryCount < _maxRetries) {
         _retryGeneration();
       } else {
-        if (mounted) { // Check mounted before setState
+        if (mounted) {
           setState(() {
             _isGenerating = false;
             _generationError = errorMessage;
@@ -242,6 +247,126 @@ class _SummaryGenerationDialogState extends State<SummaryGenerationDialog> {
         }
       }
     }
+  }
+
+  Future<void> _subscribeToJobUpdates(String jobId, DateTime startTime) async {
+    try {
+      // Get WebSocket service
+      final wsService = ref.read(jobWebSocketServiceProvider);
+
+      // Ensure connected
+      if (!wsService.isConnected) {
+        await wsService.connect();
+      }
+
+      // Subscribe to this specific job
+      await wsService.subscribeToJob(jobId);
+
+      // Listen to job updates
+      _jobSubscription = wsService.jobUpdates
+          .where((job) => job.jobId == jobId)
+          .listen((jobModel) {
+        if (!mounted) return;
+
+        setState(() {
+          // Update progress from job
+          _generationProgress = (jobModel.progress / 100).clamp(0.0, 1.0);
+
+          // Update status message
+          if (jobModel.stepDescription != null && jobModel.stepDescription!.isNotEmpty) {
+            _generationStatus = jobModel.stepDescription!;
+          } else if (jobModel.currentStep > 0 && jobModel.totalSteps > 0) {
+            _generationStatus = 'Step ${jobModel.currentStep} of ${jobModel.totalSteps}';
+          } else {
+            _generationStatus = _getDefaultStatusMessage(jobModel.progress);
+          }
+        });
+
+        // Handle completion
+        if (jobModel.status == JobStatus.completed) {
+          _handleJobCompletion(jobModel, startTime);
+        } else if (jobModel.status == JobStatus.failed) {
+          _handleJobFailure(jobModel);
+        }
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isGenerating = false;
+          _generationError = 'Failed to connect to job updates: $e';
+        });
+      }
+    }
+  }
+
+  String _getDefaultStatusMessage(double progress) {
+    if (progress < 10) {
+      return 'Initializing summary generation...';
+    } else if (progress < 30) {
+      return 'Collecting ${widget.entityType} data...';
+    } else if (progress < 50) {
+      return 'Analyzing content...';
+    } else if (progress < 70) {
+      return 'Generating insights with AI...';
+    } else if (progress < 90) {
+      return 'Formatting summary...';
+    } else {
+      return 'Finalizing summary...';
+    }
+  }
+
+  void _handleJobCompletion(JobModel jobModel, DateTime startTime) {
+    _jobSubscription?.cancel();
+
+    final summaryId = jobModel.result?['summary_id'] as String? ??
+                     jobModel.result?['id'] as String?;
+
+    if (summaryId != null) {
+      // Log completion
+      final generationTime = DateTime.now().difference(startTime).inMilliseconds;
+      FirebaseAnalyticsService().logSummaryGenerationCompleted(
+        entityType: widget.entityType,
+        entityId: widget.entityId,
+        summaryType: 'custom',
+        summaryId: summaryId,
+        generationTime: generationTime,
+      );
+
+      setState(() {
+        _isGenerating = false;
+        _generationProgress = 1.0;
+        _generationStatus = 'Summary generated successfully!';
+      });
+
+      // Close dialog and navigate to summary
+      Future.delayed(const Duration(milliseconds: 800), () {
+        if (mounted) {
+          Navigator.of(context).pop(); // Close dialog
+          context.push('/summaries/$summaryId'); // Navigate to summary
+        }
+      });
+    } else {
+      setState(() {
+        _isGenerating = false;
+        _generationError = 'Summary generated but ID not found in response';
+      });
+    }
+  }
+
+  void _handleJobFailure(JobModel jobModel) {
+    _jobSubscription?.cancel();
+
+    FirebaseAnalyticsService().logSummaryGenerationFailed(
+      entityType: widget.entityType,
+      entityId: widget.entityId,
+      errorReason: jobModel.errorMessage ?? 'Unknown error',
+    );
+
+    setState(() {
+      _isGenerating = false;
+      _generationError = jobModel.errorMessage ?? 'Summary generation failed';
+      _generationProgress = 0.0;
+    });
   }
 
   String _parseErrorMessage(String error) {
@@ -284,42 +409,6 @@ class _SummaryGenerationDialogState extends State<SummaryGenerationDialog> {
            error.contains('504');
   }
 
-  void _startProgressSimulation() {
-    _progressTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
-      if (!_isGenerating) {
-        timer.cancel();
-        return;
-      }
-
-      setState(() {
-        // Slow down as we approach completion but never reach 100% until actually done
-        if (_generationProgress < 0.9) {
-          _generationProgress += 0.05;
-        } else if (_generationProgress < 0.95) {
-          _generationProgress += 0.01;
-        } else if (_generationProgress < 0.99) {
-          _generationProgress += 0.002;
-        }
-        // Stay at 99% until actually complete
-        _generationProgress = _generationProgress.clamp(0.0, 0.99);
-        _updateStatusMessage();
-      });
-    });
-  }
-
-  void _updateStatusMessage() {
-    if (_generationProgress < 0.2) {
-      _generationStatus = 'Initializing summary generation...';
-    } else if (_generationProgress < 0.4) {
-      _generationStatus = 'Collecting ${widget.entityType} data...';
-    } else if (_generationProgress < 0.6) {
-      _generationStatus = 'Analyzing content...';
-    } else if (_generationProgress < 0.8) {
-      _generationStatus = 'Generating insights with AI...';
-    } else {
-      _generationStatus = 'Finalizing summary...';
-    }
-  }
 
   void _handleTimeout() {
     if (_retryCount < _maxRetries) {
@@ -560,6 +649,37 @@ class _SummaryGenerationDialogState extends State<SummaryGenerationDialog> {
           _generationStatus,
           style: theme.textTheme.bodyMedium,
           textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 12),
+
+        // Time expectation message
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.schedule_outlined,
+                size: 16,
+                color: colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'This usually takes 1-2 minutes',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
         ),
 
         if (_retryCount > 0) ...[

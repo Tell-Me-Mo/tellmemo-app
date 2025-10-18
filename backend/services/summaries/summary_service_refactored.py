@@ -46,15 +46,15 @@ class SummaryService:
 
     def __init__(self):
         """Initialize the summary service with configuration."""
-        settings = get_settings()
+        self.settings = get_settings()
         # DEPRECATED: settings.llm_model is kept for backward compatibility
         # The multi-provider client now uses PRIMARY_LLM_MODEL from settings
         self.llm_model = None  # Let multi-provider client determine the model
-        self.max_tokens = settings.max_tokens
-        self.temperature = settings.temperature
+        self.max_tokens = self.settings.max_tokens
+        self.temperature = self.settings.temperature
 
         # Use multi-provider LLM client
-        self.llm_client = get_multi_llm_client(settings)
+        self.llm_client = get_multi_llm_client(self.settings)
 
         if not self.llm_client.is_available():
             logger.warning("LLM client not available, summary generation will use placeholder responses")
@@ -383,7 +383,7 @@ class SummaryService:
                 "meetings": meeting_data_for_claude
             }, indent=2)
 
-            # Generate summary using Claude API
+            # Generate summary using LLM API (use manual summary config for on-demand generation)
             summary_data = await self._generate_claude_summary_with_context(
                 content_type="project",
                 project_name=project.name,
@@ -396,7 +396,10 @@ class SummaryService:
                     "structured_data": meeting_data_for_claude
                 },
                 rq_job=rq_job,
-                format_type=format_type
+                format_type=format_type,
+                model_override=self.settings.manual_summary_llm_model,
+                provider_override=self.settings.manual_summary_llm_provider,
+                max_tokens_override=self.settings.manual_summary_max_tokens
             )
 
             # Process enhanced fields for weekly summary
@@ -640,7 +643,7 @@ class SummaryService:
                 week_end=week_end
             )
 
-            # Generate program-level summary
+            # Generate program-level summary (use manual summary config for on-demand generation)
             summary_data = await self._generate_claude_summary_with_context(
                 content_type="program",
                 project_name=program.name,
@@ -653,7 +656,10 @@ class SummaryService:
                     "project_names": [p.name for p in projects]
                 },
                 rq_job=rq_job,
-                format_type=format_type
+                format_type=format_type,
+                model_override=self.settings.manual_summary_llm_model,
+                provider_override=self.settings.manual_summary_llm_provider,
+                max_tokens_override=self.settings.manual_summary_max_tokens
             )
 
             # Process sentiment analysis if present
@@ -902,7 +908,7 @@ class SummaryService:
                 week_end=week_end
             )
 
-            # Generate portfolio-level summary
+            # Generate portfolio-level summary (use manual summary config for on-demand generation)
             summary_data = await self._generate_claude_summary_with_context(
                 content_type="portfolio",
                 project_name=portfolio.name,
@@ -917,7 +923,10 @@ class SummaryService:
                     "project_names": [p.name for p in all_projects]
                 },
                 rq_job=rq_job,
-                format_type=format_type
+                format_type=format_type,
+                model_override=self.settings.manual_summary_llm_model,
+                provider_override=self.settings.manual_summary_llm_provider,
+                max_tokens_override=self.settings.manual_summary_max_tokens
             )
 
             # Process sentiment analysis if present
@@ -1038,12 +1047,34 @@ class SummaryService:
         exponential_base=2.0,
         jitter=True
     ))
-    async def _call_claude_api_with_retry(self, prompt: str) -> Any:
-        """Make the actual API call to Claude with retry logic."""
+    async def _call_claude_api_with_retry(
+        self,
+        prompt: str,
+        model_override: Optional[str] = None,
+        provider_override: Optional[str] = None,
+        max_tokens_override: Optional[int] = None
+    ) -> Any:
+        """
+        Make the actual API call to LLM with retry logic.
+
+        Args:
+            prompt: The prompt to send to the LLM
+            model_override: Optional model to use instead of default (e.g., 'claude-3-5-haiku-latest')
+            provider_override: Optional provider to use instead of default (e.g., 'claude')
+            max_tokens_override: Optional max_tokens to use instead of default (e.g., 8192)
+        """
+        # Use override model if provided, otherwise use default
+        model = model_override if model_override else self.llm_model
+        max_tokens = max_tokens_override if max_tokens_override else self.max_tokens
+
+        # Log if using override
+        if model_override:
+            logger.info(f"Using manual summary LLM override: provider={provider_override}, model={model}, max_tokens={max_tokens}")
+
         return await self.llm_client.create_message(
             prompt=prompt,
-            model=self.llm_model,
-            max_tokens=self.max_tokens,
+            model=model,
+            max_tokens=max_tokens,
             temperature=self.temperature,
             system="You are a JSON API that ONLY returns valid JSON responses. Never ask questions or engage in conversation. Process the input and return the complete JSON summary immediately."
         )
@@ -1392,9 +1423,27 @@ class SummaryService:
         content_date: Any,
         additional_context: Optional[Dict[str, Any]] = None,
         rq_job=None,
-        format_type: str = "general"
+        format_type: str = "general",
+        model_override: Optional[str] = None,
+        provider_override: Optional[str] = None,
+        max_tokens_override: Optional[int] = None
     ) -> Dict[str, Any]:
-        """Generate summary using Claude API."""
+        """
+        Generate summary using LLM API.
+
+        Args:
+            content_type: Type of content (meeting, project, program, portfolio)
+            project_name: Name of the project/program/portfolio
+            content_title: Title of the content being summarized
+            content_text: The actual content text to summarize
+            content_date: Date of the content
+            additional_context: Additional context for the summary
+            rq_job: Optional RQ job for progress tracking
+            format_type: Summary format (general, executive, technical, stakeholder)
+            model_override: Optional model to use instead of default
+            provider_override: Optional provider to use instead of default
+            max_tokens_override: Optional max_tokens to use instead of default
+        """
         if not self.llm_client.is_available():
             logger.error("LLM client not available - cannot generate summary")
             raise ValueError("AI service is not configured. Please check your API settings.")
@@ -1441,10 +1490,15 @@ class SummaryService:
                 )
 
             # Update progress: Making API call (94%)
-            self._update_rq_job_progress(rq_job, 94.0, "Calling Claude AI")
+            self._update_rq_job_progress(rq_job, 94.0, "Calling LLM AI")
 
-            # Make API call to Claude with retry logic
-            response = await self._call_claude_api_with_retry(prompt)
+            # Make API call to LLM with retry logic
+            response = await self._call_claude_api_with_retry(
+                prompt,
+                model_override=model_override,
+                provider_override=provider_override,
+                max_tokens_override=max_tokens_override
+            )
 
             # Update progress: Processing API response (96%)
             self._update_rq_job_progress(rq_job, 96.0, "Processing AI response")

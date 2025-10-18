@@ -313,7 +313,6 @@ class SummaryRequest with _$SummaryRequest {
     @JsonKey(name: 'date_range_start') DateTime? dateRangeStart,
     @JsonKey(name: 'date_range_end') DateTime? dateRangeEnd,
     @JsonKey(name: 'created_by') String? createdBy,
-    @JsonKey(name: 'use_job') @Default(false) bool useJob,
     @JsonKey(name: 'format') @Default('general') String format,
   }) = _SummaryRequest;
 
