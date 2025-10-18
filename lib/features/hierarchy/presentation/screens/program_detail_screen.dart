@@ -1771,7 +1771,7 @@ class _ProgramDetailScreenState extends ConsumerState<ProgramDetailScreen> {
   }
 
   void _showProgramSummaryDialog(BuildContext context, Program program) async {
-    final result = await showDialog<SummaryModel>(
+    showDialog(
       context: context,
       builder: (dialogContext) => SummaryGenerationDialog(
         entityType: 'program',
@@ -1784,23 +1784,32 @@ class _ProgramDetailScreenState extends ConsumerState<ProgramDetailScreen> {
         }) async {
           try {
             final response = await DioClient.instance.post(
-              '/api/v1/hierarchy/program/${program.id}/summary',
+              '/api/v1/unified-summaries/generate',
               data: {
-                'type': 'program',
+                'entity_type': 'program',
                 'entity_id': program.id,
+                'summary_type': 'program',
                 'date_range_start': startDate.toIso8601String(),
                 'date_range_end': endDate.toIso8601String(),
                 'format': format,
                 'created_by': 'User',
+                'use_job': true, // ✅ Enable job-based generation
               },
             );
 
-            // Parse the response to a SummaryModel if successful
-            if (response.data != null) {
+            // Extract jobId from response
+            final jobId = response.data['job_id'] as String?;
+            if (jobId != null) {
               _refreshSummaries();
-              return SummaryModel.fromJson(response.data);
+              // Refresh activities after summary generation
+              final programAsync = ref.read(programProvider(widget.programId));
+              if (programAsync.hasValue && programAsync.value != null) {
+                _loadProgramActivitiesForProgram(programAsync.value!);
+              }
             }
-            return null;
+
+            // Return jobId to dialog (dialog handles subscription and navigation)
+            return jobId;
           } catch (e) {
             throw Exception('Failed to generate summary: $e');
           }
@@ -1812,25 +1821,6 @@ class _ProgramDetailScreenState extends ConsumerState<ProgramDetailScreen> {
         },
       ),
     );
-
-    // Navigate to the newly generated summary if successful
-    if (result != null && mounted) {
-      // Refresh the summaries list first
-      _refreshSummaries();
-      // Refresh activities after summary generation
-      final programAsync = ref.read(programProvider(widget.programId));
-      if (programAsync.hasValue && programAsync.value != null) {
-        _loadProgramActivitiesForProgram(programAsync.value!);
-      }
-
-      // Wait a moment for the UI to update
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      // Navigate to the summary detail screen
-      if (mounted) {
-        context.push('/summaries/${result.id}');
-      }
-    }
   }
 
   String _formatFullDate(DateTime date) {

@@ -846,7 +846,7 @@ class _LessonsLearnedScreenV2State extends ConsumerState<LessonsLearnedScreenV2>
                               ),
 
                               // Category Filter Tabs
-                              ...[
+                              if (!isMobile) ...[
                                 const SizedBox(height: 12),
                                 Container(
                                   height: 38,
@@ -859,13 +859,14 @@ class _LessonsLearnedScreenV2State extends ConsumerState<LessonsLearnedScreenV2>
                                     builder: (context, constraints) {
                                       return Row(
                                         children: [
-                                          _buildCategoryTab(
-                                            label: 'All',
-                                            count: allLessons.length,
-                                            isSelected: _tabController.index == 0,
-                                            onTap: () => _tabController.animateTo(0),
-                                            colorScheme: colorScheme,
-                                          ),
+                                          if (!isMobile || _tabController.index == 0)
+                                            _buildCategoryTab(
+                                              label: 'All',
+                                              count: allLessons.length,
+                                              isSelected: _tabController.index == 0,
+                                              onTap: () => _tabController.animateTo(0),
+                                              colorScheme: colorScheme,
+                                            ),
                                           if (!isMobile || _tabController.index == 1)
                                             _buildCategoryTab(
                                               label: 'Technical',

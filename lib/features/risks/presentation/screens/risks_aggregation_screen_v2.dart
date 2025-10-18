@@ -347,7 +347,7 @@ class _RisksAggregationScreenV2State extends ConsumerState<RisksAggregationScree
                             ],
 
                             // Quick Filters
-                            if (_hasActiveFilters() || (statistics['critical'] ?? 0) > 0) ...[
+                            if (_hasActiveFilters()) ...[
                               const SizedBox(height: 8),
                               _buildQuickFilters(theme, colorScheme, statistics),
                             ],
@@ -1054,35 +1054,6 @@ class _RisksAggregationScreenV2State extends ConsumerState<RisksAggregationScree
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
-          if ((statistics['critical'] ?? 0) > 0)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: FilterChip(
-                label: Text('Critical (${statistics['critical']})',
-                  style: const TextStyle(fontSize: 12),
-                ),
-                selected: _selectedSeverity == RiskSeverity.critical,
-                onSelected: (_) {
-                  setState(() {
-                    _selectedSeverity = _selectedSeverity == RiskSeverity.critical ? null : RiskSeverity.critical;
-                  });
-                  // Persist the change
-                  ref.read(risksFilterProvider.notifier).setSeverity(_selectedSeverity);
-                },
-                selectedColor: Colors.red.withValues(alpha: 0.2),
-                checkmarkColor: Colors.red,
-                labelStyle: TextStyle(
-                  color: _selectedSeverity == RiskSeverity.critical ? Colors.red : null,
-                ),
-                side: BorderSide(
-                  color: _selectedSeverity == RiskSeverity.critical
-                      ? Colors.red.withValues(alpha: 0.5)
-                      : colorScheme.outline.withValues(alpha: 0.3),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-            ),
           if (_showAIGeneratedOnly)
             Padding(
               padding: const EdgeInsets.only(right: 8),

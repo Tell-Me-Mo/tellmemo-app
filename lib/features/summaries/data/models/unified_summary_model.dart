@@ -25,7 +25,6 @@ class UnifiedSummaryRequest with _$UnifiedSummaryRequest {
     @JsonKey(name: 'date_range_end') @DateTimeConverterNullable() DateTime? dateRangeEnd,
     @Default('general') String format,
     @JsonKey(name: 'created_by') String? createdBy,
-    @JsonKey(name: 'use_job') @Default(false) bool useJob,
   }) = _UnifiedSummaryRequest;
 
   factory UnifiedSummaryRequest.fromJson(Map<String, dynamic> json) =>

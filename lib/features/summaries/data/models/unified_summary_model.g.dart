@@ -21,7 +21,6 @@ _$UnifiedSummaryRequestImpl _$$UnifiedSummaryRequestImplFromJson(
   ),
   format: json['format'] as String? ?? 'general',
   createdBy: json['created_by'] as String?,
-  useJob: json['use_job'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$$UnifiedSummaryRequestImplToJson(
@@ -39,7 +38,6 @@ Map<String, dynamic> _$$UnifiedSummaryRequestImplToJson(
   ),
   'format': instance.format,
   'created_by': instance.createdBy,
-  'use_job': instance.useJob,
 };
 
 const _$EntityTypeEnumMap = {

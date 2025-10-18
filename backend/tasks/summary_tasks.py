@@ -108,12 +108,22 @@ def generate_summary_task(
             rq_job.meta['result'] = result
             rq_job.save_meta()
 
-            # Publish via Redis pub/sub
-            queue_config.publish_job_update(rq_job.id, {
+            # Log result for debugging
+            logger.info(f"Summary generation result: {result}")
+            logger.info(f"Summary ID from result: {result.get('summary_id') if result else 'None'}")
+
+            # Prepare update data
+            update_data = {
                 'status': 'completed',
                 'progress': 100.0,
-                'step': 'Completed'
-            })
+                'step': 'Completed',
+                'result': result
+            }
+            logger.info(f"About to publish job update with data: {update_data}")
+
+            # Publish via Redis pub/sub - Include result for frontend navigation
+            queue_config.publish_job_update(rq_job.id, update_data)
+            logger.info(f"Successfully called publish_job_update for job {rq_job.id}")
 
         logger.info(f"Summary generation task completed successfully")
         return result

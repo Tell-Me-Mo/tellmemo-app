@@ -147,6 +147,18 @@ class ProcessingJobs extends _$ProcessingJobs {
               if (summaryId != null) {
                 print('[ProcessingJobs] Marking summary as new: $summaryId');
                 ref.read(newItemsProvider.notifier).addNewItem(summaryId);
+
+                // Call the onSummaryGenerated callback if provided
+                if (job.onSummaryGenerated != null) {
+                  try {
+                    print('[ProcessingJobs] Calling onSummaryGenerated callback for: $summaryId');
+                    job.onSummaryGenerated!(summaryId);
+                  } catch (e, stackTrace) {
+                    print('[ProcessingJobs] Error in onSummaryGenerated callback: $e');
+                    print('[ProcessingJobs] Stack trace: $stackTrace');
+                    // Don't rethrow - callback errors shouldn't break job processing
+                  }
+                }
               }
 
               // Check if a new project was created during this job
@@ -156,8 +168,6 @@ class ProcessingJobs extends _$ProcessingJobs {
                 print('[ProcessingJobs] Marking project as new: $actualProjectId');
                 ref.read(newItemsProvider.notifier).addNewItem(actualProjectId);
               }
-
-              // Don't call the navigation callback anymore - user will click button to navigate
             }
 
             // Use actual project ID for refreshing providers (important for AI-matched projects)

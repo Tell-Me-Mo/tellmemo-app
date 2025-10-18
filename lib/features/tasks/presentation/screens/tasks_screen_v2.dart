@@ -59,8 +59,12 @@ class _TasksScreenV2State extends ConsumerState<TasksScreenV2>
       vsync: this,
     );
     _tabController.addListener(() {
-      // Tab changes are handled by TabBarView, no setState needed
-      print('📑 Tab changed to index: ${_tabController.index}');
+      // Rebuild to update tab highlighting
+      if (mounted) {
+        setState(() {
+          print('📑 Tab changed to index: ${_tabController.index}');
+        });
+      }
     });
 
     // Initialize project filter if coming from a project

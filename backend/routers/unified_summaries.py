@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
-from typing import Optional, List, Literal
+from typing import Optional, List, Literal, Union
 from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
@@ -24,6 +24,13 @@ router = APIRouter()
 logger = get_logger(__name__)
 
 
+class JobQueuedResponse(BaseModel):
+    """Response when summary generation is queued as a background job."""
+    job_id: str = Field(..., description="RQ job ID for tracking generation progress")
+    status: str = Field(..., description="Job status (always 'processing' when queued)")
+    message: str = Field(..., description="Human-readable message")
+
+
 class UnifiedSummaryRequest(BaseModel):
     """Unified request model for all summary generation."""
     entity_type: Literal["project", "program", "portfolio"] = Field(..., description="Type of entity")
@@ -34,7 +41,6 @@ class UnifiedSummaryRequest(BaseModel):
     date_range_end: Optional[datetime] = Field(None, description="End date for summaries")
     format: Optional[str] = Field("general", description="Summary format: 'general', 'executive', 'technical', or 'stakeholder'")
     created_by: Optional[str] = Field(None, description="User who requested the summary")
-    use_job: Optional[bool] = Field(False, description="Use job-based async generation")
 
 
 class UnifiedSummaryResponse(BaseModel):
@@ -82,12 +88,39 @@ class SummaryFilters(BaseModel):
 
 @router.post(
     "/generate",
-    response_model=UnifiedSummaryResponse,
+    response_model=Union[JobQueuedResponse, UnifiedSummaryResponse],
     summary="Generate Unified Summary",
     description="Generate a summary for any entity type (project, program, portfolio). "
-                "This is the preferred endpoint for all summary generation operations.",
+                "Manual summaries (project/program/portfolio) are always queued as background jobs. "
+                "Meeting summaries are generated directly during content upload.",
     responses={
-        200: {"description": "Summary generated successfully"},
+        200: {
+            "description": "Summary generation job queued or meeting summary generated",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "job_queued": {
+                            "summary": "Manual summary generation (project/program/portfolio)",
+                            "value": {
+                                "job_id": "088c16d7-e5ad-447d-98c4-b9183cc2a0be",
+                                "status": "processing",
+                                "message": "Summary generation job queued successfully"
+                            }
+                        },
+                        "meeting_summary": {
+                            "summary": "Meeting summary (generated during upload)",
+                            "value": {
+                                "summary_id": "9c82c4b3-...",
+                                "entity_type": "project",
+                                "summary_type": "MEETING",
+                                "subject": "Meeting Summary",
+                                "body": "..."
+                            }
+                        }
+                    }
+                }
+            }
+        },
         400: {"description": "Invalid request parameters"},
         404: {"description": "Entity not found"},
         500: {"description": "Internal server error"}
@@ -103,20 +136,20 @@ async def generate_summary(
     Generate a summary for any entity type (project, program, portfolio).
 
     This unified endpoint handles all summary generation operations:
-    - **Meeting summaries**: For individual meeting content
-    - **Weekly summaries**: For project progress over time
-    - **Program summaries**: Aggregated insights from multiple projects
-    - **Portfolio summaries**: High-level insights from multiple programs
+    - **Meeting summaries**: Generated directly during content upload (synchronous)
+    - **Project summaries**: For project progress over time (job-based)
+    - **Program summaries**: Aggregated insights from multiple projects (job-based)
+    - **Portfolio summaries**: High-level insights from multiple programs (job-based)
 
     **Request Parameters:**
     - `entity_type`: The type of entity (project, program, portfolio)
     - `entity_id`: UUID of the entity
-    - `summary_type`: Type of summary (meeting, weekly, program, portfolio)
+    - `summary_type`: Type of summary (meeting, project, program, portfolio)
     - `format`: Output format (general, executive, technical, stakeholder)
-    - `use_job`: Whether to use background job processing
 
     **Response:**
-    Returns either the generated summary or job information if `use_job=true`.
+    - For manual summaries (project/program/portfolio): Returns job ID for tracking
+    - For meeting summaries: Returns the completed summary (generated during upload)
     """
     logger.info(f"Generating {sanitize_for_log(request.summary_type)} summary for {sanitize_for_log(request.entity_type)} {sanitize_for_log(request.entity_id)}")
 
@@ -171,8 +204,8 @@ async def generate_summary(
             if request.date_range_end.tzinfo is not None:
                 request.date_range_end = request.date_range_end.replace(tzinfo=None)
 
-        # Handle job-based generation for long-running summaries
-        if request.use_job and request.summary_type in ["project", "program", "portfolio"]:
+        # Manual summaries (project/program/portfolio) always use job-based generation
+        if request.summary_type in ["project", "program", "portfolio"]:
             # Enqueue RQ task for summary generation
             from tasks.summary_tasks import generate_summary_task
 
@@ -207,22 +240,14 @@ async def generate_summary(
 
             logger.info(f"Enqueued summary generation (RQ job: {rq_job.id})")
 
-            # Return job response with RQ job ID
-            return UnifiedSummaryResponse(
-                summary_id=rq_job.id,  # Return RQ job ID directly
-                entity_type=request.entity_type,
-                entity_id=str(entity_uuid),
-                entity_name=entity_name,
-                project_id=None,  # Added for Flutter model compatibility
-                summary_type=request.summary_type.upper(),  # Convert to uppercase for Flutter enum
-                subject=f"Generating {request.summary_type} summary...",
-                body="Summary generation in progress. Check job status for updates.",
-                format=request.format,
-                created_at=datetime.now().isoformat(),
-                created_by=request.created_by
+            # Return job response
+            return JobQueuedResponse(
+                job_id=rq_job.id,
+                status="processing",
+                message="Summary generation job queued successfully"
             )
 
-        # Direct generation
+        # Meeting summaries are generated directly (during content upload)
         summary_data = None
 
         if request.summary_type == "meeting":
@@ -243,43 +268,9 @@ async def generate_summary(
                 created_by_id=str(current_user.id),
                 format_type=request.format
             )
-
-        elif request.summary_type == "project":
-            if request.entity_type == "project":
-                summary_data = await summary_service.generate_project_summary(
-                    session=session,
-                    project_id=entity_uuid,
-                    week_start=request.date_range_start,
-                    week_end=request.date_range_end,
-                    created_by=current_user.email,
-                    created_by_id=str(current_user.id),
-                    format_type=request.format
-                )
-            else:
-                # For programs and portfolios, aggregate their children
-                raise HTTPException(status_code=501, detail="Project summaries for programs/portfolios not yet implemented")
-
-        elif request.summary_type == "program":
-            summary_data = await summary_service.generate_program_summary(
-                session=session,
-                program_id=entity_uuid,
-                week_start=request.date_range_start,
-                week_end=request.date_range_end,
-                created_by=current_user.email,
-                created_by_id=str(current_user.id),
-                format_type=request.format
-            )
-
-        elif request.summary_type == "portfolio":
-            summary_data = await summary_service.generate_portfolio_summary(
-                session=session,
-                portfolio_id=entity_uuid,
-                week_start=request.date_range_start,
-                week_end=request.date_range_end,
-                created_by=current_user.email,
-                created_by_id=str(current_user.id),
-                format_type=request.format
-            )
+        else:
+            # This should not happen - all other types use job-based generation
+            raise HTTPException(status_code=400, detail=f"Unsupported summary type: {request.summary_type}")
 
         # Convert to response - Include project_id for compatibility with Flutter model
         response_data = {

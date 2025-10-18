@@ -274,7 +274,6 @@ _$SummaryRequestImpl _$$SummaryRequestImplFromJson(Map<String, dynamic> json) =>
           ? null
           : DateTime.parse(json['date_range_end'] as String),
       createdBy: json['created_by'] as String?,
-      useJob: json['use_job'] as bool? ?? false,
       format: json['format'] as String? ?? 'general',
     );
 
@@ -286,7 +285,6 @@ Map<String, dynamic> _$$SummaryRequestImplToJson(
   'date_range_start': instance.dateRangeStart?.toIso8601String(),
   'date_range_end': instance.dateRangeEnd?.toIso8601String(),
   'created_by': instance.createdBy,
-  'use_job': instance.useJob,
   'format': instance.format,
 };
 

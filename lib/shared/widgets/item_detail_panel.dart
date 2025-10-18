@@ -15,6 +15,7 @@ class ItemDetailPanel extends StatefulWidget {
   final double rightOffset;
   final bool initiallyShowUpdates;
   final int? commentCount; // Number of comments to display as badge (null or 0 = no badge)
+  final bool showMobileBottomBar; // Whether to show a sticky bottom bar in mobile (for edit/create modes)
 
   const ItemDetailPanel({
     super.key,
@@ -29,6 +30,7 @@ class ItemDetailPanel extends StatefulWidget {
     this.rightOffset = 0.0,
     this.initiallyShowUpdates = false,
     this.commentCount,
+    this.showMobileBottomBar = false,
   });
 
   @override
@@ -109,6 +111,36 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
       }
     }
     return spacedActions;
+  }
+
+  /// Extracts primary actions (TextButton, FilledButton) from headerActions
+  /// Used for the mobile bottom action bar
+  List<Widget> _extractPrimaryActions(List<Widget> actions) {
+    final primaryActions = <Widget>[];
+
+    for (final action in actions) {
+      // Include TextButton (Cancel) and FilledButton (Save/Create)
+      if (action is TextButton || action is FilledButton) {
+        primaryActions.add(action);
+      }
+    }
+
+    return primaryActions;
+  }
+
+  /// Extracts secondary actions (IconButton, PopupMenuButton) from headerActions
+  /// Used for the mobile 3-dot menu when bottom bar is shown
+  List<Widget> _extractSecondaryActions(List<Widget> actions) {
+    final secondaryActions = <Widget>[];
+
+    for (final action in actions) {
+      // Exclude TextButton and FilledButton (they go to bottom bar)
+      if (action is! TextButton && action is! FilledButton) {
+        secondaryActions.add(action);
+      }
+    }
+
+    return secondaryActions;
   }
 
   /// Builds mobile-friendly actions menu from headerActions
@@ -275,6 +307,41 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
 
         return menuItems;
       },
+    );
+  }
+
+  /// Builds the sticky bottom action bar for mobile edit/create mode
+  Widget _buildMobileBottomBar(BuildContext context, List<Widget> actions) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, -4),
+          ),
+        ],
+        border: Border(
+          top: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+            width: 1,
+          ),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: _buildSpacedActions(actions),
+          ),
+        ),
+      ),
     );
   }
 
@@ -527,10 +594,19 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
                               // Header Actions with proper spacing
                               if (widget.headerActions != null && widget.headerActions!.isNotEmpty) ...[
                                 const SizedBox(width: 8),
-                                // Mobile: Show 3-dot menu, Desktop: Show all actions
-                                if (screenInfo.isMobile)
-                                  _buildMobileActionsMenu(context, widget.headerActions!)
-                                else
+                                // Mobile: Show 3-dot menu (or secondary actions if bottom bar is shown), Desktop: Show all actions
+                                if (screenInfo.isMobile) ...[
+                                  // If bottom bar is shown, only show secondary actions in menu
+                                  if (widget.showMobileBottomBar) ...[
+                                    () {
+                                      final secondaryActions = _extractSecondaryActions(widget.headerActions!);
+                                      return secondaryActions.isNotEmpty
+                                          ? _buildMobileActionsMenu(context, secondaryActions)
+                                          : const SizedBox.shrink();
+                                    }(),
+                                  ] else
+                                    _buildMobileActionsMenu(context, widget.headerActions!),
+                                ] else
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: _buildSpacedActions(widget.headerActions!),
@@ -607,6 +683,15 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
                         ],
                       ),
                     ),
+                    // Mobile Bottom Action Bar (only in edit/create mode)
+                    if (screenInfo.isMobile &&
+                        widget.showMobileBottomBar &&
+                        widget.headerActions != null &&
+                        widget.headerActions!.isNotEmpty)
+                      _buildMobileBottomBar(
+                        context,
+                        _extractPrimaryActions(widget.headerActions!),
+                      ),
                   ],
                 ),
               ),

@@ -149,6 +149,33 @@ Contains 35 detailed development tasks with:
 - **API tests**: Backend testing with pytest (when implemented)
 - **Target coverage**: 80% for Flutter widgets
 
+## MCP Servers
+
+### Dart and Flutter MCP Server
+
+The official Dart and Flutter MCP server is configured for this project, providing AI-powered development assistance.
+
+**Status**: ✓ Connected (local scope)
+
+**What it provides**:
+- Get current runtime errors from running applications
+- Search pub.dev for packages and add them as dependencies
+- Generate widget code and self-correct syntax errors
+- Access to Dart/Flutter SDK tools and diagnostics
+
+**When to use**:
+- Use the IDE MCP tools (`mcp__ide__getDiagnostics`, `mcp__ide__executeCode`) for accessing Flutter/Dart diagnostics and code execution
+- The MCP server runs automatically in the background when using Claude Code
+- Diagnostics are available for any Dart/Flutter files in the project
+
+**Requirements**:
+- Dart SDK 3.9+ / Flutter 3.35+ (✓ Currently: Dart 3.9.2, Flutter 3.35.6)
+
+**Configuration**:
+- Configured via: `claude mcp add dart --scope local -- dart mcp-server`
+- Verify status: `claude mcp list`
+- Config file: `~/.claude.json` (local scope for this project)
+
 ## Important Notes
 
 1. **Project Phase**: Early development - currently only starter template exists

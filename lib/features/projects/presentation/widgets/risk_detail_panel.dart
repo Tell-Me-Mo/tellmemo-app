@@ -12,7 +12,6 @@ import '../../../../core/services/notification_service.dart';
 import '../../../../shared/widgets/item_detail_panel.dart';
 import '../../../../shared/widgets/item_updates_tab.dart';
 import '../../../../shared/widgets/expandable_text_container.dart';
-import '../../../../shared/widgets/ai_assist_button.dart';
 import '../../domain/entities/item_update.dart' as domain;
 
 class RiskDetailPanel extends ConsumerStatefulWidget {
@@ -536,6 +535,7 @@ ${_buildRiskContext(risk)}''';
       headerIconColor: _isEditing ? Colors.orange : (_risk != null ? _getSeverityColor(_risk!.severity) : Colors.orange),
       onClose: () => Navigator.of(context).pop(),
       commentCount: commentCount,
+      showMobileBottomBar: _isEditing, // Show bottom bar in edit/create mode
       headerActions: _isEditing ? [
         // Edit mode actions
         TextButton(

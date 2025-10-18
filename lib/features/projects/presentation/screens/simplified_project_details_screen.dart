@@ -3725,34 +3725,32 @@ class _SimplifiedProjectDetailsScreenState
               required DateTime endDate,
             }) async {
               try {
-                await ref
+                // Request job-based generation - returns jobId
+                final jobId = await ref
                     .read(summaryGenerationProvider.notifier)
                     .generateSummary(
                       projectId: project.id,
                       type: SummaryType.project,
                       startDate: startDate,
                       endDate: endDate,
-                      useJob: false,
                       format: format,
                     );
 
-                final generatedSummary = ref
-                    .read(summaryGenerationProvider)
-                    .generatedSummary;
+                // Register job for background tracking (for provider refresh)
+                if (jobId != null) {
+                  await ref.read(processingJobsProvider.notifier).addJob(
+                    jobId: jobId,
+                    contentId: null,
+                    projectId: project.id,
+                  );
 
-                if (generatedSummary != null && context.mounted) {
-                  Navigator.of(dialogContext).pop();
-                  context.push('/summaries/${generatedSummary.id}');
-
-                  ref
-                      .read(notificationServiceProvider.notifier)
-                      .showSuccess('Summary generated successfully!');
+                  // Refresh providers when complete
+                  ref.invalidate(projectSummariesProvider(project.id));
+                  _checkContentAvailability();
                 }
 
-                ref.invalidate(projectSummariesProvider(project.id));
-                _checkContentAvailability();
-
-                return generatedSummary!;
+                // Return jobId to dialog (dialog will handle subscription and navigation)
+                return jobId;
               } catch (e) {
                 throw Exception('Failed to generate summary: $e');
               }

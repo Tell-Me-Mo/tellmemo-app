@@ -177,7 +177,6 @@ class SummaryGenerationNotifier extends StateNotifier<SummaryGenerationState> {
     String? contentId,
     DateTime? startDate,
     DateTime? endDate,
-    bool useJob = false,
     String format = 'general',
   }) async {
     state = state.copyWith(
@@ -198,7 +197,6 @@ class SummaryGenerationNotifier extends StateNotifier<SummaryGenerationState> {
         dateRangeStart: startDate,
         dateRangeEnd: endDate,
         createdBy: 'User', // Would get from user context
-        useJob: useJob,
         format: format,
       );
 
@@ -214,18 +212,16 @@ class SummaryGenerationNotifier extends StateNotifier<SummaryGenerationState> {
         'date_range_end': request.dateRangeEnd?.toIso8601String(),
         'format': request.format,
         'created_by': request.createdBy,
-        'use_job': useJob,
       };
 
       final response = await client.generateUnifiedSummary(unifiedRequest);
 
       // Response received successfully
-      
-      // Check if it's a job response
-      if (useJob && response is Map<String, dynamic> && response.containsKey('job_id')) {
+
+      // Manual summaries (project/program/portfolio) always return job_id
+      if (response is Map<String, dynamic> && response.containsKey('job_id')) {
         // Job-based generation - return job ID
         final jobId = response['job_id'] as String;
-        // Job-based generation initiated
         
         state = state.copyWith(
           isGenerating: false,

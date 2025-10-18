@@ -6,6 +6,7 @@ import '../../../../core/constants/breakpoints.dart';
 import '../../../../core/constants/layout_constants.dart';
 import '../../../../core/network/api_service.dart';
 import '../../../../core/services/notification_service.dart';
+import '../../../content/presentation/providers/processing_jobs_provider.dart';
 import '../../../projects/presentation/providers/projects_provider.dart';
 import '../../../projects/domain/entities/project.dart';
 import '../../data/models/summary_model.dart';
@@ -1568,31 +1569,30 @@ class _SummariesScreenState extends ConsumerState<SummariesScreen>
           required DateTime endDate,
         }) async {
           try {
-            await ref.read(summaryGenerationProvider.notifier).generateSummary(
+            // Request job-based generation - returns jobId
+            final jobId = await ref.read(summaryGenerationProvider.notifier).generateSummary(
               projectId: project.id,
               type: SummaryType.project,
               startDate: startDate,
               endDate: endDate,
-              useJob: false,
               format: format,
             );
 
-            final generatedSummary = ref.read(summaryGenerationProvider).generatedSummary;
-
-            if (generatedSummary != null && context.mounted) {
-              // Navigate to the summary detail page
-              context.push('/summaries/${generatedSummary.id}');
-
-              ref.read(notificationServiceProvider.notifier).showSuccess(
-                'Summary generated successfully!',
+            // Register job for background tracking (for provider refresh)
+            if (jobId != null) {
+              await ref.read(processingJobsProvider.notifier).addJob(
+                jobId: jobId,
+                contentId: null,
+                projectId: project.id,
               );
 
-              // Refresh summaries list
+              // Refresh providers when complete
               ref.invalidate(allSummariesProvider);
               _refreshSummaries();
             }
 
-            return generatedSummary;
+            // Return jobId to dialog (dialog will handle subscription and navigation)
+            return jobId;
           } catch (e) {
             if (context.mounted) {
               ref.read(notificationServiceProvider.notifier).showError(
