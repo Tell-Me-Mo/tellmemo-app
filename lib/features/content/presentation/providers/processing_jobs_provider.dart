@@ -150,8 +150,14 @@ class ProcessingJobs extends _$ProcessingJobs {
 
                 // Call the onSummaryGenerated callback if provided
                 if (job.onSummaryGenerated != null) {
-                  print('[ProcessingJobs] Calling onSummaryGenerated callback for: $summaryId');
-                  job.onSummaryGenerated!(summaryId);
+                  try {
+                    print('[ProcessingJobs] Calling onSummaryGenerated callback for: $summaryId');
+                    job.onSummaryGenerated!(summaryId);
+                  } catch (e, stackTrace) {
+                    print('[ProcessingJobs] Error in onSummaryGenerated callback: $e');
+                    print('[ProcessingJobs] Stack trace: $stackTrace');
+                    // Don't rethrow - callback errors shouldn't break job processing
+                  }
                 }
               }
 
