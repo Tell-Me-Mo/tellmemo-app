@@ -320,15 +320,17 @@ class QueueConfig:
             message = json.dumps(update_data)
             redis_conn.publish(channel, message)
 
-            # Debug logging for completed jobs
+            # Log job updates (use DEBUG to avoid production log pollution)
             if update_data.get('status') == 'completed':
-                logger.info(f"Published COMPLETED job update for {job_id}")
-                logger.info(f"  - Channel: {channel}")
-                logger.info(f"  - Update data keys: {list(update_data.keys())}")
-                logger.info(f"  - Result present: {'result' in update_data}")
+                result_info = ""
                 if 'result' in update_data:
-                    logger.info(f"  - Result keys: {list(update_data['result'].keys()) if isinstance(update_data['result'], dict) else 'not a dict'}")
-                    logger.info(f"  - Result: {update_data['result']}")
+                    result_type = type(update_data['result']).__name__
+                    result_keys = list(update_data['result'].keys()) if isinstance(update_data['result'], dict) else None
+                    result_info = f", result_type={result_type}, result_keys={result_keys}"
+                logger.debug(
+                    f"Published COMPLETED job update: job_id={job_id}, channel={channel}, "
+                    f"update_keys={list(update_data.keys())}{result_info}"
+                )
             else:
                 logger.debug(f"Published update for job {job_id} to channel {channel}")
         except Exception as e:
