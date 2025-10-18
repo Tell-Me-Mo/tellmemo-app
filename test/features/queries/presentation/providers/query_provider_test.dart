@@ -406,7 +406,8 @@ void main() {
 
       // Assert
       final state = container.read(queryProvider);
-      expect(state.activeSessionId, isNotNull);
+      // Session ID is assigned by backend when first message is sent, so it's null initially
+      expect(state.activeSessionId, isNull);
       expect(state.conversation, isEmpty);
       expect(state.error, null);
     });
