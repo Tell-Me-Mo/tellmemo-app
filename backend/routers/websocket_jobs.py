@@ -209,7 +209,9 @@ class JobConnectionManager:
             # Build job data from RQ meta
             # For result, prefer meta['result'] (set during task execution) over rq_job.result (set after task completes)
             # Use explicit None check to allow falsy results (empty dict, 0, False, etc.)
-            result = meta.get('result') if meta.get('result') is not None else (rq_job.result if rq_job.is_finished else None)
+            result = meta.get('result')
+            if result is None and rq_job.is_finished:
+                result = rq_job.result
 
             return {
                 'job_id': rq_job_id,
