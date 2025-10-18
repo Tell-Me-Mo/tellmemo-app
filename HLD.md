@@ -4,7 +4,7 @@
 
 TellMeMo is a production SaaS platform for AI-powered project intelligence. This document describes the implemented technical architecture, system components, and operational capabilities.
 
-**Document Status**: October 2025 - Reflects actual production implementation.
+**Document Status**: October 2025 - Updated to reflect actual production implementation including email digest system, dual authentication support, and complete API surface.
 
 ---
 
@@ -134,6 +134,10 @@ TellMeMo helps teams extract insights from project content using AI:
 | **Cache & Pub/Sub** | Redis | Job state management and real-time updates |
 | **Monitoring** | Sentry + Langfuse | Error & LLM tracking |
 | **Queue Dashboard** | RQ Dashboard | Job queue visualization and management |
+| **Scheduling** | APScheduler 3.11+ | Email digest automation |
+| **Email Service** | SendGrid 6.12+ | Transactional email delivery |
+| **Templates** | Jinja2 3.1+ | HTML email rendering |
+| **Circuit Breaker** | Purgatory 3.0+ | API resilience pattern |
 
 ### Frontend Stack
 
@@ -154,8 +158,9 @@ TellMeMo helps teams extract insights from project content using AI:
 - **Production Backend**: Hetzner VPS
 - **Database**: Managed PostgreSQL instance
 - **Vector Database**: Qdrant Cloud
-- **Job Queue**: Redis (in-memory or managed instance)
+- **Job Queue**: Redis (required - not optional)
 - **Queue Dashboard**: RQ Dashboard for job monitoring
+- **Email Delivery**: SendGrid API
 - **Deployment**: Git-based with automated migrations
 
 ---
@@ -164,7 +169,12 @@ TellMeMo helps teams extract insights from project content using AI:
 
 ### 1. Authentication System
 
-**Technology**: Supabase Auth + JWT
+**Technology**: Dual authentication support (Supabase Auth or Native Backend Auth) + JWT
+
+**Authentication Providers:**
+- **Supabase Auth** (default): Third-party managed authentication
+- **Native Backend Auth**: Built-in backend authentication with bcrypt password hashing
+- Selection via `AUTH_PROVIDER` environment variable (supabase | backend)
 
 **Features:**
 - Email/password authentication
@@ -173,10 +183,11 @@ TellMeMo helps teams extract insights from project content using AI:
 - Session management
 - JWT token validation
 - Multi-organization support
+- Provider-agnostic API layer
 
 **Flow:**
 1. User signs up with email/password
-2. Supabase creates account and sends verification
+2. Auth provider creates account and sends verification (if configured)
 3. User verifies email
 4. User signs in and receives JWT token
 5. Token included in all API requests
@@ -547,6 +558,46 @@ APPEND_UPDATES_TO_DESCRIPTION=true  # Append vs replace
 **Database Tables:**
 - `integrations` - Integration configurations (encrypted API keys)
 
+### 14. Email Digest System
+
+**Technology**: APScheduler + SendGrid + Jinja2
+
+**Features:**
+- **Automated Digests**: Daily, weekly, and monthly email summaries
+- **User Preferences**: Customizable frequency and content types
+- **Email Types**:
+  - Digest emails (scheduled delivery with activity summaries)
+  - Welcome emails (onboarding for new users)
+  - Inactive reminders (7-day inactivity detection)
+- **Content Customization**: Users select what to include (summaries, tasks, risks, decisions, blockers)
+- **Intelligent Sending**: Empty digest prevention (no spam)
+- **Unsubscribe**: JWT-based one-click unsubscribe
+- **Testing Tools**: Preview and test email functionality
+
+**Architecture:**
+- APScheduler runs background jobs (daily 8 AM UTC, weekly Monday, monthly 1st)
+- Redis Queue processes email generation jobs
+- SendGrid API handles delivery (100 emails/day free tier)
+- Jinja2 renders responsive HTML templates
+- User preferences stored in `users.preferences` JSONB column
+
+**Configuration:**
+```env
+EMAIL_DIGEST_ENABLED=true
+SENDGRID_API_KEY=your-key-here
+SENDGRID_FROM_EMAIL=noreply@tellmemo.io
+```
+
+**Database:**
+- `users.preferences` - JSONB column with email digest settings
+- Tracks: enabled status, frequency, content types, last_sent_at
+
+**API Endpoints:**
+- `GET/PUT /api/v1/email-preferences/digest` - Manage preferences
+- `POST /api/v1/email-preferences/digest/preview` - Preview digest
+- `POST /api/v1/email-preferences/digest/send-test` - Send test emails
+- `GET /api/v1/email-preferences/unsubscribe` - JWT unsubscribe
+
 ---
 
 ## Data Flow
@@ -652,8 +703,9 @@ Return to user
 ### Core Tables
 
 **users**
-- id, email, created_at, updated_at
-- Managed by Supabase
+- id, email, name, created_at, updated_at
+- preferences (JSONB) - Stores email digest and other user preferences
+- Managed by auth provider (Supabase or native backend)
 
 **organizations**
 - id, name, description, created_at, updated_at
@@ -662,7 +714,7 @@ Return to user
 - id, organization_id, user_id, role, joined_at
 
 **organization_invitations**
-- id, organization_id, email, name, role, status, token, expires_at
+- id, organization_id, email, name, role, status, token, expires_at, invited_by, accepted_at
 
 **portfolios**
 - id, name, description, owner, organization_id, health_status, created_at, updated_at
@@ -714,6 +766,10 @@ Return to user
 
 **integrations**
 - id, organization_id, integration_type, config (encrypted), status, created_at, updated_at
+
+**item_updates**
+- id, item_type, item_id, update_type, update_data, similarity_score, organization_id, created_at
+- Tracks updates from semantic deduplication system
 
 ### Qdrant Schema
 
@@ -844,6 +900,20 @@ Return to user
 - `GET /api/integrations/fireflies/transcripts` - List transcripts
 - `POST /api/integrations/fireflies/sync/{transcript_id}` - Sync transcript
 - `POST /api/integrations/fireflies/webhook` - Webhook receiver
+
+### Email Preferences
+- `GET /api/v1/email-preferences/digest` - Get digest preferences
+- `PUT /api/v1/email-preferences/digest` - Update preferences
+- `POST /api/v1/email-preferences/digest/preview` - Preview digest
+- `POST /api/v1/email-preferences/digest/send-test` - Send test emails
+- `GET /api/v1/email-preferences/unsubscribe` - JWT-based unsubscribe
+
+### Content Availability
+- `GET /api/v1/content-availability/check` - Check content processing status
+
+### Jobs
+- `GET /api/v1/jobs/{job_id}` - Get job status
+- `GET /api/v1/jobs` - List background jobs
 
 ### WebSocket Endpoints
 - `WS /ws/jobs` - Upload job progress
@@ -1037,11 +1107,11 @@ Return to user
 
 ### Current Limitations
 
-- **Single Server**: Not load-balanced (can be scaled)
-- **Email Integration**: SMTP not configured (notifications in-app only)
-- **Fireflies**: Basic integration (not fully production-tested)
-- **Mobile**: Web-only (no native mobile apps)
-- **Export**: Limited export capabilities
+- **Single Server**: Not load-balanced (can be scaled horizontally)
+- **Email Delivery**: SendGrid configured (100 emails/day free tier limit)
+- **Fireflies Integration**: Basic implementation (production testing ongoing)
+- **Mobile**: Web-first (Flutter supports native mobile but not production-deployed)
+- **Export**: Limited export capabilities (no bulk export yet)
 
 ### Design Decisions
 
@@ -1050,6 +1120,12 @@ Return to user
 - Fast inference on CPU
 - Sufficient quality for semantic search
 - Data privacy (no external API calls)
+
+**Why Dual Authentication Support:**
+- **Supabase**: Managed service with email verification, OAuth support
+- **Native Backend**: Full control, no third-party dependencies, bcrypt security
+- Flexibility for different deployment scenarios
+- Provider-agnostic API design
 
 **Why Anthropic Claude (Primary):**
 - Superior reasoning capabilities
@@ -1060,9 +1136,16 @@ Return to user
 **Why OpenAI GPT (Fallback):**
 - High availability and reliability
 - Equivalent model quality tiers (GPT-4o ≈ Claude Sonnet)
-- Automatic failover prevents service disruption
+- Automatic failover prevents service disruption (circuit breaker pattern)
 - Cost-effective disaster recovery
 - Transparent to application code
+
+**Why SendGrid (Email Delivery):**
+- Reliable transactional email service
+- 100 emails/day free tier (suitable for MVP/small deployments)
+- Easy API integration
+- Email template support
+- Delivery tracking and analytics
 
 **Why Qdrant:**
 - Fast semantic search

@@ -11,12 +11,34 @@ Turn project chaos into clarity. AI-powered platform that transforms meetings in
 - 📊 **Portfolio view** - Organize by Portfolio → Program → Project
 - 🔓 **100% Open Source** - Self-host or use our cloud
 
+## 🆕 Recent Updates
+
+See [CHANGELOG.md](CHANGELOG.md) for latest features, improvements, and bug fixes.
+
 ## 🏗️ Tech Stack
 
-- **Frontend**: Flutter Web
-- **Backend**: FastAPI + PostgreSQL + Qdrant
-- **AI**: Claude 3.5 (primary LLM) + OpenAI GPT (fallback), EmbeddingGemma (local embeddings)
-- **Deploy**: Docker Compose (everything containerized)
+### Core Services
+- **Frontend**: Flutter Web (Nginx-served)
+- **Backend**: FastAPI (async Python)
+- **Database**: PostgreSQL 18.0 (metadata & relational data)
+- **Vector DB**: Qdrant v1.15.5 (semantic search & embeddings)
+- **Queue**: Redis 8.2 + RQ (background job processing)
+- **Workers**: RQ Worker (2 workers for high/default/low priority queues)
+
+### AI & ML
+- **Primary LLM**: Claude 3.5 Haiku (Anthropic)
+- **Fallback LLM**: GPT-4o/GPT-4o-mini (OpenAI) - automatic fallback on Claude overload
+- **Embeddings**: Google EmbeddingGemma-300m (local, 768-dimensional)
+- **Circuit Breaker**: Purgatory library for production resilience
+
+### Monitoring & Observability (Optional)
+- **RQ Dashboard**: Web UI for queue monitoring (port 9181)
+- **Langfuse**: LLM observability & cost tracking (optional)
+- **ELK Stack**: Elasticsearch, Logstash, Kibana for centralized logging (optional)
+
+### Deployment
+- **Containerization**: Docker Compose (7 services: frontend, backend, postgres, qdrant, redis, rq-worker, rq-dashboard)
+- **Authentication**: Built-in JWT auth (backend) or Supabase (configurable)
 
 ## 🚀 Quick Start
 
