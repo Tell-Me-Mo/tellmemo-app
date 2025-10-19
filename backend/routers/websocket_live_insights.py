@@ -16,9 +16,13 @@ import json
 import logging
 import time
 import uuid
+import base64
+import tempfile
+import os
 from typing import Dict, Optional, Set
 from datetime import datetime
 from enum import Enum
+from pathlib import Path
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,8 +35,7 @@ from services.intelligence.realtime_meeting_insights import (
     TranscriptChunk,
     InsightType
 )
-from services.transcription.replicate_transcription_service import replicate_transcription_service
-from services.transcription.whisper_service import whisper_service
+from services.transcription.replicate_transcription_service import get_replicate_service
 from dependencies.auth import get_current_user_ws
 from utils.logger import get_logger, sanitize_for_log
 from config import get_settings
@@ -293,6 +296,9 @@ async def websocket_live_insights(
     """
     WebSocket endpoint for real-time meeting insights.
 
+    Authentication:
+    - Pass JWT token as query parameter: ?token=<jwt_token>&project_id=<id>
+
     Message Protocol:
 
     Client -> Server:
@@ -315,10 +321,40 @@ async def websocket_live_insights(
     settings = get_settings()
 
     try:
-        # TODO: Add proper authentication via get_current_user_ws
-        # For now, use a placeholder user_id
-        user_id = "test_user"  # This should come from auth token
-        organization_id = "test_org"  # This should come from project lookup
+        # Authenticate user
+        try:
+            current_user = await get_current_user_ws(websocket, db=db)
+            user_id = str(current_user.id)
+        except HTTPException as e:
+            await websocket.close(code=1008, reason=f"Authentication failed: {e.detail}")
+            return
+
+        # Verify user has access to the project and get organization
+        from sqlalchemy import select
+        result = await db.execute(
+            select(Project).where(Project.id == project_id)
+        )
+        project = result.scalar_one_or_none()
+
+        if not project:
+            await websocket.close(code=1008, reason="Project not found")
+            return
+
+        organization_id = str(project.organization_id)
+
+        # Verify user is member of the organization
+        from models.organization_member import OrganizationMember
+        result = await db.execute(
+            select(OrganizationMember).where(
+                OrganizationMember.user_id == current_user.id,
+                OrganizationMember.organization_id == project.organization_id
+            )
+        )
+        membership = result.scalar_one_or_none()
+
+        if not membership:
+            await websocket.close(code=1008, reason="User not authorized to access this project")
+            return
 
         # Wait for initialization message
         init_data = await websocket.receive_json()
@@ -421,12 +457,55 @@ async def handle_audio_chunk(
             })
             return
 
-        # TODO: Implement audio transcription
-        # For now, use placeholder transcription
-        # In production, call replicate_transcription_service or whisper_service
+        # Transcribe audio using Replicate service
+        transcript_text = ""
+        temp_audio_path = None
 
-        # Placeholder transcription (replace with actual service call)
-        transcript_text = f"[Placeholder transcript for chunk {session.chunk_index}]"
+        try:
+            # Decode base64 audio data
+            audio_bytes = base64.b64decode(audio_data)
+
+            # Create temporary file for audio
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as temp_file:
+                temp_audio_path = temp_file.name
+                temp_file.write(audio_bytes)
+
+            logger.debug(f"Saved audio chunk to {temp_audio_path}, size: {len(audio_bytes)} bytes")
+
+            # Get Replicate transcription service
+            settings = get_settings()
+            replicate_service = get_replicate_service(api_key=settings.REPLICATE_API_KEY)
+
+            # Transcribe audio
+            transcription_result = await replicate_service.transcribe_audio_file(
+                audio_path=temp_audio_path,
+                language=None  # Auto-detect language
+            )
+
+            transcript_text = transcription_result.get('text', '').strip()
+
+            if not transcript_text:
+                logger.warning(f"Transcription returned empty text for chunk {session.chunk_index}")
+                transcript_text = "[No speech detected]"
+
+            logger.info(f"Transcribed chunk {session.chunk_index}: {len(transcript_text)} characters")
+
+        except Exception as e:
+            logger.error(f"Transcription error for chunk {session.chunk_index}: {e}", exc_info=True)
+            await live_insights_manager.send_message(session, {
+                'type': 'error',
+                'message': f'Transcription failed: {str(e)}'
+            })
+            transcript_text = "[Transcription failed]"
+
+        finally:
+            # Clean up temporary file
+            if temp_audio_path and os.path.exists(temp_audio_path):
+                try:
+                    os.unlink(temp_audio_path)
+                    logger.debug(f"Deleted temporary file: {temp_audio_path}")
+                except Exception as e:
+                    logger.warning(f"Failed to delete temporary file {temp_audio_path}: {e}")
 
         transcription_time = time.time() - start_time
         session.add_transcription_time(transcription_time * 1000)

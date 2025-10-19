@@ -52,16 +52,22 @@ class LiveInsightsWebSocketService {
   String? get sessionId => _sessionId;
   String? get projectId => _projectId;
 
-  /// Generate WebSocket URL
-  String _getWsUrl(String projectId) {
+  /// Generate WebSocket URL with authentication token
+  String _getWsUrl(String projectId, String? token) {
     final baseUrl = ApiConfig.baseUrl;
     final wsProtocol = baseUrl.startsWith('https') ? 'wss' : 'ws';
     final host = baseUrl.replaceAll(RegExp(r'^https?://'), '');
-    return '$wsProtocol://$host/ws/live-insights?project_id=$projectId';
+
+    // Add token as query parameter for WebSocket authentication
+    final tokenParam = token != null ? '&token=$token' : '';
+    return '$wsProtocol://$host/ws/live-insights?project_id=$projectId$tokenParam';
   }
 
   /// Connect to WebSocket server and initialize session
-  Future<void> connect(String projectId) async {
+  ///
+  /// [projectId] - The project ID to connect to
+  /// [token] - Optional JWT authentication token. If not provided, will try to get from auth service.
+  Future<void> connect(String projectId, {String? token}) async {
     if (_isConnecting) {
       debugPrint('[LiveInsightsWS] Connection already in progress');
       return;
@@ -84,7 +90,7 @@ class LiveInsightsWebSocketService {
         _isConnected = false;
       }
 
-      final wsUrl = _getWsUrl(projectId);
+      final wsUrl = _getWsUrl(projectId, token);
       debugPrint('[LiveInsightsWS] Connecting to $wsUrl');
 
       _channel = WebSocketChannel.connect(Uri.parse(wsUrl));

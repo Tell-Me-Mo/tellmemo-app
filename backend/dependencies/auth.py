@@ -8,7 +8,7 @@ in API endpoints.
 from typing import Optional
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, HTTPException, Request, WebSocket, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db import get_db
@@ -276,3 +276,80 @@ async def get_optional_organization(
 
 # Alias for backward compatibility
 get_current_user_optional = get_optional_current_user
+
+
+async def get_current_user_ws(
+    websocket: WebSocket,
+    token: Optional[str] = None,
+    db: AsyncSession = Depends(get_db)
+) -> User:
+    """
+    Get the current authenticated user from a WebSocket connection.
+
+    WebSocket connections can pass the JWT token in two ways:
+    1. As a query parameter: ?token=<jwt_token>
+    2. As a parameter to this function (extracted from initial message)
+
+    Args:
+        websocket: WebSocket connection
+        token: Optional JWT token (from query params or initial message)
+        db: Database session
+
+    Returns:
+        Current authenticated User
+
+    Raises:
+        HTTPException: If user is not authenticated or token is invalid
+    """
+    # Try to get token from query parameters if not provided
+    if not token:
+        token = websocket.query_params.get("token")
+
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No authentication token provided. Please provide token as query parameter (?token=<jwt>)",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Try to authenticate with both auth services
+    user = None
+
+    try:
+        # Try native auth first
+        user = await native_auth_service.get_user_from_token(db, token)
+
+        # Fallback to Supabase auth if native auth fails
+        if not user:
+            user = await auth_service.get_user_from_token(db, token)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid or expired authentication token: {str(e)}",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found or token is invalid",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Re-fetch user in current session to avoid "not bound to Session" error
+    from sqlalchemy import select
+    from models.user import User as UserModel
+
+    result = await db.execute(
+        select(UserModel).where(UserModel.id == user.id)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found in database",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return user
