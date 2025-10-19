@@ -1,9 +1,9 @@
 # High-Level Design: Real-Time Meeting Insights
 
-**Document Version:** 1.0
-**Last Updated:** October 2025
-**Status:** Implemented
-**Feature:** Live Meeting Insights
+**Document Version:** 2.0
+**Last Updated:** October 19, 2025
+**Status:** ✅ **Production Ready** (100% Complete)
+**Feature:** Live Meeting Insights with Real-Time Audio Streaming
 
 ---
 
@@ -202,15 +202,24 @@ During meetings, participants often:
 
 ```sequence
 User -> Flutter: Start Recording
-Flutter -> Browser: Capture Audio (WebRTC)
-Browser -> Flutter: Audio Chunks (10s each)
+Flutter -> AudioStreamingService: initialize()
+AudioStreamingService -> FlutterSound: openRecorder()
+FlutterSound -> AudioStreamingService: Ready
 
-Flutter -> WebSocket: Connect /ws/live-insights?project_id=X
-WebSocket -> Backend: Establish Connection
+Flutter -> WebSocket: Connect /ws/live-insights?project_id=X&token=JWT
+WebSocket -> Backend: Validate JWT & Establish Connection
 Backend -> Flutter: session_initialized
 
-loop Every 10 seconds
-    Flutter -> WebSocket: audio_chunk {data, duration, speaker}
+Flutter -> AudioStreamingService: startStreaming()
+AudioStreamingService -> FlutterSound: startRecorder(toStream, PCM16, 16kHz)
+
+loop Continuous Audio Streaming
+    FlutterSound -> AudioStreamingService: Raw Audio Data (PCM16 bytes)
+    AudioStreamingService -> AudioStreamingService: Buffer until 160KB (10 seconds)
+    AudioStreamingService -> RecordingProvider: Emit Uint8List chunk via Stream
+    RecordingProvider -> RecordingProvider: Encode to base64
+    RecordingProvider -> WebSocket: audio_chunk {data, duration, speaker}
+
     WebSocket -> Transcription: Transcribe Audio
     Transcription -> WebSocket: Transcript Text
     WebSocket -> InsightService: process_transcript_chunk()
@@ -230,11 +239,15 @@ loop Every 10 seconds
 end
 
 User -> Flutter: End Recording
+Flutter -> AudioStreamingService: stopStreaming()
+AudioStreamingService -> FlutterSound: stopRecorder()
+AudioStreamingService -> RecordingProvider: Emit final buffer chunk
 Flutter -> WebSocket: {"action": "end"}
 WebSocket -> InsightService: finalize_session()
 InsightService -> WebSocket: session_finalized
 WebSocket -> Flutter: Final Summary + Metrics
 Flutter -> UI: Show Summary
+Flutter -> AudioStreamingService: dispose()
 ```
 
 ---
@@ -325,7 +338,42 @@ class LiveInsightsConnectionManager:
 
 ### Frontend Components
 
-#### 1. LiveInsightsPanel (UI Widget)
+#### 1. AudioStreamingService
+
+**Purpose:** Capture real-time audio and emit 10-second chunks for live transcription.
+
+**Implementation:** ✅ Completed
+- Uses flutter_sound's FlutterSoundRecorder with `toStream` API
+- PCM16 codec at 16kHz sample rate (optimal for speech recognition)
+- Mono channel (single audio channel)
+- Automatic buffering: accumulates 160,000 bytes = 10 seconds of audio
+- Emits chunks via Stream<Uint8List>
+
+**Configuration:**
+```dart
+static const int sampleRate = 16000;      // 16kHz for speech
+static const int bufferSize = 160000;     // 10 seconds worth of audio
+```
+
+**Key Methods:**
+```dart
+Future<bool> initialize() async;           // Open audio session
+Future<bool> startStreaming() async;       // Start capturing audio
+Future<void> stopStreaming() async;        // Stop and emit final chunk
+Future<void> pauseStreaming() async;       // Pause capture
+Future<void> resumeStreaming() async;      // Resume capture
+Future<void> dispose() async;              // Clean up resources
+```
+
+**Lifecycle:**
+1. Initialize → Opens recorder session
+2. Start Streaming → Begins audio capture with callback
+3. Buffer Data → Accumulates bytes until 10-second threshold
+4. Emit Chunk → Sends Uint8List via stream
+5. Stop → Emits remaining buffer as final chunk
+6. Dispose → Closes recorder and stream
+
+#### 2. LiveInsightsPanel (UI Widget)
 
 **Purpose:** Display real-time insights with filtering and search.
 
@@ -347,7 +395,7 @@ class _LiveInsightsPanelState {
 }
 ```
 
-#### 2. LiveInsightsWebSocketService
+#### 3. LiveInsightsWebSocketService
 
 **Purpose:** Manage WebSocket connection and message handling.
 
@@ -375,7 +423,7 @@ Stream<bool> connectionStateStream;
 - 3-second delay between retries
 - Ping every 30 seconds
 
-#### 3. Data Models (Freezed)
+#### 4. Data Models (Freezed)
 
 **Purpose:** Type-safe data models with immutability.
 
@@ -501,9 +549,9 @@ User clicks "Stop Recording"
 
 ### WebSocket Endpoint
 
-**URL:** `ws://localhost:8000/ws/live-insights?project_id={uuid}`
+**URL:** `ws://localhost:8000/ws/live-insights?project_id={uuid}&token={jwt_token}`
 
-**Authentication:** JWT token (to be implemented)
+**Authentication:** ✅ JWT token via query parameter (implemented)
 
 **Protocol:** JSON over WebSocket
 
@@ -774,7 +822,9 @@ class SessionMetrics with _$SessionMetrics {
 | **Framework** | Flutter | 3.24+ | Web UI |
 | **Language** | Dart | 3.5+ | Frontend logic |
 | **State Management** | Riverpod | 2.5+ | Reactive state |
-| **WebSocket** | web_socket_channel | 2.4+ | WebSocket client |
+| **Audio Streaming** | flutter_sound | 9.16.3 | Real-time audio capture (PCM16, 16kHz) |
+| **Audio Recording** | record | 6.1.2 | File-based audio recording |
+| **WebSocket** | web_socket_channel | 3.0+ | WebSocket client |
 | **Serialization** | freezed + json_serializable | 2.4+ / 6.7+ | Type-safe models |
 | **UI Framework** | Material Design 3 | Built-in | Design system |
 
@@ -783,7 +833,7 @@ class SessionMetrics with _$SessionMetrics {
 | Component | Technology | Purpose |
 |-----------|-----------|---------|
 | **WebSocket Protocol** | JSON over WebSocket | Message format |
-| **Authentication** | JWT | User auth (TBD) |
+| **Authentication** | JWT | ✅ User auth (implemented) |
 | **Logging** | Structured logging | Debugging & monitoring |
 
 ---
@@ -887,19 +937,21 @@ class SessionMetrics with _$SessionMetrics {
 
 ### Authentication & Authorization
 
-**WebSocket Authentication:**
-- JWT token passed as query parameter or header
-- Token validated before session creation
-- Token refresh on expiration
+**WebSocket Authentication:** ✅ Implemented
+- JWT token passed as query parameter: `?token={jwt_token}`
+- Token validated via `get_current_user_ws()` dependency before session creation
+- Extracts user_id and organization_id from token
+- Blocks connection if token invalid or expired
 
-**Project Authorization:**
-- Verify user has access to project
-- Check organization membership
-- Validate project ID exists
+**Project Authorization:** ✅ Implemented
+- Verifies user has access to project via database query
+- Checks organization membership matches token
+- Validates project ID exists in database
+- Returns 403 error if unauthorized
 
 **Example:**
 ```
-ws://api.example.com/ws/live-insights?project_id=xxx&token=jwt_token_here
+ws://localhost:8000/ws/live-insights?project_id=550e8400-e29b-41d4-a716-446655440000&token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
 ### Data Security
@@ -1317,13 +1369,16 @@ curl http://localhost:8000/api/v1/health
 | Term | Definition |
 |------|------------|
 | **Insight** | Actionable information extracted from meeting transcript |
-| **Chunk** | 10-second segment of meeting transcript |
+| **Chunk** | 10-second segment of meeting transcript or audio |
+| **Audio Chunk** | 160,000 bytes of PCM16 audio data at 16kHz = 10 seconds of recording |
+| **PCM16** | 16-bit Pulse Code Modulation - uncompressed audio format optimal for speech recognition |
 | **Sliding Window** | Context management technique that keeps last N chunks in memory |
 | **Semantic Deduplication** | Technique to filter duplicate insights based on meaning, not exact text |
 | **Confidence Score** | LLM's confidence in the accuracy of an extracted insight (0.0-1.0) |
 | **Session** | Single meeting instance from start to end |
 | **WebSocket** | Protocol for bidirectional real-time communication |
 | **RAG** | Retrieval-Augmented Generation - combining search with LLM generation |
+| **flutter_sound** | Flutter audio recording library used for real-time audio streaming |
 
 ### B. References
 
@@ -1333,6 +1388,7 @@ curl http://localhost:8000/api/v1/health
 - [Qdrant Vector Database](https://qdrant.tech/documentation/)
 - [FastAPI WebSockets](https://fastapi.tiangolo.com/advanced/websockets/)
 - [Flutter WebSockets](https://pub.dev/packages/web_socket_channel)
+- [flutter_sound Package](https://pub.dev/packages/flutter_sound)
 
 **Internal Documentation:**
 - TellMeMo HLD (`HLD.md`)
@@ -1345,9 +1401,10 @@ curl http://localhost:8000/api/v1/health
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2025-10-19 | Claude | Initial HLD document |
+| 2.0 | 2025-10-19 | Claude | Updated to reflect production implementation: Added AudioStreamingService with flutter_sound, JWT authentication completed, updated technology stack, revised component interaction sequence, marked all implementation statuses |
 
 ---
 
-**Document Status:** ✅ Implemented
-**Last Review:** October 2025
+**Document Status:** ✅ Production Ready (100% Complete)
+**Last Review:** October 19, 2025
 **Next Review:** January 2026
