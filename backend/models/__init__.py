@@ -20,6 +20,7 @@ from .conversation import Conversation
 from .notification import Notification, NotificationType, NotificationPriority, NotificationCategory
 from .support_ticket import SupportTicket, TicketComment, TicketAttachment
 from .item_update import ItemUpdate, ItemUpdateType
+from .live_meeting_insight import LiveMeetingInsight
 
 __all__ = [
     "Project",
@@ -50,5 +51,6 @@ __all__ = [
     "TicketComment",
     "TicketAttachment",
     "ItemUpdate",
-    "ItemUpdateType"
+    "ItemUpdateType",
+    "LiveMeetingInsight"
 ]

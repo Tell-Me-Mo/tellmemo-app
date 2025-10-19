@@ -1,9 +1,9 @@
 # High-Level Design: Real-Time Meeting Insights
 
-**Document Version:** 2.0
+**Document Version:** 3.0
 **Last Updated:** October 19, 2025
-**Status:** ✅ **Production Ready** (100% Complete)
-**Feature:** Live Meeting Insights with Real-Time Audio Streaming
+**Status:** ✅ **Production Ready with Persistence** (100% Complete)
+**Feature:** Live Meeting Insights with Real-Time Audio Streaming & Historical Access
 
 ---
 
@@ -55,6 +55,8 @@ During meetings, participants often:
 - **Action Tracking** - Never miss an action item again
 - **Decision Documentation** - Automatic record of all decisions made
 - **Risk Prevention** - Early warning system for potential blockers
+- **Historical Access** - All insights persisted to database for post-meeting review
+- **Advanced Querying** - Filter insights by type, priority, session with pagination
 
 ### Key Metrics
 
@@ -711,6 +713,104 @@ User clicks "Stop Recording"
 
 ---
 
+### REST API Endpoints (Historical Insights)
+
+#### 1. Get Project Live Insights
+**URL:** `GET /api/v1/projects/{project_id}/live-insights`
+
+**Authentication:** Required (JWT Bearer token)
+
+**Query Parameters:**
+- `session_id` (optional) - Filter by specific session
+- `insight_type` (optional) - Filter by type (action_item, decision, question, risk, etc.)
+- `priority` (optional) - Filter by priority (critical, high, medium, low)
+- `limit` (optional) - Max results (default: 100, max: 500)
+- `offset` (optional) - Pagination offset (default: 0)
+
+**Response:**
+```json
+{
+  "insights": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "session_id": "live_550e8400_user123_1698876000",
+      "project_id": "550e8400-e29b-41d4-a716-446655440000",
+      "organization_id": "660e8400-e29b-41d4-a716-446655440000",
+      "insight_type": "action_item",
+      "priority": "high",
+      "content": "John to draft API spec by Friday",
+      "context": "Discussion about new feature API design",
+      "assigned_to": "John",
+      "due_date": "2025-10-22",
+      "confidence_score": 0.92,
+      "chunk_index": 5,
+      "created_at": "2025-10-19T12:05:00Z",
+      "metadata": {
+        "related_content_ids": ["abc123", "def456"]
+      }
+    }
+  ],
+  "total": 42,
+  "session_id": null,
+  "project_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Example Requests:**
+```bash
+# Get all insights for a project
+GET /api/v1/projects/550e8400-e29b-41d4-a716-446655440000/live-insights
+
+# Get insights from specific session
+GET /api/v1/projects/550e8400-e29b-41d4-a716-446655440000/live-insights?session_id=live_abc_user_123
+
+# Get only action items
+GET /api/v1/projects/550e8400-e29b-41d4-a716-446655440000/live-insights?insight_type=action_item
+
+# Get high priority insights with pagination
+GET /api/v1/projects/550e8400-e29b-41d4-a716-446655440000/live-insights?priority=high&limit=50&offset=0
+```
+
+#### 2. Get Session Live Insights
+**URL:** `GET /api/v1/sessions/{session_id}/live-insights`
+
+**Authentication:** Required (JWT Bearer token)
+
+**Response:**
+```json
+{
+  "insights": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "session_id": "live_550e8400_user123_1698876000",
+      "project_id": "550e8400-e29b-41d4-a716-446655440000",
+      "organization_id": "660e8400-e29b-41d4-a716-446655440000",
+      "insight_type": "decision",
+      "priority": "high",
+      "content": "Use GraphQL for new API",
+      "context": "Team discussion on API architecture",
+      "assigned_to": null,
+      "due_date": null,
+      "confidence_score": 0.95,
+      "chunk_index": 3,
+      "created_at": "2025-10-19T12:03:00Z",
+      "metadata": {}
+    }
+  ],
+  "total": 15,
+  "session_id": "live_550e8400_user123_1698876000",
+  "project_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Notes:**
+- Results ordered by `chunk_index` ASC (chronological order within session)
+- User must have access to the project's organization
+- Returns 404 if session not found
+- Returns 403 if user not authorized
+
+---
+
 ## Data Models
 
 ### Backend Models
@@ -760,6 +860,44 @@ class LiveMeetingSession:
     insights_by_type: Dict[str, int]
     processing_times: List[float]
 ```
+
+#### LiveMeetingInsight (Database Model)
+```python
+class LiveMeetingInsight(Base):
+    """Model for persisting insights to PostgreSQL"""
+    __tablename__ = "live_meeting_insights"
+
+    id: UUID  # Primary key
+    session_id: str  # Session identifier
+    project_id: UUID  # FK to projects
+    organization_id: UUID  # FK to organizations
+    insight_type: str  # action_item, decision, question, etc.
+    priority: str  # critical, high, medium, low
+    content: str  # Main insight content
+    context: Optional[str]  # Additional context
+    assigned_to: Optional[str]  # For action items
+    due_date: Optional[str]  # For action items
+    confidence_score: Optional[float]  # LLM confidence (0.0-1.0)
+    chunk_index: Optional[int]  # Source chunk number
+    created_at: datetime  # Timestamp
+    insight_metadata: Optional[dict]  # JSONB for related_content_ids, contradictions
+
+    # Relationships
+    project: Relationship[Project]
+    organization: Relationship[Organization]
+```
+
+**Database Indexes:**
+- `session_id` - For session-based queries
+- `project_id` - For project-based queries
+- `organization_id` - For org-based queries
+- `insight_type` - For type filtering
+- `created_at` - For time-based ordering
+- `(project_id, created_at)` - Composite for common queries
+
+**Foreign Keys:**
+- `project_id` → `projects.id` (CASCADE DELETE)
+- `organization_id` → `organizations.id` (CASCADE DELETE)
 
 ### Frontend Models (Freezed)
 
@@ -1402,9 +1540,10 @@ curl http://localhost:8000/api/v1/health
 |---------|------|--------|---------|
 | 1.0 | 2025-10-19 | Claude | Initial HLD document |
 | 2.0 | 2025-10-19 | Claude | Updated to reflect production implementation: Added AudioStreamingService with flutter_sound, JWT authentication completed, updated technology stack, revised component interaction sequence, marked all implementation statuses |
+| 3.0 | 2025-10-19 | Claude | Added insights persistence: Created LiveMeetingInsight database model, added migration (78bd477668c3), implemented persistence in finalize_session(), created REST API endpoints for historical access, added filtering and pagination support |
 
 ---
 
-**Document Status:** ✅ Production Ready (100% Complete)
+**Document Status:** ✅ Production Ready with Persistence (100% Complete)
 **Last Review:** October 19, 2025
 **Next Review:** January 2026
