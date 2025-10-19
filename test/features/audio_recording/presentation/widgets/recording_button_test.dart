@@ -369,6 +369,8 @@ class _MockRecordingNotifier extends RecordingNotifier {
   Future<void> startRecording({
     required String projectId,
     String? meetingTitle,
+    bool enableLiveInsights = false,
+    String? authToken,
   }) async {
     // No-op for testing
   }

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter_sound/flutter_sound.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 
 /// Service for real-time audio streaming using flutter_sound
 ///
@@ -13,11 +12,9 @@ class AudioStreamingService {
 
   bool _isInitialized = false;
   bool _isRecording = false;
-  List<int> _audioBuffer = [];
 
   // Configuration
   static const int sampleRate = 16000; // 16kHz for speech recognition
-  static const int bufferSize = 160000; // 10 seconds of audio at 16kHz (16000 * 10)
 
   /// Stream of audio chunks (each chunk is ~10 seconds of audio)
   Stream<Uint8List> get audioChunkStream => _audioChunkController.stream;
@@ -64,11 +61,9 @@ class AudioStreamingService {
         return false;
       }
 
-      _audioBuffer.clear();
-
       // Start recording to stream
       await _recorder.startRecorder(
-        toStream: _handleAudioData,
+        toStream: _audioChunkController.sink,
         codec: Codec.pcm16,
         sampleRate: sampleRate,
         numChannels: 1,
@@ -83,30 +78,6 @@ class AudioStreamingService {
     }
   }
 
-  /// Handle incoming audio data from the recorder
-  void _handleAudioData(Uint8List data) {
-    try {
-      // Add data to buffer
-      _audioBuffer.addAll(data);
-
-      // Check if buffer has reached 10 seconds worth of audio
-      if (_audioBuffer.length >= bufferSize) {
-        // Extract the chunk
-        final chunk = Uint8List.fromList(_audioBuffer.take(bufferSize).toList());
-
-        // Remove processed data from buffer
-        _audioBuffer.removeRange(0, bufferSize);
-
-        // Emit the chunk
-        _audioChunkController.add(chunk);
-
-        print('[AudioStreamingService] Emitted audio chunk: ${chunk.length} bytes');
-      }
-    } catch (e) {
-      print('[AudioStreamingService] Error handling audio data: $e');
-    }
-  }
-
   /// Stop streaming audio
   Future<void> stopStreaming() async {
     try {
@@ -116,14 +87,6 @@ class AudioStreamingService {
       }
 
       await _recorder.stopRecorder();
-
-      // Emit any remaining audio in buffer as final chunk
-      if (_audioBuffer.isNotEmpty) {
-        final finalChunk = Uint8List.fromList(_audioBuffer);
-        _audioChunkController.add(finalChunk);
-        print('[AudioStreamingService] Emitted final chunk: ${finalChunk.length} bytes');
-        _audioBuffer.clear();
-      }
 
       _isRecording = false;
       print('[AudioStreamingService] Stopped streaming audio');
@@ -170,7 +133,6 @@ class AudioStreamingService {
       }
 
       await _audioChunkController.close();
-      _audioBuffer.clear();
 
       print('[AudioStreamingService] Disposed');
     } catch (e) {
