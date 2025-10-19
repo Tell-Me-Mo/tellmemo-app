@@ -9,16 +9,23 @@ part of 'live_insight_model.dart';
 _$LiveInsightModelImpl _$$LiveInsightModelImplFromJson(
   Map<String, dynamic> json,
 ) => _$LiveInsightModelImpl(
-  insightId: json['insightId'] as String,
-  type: $enumDecode(_$LiveInsightTypeEnumMap, json['type']),
+  id: json['id'] as String? ?? '',
+  insightId: json['insight_id'] as String?,
+  type: $enumDecode(_$LiveInsightTypeEnumMap, json['insight_type']),
   priority: $enumDecode(_$LiveInsightPriorityEnumMap, json['priority']),
   content: json['content'] as String,
-  context: json['context'] as String,
-  timestamp: DateTime.parse(json['timestamp'] as String),
-  assignedTo: json['assignedTo'] as String?,
-  dueDate: json['dueDate'] as String?,
-  confidenceScore: (json['confidenceScore'] as num?)?.toDouble() ?? 0.0,
-  sourceChunkIndex: (json['sourceChunkIndex'] as num?)?.toInt(),
+  context: json['context'] as String? ?? '',
+  createdAt: json['created_at'] == null
+      ? null
+      : DateTime.parse(json['created_at'] as String),
+  timestamp: json['timestamp'] == null
+      ? null
+      : DateTime.parse(json['timestamp'] as String),
+  assignedTo: json['assigned_to'] as String?,
+  dueDate: json['due_date'] as String?,
+  confidenceScore: (json['confidence_score'] as num?)?.toDouble() ?? 0.0,
+  sourceChunkIndex: (json['chunk_index'] as num?)?.toInt(),
+  metadata: json['metadata'] as Map<String, dynamic>?,
   relatedContentIds: (json['relatedContentIds'] as List<dynamic>?)
       ?.map((e) => e as String)
       .toList(),
@@ -32,16 +39,19 @@ _$LiveInsightModelImpl _$$LiveInsightModelImplFromJson(
 Map<String, dynamic> _$$LiveInsightModelImplToJson(
   _$LiveInsightModelImpl instance,
 ) => <String, dynamic>{
-  'insightId': instance.insightId,
-  'type': _$LiveInsightTypeEnumMap[instance.type]!,
+  'id': instance.id,
+  'insight_id': instance.insightId,
+  'insight_type': _$LiveInsightTypeEnumMap[instance.type]!,
   'priority': _$LiveInsightPriorityEnumMap[instance.priority]!,
   'content': instance.content,
   'context': instance.context,
-  'timestamp': instance.timestamp.toIso8601String(),
-  'assignedTo': instance.assignedTo,
-  'dueDate': instance.dueDate,
-  'confidenceScore': instance.confidenceScore,
-  'sourceChunkIndex': instance.sourceChunkIndex,
+  'created_at': instance.createdAt?.toIso8601String(),
+  'timestamp': instance.timestamp?.toIso8601String(),
+  'assigned_to': instance.assignedTo,
+  'due_date': instance.dueDate,
+  'confidence_score': instance.confidenceScore,
+  'chunk_index': instance.sourceChunkIndex,
+  'metadata': instance.metadata,
   'relatedContentIds': instance.relatedContentIds,
   'similarityScores': instance.similarityScores,
   'contradictsContentId': instance.contradictsContentId,

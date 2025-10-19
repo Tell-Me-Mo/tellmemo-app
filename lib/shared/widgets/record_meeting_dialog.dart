@@ -339,12 +339,12 @@ class _RecordMeetingDialogState extends ConsumerState<RecordMeetingDialog> {
                         child: LiveInsightsPanel(
                           insights: recordingState.liveInsights.map((insight) {
                             return MeetingInsight(
-                              insightId: insight.insightId,
+                              insightId: insight.insightId ?? insight.id ?? '',
                               type: _mapInsightType(insight.type),
                               priority: _mapInsightPriority(insight.priority),
                               content: insight.content,
                               context: insight.context,
-                              timestamp: insight.timestamp,
+                              timestamp: insight.timestamp ?? insight.createdAt ?? DateTime.now(),
                               assignedTo: insight.assignedTo,
                               dueDate: insight.dueDate,
                               confidenceScore: insight.confidenceScore,

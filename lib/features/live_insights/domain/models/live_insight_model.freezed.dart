@@ -21,16 +21,29 @@ LiveInsightModel _$LiveInsightModelFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$LiveInsightModel {
-  String get insightId => throw _privateConstructorUsedError;
+  // Support both API formats: 'id' from REST API, 'insight_id' from WebSocket
+  @JsonKey(name: 'id', defaultValue: '')
+  String? get id => throw _privateConstructorUsedError;
+  @JsonKey(name: 'insight_id')
+  String? get insightId => throw _privateConstructorUsedError;
+  @JsonKey(name: 'insight_type')
   LiveInsightType get type => throw _privateConstructorUsedError;
   LiveInsightPriority get priority => throw _privateConstructorUsedError;
   String get content => throw _privateConstructorUsedError;
   String get context => throw _privateConstructorUsedError;
-  DateTime get timestamp => throw _privateConstructorUsedError;
+  @JsonKey(name: 'created_at')
+  DateTime? get createdAt => throw _privateConstructorUsedError;
+  DateTime? get timestamp => throw _privateConstructorUsedError;
+  @JsonKey(name: 'assigned_to')
   String? get assignedTo => throw _privateConstructorUsedError;
+  @JsonKey(name: 'due_date')
   String? get dueDate => throw _privateConstructorUsedError;
+  @JsonKey(name: 'confidence_score')
   double get confidenceScore => throw _privateConstructorUsedError;
+  @JsonKey(name: 'chunk_index')
   int? get sourceChunkIndex => throw _privateConstructorUsedError;
+  Map<String, dynamic>? get metadata =>
+      throw _privateConstructorUsedError; // WebSocket-only fields
   List<String>? get relatedContentIds => throw _privateConstructorUsedError;
   List<double>? get similarityScores => throw _privateConstructorUsedError;
   String? get contradictsContentId => throw _privateConstructorUsedError;
@@ -54,16 +67,19 @@ abstract class $LiveInsightModelCopyWith<$Res> {
   ) = _$LiveInsightModelCopyWithImpl<$Res, LiveInsightModel>;
   @useResult
   $Res call({
-    String insightId,
-    LiveInsightType type,
+    @JsonKey(name: 'id', defaultValue: '') String? id,
+    @JsonKey(name: 'insight_id') String? insightId,
+    @JsonKey(name: 'insight_type') LiveInsightType type,
     LiveInsightPriority priority,
     String content,
     String context,
-    DateTime timestamp,
-    String? assignedTo,
-    String? dueDate,
-    double confidenceScore,
-    int? sourceChunkIndex,
+    @JsonKey(name: 'created_at') DateTime? createdAt,
+    DateTime? timestamp,
+    @JsonKey(name: 'assigned_to') String? assignedTo,
+    @JsonKey(name: 'due_date') String? dueDate,
+    @JsonKey(name: 'confidence_score') double confidenceScore,
+    @JsonKey(name: 'chunk_index') int? sourceChunkIndex,
+    Map<String, dynamic>? metadata,
     List<String>? relatedContentIds,
     List<double>? similarityScores,
     String? contradictsContentId,
@@ -86,16 +102,19 @@ class _$LiveInsightModelCopyWithImpl<$Res, $Val extends LiveInsightModel>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? insightId = null,
+    Object? id = freezed,
+    Object? insightId = freezed,
     Object? type = null,
     Object? priority = null,
     Object? content = null,
     Object? context = null,
-    Object? timestamp = null,
+    Object? createdAt = freezed,
+    Object? timestamp = freezed,
     Object? assignedTo = freezed,
     Object? dueDate = freezed,
     Object? confidenceScore = null,
     Object? sourceChunkIndex = freezed,
+    Object? metadata = freezed,
     Object? relatedContentIds = freezed,
     Object? similarityScores = freezed,
     Object? contradictsContentId = freezed,
@@ -103,10 +122,14 @@ class _$LiveInsightModelCopyWithImpl<$Res, $Val extends LiveInsightModel>
   }) {
     return _then(
       _value.copyWith(
-            insightId: null == insightId
+            id: freezed == id
+                ? _value.id
+                : id // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            insightId: freezed == insightId
                 ? _value.insightId
                 : insightId // ignore: cast_nullable_to_non_nullable
-                      as String,
+                      as String?,
             type: null == type
                 ? _value.type
                 : type // ignore: cast_nullable_to_non_nullable
@@ -123,10 +146,14 @@ class _$LiveInsightModelCopyWithImpl<$Res, $Val extends LiveInsightModel>
                 ? _value.context
                 : context // ignore: cast_nullable_to_non_nullable
                       as String,
-            timestamp: null == timestamp
+            createdAt: freezed == createdAt
+                ? _value.createdAt
+                : createdAt // ignore: cast_nullable_to_non_nullable
+                      as DateTime?,
+            timestamp: freezed == timestamp
                 ? _value.timestamp
                 : timestamp // ignore: cast_nullable_to_non_nullable
-                      as DateTime,
+                      as DateTime?,
             assignedTo: freezed == assignedTo
                 ? _value.assignedTo
                 : assignedTo // ignore: cast_nullable_to_non_nullable
@@ -143,6 +170,10 @@ class _$LiveInsightModelCopyWithImpl<$Res, $Val extends LiveInsightModel>
                 ? _value.sourceChunkIndex
                 : sourceChunkIndex // ignore: cast_nullable_to_non_nullable
                       as int?,
+            metadata: freezed == metadata
+                ? _value.metadata
+                : metadata // ignore: cast_nullable_to_non_nullable
+                      as Map<String, dynamic>?,
             relatedContentIds: freezed == relatedContentIds
                 ? _value.relatedContentIds
                 : relatedContentIds // ignore: cast_nullable_to_non_nullable
@@ -175,16 +206,19 @@ abstract class _$$LiveInsightModelImplCopyWith<$Res>
   @override
   @useResult
   $Res call({
-    String insightId,
-    LiveInsightType type,
+    @JsonKey(name: 'id', defaultValue: '') String? id,
+    @JsonKey(name: 'insight_id') String? insightId,
+    @JsonKey(name: 'insight_type') LiveInsightType type,
     LiveInsightPriority priority,
     String content,
     String context,
-    DateTime timestamp,
-    String? assignedTo,
-    String? dueDate,
-    double confidenceScore,
-    int? sourceChunkIndex,
+    @JsonKey(name: 'created_at') DateTime? createdAt,
+    DateTime? timestamp,
+    @JsonKey(name: 'assigned_to') String? assignedTo,
+    @JsonKey(name: 'due_date') String? dueDate,
+    @JsonKey(name: 'confidence_score') double confidenceScore,
+    @JsonKey(name: 'chunk_index') int? sourceChunkIndex,
+    Map<String, dynamic>? metadata,
     List<String>? relatedContentIds,
     List<double>? similarityScores,
     String? contradictsContentId,
@@ -206,16 +240,19 @@ class __$$LiveInsightModelImplCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? insightId = null,
+    Object? id = freezed,
+    Object? insightId = freezed,
     Object? type = null,
     Object? priority = null,
     Object? content = null,
     Object? context = null,
-    Object? timestamp = null,
+    Object? createdAt = freezed,
+    Object? timestamp = freezed,
     Object? assignedTo = freezed,
     Object? dueDate = freezed,
     Object? confidenceScore = null,
     Object? sourceChunkIndex = freezed,
+    Object? metadata = freezed,
     Object? relatedContentIds = freezed,
     Object? similarityScores = freezed,
     Object? contradictsContentId = freezed,
@@ -223,10 +260,14 @@ class __$$LiveInsightModelImplCopyWithImpl<$Res>
   }) {
     return _then(
       _$LiveInsightModelImpl(
-        insightId: null == insightId
+        id: freezed == id
+            ? _value.id
+            : id // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        insightId: freezed == insightId
             ? _value.insightId
             : insightId // ignore: cast_nullable_to_non_nullable
-                  as String,
+                  as String?,
         type: null == type
             ? _value.type
             : type // ignore: cast_nullable_to_non_nullable
@@ -243,10 +284,14 @@ class __$$LiveInsightModelImplCopyWithImpl<$Res>
             ? _value.context
             : context // ignore: cast_nullable_to_non_nullable
                   as String,
-        timestamp: null == timestamp
+        createdAt: freezed == createdAt
+            ? _value.createdAt
+            : createdAt // ignore: cast_nullable_to_non_nullable
+                  as DateTime?,
+        timestamp: freezed == timestamp
             ? _value.timestamp
             : timestamp // ignore: cast_nullable_to_non_nullable
-                  as DateTime,
+                  as DateTime?,
         assignedTo: freezed == assignedTo
             ? _value.assignedTo
             : assignedTo // ignore: cast_nullable_to_non_nullable
@@ -263,6 +308,10 @@ class __$$LiveInsightModelImplCopyWithImpl<$Res>
             ? _value.sourceChunkIndex
             : sourceChunkIndex // ignore: cast_nullable_to_non_nullable
                   as int?,
+        metadata: freezed == metadata
+            ? _value._metadata
+            : metadata // ignore: cast_nullable_to_non_nullable
+                  as Map<String, dynamic>?,
         relatedContentIds: freezed == relatedContentIds
             ? _value._relatedContentIds
             : relatedContentIds // ignore: cast_nullable_to_non_nullable
@@ -288,48 +337,77 @@ class __$$LiveInsightModelImplCopyWithImpl<$Res>
 @JsonSerializable()
 class _$LiveInsightModelImpl implements _LiveInsightModel {
   const _$LiveInsightModelImpl({
-    required this.insightId,
-    required this.type,
+    @JsonKey(name: 'id', defaultValue: '') this.id,
+    @JsonKey(name: 'insight_id') this.insightId,
+    @JsonKey(name: 'insight_type') required this.type,
     required this.priority,
     required this.content,
-    required this.context,
-    required this.timestamp,
-    this.assignedTo,
-    this.dueDate,
-    this.confidenceScore = 0.0,
-    this.sourceChunkIndex,
+    this.context = '',
+    @JsonKey(name: 'created_at') this.createdAt,
+    this.timestamp,
+    @JsonKey(name: 'assigned_to') this.assignedTo,
+    @JsonKey(name: 'due_date') this.dueDate,
+    @JsonKey(name: 'confidence_score') this.confidenceScore = 0.0,
+    @JsonKey(name: 'chunk_index') this.sourceChunkIndex,
+    final Map<String, dynamic>? metadata,
     final List<String>? relatedContentIds,
     final List<double>? similarityScores,
     this.contradictsContentId,
     this.contradictionExplanation,
-  }) : _relatedContentIds = relatedContentIds,
+  }) : _metadata = metadata,
+       _relatedContentIds = relatedContentIds,
        _similarityScores = similarityScores;
 
   factory _$LiveInsightModelImpl.fromJson(Map<String, dynamic> json) =>
       _$$LiveInsightModelImplFromJson(json);
 
+  // Support both API formats: 'id' from REST API, 'insight_id' from WebSocket
   @override
-  final String insightId;
+  @JsonKey(name: 'id', defaultValue: '')
+  final String? id;
   @override
+  @JsonKey(name: 'insight_id')
+  final String? insightId;
+  @override
+  @JsonKey(name: 'insight_type')
   final LiveInsightType type;
   @override
   final LiveInsightPriority priority;
   @override
   final String content;
   @override
+  @JsonKey()
   final String context;
   @override
-  final DateTime timestamp;
+  @JsonKey(name: 'created_at')
+  final DateTime? createdAt;
   @override
+  final DateTime? timestamp;
+  @override
+  @JsonKey(name: 'assigned_to')
   final String? assignedTo;
   @override
+  @JsonKey(name: 'due_date')
   final String? dueDate;
   @override
-  @JsonKey()
+  @JsonKey(name: 'confidence_score')
   final double confidenceScore;
   @override
+  @JsonKey(name: 'chunk_index')
   final int? sourceChunkIndex;
+  final Map<String, dynamic>? _metadata;
+  @override
+  Map<String, dynamic>? get metadata {
+    final value = _metadata;
+    if (value == null) return null;
+    if (_metadata is EqualUnmodifiableMapView) return _metadata;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableMapView(value);
+  }
+
+  // WebSocket-only fields
   final List<String>? _relatedContentIds;
+  // WebSocket-only fields
   @override
   List<String>? get relatedContentIds {
     final value = _relatedContentIds;
@@ -358,7 +436,7 @@ class _$LiveInsightModelImpl implements _LiveInsightModel {
 
   @override
   String toString() {
-    return 'LiveInsightModel(insightId: $insightId, type: $type, priority: $priority, content: $content, context: $context, timestamp: $timestamp, assignedTo: $assignedTo, dueDate: $dueDate, confidenceScore: $confidenceScore, sourceChunkIndex: $sourceChunkIndex, relatedContentIds: $relatedContentIds, similarityScores: $similarityScores, contradictsContentId: $contradictsContentId, contradictionExplanation: $contradictionExplanation)';
+    return 'LiveInsightModel(id: $id, insightId: $insightId, type: $type, priority: $priority, content: $content, context: $context, createdAt: $createdAt, timestamp: $timestamp, assignedTo: $assignedTo, dueDate: $dueDate, confidenceScore: $confidenceScore, sourceChunkIndex: $sourceChunkIndex, metadata: $metadata, relatedContentIds: $relatedContentIds, similarityScores: $similarityScores, contradictsContentId: $contradictsContentId, contradictionExplanation: $contradictionExplanation)';
   }
 
   @override
@@ -366,6 +444,7 @@ class _$LiveInsightModelImpl implements _LiveInsightModel {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _$LiveInsightModelImpl &&
+            (identical(other.id, id) || other.id == id) &&
             (identical(other.insightId, insightId) ||
                 other.insightId == insightId) &&
             (identical(other.type, type) || other.type == type) &&
@@ -373,6 +452,8 @@ class _$LiveInsightModelImpl implements _LiveInsightModel {
                 other.priority == priority) &&
             (identical(other.content, content) || other.content == content) &&
             (identical(other.context, context) || other.context == context) &&
+            (identical(other.createdAt, createdAt) ||
+                other.createdAt == createdAt) &&
             (identical(other.timestamp, timestamp) ||
                 other.timestamp == timestamp) &&
             (identical(other.assignedTo, assignedTo) ||
@@ -382,6 +463,7 @@ class _$LiveInsightModelImpl implements _LiveInsightModel {
                 other.confidenceScore == confidenceScore) &&
             (identical(other.sourceChunkIndex, sourceChunkIndex) ||
                 other.sourceChunkIndex == sourceChunkIndex) &&
+            const DeepCollectionEquality().equals(other._metadata, _metadata) &&
             const DeepCollectionEquality().equals(
               other._relatedContentIds,
               _relatedContentIds,
@@ -403,16 +485,19 @@ class _$LiveInsightModelImpl implements _LiveInsightModel {
   @override
   int get hashCode => Object.hash(
     runtimeType,
+    id,
     insightId,
     type,
     priority,
     content,
     context,
+    createdAt,
     timestamp,
     assignedTo,
     dueDate,
     confidenceScore,
     sourceChunkIndex,
+    const DeepCollectionEquality().hash(_metadata),
     const DeepCollectionEquality().hash(_relatedContentIds),
     const DeepCollectionEquality().hash(_similarityScores),
     contradictsContentId,
@@ -438,16 +523,19 @@ class _$LiveInsightModelImpl implements _LiveInsightModel {
 
 abstract class _LiveInsightModel implements LiveInsightModel {
   const factory _LiveInsightModel({
-    required final String insightId,
-    required final LiveInsightType type,
+    @JsonKey(name: 'id', defaultValue: '') final String? id,
+    @JsonKey(name: 'insight_id') final String? insightId,
+    @JsonKey(name: 'insight_type') required final LiveInsightType type,
     required final LiveInsightPriority priority,
     required final String content,
-    required final String context,
-    required final DateTime timestamp,
-    final String? assignedTo,
-    final String? dueDate,
-    final double confidenceScore,
-    final int? sourceChunkIndex,
+    final String context,
+    @JsonKey(name: 'created_at') final DateTime? createdAt,
+    final DateTime? timestamp,
+    @JsonKey(name: 'assigned_to') final String? assignedTo,
+    @JsonKey(name: 'due_date') final String? dueDate,
+    @JsonKey(name: 'confidence_score') final double confidenceScore,
+    @JsonKey(name: 'chunk_index') final int? sourceChunkIndex,
+    final Map<String, dynamic>? metadata,
     final List<String>? relatedContentIds,
     final List<double>? similarityScores,
     final String? contradictsContentId,
@@ -457,9 +545,15 @@ abstract class _LiveInsightModel implements LiveInsightModel {
   factory _LiveInsightModel.fromJson(Map<String, dynamic> json) =
       _$LiveInsightModelImpl.fromJson;
 
+  // Support both API formats: 'id' from REST API, 'insight_id' from WebSocket
   @override
-  String get insightId;
+  @JsonKey(name: 'id', defaultValue: '')
+  String? get id;
   @override
+  @JsonKey(name: 'insight_id')
+  String? get insightId;
+  @override
+  @JsonKey(name: 'insight_type')
   LiveInsightType get type;
   @override
   LiveInsightPriority get priority;
@@ -468,15 +562,24 @@ abstract class _LiveInsightModel implements LiveInsightModel {
   @override
   String get context;
   @override
-  DateTime get timestamp;
+  @JsonKey(name: 'created_at')
+  DateTime? get createdAt;
   @override
+  DateTime? get timestamp;
+  @override
+  @JsonKey(name: 'assigned_to')
   String? get assignedTo;
   @override
+  @JsonKey(name: 'due_date')
   String? get dueDate;
   @override
+  @JsonKey(name: 'confidence_score')
   double get confidenceScore;
   @override
+  @JsonKey(name: 'chunk_index')
   int? get sourceChunkIndex;
+  @override
+  Map<String, dynamic>? get metadata; // WebSocket-only fields
   @override
   List<String>? get relatedContentIds;
   @override
