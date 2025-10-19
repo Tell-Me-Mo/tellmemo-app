@@ -45,7 +45,7 @@ final transcriptionServiceProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef TranscriptionServiceRef = AutoDisposeProviderRef<TranscriptionService>;
-String _$recordingNotifierHash() => r'63233571f9c334c0f0d7e213034823a62d7141d6';
+String _$recordingNotifierHash() => r'583a8096bf713f1373f6903526b08bb6760c9a19';
 
 /// See also [RecordingNotifier].
 @ProviderFor(RecordingNotifier)

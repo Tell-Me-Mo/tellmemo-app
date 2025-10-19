@@ -73,6 +73,7 @@ dependencies:
   
   # Audio Recording & Streaming
   record: ^6.1.2
+  flutter_sound: ^9.16.3
   web_socket_channel: ^3.0.3
   
   # JSON & Serialization
