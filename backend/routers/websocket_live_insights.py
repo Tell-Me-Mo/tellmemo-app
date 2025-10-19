@@ -198,9 +198,11 @@ class LiveInsightsConnectionManager:
         session.phase = MeetingPhase.FINALIZING
 
         try:
-            # Finalize insights
+            # Finalize insights and persist to database
             final_insights = await realtime_insights_service.finalize_session(
                 session_id=session_id,
+                project_id=session.project_id,
+                organization_id=session.organization_id,
                 db=db
             )
 

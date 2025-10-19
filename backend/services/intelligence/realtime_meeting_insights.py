@@ -14,6 +14,7 @@ Architecture:
 
 import asyncio
 import time
+import uuid
 from typing import List, Dict, Any, Optional, Set, Tuple
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -25,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from models.project import Project
+from models.live_meeting_insight import LiveMeetingInsight
 from services.llm.multi_llm_client import get_multi_llm_client
 from services.rag.embedding_service import embedding_service
 from services.prompts.realtime_insights_prompts import (
@@ -503,13 +505,17 @@ class RealtimeMeetingInsightsService:
     async def finalize_session(
         self,
         session_id: str,
+        project_id: str,
+        organization_id: str,
         db: AsyncSession
     ) -> Dict[str, Any]:
         """
-        Finalize a meeting session and return all extracted insights.
+        Finalize a meeting session, persist insights to database, and return all extracted insights.
 
         Args:
             session_id: Meeting session identifier
+            project_id: Project UUID
+            organization_id: Organization UUID
             db: Database session
 
         Returns:
@@ -524,6 +530,46 @@ class RealtimeMeetingInsightsService:
 
         insights = self.extracted_insights[session_id]
 
+        # Persist insights to database
+        try:
+            persisted_count = 0
+            for insight in insights:
+                # Prepare metadata
+                metadata = {}
+                if insight.related_content_ids:
+                    metadata['related_content_ids'] = insight.related_content_ids
+                if insight.contradicts_content_id:
+                    metadata['contradicts_content_id'] = insight.contradicts_content_id
+                if insight.contradiction_explanation:
+                    metadata['contradiction_explanation'] = insight.contradiction_explanation
+
+                # Create database model
+                db_insight = LiveMeetingInsight(
+                    id=uuid.uuid4(),
+                    session_id=session_id,
+                    project_id=uuid.UUID(project_id),
+                    organization_id=uuid.UUID(organization_id),
+                    insight_type=insight.type.value,
+                    priority=insight.priority.value,
+                    content=insight.content,
+                    context=insight.context,
+                    assigned_to=insight.assigned_to,
+                    due_date=insight.due_date,
+                    confidence_score=insight.confidence_score,
+                    chunk_index=insight.source_chunk_index,
+                    insight_metadata=metadata if metadata else None
+                )
+                db.add(db_insight)
+                persisted_count += 1
+
+            await db.commit()
+            logger.info(f"Persisted {persisted_count} insights to database for session {sanitize_for_log(session_id)}")
+
+        except Exception as e:
+            logger.error(f"Failed to persist insights for session {sanitize_for_log(session_id)}: {e}", exc_info=True)
+            await db.rollback()
+            # Continue even if persistence fails - return insights to client
+
         # Group insights by type
         insights_by_type = {}
         for insight in insights:
@@ -532,7 +578,7 @@ class RealtimeMeetingInsightsService:
                 insights_by_type[insight_type] = []
             insights_by_type[insight_type].append(insight.to_dict())
 
-        # Clean up session data
+        # Clean up session data from memory
         del self.extracted_insights[session_id]
         del self.insight_embeddings[session_id]
         del self.active_contexts[session_id]

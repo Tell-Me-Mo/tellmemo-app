@@ -1,9 +1,9 @@
 # Live Insights Feature - Completion Tasks
 
-**Document Version:** 2.0
-**Last Updated:** October 19, 2025 (Final Update)
-**Current Status:** 🟢 **COMPLETE (100%)** ✅
-**Time Spent:** ~8 hours total
+**Document Version:** 3.0
+**Last Updated:** October 19, 2025 (Persistence Added)
+**Current Status:** 🟢 **COMPLETE WITH PERSISTENCE (100%)** ✅
+**Time Spent:** ~10.5 hours total
 
 ---
 
@@ -46,6 +46,10 @@
 - [x] Complete lifecycle management (init, start, pause, resume, stop)
 - [x] Type-safe model mapping between enums
 - [x] Conditional UI rendering based on recording state
+- [x] **Insights persistence to PostgreSQL** ✅
+- [x] **REST API for historical insights retrieval** ✅
+- [x] **Advanced filtering (type, priority, session)** ✅
+- [x] **Pagination support for large datasets** ✅
 
 ### ⏳ Optional Future Enhancements (Not Blocking)
 
@@ -1183,11 +1187,11 @@ bool _isRecoverableError(dynamic error) {
 
 ---
 
-### I5. Add Insight Persistence
+### I5. Add Insight Persistence ✅ COMPLETED
 **Priority:** 🟡 MEDIUM
-**Estimated Time:** 2-3 hours
-**Assignee:** TBD
-**Status:** ❌ Not Started
+**Estimated Time:** 2-3 hours | **Actual Time:** 2.5 hours
+**Assignee:** Claude Code
+**Status:** ✅ **COMPLETED** (Commit: TBD)
 
 **Description:**
 Store insights in PostgreSQL after session ends for historical access.
@@ -1294,11 +1298,49 @@ async def get_live_insights(
 4. Create API endpoint to retrieve historical insights
 5. Test persistence and retrieval
 
+**What Was Done:**
+
+**1. Database Model Created:**
+- ✅ Created `backend/models/live_meeting_insight.py`
+- ✅ LiveMeetingInsight model with all required fields
+- ✅ Fixed SQLAlchemy reserved name (`metadata` → `insight_metadata`)
+- ✅ Relationships to Project and Organization
+- ✅ `to_dict()` method for API responses
+
+**2. Database Migration:**
+- ✅ Created migration `78bd477668c3_add_live_meeting_insights_table.py`
+- ✅ Table created with proper schema
+- ✅ 6 indexes for query optimization (session_id, project_id, organization_id, insight_type, created_at, composite)
+- ✅ Foreign keys with CASCADE delete
+
+**3. Service Updated:**
+- ✅ Updated `finalize_session()` signature to accept project_id and organization_id
+- ✅ Added persistence logic before cleanup
+- ✅ Stores metadata in JSONB (related_content_ids, contradictions)
+- ✅ Graceful error handling
+- ✅ Updated WebSocket endpoint to pass parameters
+
+**4. API Endpoints Created:**
+- ✅ Created `backend/routers/live_insights.py`
+- ✅ GET `/api/v1/projects/{project_id}/live-insights` - Query by project with filters
+- ✅ GET `/api/v1/sessions/{session_id}/live-insights` - Query by session
+- ✅ Support for filtering by insight_type, priority, pagination
+- ✅ JWT authentication required
+- ✅ Authorization checks for project/org access
+
+**5. Main Application:**
+- ✅ Registered router in `main.py`
+
 **Acceptance Criteria:**
-- [ ] Insights are stored in PostgreSQL after session ends
-- [ ] API endpoint returns historical insights
-- [ ] Insights are filterable by session_id
-- [ ] Database indexes are created for performance
+- [x] Insights are stored in PostgreSQL after session ends
+- [x] API endpoint returns historical insights
+- [x] Insights are filterable by session_id, insight_type, priority
+- [x] Database indexes are created for performance
+- [x] Foreign key constraints with CASCADE delete
+- [x] Pagination support (limit, offset)
+- [x] JWT authentication and authorization
+
+**Result:** Full persistence implementation complete with REST API for retrieval.
 
 **Blockers:** None
 
