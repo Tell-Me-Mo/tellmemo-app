@@ -43,6 +43,9 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
   late Animation<Offset> _slideAnimation;
   late TabController _tabController;
 
+  // Swipe gesture state
+  double _dragOffset = 0.0;
+
   @override
   void initState() {
     super.initState();
@@ -91,6 +94,38 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
       if (mounted) {  // Add mounted check
         widget.onClose();
       }
+    });
+  }
+
+  void _handleHorizontalDragUpdate(DragUpdateDetails details, double panelWidth) {
+    setState(() {
+      // Only allow dragging to the right (positive delta)
+      if (details.delta.dx > 0) {
+        _dragOffset += details.delta.dx;
+        // Clamp the offset to prevent dragging too far
+        _dragOffset = _dragOffset.clamp(0.0, panelWidth);
+      }
+    });
+  }
+
+  void _handleHorizontalDragEnd(DragEndDetails details, double panelWidth) {
+    final velocity = details.primaryVelocity ?? 0;
+    final dismissThreshold = panelWidth * 0.3; // 30% of panel width
+
+    if (_dragOffset > dismissThreshold || velocity > 300) {
+      // Close the panel
+      _handleClose();
+    } else {
+      // Animate back to original position
+      setState(() {
+        _dragOffset = 0.0;
+      });
+    }
+  }
+
+  void _handleHorizontalDragCancel() {
+    setState(() {
+      _dragOffset = 0.0;
     });
   }
 
@@ -493,25 +528,47 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
             top: 0,
             bottom: screenInfo.isMobile ? keyboardHeight : 0,
             width: actualWidth,
-            child: SlideTransition(
-              position: _slideAnimation,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: colorScheme.surface,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
-                      blurRadius: 32,
-                      offset: const Offset(-8, 0),
-                    ),
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 16,
-                      offset: const Offset(-4, 0),
-                    ),
-                  ],
-                ),
-                child: Column(
+            child: GestureDetector(
+              // Only enable horizontal drag on mobile
+              onHorizontalDragUpdate: screenInfo.isMobile
+                  ? (details) => _handleHorizontalDragUpdate(details, actualWidth)
+                  : null,
+              onHorizontalDragEnd: screenInfo.isMobile
+                  ? (details) => _handleHorizontalDragEnd(details, actualWidth)
+                  : null,
+              onHorizontalDragCancel: screenInfo.isMobile
+                  ? _handleHorizontalDragCancel
+                  : null,
+              child: AnimatedBuilder(
+                animation: _animationController,
+                builder: (context, child) {
+                  // Calculate combined offset: slide animation + drag offset
+                  final slideOffset = _slideAnimation.value.dx;
+                  final dragOffsetNormalized = _dragOffset / actualWidth;
+                  final combinedOffset = slideOffset + dragOffsetNormalized;
+
+                  return Transform.translate(
+                    offset: Offset(combinedOffset * actualWidth, 0),
+                    child: child,
+                  );
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: colorScheme.surface,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 32,
+                        offset: const Offset(-8, 0),
+                      ),
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 16,
+                        offset: const Offset(-4, 0),
+                      ),
+                    ],
+                  ),
+                  child: Column(
                   children: [
                     // Header
                     Container(
@@ -693,6 +750,7 @@ class _ItemDetailPanelState extends State<ItemDetailPanel>
                         _extractPrimaryActions(widget.headerActions!),
                       ),
                   ],
+                ),
                 ),
               ),
             ),
