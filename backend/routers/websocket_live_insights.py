@@ -1,0 +1,504 @@
+"""
+WebSocket router for real-time meeting insights streaming.
+
+Handles live meeting transcription and insight extraction, providing
+real-time feedback to participants during meetings.
+
+Architecture:
+- Receives audio chunks from Flutter client
+- Streams to transcription service
+- Extracts insights in real-time
+- Broadcasts insights back to client via WebSocket
+"""
+
+import asyncio
+import json
+import logging
+import time
+import uuid
+from typing import Dict, Optional, Set
+from datetime import datetime
+from enum import Enum
+
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, Query, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from db.database import get_db
+from models.project import Project
+from models.user import User
+from services.intelligence.realtime_meeting_insights import (
+    realtime_insights_service,
+    TranscriptChunk,
+    InsightType
+)
+from services.transcription.replicate_transcription_service import replicate_transcription_service
+from services.transcription.whisper_service import whisper_service
+from dependencies.auth import get_current_user_ws
+from utils.logger import get_logger, sanitize_for_log
+from config import get_settings
+
+logger = get_logger(__name__)
+router = APIRouter(prefix="/ws", tags=["websocket", "live-insights"])
+
+
+class MeetingPhase(Enum):
+    """Phases of a live meeting session."""
+    INITIALIZING = "initializing"
+    ACTIVE = "active"
+    PAUSED = "paused"
+    FINALIZING = "finalizing"
+    COMPLETED = "completed"
+    ERROR = "error"
+
+
+class LiveMeetingSession:
+    """Represents an active live meeting session."""
+
+    def __init__(
+        self,
+        session_id: str,
+        project_id: str,
+        organization_id: str,
+        user_id: str,
+        websocket: WebSocket
+    ):
+        self.session_id = session_id
+        self.project_id = project_id
+        self.organization_id = organization_id
+        self.user_id = user_id
+        self.websocket = websocket
+
+        # Session state
+        self.phase = MeetingPhase.INITIALIZING
+        self.start_time = datetime.utcnow()
+        self.last_activity = datetime.utcnow()
+
+        # Transcription state
+        self.chunk_index = 0
+        self.total_audio_duration = 0.0
+        self.accumulated_transcript = []
+
+        # Insight tracking
+        self.total_insights_extracted = 0
+        self.insights_by_type: Dict[str, int] = {}
+
+        # Performance metrics
+        self.processing_times = []
+        self.transcription_times = []
+
+    def update_activity(self) -> None:
+        """Update last activity timestamp."""
+        self.last_activity = datetime.utcnow()
+
+    def add_processing_time(self, ms: float) -> None:
+        """Track processing time for metrics."""
+        self.processing_times.append(ms)
+
+    def add_transcription_time(self, ms: float) -> None:
+        """Track transcription time for metrics."""
+        self.transcription_times.append(ms)
+
+    def increment_insight_count(self, insight_type: str) -> None:
+        """Increment count for specific insight type."""
+        self.insights_by_type[insight_type] = self.insights_by_type.get(insight_type, 0) + 1
+        self.total_insights_extracted += 1
+
+    def get_metrics(self) -> Dict:
+        """Get session performance metrics."""
+        return {
+            'session_duration_seconds': (datetime.utcnow() - self.start_time).total_seconds(),
+            'chunks_processed': self.chunk_index,
+            'total_insights': self.total_insights_extracted,
+            'insights_by_type': self.insights_by_type,
+            'avg_processing_time_ms': sum(self.processing_times) / len(self.processing_times) if self.processing_times else 0,
+            'avg_transcription_time_ms': sum(self.transcription_times) / len(self.transcription_times) if self.transcription_times else 0,
+        }
+
+
+class LiveInsightsConnectionManager:
+    """Manages WebSocket connections for live meeting insights."""
+
+    def __init__(self):
+        # Active sessions: session_id -> LiveMeetingSession
+        self.active_sessions: Dict[str, LiveMeetingSession] = {}
+
+        # User connections: user_id -> set of session_ids
+        self.user_sessions: Dict[str, Set[str]] = {}
+
+        # Session cleanup task
+        self._cleanup_task: Optional[asyncio.Task] = None
+        self._session_timeout_seconds = 7200  # 2 hours
+
+    async def create_session(
+        self,
+        project_id: str,
+        organization_id: str,
+        user_id: str,
+        websocket: WebSocket,
+        db: AsyncSession
+    ) -> LiveMeetingSession:
+        """Create a new live meeting session."""
+
+        # Verify project access
+        project = await db.get(Project, project_id)
+        if not project or project.organization_id != organization_id:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        # Generate session ID
+        session_id = f"live_{project_id}_{user_id}_{int(time.time())}"
+
+        # Create session
+        session = LiveMeetingSession(
+            session_id=session_id,
+            project_id=project_id,
+            organization_id=organization_id,
+            user_id=user_id,
+            websocket=websocket
+        )
+
+        # Accept WebSocket connection
+        await websocket.accept()
+
+        # Store session
+        self.active_sessions[session_id] = session
+
+        if user_id not in self.user_sessions:
+            self.user_sessions[user_id] = set()
+        self.user_sessions[user_id].add(session_id)
+
+        # Start cleanup task if not running
+        if self._cleanup_task is None or self._cleanup_task.done():
+            self._cleanup_task = asyncio.create_task(self._cleanup_stale_sessions())
+
+        logger.info(
+            f"Created live meeting session: {sanitize_for_log(session_id)} "
+            f"for project {sanitize_for_log(project_id)}"
+        )
+
+        # Send initialization confirmation
+        await self.send_message(session, {
+            'type': 'session_initialized',
+            'session_id': session_id,
+            'project_id': project_id,
+            'timestamp': datetime.utcnow().isoformat()
+        })
+
+        return session
+
+    async def end_session(self, session_id: str, db: AsyncSession) -> Dict:
+        """End a live meeting session and finalize insights."""
+
+        if session_id not in self.active_sessions:
+            return {'error': 'Session not found'}
+
+        session = self.active_sessions[session_id]
+        session.phase = MeetingPhase.FINALIZING
+
+        try:
+            # Finalize insights
+            final_insights = await realtime_insights_service.finalize_session(
+                session_id=session_id,
+                db=db
+            )
+
+            # Get session metrics
+            metrics = session.get_metrics()
+
+            # Send final summary
+            await self.send_message(session, {
+                'type': 'session_finalized',
+                'session_id': session_id,
+                'insights': final_insights,
+                'metrics': metrics,
+                'timestamp': datetime.utcnow().isoformat()
+            })
+
+            session.phase = MeetingPhase.COMPLETED
+
+            # Cleanup
+            self._remove_session(session_id)
+
+            logger.info(f"Finalized session {sanitize_for_log(session_id)}")
+
+            return {
+                'session_id': session_id,
+                'insights': final_insights,
+                'metrics': metrics
+            }
+
+        except Exception as e:
+            logger.error(f"Error finalizing session {session_id}: {e}", exc_info=True)
+            session.phase = MeetingPhase.ERROR
+            return {'error': str(e)}
+
+    def _remove_session(self, session_id: str) -> None:
+        """Remove session from active sessions."""
+        if session_id in self.active_sessions:
+            session = self.active_sessions[session_id]
+            user_id = session.user_id
+
+            del self.active_sessions[session_id]
+
+            if user_id in self.user_sessions:
+                self.user_sessions[user_id].discard(session_id)
+                if not self.user_sessions[user_id]:
+                    del self.user_sessions[user_id]
+
+    async def send_message(self, session: LiveMeetingSession, data: Dict) -> bool:
+        """Send JSON message to WebSocket client."""
+        try:
+            await session.websocket.send_json(data)
+            session.update_activity()
+            return True
+        except Exception as e:
+            logger.error(f"Error sending message to session {session.session_id}: {e}")
+            return False
+
+    async def _cleanup_stale_sessions(self) -> None:
+        """Background task to cleanup stale sessions."""
+        while True:
+            try:
+                await asyncio.sleep(300)  # Check every 5 minutes
+
+                current_time = datetime.utcnow()
+                stale_sessions = []
+
+                for session_id, session in self.active_sessions.items():
+                    time_since_activity = (current_time - session.last_activity).total_seconds()
+
+                    if time_since_activity > self._session_timeout_seconds:
+                        stale_sessions.append(session_id)
+
+                # Remove stale sessions
+                for session_id in stale_sessions:
+                    logger.warning(f"Cleaning up stale session: {sanitize_for_log(session_id)}")
+                    self._remove_session(session_id)
+
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Error in cleanup task: {e}", exc_info=True)
+
+
+# Global connection manager
+live_insights_manager = LiveInsightsConnectionManager()
+
+
+@router.websocket("/live-insights")
+async def websocket_live_insights(
+    websocket: WebSocket,
+    project_id: str = Query(...),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    WebSocket endpoint for real-time meeting insights.
+
+    Message Protocol:
+
+    Client -> Server:
+    1. Initialize: {"action": "init", "project_id": "..."}
+    2. Audio Chunk: {"action": "audio_chunk", "data": base64_audio, "duration": 10.0}
+    3. Pause: {"action": "pause"}
+    4. Resume: {"action": "resume"}
+    5. End: {"action": "end"}
+
+    Server -> Client:
+    1. Session Init: {"type": "session_initialized", "session_id": "..."}
+    2. Transcription: {"type": "transcript_chunk", "text": "...", "chunk_index": 0}
+    3. Insights: {"type": "insights_extracted", "insights": [...]}
+    4. Metrics: {"type": "metrics_update", "metrics": {...}}
+    5. Final Summary: {"type": "session_finalized", "insights": {...}, "metrics": {...}}
+    6. Error: {"type": "error", "message": "..."}
+    """
+
+    session: Optional[LiveMeetingSession] = None
+    settings = get_settings()
+
+    try:
+        # TODO: Add proper authentication via get_current_user_ws
+        # For now, use a placeholder user_id
+        user_id = "test_user"  # This should come from auth token
+        organization_id = "test_org"  # This should come from project lookup
+
+        # Wait for initialization message
+        init_data = await websocket.receive_json()
+
+        if init_data.get('action') != 'init':
+            await websocket.close(code=1008, reason="First message must be 'init'")
+            return
+
+        # Create session
+        session = await live_insights_manager.create_session(
+            project_id=project_id,
+            organization_id=organization_id,
+            user_id=user_id,
+            websocket=websocket,
+            db=db
+        )
+
+        session.phase = MeetingPhase.ACTIVE
+
+        # Main message loop
+        while True:
+            data = await websocket.receive_json()
+            action = data.get('action')
+
+            if action == 'audio_chunk':
+                await handle_audio_chunk(session, data, db)
+
+            elif action == 'pause':
+                session.phase = MeetingPhase.PAUSED
+                await live_insights_manager.send_message(session, {
+                    'type': 'session_paused',
+                    'timestamp': datetime.utcnow().isoformat()
+                })
+
+            elif action == 'resume':
+                session.phase = MeetingPhase.ACTIVE
+                await live_insights_manager.send_message(session, {
+                    'type': 'session_resumed',
+                    'timestamp': datetime.utcnow().isoformat()
+                })
+
+            elif action == 'end':
+                # Finalize session
+                final_result = await live_insights_manager.end_session(session.session_id, db)
+                break
+
+            elif action == 'ping':
+                # Heartbeat
+                await live_insights_manager.send_message(session, {
+                    'type': 'pong',
+                    'timestamp': datetime.utcnow().isoformat()
+                })
+
+            else:
+                await live_insights_manager.send_message(session, {
+                    'type': 'error',
+                    'message': f'Unknown action: {action}'
+                })
+
+    except WebSocketDisconnect:
+        logger.info(f"Client disconnected from live insights session")
+        if session:
+            live_insights_manager._remove_session(session.session_id)
+
+    except Exception as e:
+        logger.error(f"Error in live insights WebSocket: {e}", exc_info=True)
+        if session:
+            await live_insights_manager.send_message(session, {
+                'type': 'error',
+                'message': str(e)
+            })
+            live_insights_manager._remove_session(session.session_id)
+
+
+async def handle_audio_chunk(
+    session: LiveMeetingSession,
+    data: Dict,
+    db: AsyncSession
+) -> None:
+    """
+    Process incoming audio chunk: transcribe and extract insights.
+
+    Args:
+        session: Active meeting session
+        data: Audio chunk data from client
+        db: Database session
+    """
+    try:
+        start_time = time.time()
+
+        # Extract audio data
+        audio_data = data.get('data')  # Base64 encoded audio
+        duration = data.get('duration', 10.0)
+        speaker = data.get('speaker')
+
+        if not audio_data:
+            await live_insights_manager.send_message(session, {
+                'type': 'error',
+                'message': 'No audio data provided'
+            })
+            return
+
+        # TODO: Implement audio transcription
+        # For now, use placeholder transcription
+        # In production, call replicate_transcription_service or whisper_service
+
+        # Placeholder transcription (replace with actual service call)
+        transcript_text = f"[Placeholder transcript for chunk {session.chunk_index}]"
+
+        transcription_time = time.time() - start_time
+        session.add_transcription_time(transcription_time * 1000)
+
+        # Send transcription update
+        await live_insights_manager.send_message(session, {
+            'type': 'transcript_chunk',
+            'chunk_index': session.chunk_index,
+            'text': transcript_text,
+            'speaker': speaker,
+            'timestamp': datetime.utcnow().isoformat()
+        })
+
+        # Create transcript chunk
+        chunk = TranscriptChunk(
+            chunk_id=f"{session.session_id}_{session.chunk_index}",
+            text=transcript_text,
+            timestamp=datetime.utcnow(),
+            index=session.chunk_index,
+            speaker=speaker,
+            duration_seconds=duration
+        )
+
+        # Extract insights
+        insights_start = time.time()
+
+        result = await realtime_insights_service.process_transcript_chunk(
+            session_id=session.session_id,
+            project_id=session.project_id,
+            organization_id=session.organization_id,
+            chunk=chunk,
+            db=db
+        )
+
+        insights_time = time.time() - insights_start
+        session.add_processing_time(insights_time * 1000)
+
+        # Update session state
+        session.chunk_index += 1
+        session.total_audio_duration += duration
+        session.accumulated_transcript.append(transcript_text)
+
+        # Track insights
+        for insight in result.get('insights', []):
+            insight_type = insight.get('type', 'unknown')
+            session.increment_insight_count(insight_type)
+
+        # Send insights update
+        await live_insights_manager.send_message(session, {
+            'type': 'insights_extracted',
+            'chunk_index': chunk.index,
+            'insights': result.get('insights', []),
+            'total_insights': result.get('total_insights_count', 0),
+            'processing_time_ms': result.get('processing_time_ms', 0),
+            'timestamp': datetime.utcnow().isoformat()
+        })
+
+        # Send metrics update every 10 chunks
+        if session.chunk_index % 10 == 0:
+            await live_insights_manager.send_message(session, {
+                'type': 'metrics_update',
+                'metrics': session.get_metrics(),
+                'timestamp': datetime.utcnow().isoformat()
+            })
+
+    except Exception as e:
+        logger.error(f"Error handling audio chunk: {e}", exc_info=True)
+        await live_insights_manager.send_message(session, {
+            'type': 'error',
+            'message': f'Failed to process audio chunk: {str(e)}'
+        })
+
+
+# Export router and manager
+__all__ = ['router', 'live_insights_manager']
