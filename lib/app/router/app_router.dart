@@ -10,7 +10,6 @@ import '../../features/dashboard/presentation/screens/dashboard_screen_v2.dart';
 import '../../features/documents/presentation/screens/documents_screen.dart';
 import '../../features/summaries/presentation/screens/summaries_screen.dart';
 import '../../features/summaries/presentation/screens/summary_detail_screen.dart';
-import '../../features/landing/presentation/screens/landing_screen.dart';
 import '../../features/projects/presentation/screens/simplified_project_details_screen.dart';
 import '../../features/integrations/presentation/screens/integrations_screen.dart';
 import '../../features/integrations/presentation/screens/fireflies_integration_screen.dart';
@@ -43,7 +42,7 @@ GoRouter goRouter(Ref ref) {
   }
 
   return GoRouter(
-    initialLocation: AppRoutes.landing,
+    initialLocation: AppRoutes.dashboard,
     debugLogDiagnostics: true,
     observers: observers,
     redirect: (context, state) {
@@ -51,26 +50,15 @@ GoRouter goRouter(Ref ref) {
       final authState = ref.read(authControllerProvider);
       final isAuthenticated = authState.valueOrNull != null;
       final isAuthRoute = state.matchedLocation.startsWith('/auth');
-      final isLandingRoute = state.matchedLocation == '/';
 
       // If not authenticated and trying to access protected routes
-      if (!isAuthenticated && !isAuthRoute && !isLandingRoute && !state.matchedLocation.startsWith('/organization/create')) {
+      if (!isAuthenticated && !isAuthRoute && !state.matchedLocation.startsWith('/organization/create')) {
         return '/auth/signin';
       }
-
-      // If authenticated and on auth/landing routes, let them stay there
-      // The screens will handle their own navigation after loading data
 
       return null;
     },
     routes: [
-      // Landing page (outside shell)
-      GoRoute(
-        path: AppRoutes.landing,
-        name: AppRoutes.landingName,
-        builder: (context, state) => const LandingScreen(),
-      ),
-
       // Organization creation wizard (outside shell - needs to be accessible without org context)
       GoRoute(
         path: '/organization/create',
