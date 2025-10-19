@@ -68,43 +68,6 @@ class _RecordMeetingDialogState extends ConsumerState<RecordMeetingDialog> {
     super.dispose();
   }
 
-  // Helper function to map LiveInsightType to InsightType for the panel
-  InsightType _mapInsightType(LiveInsightType type) {
-    switch (type) {
-      case LiveInsightType.actionItem:
-        return InsightType.actionItem;
-      case LiveInsightType.decision:
-        return InsightType.decision;
-      case LiveInsightType.question:
-        return InsightType.question;
-      case LiveInsightType.risk:
-        return InsightType.risk;
-      case LiveInsightType.keyPoint:
-        return InsightType.keyPoint;
-      case LiveInsightType.relatedDiscussion:
-        return InsightType.relatedDiscussion;
-      case LiveInsightType.contradiction:
-        return InsightType.contradiction;
-      case LiveInsightType.missingInfo:
-        return InsightType.missingInfo;
-    }
-  }
-
-  // Helper function to map LiveInsightPriority to InsightPriority
-  InsightPriority _mapInsightPriority(LiveInsightPriority priority) {
-    switch (priority) {
-      case LiveInsightPriority.critical:
-        return InsightPriority.critical;
-      case LiveInsightPriority.high:
-        return InsightPriority.high;
-      case LiveInsightPriority.medium:
-        return InsightPriority.medium;
-      case LiveInsightPriority.low:
-        return InsightPriority.low;
-    }
-  }
-
-
   Future<void> _handleRecordingComplete(String? filePath) async {
     if (filePath == null) return;
     // Determine project selection
@@ -321,37 +284,23 @@ class _RecordMeetingDialogState extends ConsumerState<RecordMeetingDialog> {
                       (recordingState.state == RecordingState.recording ||
                        recordingState.state == RecordingState.paused)) ...[
                     const SizedBox(height: _DialogConstants.spacing),
-                    Container(
-                      constraints: const BoxConstraints(
-                        maxHeight: 400,
-                        minHeight: 200,
-                      ),
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: colorScheme.primary.withValues(alpha: 0.3),
-                          width: 2,
+                    SizedBox(
+                      height: 400, // Fixed height to prevent intrinsic dimension issues
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: colorScheme.primary.withValues(alpha: 0.3),
+                            width: 2,
+                          ),
+                          borderRadius: BorderRadius.circular(_DialogConstants.borderRadius),
+                          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.05),
                         ),
-                        borderRadius: BorderRadius.circular(_DialogConstants.borderRadius),
-                        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.05),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(_DialogConstants.borderRadius),
-                        child: LiveInsightsPanel(
-                          insights: recordingState.liveInsights.map((insight) {
-                            return MeetingInsight(
-                              insightId: insight.insightId ?? insight.id ?? '',
-                              type: _mapInsightType(insight.type),
-                              priority: _mapInsightPriority(insight.priority),
-                              content: insight.content,
-                              context: insight.context,
-                              timestamp: insight.timestamp ?? insight.createdAt ?? DateTime.now(),
-                              assignedTo: insight.assignedTo,
-                              dueDate: insight.dueDate,
-                              confidenceScore: insight.confidenceScore,
-                            );
-                          }).toList(),
-                          isRecording: recordingState.state == RecordingState.recording,
-                          onClose: null, // Don't allow closing during recording
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(_DialogConstants.borderRadius),
+                          child: _LiveInsightsPanelWrapper(
+                            liveInsights: recordingState.liveInsights,
+                            isRecording: recordingState.state == RecordingState.recording,
+                          ),
                         ),
                       ),
                     ),
@@ -897,6 +846,78 @@ class _DialogActions extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// Wrapper widget to prevent rebuild issues with live insights panel
+class _LiveInsightsPanelWrapper extends StatelessWidget {
+  final List<LiveInsightModel> liveInsights;
+  final bool isRecording;
+
+  const _LiveInsightsPanelWrapper({
+    required this.liveInsights,
+    required this.isRecording,
+  });
+
+  // Helper function to map LiveInsightType to InsightType for the panel
+  InsightType _mapInsightType(LiveInsightType type) {
+    switch (type) {
+      case LiveInsightType.actionItem:
+        return InsightType.actionItem;
+      case LiveInsightType.decision:
+        return InsightType.decision;
+      case LiveInsightType.question:
+        return InsightType.question;
+      case LiveInsightType.risk:
+        return InsightType.risk;
+      case LiveInsightType.keyPoint:
+        return InsightType.keyPoint;
+      case LiveInsightType.relatedDiscussion:
+        return InsightType.relatedDiscussion;
+      case LiveInsightType.contradiction:
+        return InsightType.contradiction;
+      case LiveInsightType.missingInfo:
+        return InsightType.missingInfo;
+    }
+  }
+
+  // Helper function to map LiveInsightPriority to InsightPriority
+  InsightPriority _mapInsightPriority(LiveInsightPriority priority) {
+    switch (priority) {
+      case LiveInsightPriority.critical:
+        return InsightPriority.critical;
+      case LiveInsightPriority.high:
+        return InsightPriority.high;
+      case LiveInsightPriority.medium:
+        return InsightPriority.medium;
+      case LiveInsightPriority.low:
+        return InsightPriority.low;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Create the mapped insights list outside of the LiveInsightsPanel widget
+    // This prevents rebuilds during the mapping process
+    final mappedInsights = liveInsights.map((insight) {
+      return MeetingInsight(
+        insightId: insight.insightId ?? insight.id ?? '',
+        type: _mapInsightType(insight.type),
+        priority: _mapInsightPriority(insight.priority),
+        content: insight.content,
+        context: insight.context,
+        timestamp: insight.timestamp ?? insight.createdAt ?? DateTime.now(),
+        assignedTo: insight.assignedTo,
+        dueDate: insight.dueDate,
+        confidenceScore: insight.confidenceScore,
+      );
+    }).toList();
+
+    return LiveInsightsPanel(
+      insights: mappedInsights,
+      isRecording: isRecording,
+      onClose: null, // Don't allow closing during recording
     );
   }
 }
