@@ -52,6 +52,23 @@ class LiveInsightsWebSocketService {
   String? get sessionId => _sessionId;
   String? get projectId => _projectId;
 
+  /// Inject a WebSocket channel for testing purposes
+  @visibleForTesting
+  void injectChannelForTesting(WebSocketChannel channel) {
+    _channel = channel;
+    _isConnected = true;
+
+    // Listen to messages
+    _channel!.stream.listen(
+      _handleMessage,
+      onError: _handleError,
+      onDone: _handleDisconnect,
+      cancelOnError: false,
+    );
+
+    _connectionStateController.add(true);
+  }
+
   /// Generate WebSocket URL with authentication token
   String _getWsUrl(String projectId, String? token) {
     final baseUrl = ApiConfig.baseUrl;
