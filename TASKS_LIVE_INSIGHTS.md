@@ -1191,7 +1191,7 @@ bool _isRecoverableError(dynamic error) {
 **Priority:** 🟡 MEDIUM
 **Estimated Time:** 2-3 hours | **Actual Time:** 2.5 hours
 **Assignee:** Claude Code
-**Status:** ✅ **COMPLETED** (Commit: TBD)
+**Status:** ✅ **COMPLETED** (Commit: 449db91)
 
 **Description:**
 Store insights in PostgreSQL after session ends for historical access.
