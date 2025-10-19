@@ -1,0 +1,567 @@
+"""
+Real-time Meeting Insights Service.
+
+This service processes live meeting transcript chunks and extracts actionable insights
+in real-time, including action items, decisions, questions, risks, and contextual
+information from past meetings.
+
+Architecture:
+- Sliding window context management for conversation continuity
+- Incremental insight extraction with deduplication
+- Semantic search for related past discussions
+- Structured insight categorization and prioritization
+"""
+
+import asyncio
+import time
+from typing import List, Dict, Any, Optional, Set, Tuple
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from collections import deque
+import json
+
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+
+from models.project import Project
+from services.llm.multi_llm_client import get_multi_llm_client
+from services.rag.embedding_service import embedding_service
+from services.prompts.realtime_insights_prompts import (
+    get_realtime_insight_extraction_prompt,
+    get_contradiction_detection_prompt,
+    get_meeting_summary_prompt_realtime
+)
+from db.multi_tenant_vector_store import multi_tenant_vector_store
+from config import get_settings
+from utils.logger import get_logger, sanitize_for_log
+
+logger = get_logger(__name__)
+
+
+class InsightType(Enum):
+    """Types of insights that can be extracted from meetings."""
+    ACTION_ITEM = "action_item"
+    DECISION = "decision"
+    QUESTION = "question"
+    RISK = "risk"
+    KEY_POINT = "key_point"
+    RELATED_DISCUSSION = "related_discussion"
+    CONTRADICTION = "contradiction"
+    MISSING_INFO = "missing_info"
+
+
+class InsightPriority(Enum):
+    """Priority levels for insights."""
+    CRITICAL = "critical"
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
+@dataclass
+class MeetingInsight:
+    """Structured representation of a meeting insight."""
+    insight_id: str
+    type: InsightType
+    priority: InsightPriority
+    content: str
+    context: str
+    timestamp: datetime
+
+    # Additional metadata
+    assigned_to: Optional[str] = None
+    due_date: Optional[str] = None
+    source_chunk_index: int = 0
+    confidence_score: float = 0.0
+
+    # For related discussions
+    related_content_ids: List[str] = field(default_factory=list)
+    similarity_scores: List[float] = field(default_factory=list)
+
+    # For contradictions
+    contradicts_content_id: Optional[str] = None
+    contradiction_explanation: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert insight to dictionary for serialization."""
+        return {
+            'insight_id': self.insight_id,
+            'type': self.type.value,
+            'priority': self.priority.value,
+            'content': self.content,
+            'context': self.context,
+            'timestamp': self.timestamp.isoformat(),
+            'assigned_to': self.assigned_to,
+            'due_date': self.due_date,
+            'source_chunk_index': self.source_chunk_index,
+            'confidence_score': self.confidence_score,
+            'related_content_ids': self.related_content_ids,
+            'similarity_scores': self.similarity_scores,
+            'contradicts_content_id': self.contradicts_content_id,
+            'contradiction_explanation': self.contradiction_explanation
+        }
+
+
+@dataclass
+class TranscriptChunk:
+    """Represents a chunk of meeting transcript."""
+    chunk_id: str
+    text: str
+    timestamp: datetime
+    index: int
+    speaker: Optional[str] = None
+    duration_seconds: float = 0.0
+
+
+@dataclass
+class SlidingWindowContext:
+    """Manages sliding window context for conversation continuity."""
+    max_chunks: int = 10  # Keep last 10 chunks (~100 seconds of conversation)
+    chunks: deque = field(default_factory=deque)
+
+    def add_chunk(self, chunk: TranscriptChunk) -> None:
+        """Add a new chunk to the sliding window."""
+        self.chunks.append(chunk)
+        if len(self.chunks) > self.max_chunks:
+            self.chunks.popleft()
+
+    def get_context_text(self, include_speakers: bool = True) -> str:
+        """Get the full context text from all chunks in the window."""
+        if include_speakers:
+            return "\n".join([
+                f"[{chunk.speaker or 'Unknown'}]: {chunk.text}"
+                for chunk in self.chunks
+            ])
+        return "\n".join([chunk.text for chunk in self.chunks])
+
+    def get_recent_context(self, num_chunks: int = 3) -> str:
+        """Get the most recent N chunks as context."""
+        recent_chunks = list(self.chunks)[-num_chunks:] if len(self.chunks) >= num_chunks else list(self.chunks)
+        return "\n".join([chunk.text for chunk in recent_chunks])
+
+
+class RealtimeMeetingInsightsService:
+    """
+    Service for extracting insights from live meeting transcripts in real-time.
+
+    Features:
+    - Sliding window context management
+    - Incremental insight extraction
+    - Semantic deduplication
+    - Past meeting correlation
+    - Structured insight categorization
+    """
+
+    def __init__(self):
+        self.settings = get_settings()
+        self.llm_client = get_multi_llm_client(self.settings)
+
+        # Insight extraction configuration
+        self.min_confidence_threshold = 0.6
+        self.semantic_similarity_threshold = 0.85  # For deduplication
+        self.past_meeting_search_limit = 5
+
+        # Context management
+        self.active_contexts: Dict[str, SlidingWindowContext] = {}
+
+        # Insight cache for deduplication (session_id -> set of insight embeddings)
+        self.extracted_insights: Dict[str, List[MeetingInsight]] = {}
+        self.insight_embeddings: Dict[str, List[List[float]]] = {}
+
+        # Rate limiting for semantic search (avoid overwhelming Qdrant)
+        self.last_semantic_search: Dict[str, float] = {}
+        self.semantic_search_interval = 30.0  # seconds
+
+    async def process_transcript_chunk(
+        self,
+        session_id: str,
+        project_id: str,
+        organization_id: str,
+        chunk: TranscriptChunk,
+        db: AsyncSession
+    ) -> Dict[str, Any]:
+        """
+        Process a single transcript chunk and extract insights.
+
+        Args:
+            session_id: Unique identifier for the meeting session
+            project_id: Project UUID
+            organization_id: Organization UUID
+            chunk: Transcript chunk to process
+            db: Database session
+
+        Returns:
+            Dictionary containing extracted insights and metadata
+        """
+        start_time = time.time()
+
+        try:
+            # Initialize context if first chunk
+            if session_id not in self.active_contexts:
+                self.active_contexts[session_id] = SlidingWindowContext()
+                self.extracted_insights[session_id] = []
+                self.insight_embeddings[session_id] = []
+                logger.info(f"Initialized context for session {sanitize_for_log(session_id)}")
+
+            # Add chunk to sliding window
+            context = self.active_contexts[session_id]
+            context.add_chunk(chunk)
+
+            # Get conversation context
+            full_context = context.get_context_text(include_speakers=True)
+            recent_context = context.get_recent_context(num_chunks=3)
+
+            # Extract insights from current chunk
+            insights = await self._extract_insights(
+                session_id=session_id,
+                project_id=project_id,
+                organization_id=organization_id,
+                current_chunk=chunk,
+                recent_context=recent_context,
+                full_context=full_context,
+                db=db
+            )
+
+            # Deduplicate insights
+            new_insights = await self._deduplicate_insights(session_id, insights)
+
+            # Store new insights
+            self.extracted_insights[session_id].extend(new_insights)
+
+            processing_time = time.time() - start_time
+
+            result = {
+                'session_id': session_id,
+                'chunk_index': chunk.index,
+                'insights': [insight.to_dict() for insight in new_insights],
+                'total_insights_count': len(self.extracted_insights[session_id]),
+                'processing_time_ms': int(processing_time * 1000),
+                'context_window_size': len(context.chunks)
+            }
+
+            logger.info(
+                f"Processed chunk {chunk.index} for session {sanitize_for_log(session_id)}: "
+                f"{len(new_insights)} new insights extracted in {processing_time:.2f}s"
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Error processing transcript chunk: {e}", exc_info=True)
+            return {
+                'session_id': session_id,
+                'chunk_index': chunk.index,
+                'insights': [],
+                'error': str(e)
+            }
+
+    async def _extract_insights(
+        self,
+        session_id: str,
+        project_id: str,
+        organization_id: str,
+        current_chunk: TranscriptChunk,
+        recent_context: str,
+        full_context: str,
+        db: AsyncSession
+    ) -> List[MeetingInsight]:
+        """
+        Extract insights from the current chunk with context.
+
+        Uses LLM to analyze the conversation and extract structured insights.
+        """
+        insights = []
+
+        try:
+            # Query for related past discussions (rate-limited)
+            related_discussions = await self._get_related_discussions(
+                session_id=session_id,
+                project_id=project_id,
+                organization_id=organization_id,
+                current_text=current_chunk.text
+            )
+
+            # Build prompt for insight extraction using optimized prompts module
+            prompt = get_realtime_insight_extraction_prompt(
+                current_chunk=current_chunk.text,
+                recent_context=recent_context,
+                related_discussions=related_discussions,
+                speaker_info=f"Speaker: {current_chunk.speaker}" if current_chunk.speaker else None
+            )
+
+            # Call LLM for insight extraction
+            response = await self.llm_client.create_message(
+                prompt=prompt,
+                model="claude-haiku-4.5",  # Fast model for real-time processing
+                max_tokens=2000,
+                temperature=0.1,  # Low temperature for consistent extraction
+                system="You are an expert meeting analyst extracting actionable insights in real-time."
+            )
+
+            if not response:
+                logger.warning("LLM returned empty response for insight extraction")
+                return insights
+
+            # Parse LLM response
+            extracted_data = self._parse_llm_response(response)
+
+            # Convert to MeetingInsight objects
+            for idx, item in enumerate(extracted_data.get('insights', [])):
+                insight = MeetingInsight(
+                    insight_id=f"{session_id}_{current_chunk.index}_{idx}",
+                    type=InsightType(item.get('type', 'key_point')),
+                    priority=InsightPriority(item.get('priority', 'medium')),
+                    content=item.get('content', ''),
+                    context=recent_context,
+                    timestamp=current_chunk.timestamp,
+                    assigned_to=item.get('assigned_to'),
+                    due_date=item.get('due_date'),
+                    source_chunk_index=current_chunk.index,
+                    confidence_score=item.get('confidence', 0.7)
+                )
+
+                # Filter by confidence threshold
+                if insight.confidence_score >= self.min_confidence_threshold:
+                    insights.append(insight)
+
+            # Add related discussion insights
+            if related_discussions:
+                for discussion in related_discussions[:3]:  # Top 3 most relevant
+                    insight = MeetingInsight(
+                        insight_id=f"{session_id}_{current_chunk.index}_related_{discussion['content_id']}",
+                        type=InsightType.RELATED_DISCUSSION,
+                        priority=InsightPriority.LOW,
+                        content=f"Related to past discussion: {discussion.get('title', 'Untitled')}",
+                        context=discussion.get('snippet', ''),
+                        timestamp=current_chunk.timestamp,
+                        source_chunk_index=current_chunk.index,
+                        confidence_score=discussion.get('similarity_score', 0.0),
+                        related_content_ids=[discussion['content_id']],
+                        similarity_scores=[discussion.get('similarity_score', 0.0)]
+                    )
+                    insights.append(insight)
+
+            logger.debug(f"Extracted {len(insights)} insights from chunk {current_chunk.index}")
+
+        except Exception as e:
+            logger.error(f"Error extracting insights: {e}", exc_info=True)
+
+        return insights
+
+    async def _get_related_discussions(
+        self,
+        session_id: str,
+        project_id: str,
+        organization_id: str,
+        current_text: str
+    ) -> List[Dict[str, Any]]:
+        """
+        Query Qdrant for related past discussions (rate-limited).
+
+        Only performs search if enough time has passed since last search.
+        """
+        current_time = time.time()
+        last_search_time = self.last_semantic_search.get(session_id, 0)
+
+        # Rate limit: only search every N seconds
+        if current_time - last_search_time < self.semantic_search_interval:
+            return []
+
+        try:
+            # Generate embedding for current text
+            embedding = await embedding_service.generate_embedding(current_text)
+
+            # Search in Qdrant
+            results = await multi_tenant_vector_store.search(
+                organization_id=organization_id,
+                query_embedding=embedding,
+                limit=self.past_meeting_search_limit,
+                filter_conditions={
+                    'project_id': project_id
+                }
+            )
+
+            # Update last search time
+            self.last_semantic_search[session_id] = current_time
+
+            # Format results
+            related = []
+            for result in results:
+                related.append({
+                    'content_id': result.get('content_id'),
+                    'title': result.get('metadata', {}).get('title', 'Untitled'),
+                    'snippet': result.get('content', '')[:200],
+                    'similarity_score': result.get('score', 0.0)
+                })
+
+            logger.debug(f"Found {len(related)} related discussions for session {sanitize_for_log(session_id)}")
+            return related
+
+        except Exception as e:
+            logger.error(f"Error searching for related discussions: {e}", exc_info=True)
+            return []
+
+
+    def _parse_llm_response(self, response: Any) -> Dict[str, Any]:
+        """
+        Parse LLM response and extract structured data.
+
+        Handles both text and API response objects.
+        """
+        try:
+            # Extract text from response
+            if hasattr(response, 'content') and isinstance(response.content, list):
+                # Anthropic API format
+                text = response.content[0].text
+            elif hasattr(response, 'choices'):
+                # OpenAI API format
+                text = response.choices[0].message.content
+            else:
+                text = str(response)
+
+            # Find JSON in response
+            start = text.find('{')
+            end = text.rfind('}') + 1
+
+            if start >= 0 and end > start:
+                json_text = text[start:end]
+                return json.loads(json_text)
+
+            logger.warning("No valid JSON found in LLM response")
+            return {'insights': []}
+
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse JSON from LLM response: {e}")
+            return {'insights': []}
+        except Exception as e:
+            logger.error(f"Error parsing LLM response: {e}", exc_info=True)
+            return {'insights': []}
+
+    async def _deduplicate_insights(
+        self,
+        session_id: str,
+        new_insights: List[MeetingInsight]
+    ) -> List[MeetingInsight]:
+        """
+        Deduplicate insights using semantic similarity.
+
+        Compares new insights against previously extracted insights
+        to avoid showing duplicates.
+        """
+        if session_id not in self.insight_embeddings:
+            self.insight_embeddings[session_id] = []
+
+        unique_insights = []
+        existing_embeddings = self.insight_embeddings[session_id]
+
+        for insight in new_insights:
+            # Generate embedding for insight content
+            try:
+                insight_embedding = await embedding_service.generate_embedding(insight.content)
+
+                # Check similarity with existing insights
+                is_duplicate = False
+                for existing_emb in existing_embeddings:
+                    similarity = self._cosine_similarity(insight_embedding, existing_emb)
+                    if similarity >= self.semantic_similarity_threshold:
+                        is_duplicate = True
+                        logger.debug(
+                            f"Duplicate insight detected (similarity: {similarity:.2f}): {insight.content[:50]}"
+                        )
+                        break
+
+                if not is_duplicate:
+                    unique_insights.append(insight)
+                    self.insight_embeddings[session_id].append(insight_embedding)
+
+            except Exception as e:
+                logger.error(f"Error during deduplication: {e}")
+                # If embedding fails, include the insight anyway
+                unique_insights.append(insight)
+
+        logger.debug(f"Deduplication: {len(new_insights)} -> {len(unique_insights)} unique insights")
+        return unique_insights
+
+    @staticmethod
+    def _cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
+        """Calculate cosine similarity between two vectors."""
+        import numpy as np
+
+        vec1_np = np.array(vec1)
+        vec2_np = np.array(vec2)
+
+        dot_product = np.dot(vec1_np, vec2_np)
+        norm1 = np.linalg.norm(vec1_np)
+        norm2 = np.linalg.norm(vec2_np)
+
+        if norm1 == 0 or norm2 == 0:
+            return 0.0
+
+        return float(dot_product / (norm1 * norm2))
+
+    async def finalize_session(
+        self,
+        session_id: str,
+        db: AsyncSession
+    ) -> Dict[str, Any]:
+        """
+        Finalize a meeting session and return all extracted insights.
+
+        Args:
+            session_id: Meeting session identifier
+            db: Database session
+
+        Returns:
+            Summary of all insights extracted during the session
+        """
+        if session_id not in self.extracted_insights:
+            return {
+                'session_id': session_id,
+                'insights': [],
+                'summary': 'No insights found for this session'
+            }
+
+        insights = self.extracted_insights[session_id]
+
+        # Group insights by type
+        insights_by_type = {}
+        for insight in insights:
+            insight_type = insight.type.value
+            if insight_type not in insights_by_type:
+                insights_by_type[insight_type] = []
+            insights_by_type[insight_type].append(insight.to_dict())
+
+        # Clean up session data
+        del self.extracted_insights[session_id]
+        del self.insight_embeddings[session_id]
+        del self.active_contexts[session_id]
+        if session_id in self.last_semantic_search:
+            del self.last_semantic_search[session_id]
+
+        logger.info(f"Finalized session {sanitize_for_log(session_id)}: {len(insights)} total insights")
+
+        return {
+            'session_id': session_id,
+            'total_insights': len(insights),
+            'insights_by_type': insights_by_type,
+            'insights': [insight.to_dict() for insight in insights]
+        }
+
+    def cleanup_stale_sessions(self, max_age_hours: int = 4) -> int:
+        """
+        Clean up stale sessions that haven't been updated recently.
+
+        Args:
+            max_age_hours: Maximum age of inactive sessions in hours
+
+        Returns:
+            Number of sessions cleaned up
+        """
+        # TODO: Implement timestamp tracking for sessions
+        # For now, manual cleanup via finalize_session
+        return 0
+
+
+# Global service instance
+realtime_insights_service = RealtimeMeetingInsightsService()
