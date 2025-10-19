@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:http/http.dart' as http;
 import '../../domain/services/audio_recording_service.dart';
+import '../../domain/services/audio_streaming_service.dart';
 import '../../domain/services/transcription_service.dart';
 import '../../../../features/meetings/presentation/providers/upload_provider.dart';
 import '../../../../features/content/presentation/providers/processing_jobs_provider.dart';
@@ -113,7 +114,8 @@ class RecordingNotifier extends _$RecordingNotifier {
 
   // Live insights support
   LiveInsightsWebSocketService? _liveInsightsService;
-  Timer? _audioChunkTimer;
+  AudioStreamingService? _audioStreamingService;
+  StreamSubscription? _audioChunkSubscription;
   StreamSubscription? _liveInsightsSubscription;
   StreamSubscription? _liveTranscriptsSubscription;
 
@@ -509,55 +511,61 @@ class RecordingNotifier extends _$RecordingNotifier {
       },
     );
 
+    // Initialize audio streaming service
+    _audioStreamingService = AudioStreamingService();
+    final initialized = await _audioStreamingService!.initialize();
+
+    if (!initialized) {
+      throw Exception('Failed to initialize audio streaming service');
+    }
+
+    // Start streaming audio
+    final started = await _audioStreamingService!.startStreaming();
+
+    if (!started) {
+      throw Exception('Failed to start audio streaming');
+    }
+
+    // Listen to audio chunks and send to WebSocket
+    _audioChunkSubscription = _audioStreamingService!.audioChunkStream.listen(
+      (audioChunk) async {
+        await _sendAudioChunk(audioChunk);
+      },
+      onError: (error) {
+        print('[RecordingProvider] Audio chunk stream error: $error');
+      },
+    );
+
     // Update state
     state = state.copyWith(
       liveInsightsEnabled: true,
       liveInsightsSessionId: _liveInsightsService!.sessionId,
     );
 
-    // Start audio chunking timer (send audio every 10 seconds)
-    _startAudioChunking();
-  }
-
-  // Start periodic audio chunking for live insights
-  void _startAudioChunking() {
-    _audioChunkTimer?.cancel();
-
-    _audioChunkTimer = Timer.periodic(const Duration(seconds: 10), (_) async {
-      if (state.state == RecordingState.recording && state.liveInsightsEnabled) {
-        await _sendAudioChunk();
-      }
-    });
+    print('[RecordingProvider] Live insights with real-time audio streaming initialized');
   }
 
   // Send audio chunk to live insights WebSocket
-  Future<void> _sendAudioChunk() async {
+  Future<void> _sendAudioChunk(Uint8List audioChunk) async {
     if (_liveInsightsService == null || !_liveInsightsService!.isConnected) {
       return;
     }
 
     try {
-      // Note: This is a simplified implementation
-      // In a real implementation, you would need to:
-      // 1. Buffer the last 10 seconds of audio from the recording
-      // 2. Convert it to base64
-      // 3. Send it via WebSocket
+      // Convert audio chunk to base64
+      final base64Audio = base64Encode(audioChunk);
 
-      // For now, we'll use a placeholder
-      // TODO: Implement actual audio buffering and chunking
+      // Calculate duration (10 seconds for full chunks, less for final chunk)
+      final duration = audioChunk.length / (AudioStreamingService.sampleRate * 2); // 2 bytes per sample (16-bit PCM)
 
-      print('[RecordingProvider] Would send audio chunk here');
+      // Send to WebSocket
+      await _liveInsightsService!.sendAudioChunk(
+        audioData: base64Audio,
+        duration: duration,
+        speaker: null,
+      );
 
-      // Example of what the real implementation would look like:
-      // final audioData = await _getLastAudioChunk();
-      // if (audioData != null) {
-      //   final base64Audio = base64Encode(audioData);
-      //   await _liveInsightsService!.sendAudioChunk(
-      //     audioData: base64Audio,
-      //     duration: 10.0,
-      //     speaker: null,
-      //   );
-      // }
+      print('[RecordingProvider] Sent audio chunk: ${audioChunk.length} bytes, ~${duration.toStringAsFixed(1)}s duration');
     } catch (e) {
       print('[RecordingProvider] Error sending audio chunk: $e');
     }
@@ -565,10 +573,22 @@ class RecordingNotifier extends _$RecordingNotifier {
 
   // Stop live insights session
   Future<void> _stopLiveInsights() async {
-    _audioChunkTimer?.cancel();
+    _audioChunkSubscription?.cancel();
     _liveInsightsSubscription?.cancel();
     _liveTranscriptsSubscription?.cancel();
 
+    // Stop audio streaming
+    if (_audioStreamingService != null) {
+      try {
+        await _audioStreamingService!.stopStreaming();
+        await _audioStreamingService!.dispose();
+      } catch (e) {
+        print('[RecordingProvider] Error stopping audio streaming: $e');
+      }
+      _audioStreamingService = null;
+    }
+
+    // Stop live insights WebSocket
     if (_liveInsightsService != null) {
       try {
         await _liveInsightsService!.endSession();
@@ -591,9 +611,10 @@ class RecordingNotifier extends _$RecordingNotifier {
     _durationSubscription?.cancel();
     _stateSubscription?.cancel();
     _warningSubscription?.cancel();
-    _audioChunkTimer?.cancel();
+    _audioChunkSubscription?.cancel();
     _liveInsightsSubscription?.cancel();
     _liveTranscriptsSubscription?.cancel();
     _liveInsightsService?.dispose();
+    _audioStreamingService?.dispose();
   }
 }
