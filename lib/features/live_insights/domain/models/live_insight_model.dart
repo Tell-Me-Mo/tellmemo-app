@@ -39,16 +39,21 @@ enum LiveInsightPriority {
 @freezed
 class LiveInsightModel with _$LiveInsightModel {
   const factory LiveInsightModel({
-    required String insightId,
-    required LiveInsightType type,
+    // Support both API formats: 'id' from REST API, 'insight_id' from WebSocket
+    @JsonKey(name: 'id', defaultValue: '') String? id,
+    @JsonKey(name: 'insight_id') String? insightId,
+    @JsonKey(name: 'insight_type') required LiveInsightType type,
     required LiveInsightPriority priority,
     required String content,
-    required String context,
-    required DateTime timestamp,
-    String? assignedTo,
-    String? dueDate,
-    @Default(0.0) double confidenceScore,
-    int? sourceChunkIndex,
+    @Default('') String context,
+    @JsonKey(name: 'created_at') DateTime? createdAt,
+    DateTime? timestamp,
+    @JsonKey(name: 'assigned_to') String? assignedTo,
+    @JsonKey(name: 'due_date') String? dueDate,
+    @JsonKey(name: 'confidence_score') @Default(0.0) double confidenceScore,
+    @JsonKey(name: 'chunk_index') int? sourceChunkIndex,
+    Map<String, dynamic>? metadata,
+    // WebSocket-only fields
     List<String>? relatedContentIds,
     List<double>? similarityScores,
     String? contradictsContentId,

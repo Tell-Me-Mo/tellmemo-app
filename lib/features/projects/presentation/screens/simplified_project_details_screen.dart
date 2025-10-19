@@ -45,6 +45,7 @@ import '../widgets/project_blockers_widget.dart';
 import '../../../queries/presentation/widgets/ask_ai_panel.dart';
 import '../../../queries/presentation/providers/query_provider.dart';
 import '../../../documents/presentation/widgets/document_detail_panel.dart';
+import '../../../live_insights/presentation/screens/historical_insights_screen.dart';
 
 class SimplifiedProjectDetailsScreen extends ConsumerStatefulWidget {
   final String projectId;
@@ -365,6 +366,21 @@ class _SimplifiedProjectDetailsScreenState
                                     ],
                                   ),
                                 ),
+                                PopupMenuItem(
+                                  value: 'insights',
+                                  height: 40,
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.insights_outlined,
+                                        size: 18,
+                                        color: Colors.purple,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      const Text('View Insights'),
+                                    ],
+                                  ),
+                                ),
                                 const PopupMenuDivider(),
                                 PopupMenuItem(
                                   value: 'edit',
@@ -574,6 +590,21 @@ class _SimplifiedProjectDetailsScreenState
                                       ),
                                       const SizedBox(width: 12),
                                       const Text('View Activities'),
+                                    ],
+                                  ),
+                                ),
+                                PopupMenuItem(
+                                  value: 'insights',
+                                  height: 40,
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.insights_outlined,
+                                        size: 18,
+                                        color: Colors.purple,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      const Text('View Insights'),
                                     ],
                                   ),
                                 ),
@@ -3562,6 +3593,16 @@ class _SimplifiedProjectDetailsScreenState
         break;
       case 'lessons':
         context.push('/lessons?project=${project.id}&from=project');
+        break;
+      case 'insights':
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => HistoricalInsightsScreen(
+              projectId: project.id,
+              projectName: project.name,
+            ),
+          ),
+        );
         break;
       case 'edit':
         _showEditProjectDialog(context, project);
