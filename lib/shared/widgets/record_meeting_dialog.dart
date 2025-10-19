@@ -7,7 +7,7 @@ import '../../features/meetings/presentation/providers/upload_provider.dart';
 import '../../features/audio_recording/presentation/providers/recording_provider.dart';
 import '../../features/audio_recording/presentation/widgets/recording_button.dart';
 import '../../features/content/presentation/providers/processing_jobs_provider.dart';
-import '../../features/live_insights/presentation/widgets/live_insights_panel.dart';
+import '../../features/meetings/presentation/widgets/live_insights_panel.dart';
 import '../../features/live_insights/domain/models/live_insight_model.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/services/auth_service.dart';
@@ -339,7 +339,7 @@ class _RecordMeetingDialogState extends ConsumerState<RecordMeetingDialog> {
                         child: LiveInsightsPanel(
                           insights: recordingState.liveInsights.map((insight) {
                             return MeetingInsight(
-                              id: insight.insightId,
+                              insightId: insight.insightId,
                               type: _mapInsightType(insight.type),
                               priority: _mapInsightPriority(insight.priority),
                               content: insight.content,
