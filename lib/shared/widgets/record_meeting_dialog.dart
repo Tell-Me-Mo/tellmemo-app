@@ -8,6 +8,7 @@ import '../../features/audio_recording/presentation/providers/recording_provider
 import '../../features/audio_recording/presentation/widgets/recording_button.dart';
 import '../../features/content/presentation/providers/processing_jobs_provider.dart';
 import '../../core/services/notification_service.dart';
+import '../../core/services/auth_service.dart';
 
 enum ProjectSelectionMode { automatic, manual, specific }
 
@@ -47,6 +48,7 @@ class _RecordMeetingDialogState extends ConsumerState<RecordMeetingDialog> {
   final _titleController = TextEditingController();
   ProjectSelectionMode _projectMode = ProjectSelectionMode.automatic;
   String? _selectedProjectId;
+  bool _enableLiveInsights = false; // Toggle for live insights
 
   @override
   void initState() {
@@ -200,7 +202,43 @@ class _RecordMeetingDialogState extends ConsumerState<RecordMeetingDialog> {
                       controller: _titleController,
                       colorScheme: colorScheme,
                     ),
-                    const SizedBox(height: _DialogConstants.spacing * 2),
+                    const SizedBox(height: _DialogConstants.spacing),
+
+                    // Live Insights Toggle
+                    CheckboxListTile(
+                      value: _enableLiveInsights,
+                      onChanged: (value) {
+                        setState(() {
+                          _enableLiveInsights = value ?? false;
+                        });
+                      },
+                      title: Text(
+                        'Enable Live Insights',
+                        style: textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'Get real-time action items, decisions, and risks during the meeting',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      secondary: Icon(
+                        Icons.lightbulb_outline,
+                        color: colorScheme.primary,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: _DialogConstants.tinyPadding,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(_DialogConstants.borderRadius),
+                      ),
+                      tileColor: _enableLiveInsights
+                          ? colorScheme.primaryContainer.withValues(alpha: 0.3)
+                          : null,
+                    ),
+                    const SizedBox(height: _DialogConstants.spacing),
 
                   // Recording Button Container with dynamic sizing
                   AnimatedContainer(
@@ -223,11 +261,19 @@ class _RecordMeetingDialogState extends ConsumerState<RecordMeetingDialog> {
                           : colorScheme.surfaceContainerHighest.withValues(alpha: 0.05),
                     ),
                     child: Center(
-                      child: RecordingButton(
-                        onRecordingComplete: _handleRecordingComplete,
-                        projectId: _projectMode == ProjectSelectionMode.automatic ? 'auto' :
-                                  (_selectedProjectId ?? widget.project?.id ?? 'auto'),
-                        meetingTitle: _titleController.text,
+                      child: FutureBuilder<String?>(
+                        future: ref.read(authServiceProvider).getToken(),
+                        builder: (context, snapshot) {
+                          final authToken = snapshot.data;
+                          return RecordingButton(
+                            onRecordingComplete: _handleRecordingComplete,
+                            projectId: _projectMode == ProjectSelectionMode.automatic ? 'auto' :
+                                      (_selectedProjectId ?? widget.project?.id ?? 'auto'),
+                            meetingTitle: _titleController.text,
+                            enableLiveInsights: _enableLiveInsights,
+                            authToken: authToken,
+                          );
+                        },
                       ),
                     ),
                   ),

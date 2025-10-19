@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -8,6 +9,8 @@ import '../../domain/services/audio_recording_service.dart';
 import '../../domain/services/transcription_service.dart';
 import '../../../../features/meetings/presentation/providers/upload_provider.dart';
 import '../../../../features/content/presentation/providers/processing_jobs_provider.dart';
+import '../../../../features/live_insights/domain/services/live_insights_websocket_service.dart';
+import '../../../../features/live_insights/domain/models/live_insight_model.dart';
 import '../../../../core/services/firebase_analytics_service.dart';
 import '../../../../core/utils/error_utils.dart';
 
@@ -26,6 +29,9 @@ class RecordingStateModel {
   final String? contentId; // Added to track uploaded content
   final bool isUploading; // Added to track upload status
   final bool showDurationWarning; // Added to track 90-minute warning
+  final bool liveInsightsEnabled; // Added for live insights feature
+  final String? liveInsightsSessionId; // Added to track live insights session
+  final List<LiveInsightModel> liveInsights; // Added to store live insights
 
   RecordingStateModel({
     this.state = RecordingState.idle,
@@ -39,6 +45,9 @@ class RecordingStateModel {
     this.contentId,
     this.isUploading = false,
     this.showDurationWarning = false,
+    this.liveInsightsEnabled = false,
+    this.liveInsightsSessionId,
+    this.liveInsights = const [],
   });
 
   RecordingStateModel copyWith({
@@ -53,6 +62,9 @@ class RecordingStateModel {
     String? contentId,
     bool? isUploading,
     bool? showDurationWarning,
+    bool? liveInsightsEnabled,
+    String? liveInsightsSessionId,
+    List<LiveInsightModel>? liveInsights,
   }) {
     return RecordingStateModel(
       state: state ?? this.state,
@@ -66,6 +78,9 @@ class RecordingStateModel {
       contentId: contentId ?? this.contentId,
       isUploading: isUploading ?? this.isUploading,
       showDurationWarning: showDurationWarning ?? this.showDurationWarning,
+      liveInsightsEnabled: liveInsightsEnabled ?? this.liveInsightsEnabled,
+      liveInsightsSessionId: liveInsightsSessionId ?? this.liveInsightsSessionId,
+      liveInsights: liveInsights ?? this.liveInsights,
     );
   }
 }
@@ -95,6 +110,12 @@ class RecordingNotifier extends _$RecordingNotifier {
   StreamSubscription? _durationSubscription;
   StreamSubscription? _stateSubscription;
   StreamSubscription? _warningSubscription;
+
+  // Live insights support
+  LiveInsightsWebSocketService? _liveInsightsService;
+  Timer? _audioChunkTimer;
+  StreamSubscription? _liveInsightsSubscription;
+  StreamSubscription? _liveTranscriptsSubscription;
 
   @override
   RecordingStateModel build() {
@@ -140,6 +161,8 @@ class RecordingNotifier extends _$RecordingNotifier {
   Future<void> startRecording({
     required String projectId,
     String? meetingTitle,
+    bool enableLiveInsights = false,
+    String? authToken,
   }) async {
     try {
       print('[RecordingProvider] Starting recording for project: $projectId');
@@ -173,6 +196,22 @@ class RecordingNotifier extends _$RecordingNotifier {
       // Generate session ID for this recording
       final sessionId = '${projectId}_${DateTime.now().millisecondsSinceEpoch}';
       state = state.copyWith(sessionId: sessionId);
+
+      // Initialize live insights if enabled
+      if (enableLiveInsights && authToken != null) {
+        try {
+          print('[RecordingProvider] Initializing live insights...');
+          await _initializeLiveInsights(projectId, authToken);
+          print('[RecordingProvider] Live insights initialized');
+        } catch (e) {
+          print('[RecordingProvider] Failed to initialize live insights: $e');
+          // Don't fail the recording if live insights fail
+          state = state.copyWith(
+            liveInsightsEnabled: false,
+            errorMessage: 'Live insights unavailable: $e',
+          );
+        }
+      }
 
       // Log recording started analytics
       try {
@@ -224,6 +263,11 @@ class RecordingNotifier extends _$RecordingNotifier {
     String? meetingTitle,
   }) async {
     try {
+      // Stop live insights if enabled
+      if (state.liveInsightsEnabled) {
+        await _stopLiveInsights();
+      }
+
       // Stop audio recording and get file path
       final filePath = await _audioService.stopRecording();
 
@@ -371,6 +415,11 @@ class RecordingNotifier extends _$RecordingNotifier {
 
   // Cancel recording without saving
   Future<void> cancelRecording() async {
+    // Stop live insights if enabled
+    if (state.liveInsightsEnabled) {
+      await _stopLiveInsights();
+    }
+
     // Cancel recording and delete file
     await _audioService.cancelRecording();
 
@@ -429,11 +478,122 @@ class RecordingNotifier extends _$RecordingNotifier {
     return await _transcriptionService.getSupportedLanguages();
   }
 
+  // Initialize live insights WebSocket connection
+  Future<void> _initializeLiveInsights(String projectId, String authToken) async {
+    // Create live insights service
+    _liveInsightsService = LiveInsightsWebSocketService();
+
+    // Connect to WebSocket with auth token
+    await _liveInsightsService!.connect(projectId, token: authToken);
+
+    // Listen to insights stream
+    _liveInsightsSubscription = _liveInsightsService!.insightsStream.listen(
+      (result) {
+        print('[RecordingProvider] Received ${result.insights.length} new insights');
+
+        // Add new insights to the list
+        final updatedInsights = List<LiveInsightModel>.from(state.liveInsights);
+        updatedInsights.addAll(result.insights);
+
+        state = state.copyWith(liveInsights: updatedInsights);
+      },
+      onError: (error) {
+        print('[RecordingProvider] Live insights error: $error');
+      },
+    );
+
+    // Listen to transcript stream (optional - for displaying live transcripts)
+    _liveTranscriptsSubscription = _liveInsightsService!.transcriptsStream.listen(
+      (transcript) {
+        print('[RecordingProvider] Live transcript: ${transcript.text}');
+      },
+    );
+
+    // Update state
+    state = state.copyWith(
+      liveInsightsEnabled: true,
+      liveInsightsSessionId: _liveInsightsService!.sessionId,
+    );
+
+    // Start audio chunking timer (send audio every 10 seconds)
+    _startAudioChunking();
+  }
+
+  // Start periodic audio chunking for live insights
+  void _startAudioChunking() {
+    _audioChunkTimer?.cancel();
+
+    _audioChunkTimer = Timer.periodic(const Duration(seconds: 10), (_) async {
+      if (state.state == RecordingState.recording && state.liveInsightsEnabled) {
+        await _sendAudioChunk();
+      }
+    });
+  }
+
+  // Send audio chunk to live insights WebSocket
+  Future<void> _sendAudioChunk() async {
+    if (_liveInsightsService == null || !_liveInsightsService!.isConnected) {
+      return;
+    }
+
+    try {
+      // Note: This is a simplified implementation
+      // In a real implementation, you would need to:
+      // 1. Buffer the last 10 seconds of audio from the recording
+      // 2. Convert it to base64
+      // 3. Send it via WebSocket
+
+      // For now, we'll use a placeholder
+      // TODO: Implement actual audio buffering and chunking
+
+      print('[RecordingProvider] Would send audio chunk here');
+
+      // Example of what the real implementation would look like:
+      // final audioData = await _getLastAudioChunk();
+      // if (audioData != null) {
+      //   final base64Audio = base64Encode(audioData);
+      //   await _liveInsightsService!.sendAudioChunk(
+      //     audioData: base64Audio,
+      //     duration: 10.0,
+      //     speaker: null,
+      //   );
+      // }
+    } catch (e) {
+      print('[RecordingProvider] Error sending audio chunk: $e');
+    }
+  }
+
+  // Stop live insights session
+  Future<void> _stopLiveInsights() async {
+    _audioChunkTimer?.cancel();
+    _liveInsightsSubscription?.cancel();
+    _liveTranscriptsSubscription?.cancel();
+
+    if (_liveInsightsService != null) {
+      try {
+        await _liveInsightsService!.endSession();
+        await _liveInsightsService!.disconnect();
+      } catch (e) {
+        print('[RecordingProvider] Error stopping live insights: $e');
+      }
+      _liveInsightsService = null;
+    }
+
+    state = state.copyWith(
+      liveInsightsEnabled: false,
+      liveInsightsSessionId: null,
+    );
+  }
+
   // Clean up subscriptions
   void disposeSubscriptions() {
     _amplitudeSubscription?.cancel();
     _durationSubscription?.cancel();
     _stateSubscription?.cancel();
     _warningSubscription?.cancel();
+    _audioChunkTimer?.cancel();
+    _liveInsightsSubscription?.cancel();
+    _liveTranscriptsSubscription?.cancel();
+    _liveInsightsService?.dispose();
   }
 }
