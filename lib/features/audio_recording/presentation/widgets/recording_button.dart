@@ -9,13 +9,17 @@ class RecordingButton extends ConsumerWidget {
   final String? meetingTitle;
   final Function(String? contentId)? onRecordingComplete;  // Updated to pass contentId
   final String? language;
-  
+  final bool enableLiveInsights;
+  final String? authToken;
+
   const RecordingButton({
     super.key,
     required this.projectId,
     this.meetingTitle,
     this.onRecordingComplete,
     this.language,
+    this.enableLiveInsights = false,
+    this.authToken,
   });
   
   @override
@@ -231,6 +235,8 @@ class RecordingButton extends ConsumerWidget {
       notifier.startRecording(
         projectId: projectId,
         meetingTitle: meetingTitle,
+        enableLiveInsights: enableLiveInsights,
+        authToken: authToken,
       );
     } else if (state.state == RecordingState.recording ||
                state.state == RecordingState.paused) {
