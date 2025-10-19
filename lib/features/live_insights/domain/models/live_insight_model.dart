@@ -42,7 +42,8 @@ class LiveInsightModel with _$LiveInsightModel {
     // Support both API formats: 'id' from REST API, 'insight_id' from WebSocket
     @JsonKey(name: 'id', defaultValue: '') String? id,
     @JsonKey(name: 'insight_id') String? insightId,
-    @JsonKey(name: 'insight_type') required LiveInsightType type,
+    // Accept both 'type' (WebSocket) and 'insight_type' (REST API)
+    @JsonKey(name: 'type') required LiveInsightType type,
     required LiveInsightPriority priority,
     required String content,
     @Default('') String context,

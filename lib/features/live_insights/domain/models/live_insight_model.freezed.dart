@@ -25,8 +25,8 @@ mixin _$LiveInsightModel {
   @JsonKey(name: 'id', defaultValue: '')
   String? get id => throw _privateConstructorUsedError;
   @JsonKey(name: 'insight_id')
-  String? get insightId => throw _privateConstructorUsedError;
-  @JsonKey(name: 'insight_type')
+  String? get insightId => throw _privateConstructorUsedError; // Accept both 'type' (WebSocket) and 'insight_type' (REST API)
+  @JsonKey(name: 'type')
   LiveInsightType get type => throw _privateConstructorUsedError;
   LiveInsightPriority get priority => throw _privateConstructorUsedError;
   String get content => throw _privateConstructorUsedError;
@@ -69,7 +69,7 @@ abstract class $LiveInsightModelCopyWith<$Res> {
   $Res call({
     @JsonKey(name: 'id', defaultValue: '') String? id,
     @JsonKey(name: 'insight_id') String? insightId,
-    @JsonKey(name: 'insight_type') LiveInsightType type,
+    @JsonKey(name: 'type') LiveInsightType type,
     LiveInsightPriority priority,
     String content,
     String context,
@@ -208,7 +208,7 @@ abstract class _$$LiveInsightModelImplCopyWith<$Res>
   $Res call({
     @JsonKey(name: 'id', defaultValue: '') String? id,
     @JsonKey(name: 'insight_id') String? insightId,
-    @JsonKey(name: 'insight_type') LiveInsightType type,
+    @JsonKey(name: 'type') LiveInsightType type,
     LiveInsightPriority priority,
     String content,
     String context,
@@ -339,7 +339,7 @@ class _$LiveInsightModelImpl implements _LiveInsightModel {
   const _$LiveInsightModelImpl({
     @JsonKey(name: 'id', defaultValue: '') this.id,
     @JsonKey(name: 'insight_id') this.insightId,
-    @JsonKey(name: 'insight_type') required this.type,
+    @JsonKey(name: 'type') required this.type,
     required this.priority,
     required this.content,
     this.context = '',
@@ -368,8 +368,9 @@ class _$LiveInsightModelImpl implements _LiveInsightModel {
   @override
   @JsonKey(name: 'insight_id')
   final String? insightId;
+  // Accept both 'type' (WebSocket) and 'insight_type' (REST API)
   @override
-  @JsonKey(name: 'insight_type')
+  @JsonKey(name: 'type')
   final LiveInsightType type;
   @override
   final LiveInsightPriority priority;
@@ -525,7 +526,7 @@ abstract class _LiveInsightModel implements LiveInsightModel {
   const factory _LiveInsightModel({
     @JsonKey(name: 'id', defaultValue: '') final String? id,
     @JsonKey(name: 'insight_id') final String? insightId,
-    @JsonKey(name: 'insight_type') required final LiveInsightType type,
+    @JsonKey(name: 'type') required final LiveInsightType type,
     required final LiveInsightPriority priority,
     required final String content,
     final String context,
@@ -551,9 +552,9 @@ abstract class _LiveInsightModel implements LiveInsightModel {
   String? get id;
   @override
   @JsonKey(name: 'insight_id')
-  String? get insightId;
+  String? get insightId; // Accept both 'type' (WebSocket) and 'insight_type' (REST API)
   @override
-  @JsonKey(name: 'insight_type')
+  @JsonKey(name: 'type')
   LiveInsightType get type;
   @override
   LiveInsightPriority get priority;

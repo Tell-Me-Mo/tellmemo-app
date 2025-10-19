@@ -11,7 +11,7 @@ _$LiveInsightModelImpl _$$LiveInsightModelImplFromJson(
 ) => _$LiveInsightModelImpl(
   id: json['id'] as String? ?? '',
   insightId: json['insight_id'] as String?,
-  type: $enumDecode(_$LiveInsightTypeEnumMap, json['insight_type']),
+  type: $enumDecode(_$LiveInsightTypeEnumMap, json['type']),
   priority: $enumDecode(_$LiveInsightPriorityEnumMap, json['priority']),
   content: json['content'] as String,
   context: json['context'] as String? ?? '',
@@ -41,7 +41,7 @@ Map<String, dynamic> _$$LiveInsightModelImplToJson(
 ) => <String, dynamic>{
   'id': instance.id,
   'insight_id': instance.insightId,
-  'insight_type': _$LiveInsightTypeEnumMap[instance.type]!,
+  'type': _$LiveInsightTypeEnumMap[instance.type]!,
   'priority': _$LiveInsightPriorityEnumMap[instance.priority]!,
   'content': instance.content,
   'context': instance.context,
