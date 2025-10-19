@@ -142,11 +142,6 @@ class LiveInsightsConnectionManager:
     ) -> LiveMeetingSession:
         """Create a new live meeting session."""
 
-        # Verify project access
-        project = await db.get(Project, project_id)
-        if not project or project.organization_id != organization_id:
-            raise HTTPException(status_code=404, detail="Project not found")
-
         # Generate session ID
         session_id = f"live_{project_id}_{user_id}_{int(time.time())}"
 
@@ -158,9 +153,6 @@ class LiveInsightsConnectionManager:
             user_id=user_id,
             websocket=websocket
         )
-
-        # Accept WebSocket connection
-        await websocket.accept()
 
         # Store session
         self.active_sessions[session_id] = session
@@ -323,6 +315,9 @@ async def websocket_live_insights(
     settings = get_settings()
 
     try:
+        # Accept WebSocket connection FIRST
+        await websocket.accept()
+
         # Authenticate user
         try:
             current_user = await get_current_user_ws(websocket, db=db)
@@ -365,7 +360,7 @@ async def websocket_live_insights(
             await websocket.close(code=1008, reason="First message must be 'init'")
             return
 
-        # Create session
+        # Create session (this will send session_initialized message)
         session = await live_insights_manager.create_session(
             project_id=project_id,
             organization_id=organization_id,
@@ -476,7 +471,7 @@ async def handle_audio_chunk(
 
             # Get Replicate transcription service
             settings = get_settings()
-            replicate_service = get_replicate_service(api_key=settings.REPLICATE_API_KEY)
+            replicate_service = get_replicate_service(api_key=settings.replicate_api_key)
 
             # Transcribe audio
             transcription_result = await replicate_service.transcribe_audio_file(

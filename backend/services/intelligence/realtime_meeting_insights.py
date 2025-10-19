@@ -295,7 +295,7 @@ class RealtimeMeetingInsightsService:
             # Call LLM for insight extraction
             response = await self.llm_client.create_message(
                 prompt=prompt,
-                model="claude-haiku-4.5",  # Fast model for real-time processing
+                model="claude-3-5-haiku-20241022",  # Fast model for real-time processing
                 max_tokens=2000,
                 temperature=0.1,  # Low temperature for consistent extraction
                 system="You are an expert meeting analyst extracting actionable insights in real-time."
@@ -375,11 +375,11 @@ class RealtimeMeetingInsightsService:
             embedding = await embedding_service.generate_embedding(current_text)
 
             # Search in Qdrant
-            results = await multi_tenant_vector_store.search(
+            results = await multi_tenant_vector_store.search_vectors(
                 organization_id=organization_id,
-                query_embedding=embedding,
+                query_vector=embedding,
                 limit=self.past_meeting_search_limit,
-                filter_conditions={
+                filter_dict={
                     'project_id': project_id
                 }
             )
@@ -390,10 +390,11 @@ class RealtimeMeetingInsightsService:
             # Format results
             related = []
             for result in results:
+                payload = result.get('payload', {})
                 related.append({
-                    'content_id': result.get('content_id'),
-                    'title': result.get('metadata', {}).get('title', 'Untitled'),
-                    'snippet': result.get('content', '')[:200],
+                    'content_id': payload.get('content_id', result.get('id')),
+                    'title': payload.get('title', 'Untitled'),
+                    'snippet': payload.get('content', payload.get('text', ''))[:200],
                     'similarity_score': result.get('score', 0.0)
                 })
 
