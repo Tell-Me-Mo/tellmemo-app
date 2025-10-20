@@ -29,7 +29,7 @@ Map<String, dynamic> _$$AnswerSourceImplToJson(_$AnswerSourceImpl instance) =>
 _$AutoAnswerAssistanceImpl _$$AutoAnswerAssistanceImplFromJson(
   Map<String, dynamic> json,
 ) => _$AutoAnswerAssistanceImpl(
-  insightId: json['insightId'] as String,
+  insightId: json['insight_id'] as String,
   question: json['question'] as String,
   answer: json['answer'] as String,
   confidence: (json['confidence'] as num).toDouble(),
@@ -43,11 +43,37 @@ _$AutoAnswerAssistanceImpl _$$AutoAnswerAssistanceImplFromJson(
 Map<String, dynamic> _$$AutoAnswerAssistanceImplToJson(
   _$AutoAnswerAssistanceImpl instance,
 ) => <String, dynamic>{
-  'insightId': instance.insightId,
+  'insight_id': instance.insightId,
   'question': instance.question,
   'answer': instance.answer,
   'confidence': instance.confidence,
   'sources': instance.sources,
+  'reasoning': instance.reasoning,
+  'timestamp': instance.timestamp.toIso8601String(),
+};
+
+_$ClarificationAssistanceImpl _$$ClarificationAssistanceImplFromJson(
+  Map<String, dynamic> json,
+) => _$ClarificationAssistanceImpl(
+  insightId: json['insight_id'] as String,
+  statement: json['statement'] as String,
+  vaguenessType: json['vagueness_type'] as String,
+  suggestedQuestions: (json['suggested_questions'] as List<dynamic>)
+      .map((e) => e as String)
+      .toList(),
+  confidence: (json['confidence'] as num).toDouble(),
+  reasoning: json['reasoning'] as String,
+  timestamp: DateTime.parse(json['timestamp'] as String),
+);
+
+Map<String, dynamic> _$$ClarificationAssistanceImplToJson(
+  _$ClarificationAssistanceImpl instance,
+) => <String, dynamic>{
+  'insight_id': instance.insightId,
+  'statement': instance.statement,
+  'vagueness_type': instance.vaguenessType,
+  'suggested_questions': instance.suggestedQuestions,
+  'confidence': instance.confidence,
   'reasoning': instance.reasoning,
   'timestamp': instance.timestamp.toIso8601String(),
 };
