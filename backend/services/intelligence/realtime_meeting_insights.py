@@ -39,6 +39,7 @@ from config import get_settings
 from utils.logger import get_logger, sanitize_for_log
 from services.intelligence.question_detector import QuestionDetector
 from services.intelligence.question_answering_service import QuestionAnsweringService
+from services.intelligence.clarification_service import ClarificationService
 
 logger = get_logger(__name__)
 
@@ -177,7 +178,8 @@ class RealtimeMeetingInsightsService:
         self.last_semantic_search: Dict[str, float] = {}
         self.semantic_search_interval = 30.0  # seconds
 
-        # Active Intelligence services (Phase 1: Question Auto-Answering)
+        # Active Intelligence services
+        # Phase 1: Question Auto-Answering
         self.question_detector = QuestionDetector(llm_client=self.llm_client)
         self.qa_service = QuestionAnsweringService(
             vector_store=multi_tenant_vector_store,
@@ -185,6 +187,8 @@ class RealtimeMeetingInsightsService:
             embedding_service=embedding_service,
             min_confidence_threshold=0.7
         )
+        # Phase 2: Proactive Clarification
+        self.clarification_service = ClarificationService(llm_client=self.llm_client)
 
     async def process_transcript_chunk(
         self,
@@ -625,10 +629,12 @@ class RealtimeMeetingInsightsService:
         context: str
     ) -> List[Dict[str, Any]]:
         """
-        Process insights to provide proactive assistance (Phase 1: Question Auto-Answering).
+        Process insights to provide proactive assistance.
 
-        Checks if any insights are questions and attempts to answer them automatically
-        using RAG.
+        Phase 1: Question Auto-Answering - Checks if any insights are questions and
+                 attempts to answer them automatically using RAG.
+        Phase 2: Proactive Clarification - Detects vague statements in action items
+                 and decisions, suggesting clarifying questions.
 
         Args:
             session_id: Current session ID
@@ -692,8 +698,32 @@ class RealtimeMeetingInsightsService:
                                 f"'{detected_question.text[:50]}...' (confidence: {answer.confidence:.2f})"
                             )
 
+                # Phase 2: Clarification suggestions for vague statements
+                if insight.type in [InsightType.ACTION_ITEM, InsightType.DECISION]:
+                    clarification = await self.clarification_service.detect_vagueness(
+                        statement=insight.content,
+                        context=context
+                    )
+
+                    if clarification and clarification.confidence >= 0.7:
+                        proactive_responses.append({
+                            'type': 'clarification_needed',
+                            'insight_id': insight.insight_id,
+                            'statement': clarification.statement,
+                            'vagueness_type': clarification.vagueness_type,
+                            'suggested_questions': clarification.suggested_questions,
+                            'confidence': clarification.confidence,
+                            'reasoning': clarification.reasoning,
+                            'timestamp': datetime.now().isoformat()
+                        })
+
+                        logger.info(
+                            f"Detected vague statement ({clarification.vagueness_type}) for session "
+                            f"{sanitize_for_log(session_id)}: '{clarification.statement[:50]}...' "
+                            f"(confidence: {clarification.confidence:.2f})"
+                        )
+
                 # Future phases can add more assistance types here:
-                # - Clarification suggestions (Phase 2)
                 # - Conflict detection (Phase 3)
                 # - Action item quality checks (Phase 4)
 

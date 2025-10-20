@@ -295,6 +295,7 @@ AutoAnswerAssistance _$AutoAnswerAssistanceFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$AutoAnswerAssistance {
+  @JsonKey(name: 'insight_id')
   String get insightId => throw _privateConstructorUsedError;
   String get question => throw _privateConstructorUsedError;
   String get answer => throw _privateConstructorUsedError;
@@ -321,7 +322,7 @@ abstract class $AutoAnswerAssistanceCopyWith<$Res> {
   ) = _$AutoAnswerAssistanceCopyWithImpl<$Res, AutoAnswerAssistance>;
   @useResult
   $Res call({
-    String insightId,
+    @JsonKey(name: 'insight_id') String insightId,
     String question,
     String answer,
     double confidence,
@@ -403,7 +404,7 @@ abstract class _$$AutoAnswerAssistanceImplCopyWith<$Res>
   @override
   @useResult
   $Res call({
-    String insightId,
+    @JsonKey(name: 'insight_id') String insightId,
     String question,
     String answer,
     double confidence,
@@ -474,7 +475,7 @@ class __$$AutoAnswerAssistanceImplCopyWithImpl<$Res>
 @JsonSerializable()
 class _$AutoAnswerAssistanceImpl implements _AutoAnswerAssistance {
   const _$AutoAnswerAssistanceImpl({
-    required this.insightId,
+    @JsonKey(name: 'insight_id') required this.insightId,
     required this.question,
     required this.answer,
     required this.confidence,
@@ -487,6 +488,7 @@ class _$AutoAnswerAssistanceImpl implements _AutoAnswerAssistance {
       _$$AutoAnswerAssistanceImplFromJson(json);
 
   @override
+  @JsonKey(name: 'insight_id')
   final String insightId;
   @override
   final String question;
@@ -564,7 +566,7 @@ class _$AutoAnswerAssistanceImpl implements _AutoAnswerAssistance {
 
 abstract class _AutoAnswerAssistance implements AutoAnswerAssistance {
   const factory _AutoAnswerAssistance({
-    required final String insightId,
+    @JsonKey(name: 'insight_id') required final String insightId,
     required final String question,
     required final String answer,
     required final double confidence,
@@ -577,6 +579,7 @@ abstract class _AutoAnswerAssistance implements AutoAnswerAssistance {
       _$AutoAnswerAssistanceImpl.fromJson;
 
   @override
+  @JsonKey(name: 'insight_id')
   String get insightId;
   @override
   String get question;
@@ -599,10 +602,345 @@ abstract class _AutoAnswerAssistance implements AutoAnswerAssistance {
   get copyWith => throw _privateConstructorUsedError;
 }
 
+ClarificationAssistance _$ClarificationAssistanceFromJson(
+  Map<String, dynamic> json,
+) {
+  return _ClarificationAssistance.fromJson(json);
+}
+
+/// @nodoc
+mixin _$ClarificationAssistance {
+  @JsonKey(name: 'insight_id')
+  String get insightId => throw _privateConstructorUsedError;
+  String get statement => throw _privateConstructorUsedError;
+  @JsonKey(name: 'vagueness_type')
+  String get vaguenessType => throw _privateConstructorUsedError; // 'time', 'assignment', 'detail', 'scope'
+  @JsonKey(name: 'suggested_questions')
+  List<String> get suggestedQuestions => throw _privateConstructorUsedError;
+  double get confidence => throw _privateConstructorUsedError;
+  String get reasoning => throw _privateConstructorUsedError;
+  DateTime get timestamp => throw _privateConstructorUsedError;
+
+  /// Serializes this ClarificationAssistance to a JSON map.
+  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
+
+  /// Create a copy of ClarificationAssistance
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $ClarificationAssistanceCopyWith<ClarificationAssistance> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $ClarificationAssistanceCopyWith<$Res> {
+  factory $ClarificationAssistanceCopyWith(
+    ClarificationAssistance value,
+    $Res Function(ClarificationAssistance) then,
+  ) = _$ClarificationAssistanceCopyWithImpl<$Res, ClarificationAssistance>;
+  @useResult
+  $Res call({
+    @JsonKey(name: 'insight_id') String insightId,
+    String statement,
+    @JsonKey(name: 'vagueness_type') String vaguenessType,
+    @JsonKey(name: 'suggested_questions') List<String> suggestedQuestions,
+    double confidence,
+    String reasoning,
+    DateTime timestamp,
+  });
+}
+
+/// @nodoc
+class _$ClarificationAssistanceCopyWithImpl<
+  $Res,
+  $Val extends ClarificationAssistance
+>
+    implements $ClarificationAssistanceCopyWith<$Res> {
+  _$ClarificationAssistanceCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of ClarificationAssistance
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? insightId = null,
+    Object? statement = null,
+    Object? vaguenessType = null,
+    Object? suggestedQuestions = null,
+    Object? confidence = null,
+    Object? reasoning = null,
+    Object? timestamp = null,
+  }) {
+    return _then(
+      _value.copyWith(
+            insightId: null == insightId
+                ? _value.insightId
+                : insightId // ignore: cast_nullable_to_non_nullable
+                      as String,
+            statement: null == statement
+                ? _value.statement
+                : statement // ignore: cast_nullable_to_non_nullable
+                      as String,
+            vaguenessType: null == vaguenessType
+                ? _value.vaguenessType
+                : vaguenessType // ignore: cast_nullable_to_non_nullable
+                      as String,
+            suggestedQuestions: null == suggestedQuestions
+                ? _value.suggestedQuestions
+                : suggestedQuestions // ignore: cast_nullable_to_non_nullable
+                      as List<String>,
+            confidence: null == confidence
+                ? _value.confidence
+                : confidence // ignore: cast_nullable_to_non_nullable
+                      as double,
+            reasoning: null == reasoning
+                ? _value.reasoning
+                : reasoning // ignore: cast_nullable_to_non_nullable
+                      as String,
+            timestamp: null == timestamp
+                ? _value.timestamp
+                : timestamp // ignore: cast_nullable_to_non_nullable
+                      as DateTime,
+          )
+          as $Val,
+    );
+  }
+}
+
+/// @nodoc
+abstract class _$$ClarificationAssistanceImplCopyWith<$Res>
+    implements $ClarificationAssistanceCopyWith<$Res> {
+  factory _$$ClarificationAssistanceImplCopyWith(
+    _$ClarificationAssistanceImpl value,
+    $Res Function(_$ClarificationAssistanceImpl) then,
+  ) = __$$ClarificationAssistanceImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({
+    @JsonKey(name: 'insight_id') String insightId,
+    String statement,
+    @JsonKey(name: 'vagueness_type') String vaguenessType,
+    @JsonKey(name: 'suggested_questions') List<String> suggestedQuestions,
+    double confidence,
+    String reasoning,
+    DateTime timestamp,
+  });
+}
+
+/// @nodoc
+class __$$ClarificationAssistanceImplCopyWithImpl<$Res>
+    extends
+        _$ClarificationAssistanceCopyWithImpl<
+          $Res,
+          _$ClarificationAssistanceImpl
+        >
+    implements _$$ClarificationAssistanceImplCopyWith<$Res> {
+  __$$ClarificationAssistanceImplCopyWithImpl(
+    _$ClarificationAssistanceImpl _value,
+    $Res Function(_$ClarificationAssistanceImpl) _then,
+  ) : super(_value, _then);
+
+  /// Create a copy of ClarificationAssistance
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? insightId = null,
+    Object? statement = null,
+    Object? vaguenessType = null,
+    Object? suggestedQuestions = null,
+    Object? confidence = null,
+    Object? reasoning = null,
+    Object? timestamp = null,
+  }) {
+    return _then(
+      _$ClarificationAssistanceImpl(
+        insightId: null == insightId
+            ? _value.insightId
+            : insightId // ignore: cast_nullable_to_non_nullable
+                  as String,
+        statement: null == statement
+            ? _value.statement
+            : statement // ignore: cast_nullable_to_non_nullable
+                  as String,
+        vaguenessType: null == vaguenessType
+            ? _value.vaguenessType
+            : vaguenessType // ignore: cast_nullable_to_non_nullable
+                  as String,
+        suggestedQuestions: null == suggestedQuestions
+            ? _value._suggestedQuestions
+            : suggestedQuestions // ignore: cast_nullable_to_non_nullable
+                  as List<String>,
+        confidence: null == confidence
+            ? _value.confidence
+            : confidence // ignore: cast_nullable_to_non_nullable
+                  as double,
+        reasoning: null == reasoning
+            ? _value.reasoning
+            : reasoning // ignore: cast_nullable_to_non_nullable
+                  as String,
+        timestamp: null == timestamp
+            ? _value.timestamp
+            : timestamp // ignore: cast_nullable_to_non_nullable
+                  as DateTime,
+      ),
+    );
+  }
+}
+
+/// @nodoc
+@JsonSerializable()
+class _$ClarificationAssistanceImpl implements _ClarificationAssistance {
+  const _$ClarificationAssistanceImpl({
+    @JsonKey(name: 'insight_id') required this.insightId,
+    required this.statement,
+    @JsonKey(name: 'vagueness_type') required this.vaguenessType,
+    @JsonKey(name: 'suggested_questions')
+    required final List<String> suggestedQuestions,
+    required this.confidence,
+    required this.reasoning,
+    required this.timestamp,
+  }) : _suggestedQuestions = suggestedQuestions;
+
+  factory _$ClarificationAssistanceImpl.fromJson(Map<String, dynamic> json) =>
+      _$$ClarificationAssistanceImplFromJson(json);
+
+  @override
+  @JsonKey(name: 'insight_id')
+  final String insightId;
+  @override
+  final String statement;
+  @override
+  @JsonKey(name: 'vagueness_type')
+  final String vaguenessType;
+  // 'time', 'assignment', 'detail', 'scope'
+  final List<String> _suggestedQuestions;
+  // 'time', 'assignment', 'detail', 'scope'
+  @override
+  @JsonKey(name: 'suggested_questions')
+  List<String> get suggestedQuestions {
+    if (_suggestedQuestions is EqualUnmodifiableListView)
+      return _suggestedQuestions;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_suggestedQuestions);
+  }
+
+  @override
+  final double confidence;
+  @override
+  final String reasoning;
+  @override
+  final DateTime timestamp;
+
+  @override
+  String toString() {
+    return 'ClarificationAssistance(insightId: $insightId, statement: $statement, vaguenessType: $vaguenessType, suggestedQuestions: $suggestedQuestions, confidence: $confidence, reasoning: $reasoning, timestamp: $timestamp)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$ClarificationAssistanceImpl &&
+            (identical(other.insightId, insightId) ||
+                other.insightId == insightId) &&
+            (identical(other.statement, statement) ||
+                other.statement == statement) &&
+            (identical(other.vaguenessType, vaguenessType) ||
+                other.vaguenessType == vaguenessType) &&
+            const DeepCollectionEquality().equals(
+              other._suggestedQuestions,
+              _suggestedQuestions,
+            ) &&
+            (identical(other.confidence, confidence) ||
+                other.confidence == confidence) &&
+            (identical(other.reasoning, reasoning) ||
+                other.reasoning == reasoning) &&
+            (identical(other.timestamp, timestamp) ||
+                other.timestamp == timestamp));
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  int get hashCode => Object.hash(
+    runtimeType,
+    insightId,
+    statement,
+    vaguenessType,
+    const DeepCollectionEquality().hash(_suggestedQuestions),
+    confidence,
+    reasoning,
+    timestamp,
+  );
+
+  /// Create a copy of ClarificationAssistance
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$ClarificationAssistanceImplCopyWith<_$ClarificationAssistanceImpl>
+  get copyWith =>
+      __$$ClarificationAssistanceImplCopyWithImpl<
+        _$ClarificationAssistanceImpl
+      >(this, _$identity);
+
+  @override
+  Map<String, dynamic> toJson() {
+    return _$$ClarificationAssistanceImplToJson(this);
+  }
+}
+
+abstract class _ClarificationAssistance implements ClarificationAssistance {
+  const factory _ClarificationAssistance({
+    @JsonKey(name: 'insight_id') required final String insightId,
+    required final String statement,
+    @JsonKey(name: 'vagueness_type') required final String vaguenessType,
+    @JsonKey(name: 'suggested_questions')
+    required final List<String> suggestedQuestions,
+    required final double confidence,
+    required final String reasoning,
+    required final DateTime timestamp,
+  }) = _$ClarificationAssistanceImpl;
+
+  factory _ClarificationAssistance.fromJson(Map<String, dynamic> json) =
+      _$ClarificationAssistanceImpl.fromJson;
+
+  @override
+  @JsonKey(name: 'insight_id')
+  String get insightId;
+  @override
+  String get statement;
+  @override
+  @JsonKey(name: 'vagueness_type')
+  String get vaguenessType; // 'time', 'assignment', 'detail', 'scope'
+  @override
+  @JsonKey(name: 'suggested_questions')
+  List<String> get suggestedQuestions;
+  @override
+  double get confidence;
+  @override
+  String get reasoning;
+  @override
+  DateTime get timestamp;
+
+  /// Create a copy of ClarificationAssistance
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$ClarificationAssistanceImplCopyWith<_$ClarificationAssistanceImpl>
+  get copyWith => throw _privateConstructorUsedError;
+}
+
 /// @nodoc
 mixin _$ProactiveAssistanceModel {
   ProactiveAssistanceType get type => throw _privateConstructorUsedError;
   AutoAnswerAssistance? get autoAnswer => throw _privateConstructorUsedError;
+  ClarificationAssistance? get clarification =>
+      throw _privateConstructorUsedError;
 
   /// Create a copy of ProactiveAssistanceModel
   /// with the given fields replaced by the non-null parameter values.
@@ -618,9 +956,14 @@ abstract class $ProactiveAssistanceModelCopyWith<$Res> {
     $Res Function(ProactiveAssistanceModel) then,
   ) = _$ProactiveAssistanceModelCopyWithImpl<$Res, ProactiveAssistanceModel>;
   @useResult
-  $Res call({ProactiveAssistanceType type, AutoAnswerAssistance? autoAnswer});
+  $Res call({
+    ProactiveAssistanceType type,
+    AutoAnswerAssistance? autoAnswer,
+    ClarificationAssistance? clarification,
+  });
 
   $AutoAnswerAssistanceCopyWith<$Res>? get autoAnswer;
+  $ClarificationAssistanceCopyWith<$Res>? get clarification;
 }
 
 /// @nodoc
@@ -640,7 +983,11 @@ class _$ProactiveAssistanceModelCopyWithImpl<
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
-  $Res call({Object? type = null, Object? autoAnswer = freezed}) {
+  $Res call({
+    Object? type = null,
+    Object? autoAnswer = freezed,
+    Object? clarification = freezed,
+  }) {
     return _then(
       _value.copyWith(
             type: null == type
@@ -651,6 +998,10 @@ class _$ProactiveAssistanceModelCopyWithImpl<
                 ? _value.autoAnswer
                 : autoAnswer // ignore: cast_nullable_to_non_nullable
                       as AutoAnswerAssistance?,
+            clarification: freezed == clarification
+                ? _value.clarification
+                : clarification // ignore: cast_nullable_to_non_nullable
+                      as ClarificationAssistance?,
           )
           as $Val,
     );
@@ -669,6 +1020,22 @@ class _$ProactiveAssistanceModelCopyWithImpl<
       return _then(_value.copyWith(autoAnswer: value) as $Val);
     });
   }
+
+  /// Create a copy of ProactiveAssistanceModel
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $ClarificationAssistanceCopyWith<$Res>? get clarification {
+    if (_value.clarification == null) {
+      return null;
+    }
+
+    return $ClarificationAssistanceCopyWith<$Res>(_value.clarification!, (
+      value,
+    ) {
+      return _then(_value.copyWith(clarification: value) as $Val);
+    });
+  }
 }
 
 /// @nodoc
@@ -680,10 +1047,16 @@ abstract class _$$ProactiveAssistanceModelImplCopyWith<$Res>
   ) = __$$ProactiveAssistanceModelImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({ProactiveAssistanceType type, AutoAnswerAssistance? autoAnswer});
+  $Res call({
+    ProactiveAssistanceType type,
+    AutoAnswerAssistance? autoAnswer,
+    ClarificationAssistance? clarification,
+  });
 
   @override
   $AutoAnswerAssistanceCopyWith<$Res>? get autoAnswer;
+  @override
+  $ClarificationAssistanceCopyWith<$Res>? get clarification;
 }
 
 /// @nodoc
@@ -703,7 +1076,11 @@ class __$$ProactiveAssistanceModelImplCopyWithImpl<$Res>
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
-  $Res call({Object? type = null, Object? autoAnswer = freezed}) {
+  $Res call({
+    Object? type = null,
+    Object? autoAnswer = freezed,
+    Object? clarification = freezed,
+  }) {
     return _then(
       _$ProactiveAssistanceModelImpl(
         type: null == type
@@ -714,6 +1091,10 @@ class __$$ProactiveAssistanceModelImplCopyWithImpl<$Res>
             ? _value.autoAnswer
             : autoAnswer // ignore: cast_nullable_to_non_nullable
                   as AutoAnswerAssistance?,
+        clarification: freezed == clarification
+            ? _value.clarification
+            : clarification // ignore: cast_nullable_to_non_nullable
+                  as ClarificationAssistance?,
       ),
     );
   }
@@ -722,16 +1103,22 @@ class __$$ProactiveAssistanceModelImplCopyWithImpl<$Res>
 /// @nodoc
 
 class _$ProactiveAssistanceModelImpl implements _ProactiveAssistanceModel {
-  const _$ProactiveAssistanceModelImpl({required this.type, this.autoAnswer});
+  const _$ProactiveAssistanceModelImpl({
+    required this.type,
+    this.autoAnswer,
+    this.clarification,
+  });
 
   @override
   final ProactiveAssistanceType type;
   @override
   final AutoAnswerAssistance? autoAnswer;
+  @override
+  final ClarificationAssistance? clarification;
 
   @override
   String toString() {
-    return 'ProactiveAssistanceModel(type: $type, autoAnswer: $autoAnswer)';
+    return 'ProactiveAssistanceModel(type: $type, autoAnswer: $autoAnswer, clarification: $clarification)';
   }
 
   @override
@@ -741,11 +1128,13 @@ class _$ProactiveAssistanceModelImpl implements _ProactiveAssistanceModel {
             other is _$ProactiveAssistanceModelImpl &&
             (identical(other.type, type) || other.type == type) &&
             (identical(other.autoAnswer, autoAnswer) ||
-                other.autoAnswer == autoAnswer));
+                other.autoAnswer == autoAnswer) &&
+            (identical(other.clarification, clarification) ||
+                other.clarification == clarification));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, type, autoAnswer);
+  int get hashCode => Object.hash(runtimeType, type, autoAnswer, clarification);
 
   /// Create a copy of ProactiveAssistanceModel
   /// with the given fields replaced by the non-null parameter values.
@@ -763,12 +1152,15 @@ abstract class _ProactiveAssistanceModel implements ProactiveAssistanceModel {
   const factory _ProactiveAssistanceModel({
     required final ProactiveAssistanceType type,
     final AutoAnswerAssistance? autoAnswer,
+    final ClarificationAssistance? clarification,
   }) = _$ProactiveAssistanceModelImpl;
 
   @override
   ProactiveAssistanceType get type;
   @override
   AutoAnswerAssistance? get autoAnswer;
+  @override
+  ClarificationAssistance? get clarification;
 
   /// Create a copy of ProactiveAssistanceModel
   /// with the given fields replaced by the non-null parameter values.

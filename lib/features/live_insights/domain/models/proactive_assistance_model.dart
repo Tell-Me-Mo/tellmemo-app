@@ -37,7 +37,7 @@ class AnswerSource with _$AnswerSource {
 @freezed
 class AutoAnswerAssistance with _$AutoAnswerAssistance {
   const factory AutoAnswerAssistance({
-    required String insightId,
+    @JsonKey(name: 'insight_id') required String insightId,
     required String question,
     required String answer,
     required double confidence,
@@ -50,14 +50,31 @@ class AutoAnswerAssistance with _$AutoAnswerAssistance {
       _$AutoAnswerAssistanceFromJson(json);
 }
 
+/// Clarification suggestion for vague statements
+@freezed
+class ClarificationAssistance with _$ClarificationAssistance {
+  const factory ClarificationAssistance({
+    @JsonKey(name: 'insight_id') required String insightId,
+    required String statement,
+    @JsonKey(name: 'vagueness_type') required String vaguenessType, // 'time', 'assignment', 'detail', 'scope'
+    @JsonKey(name: 'suggested_questions') required List<String> suggestedQuestions,
+    required double confidence,
+    required String reasoning,
+    required DateTime timestamp,
+  }) = _ClarificationAssistance;
+
+  factory ClarificationAssistance.fromJson(Map<String, dynamic> json) =>
+      _$ClarificationAssistanceFromJson(json);
+}
+
 /// Main proactive assistance model
 @freezed
 class ProactiveAssistanceModel with _$ProactiveAssistanceModel {
   const factory ProactiveAssistanceModel({
     required ProactiveAssistanceType type,
     AutoAnswerAssistance? autoAnswer,
+    ClarificationAssistance? clarification,
     // Future phases:
-    // ClarificationAssistance? clarification,
     // ConflictAssistance? conflict,
     // ActionItemQualityAssistance? actionItemQuality,
   }) = _ProactiveAssistanceModel;
@@ -71,6 +88,11 @@ class ProactiveAssistanceModel with _$ProactiveAssistanceModel {
         return ProactiveAssistanceModel(
           type: assistanceType,
           autoAnswer: AutoAnswerAssistance.fromJson(json),
+        );
+      case ProactiveAssistanceType.clarificationNeeded:
+        return ProactiveAssistanceModel(
+          type: assistanceType,
+          clarification: ClarificationAssistance.fromJson(json),
         );
       // Future phases will add other types here
       default:
