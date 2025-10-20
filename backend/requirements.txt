@@ -11,7 +11,7 @@ websockets==15.0.1
 # Database
 asyncpg==0.30.0
 sqlalchemy[asyncio]==2.0.43
-alembic==1.16.5
+alembic==1.17.0
 
 # Cache & Job Queue
 redis[hiredis]==6.4.0
