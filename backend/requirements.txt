@@ -55,7 +55,7 @@ openai==2.1.0
 purgatory==3.0.1  # Circuit breaker for resilient API calls
 
 # Observability
-langfuse==3.6.1
+langfuse==3.7.0
 sentry-sdk[fastapi]==2.39.0
 
 # Authentication
