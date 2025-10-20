@@ -41,6 +41,7 @@ from services.intelligence.question_detector import QuestionDetector
 from services.intelligence.question_answering_service import QuestionAnsweringService
 from services.intelligence.clarification_service import ClarificationService
 from services.intelligence.conflict_detection_service import ConflictDetectionService
+from services.intelligence.action_item_quality_service import ActionItemQualityService
 
 logger = get_logger(__name__)
 
@@ -196,6 +197,8 @@ class RealtimeMeetingInsightsService:
             llm_client=self.llm_client,
             embedding_service=embedding_service
         )
+        # Phase 4: Action Item Quality Enhancement
+        self.quality_service = ActionItemQualityService(llm_client=self.llm_client)
 
     async def process_transcript_chunk(
         self,
@@ -644,6 +647,8 @@ class RealtimeMeetingInsightsService:
                  and decisions, suggesting clarifying questions.
         Phase 3: Real-Time Conflict Detection - Detects when current decisions conflict
                  with past decisions and alerts the team immediately.
+        Phase 4: Action Item Quality Enhancement - Checks action items for completeness
+                 (owner, deadline, clarity) and suggests improvements.
 
         Args:
             session_id: Current session ID
@@ -653,7 +658,7 @@ class RealtimeMeetingInsightsService:
             context: Full conversation context
 
         Returns:
-            List of proactive assistance items (auto-answers, clarifications, conflicts, etc.)
+            List of proactive assistance items (auto-answers, clarifications, conflicts, quality reports, etc.)
         """
         proactive_responses = []
 
@@ -765,9 +770,46 @@ class RealtimeMeetingInsightsService:
                             f"(confidence: {conflict.confidence:.2f})"
                         )
 
+                # Phase 4: Action Item Quality Enhancement
+                if insight.type == InsightType.ACTION_ITEM:
+                    quality_report = await self.quality_service.check_quality(
+                        action_item=insight.content,
+                        context=context
+                    )
+
+                    # Only suggest improvements if completeness score is below threshold
+                    if quality_report.completeness_score < 0.8 and len(quality_report.issues) > 0:
+                        # Convert QualityIssue objects to dicts
+                        issues_dict = [
+                            {
+                                'field': issue.field,
+                                'severity': issue.severity,
+                                'message': issue.message,
+                                'suggested_fix': issue.suggested_fix
+                            }
+                            for issue in quality_report.issues
+                        ]
+
+                        proactive_responses.append({
+                            'type': 'incomplete_action_item',
+                            'insight_id': insight.insight_id,
+                            'action_item': quality_report.action_item,
+                            'completeness_score': quality_report.completeness_score,
+                            'issues': issues_dict,
+                            'improved_version': quality_report.improved_version,
+                            'timestamp': datetime.now().isoformat()
+                        })
+
+                        logger.info(
+                            f"Detected incomplete action item for session "
+                            f"{sanitize_for_log(session_id)}: '{quality_report.action_item[:50]}...' "
+                            f"(completeness: {quality_report.completeness_score:.2f}, "
+                            f"issues: {len(quality_report.issues)})"
+                        )
+
                 # Future phases can add more assistance types here:
-                # - Action item quality checks (Phase 4)
                 # - Follow-up suggestions (Phase 5)
+                # - Meeting efficiency features (Phase 6)
 
         except Exception as e:
             logger.error(f"Error processing proactive assistance: {e}", exc_info=True)

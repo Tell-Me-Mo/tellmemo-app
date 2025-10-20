@@ -88,6 +88,36 @@ class ConflictAssistance with _$ConflictAssistance {
       _$ConflictAssistanceFromJson(json);
 }
 
+/// Quality issue found in an action item
+@freezed
+class QualityIssue with _$QualityIssue {
+  const factory QualityIssue({
+    required String field, // 'owner', 'deadline', 'description', 'success_criteria'
+    required String severity, // 'critical', 'important', 'suggestion'
+    required String message,
+    @JsonKey(name: 'suggested_fix') String? suggestedFix,
+  }) = _QualityIssue;
+
+  factory QualityIssue.fromJson(Map<String, dynamic> json) =>
+      _$QualityIssueFromJson(json);
+}
+
+/// Action item quality enhancement suggestion
+@freezed
+class ActionItemQualityAssistance with _$ActionItemQualityAssistance {
+  const factory ActionItemQualityAssistance({
+    @JsonKey(name: 'insight_id') required String insightId,
+    @JsonKey(name: 'action_item') required String actionItem,
+    @JsonKey(name: 'completeness_score') required double completenessScore,
+    required List<QualityIssue> issues,
+    @JsonKey(name: 'improved_version') String? improvedVersion,
+    required DateTime timestamp,
+  }) = _ActionItemQualityAssistance;
+
+  factory ActionItemQualityAssistance.fromJson(Map<String, dynamic> json) =>
+      _$ActionItemQualityAssistanceFromJson(json);
+}
+
 /// Main proactive assistance model
 @freezed
 class ProactiveAssistanceModel with _$ProactiveAssistanceModel {
@@ -96,8 +126,8 @@ class ProactiveAssistanceModel with _$ProactiveAssistanceModel {
     AutoAnswerAssistance? autoAnswer,
     ClarificationAssistance? clarification,
     ConflictAssistance? conflict,
+    ActionItemQualityAssistance? actionItemQuality,
     // Future phases:
-    // ActionItemQualityAssistance? actionItemQuality,
     // FollowUpSuggestionAssistance? followUpSuggestion,
   }) = _ProactiveAssistanceModel;
 
@@ -120,6 +150,11 @@ class ProactiveAssistanceModel with _$ProactiveAssistanceModel {
         return ProactiveAssistanceModel(
           type: assistanceType,
           conflict: ConflictAssistance.fromJson(json),
+        );
+      case ProactiveAssistanceType.incompleteActionItem:
+        return ProactiveAssistanceModel(
+          type: assistanceType,
+          actionItemQuality: ActionItemQualityAssistance.fromJson(json),
         );
       // Future phases will add other types here
       default:

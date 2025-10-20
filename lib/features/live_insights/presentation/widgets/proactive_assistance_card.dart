@@ -178,6 +178,8 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
         return _buildClarificationContent();
       case ProactiveAssistanceType.conflictDetected:
         return _buildConflictContent();
+      case ProactiveAssistanceType.incompleteActionItem:
+        return _buildActionItemQualityContent();
       default:
         return const SizedBox.shrink();
     }
@@ -680,6 +682,255 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
         ],
       ),
     );
+  }
+
+  Widget _buildActionItemQualityContent() {
+    final quality = widget.assistance.actionItemQuality;
+    if (quality == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Original action item
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.amber[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.amber[300]!),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.assignment, color: Colors.amber[700], size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Original Action Item',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.amber[900],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        quality.actionItem,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.amber[900],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Completeness score
+          Text(
+            'Completeness Score',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: LinearProgressIndicator(
+                  value: quality.completenessScore,
+                  backgroundColor: Colors.grey[300],
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    _getCompletenessColor(quality.completenessScore),
+                  ),
+                  minHeight: 8,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                '${(quality.completenessScore * 100).toInt()}%',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: _getCompletenessColor(quality.completenessScore),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _getCompletenessLabel(quality.completenessScore),
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Issues found
+          if (quality.issues.isNotEmpty) ...[
+            Text(
+              'Issues Found',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...quality.issues.map((issue) => _buildQualityIssueChip(issue)),
+          ],
+
+          // Improved version
+          if (quality.improvedVersion != null) ...[
+            const SizedBox(height: 16),
+            Text(
+              'Suggested Improvement',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green[300]!),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green[700], size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      quality.improvedVersion!,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.green[900],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQualityIssueChip(QualityIssue issue) {
+    IconData icon;
+    Color color;
+
+    switch (issue.severity.toLowerCase()) {
+      case 'critical':
+        icon = Icons.error;
+        color = Colors.red;
+        break;
+      case 'important':
+        icon = Icons.warning;
+        color = Colors.orange;
+        break;
+      default: // suggestion
+        icon = Icons.info;
+        color = Colors.blue;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 16, color: color),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '${_getFieldLabel(issue.field)}: ${issue.message}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (issue.suggestedFix != null) ...[
+              const SizedBox(height: 6),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.lightbulb_outline, size: 14, color: Colors.grey[600]),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      issue.suggestedFix!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _getCompletenessColor(double score) {
+    if (score >= 0.7) return Colors.green;
+    if (score >= 0.4) return Colors.orange;
+    return Colors.red;
+  }
+
+  String _getCompletenessLabel(double score) {
+    if (score >= 0.7) return 'Good';
+    if (score >= 0.4) return 'Fair';
+    return 'Poor';
+  }
+
+  String _getFieldLabel(String field) {
+    switch (field.toLowerCase()) {
+      case 'owner':
+        return 'Missing Owner';
+      case 'deadline':
+        return 'Missing Deadline';
+      case 'description':
+        return 'Vague Description';
+      case 'success_criteria':
+        return 'Success Criteria';
+      default:
+        return field;
+    }
   }
 
   Widget _buildSeverityBadge(String severity) {
