@@ -19,7 +19,7 @@ rq==2.6.0  # Redis Queue for background job processing (latest)
 rq-dashboard==0.8.5
 
 # Validation & Settings
-pydantic==2.11.10
+pydantic==2.12.3
 pydantic-settings==2.11.0
 email-validator==2.3.0
 python-dotenv==1.1.1
