@@ -118,6 +118,26 @@ class ActionItemQualityAssistance with _$ActionItemQualityAssistance {
       _$ActionItemQualityAssistanceFromJson(json);
 }
 
+/// Follow-up suggestion for related topics to discuss
+@freezed
+class FollowUpSuggestionAssistance with _$FollowUpSuggestionAssistance {
+  const factory FollowUpSuggestionAssistance({
+    @JsonKey(name: 'insight_id') required String insightId,
+    required String topic,
+    required String reason,
+    @JsonKey(name: 'related_content_id') required String relatedContentId,
+    @JsonKey(name: 'related_title') required String relatedTitle,
+    @JsonKey(name: 'related_date') required DateTime relatedDate,
+    required String urgency, // 'high', 'medium', 'low'
+    @JsonKey(name: 'context_snippet') required String contextSnippet,
+    required double confidence,
+    required DateTime timestamp,
+  }) = _FollowUpSuggestionAssistance;
+
+  factory FollowUpSuggestionAssistance.fromJson(Map<String, dynamic> json) =>
+      _$FollowUpSuggestionAssistanceFromJson(json);
+}
+
 /// Main proactive assistance model
 @freezed
 class ProactiveAssistanceModel with _$ProactiveAssistanceModel {
@@ -127,8 +147,7 @@ class ProactiveAssistanceModel with _$ProactiveAssistanceModel {
     ClarificationAssistance? clarification,
     ConflictAssistance? conflict,
     ActionItemQualityAssistance? actionItemQuality,
-    // Future phases:
-    // FollowUpSuggestionAssistance? followUpSuggestion,
+    FollowUpSuggestionAssistance? followUpSuggestion,
   }) = _ProactiveAssistanceModel;
 
   factory ProactiveAssistanceModel.fromJson(Map<String, dynamic> json) {
@@ -156,7 +175,11 @@ class ProactiveAssistanceModel with _$ProactiveAssistanceModel {
           type: assistanceType,
           actionItemQuality: ActionItemQualityAssistance.fromJson(json),
         );
-      // Future phases will add other types here
+      case ProactiveAssistanceType.followUpSuggestion:
+        return ProactiveAssistanceModel(
+          type: assistanceType,
+          followUpSuggestion: FollowUpSuggestionAssistance.fromJson(json),
+        );
       default:
         return ProactiveAssistanceModel(type: assistanceType);
     }

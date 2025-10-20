@@ -42,6 +42,7 @@ from services.intelligence.question_answering_service import QuestionAnsweringSe
 from services.intelligence.clarification_service import ClarificationService
 from services.intelligence.conflict_detection_service import ConflictDetectionService
 from services.intelligence.action_item_quality_service import ActionItemQualityService
+from services.intelligence.follow_up_suggestions_service import FollowUpSuggestionsService
 
 logger = get_logger(__name__)
 
@@ -199,6 +200,12 @@ class RealtimeMeetingInsightsService:
         )
         # Phase 4: Action Item Quality Enhancement
         self.quality_service = ActionItemQualityService(llm_client=self.llm_client)
+        # Phase 5: Follow-up Suggestions
+        self.follow_up_service = FollowUpSuggestionsService(
+            vector_store=multi_tenant_vector_store,
+            llm_client=self.llm_client,
+            embedding_service=embedding_service
+        )
 
     async def process_transcript_chunk(
         self,
@@ -649,6 +656,8 @@ class RealtimeMeetingInsightsService:
                  with past decisions and alerts the team immediately.
         Phase 4: Action Item Quality Enhancement - Checks action items for completeness
                  (owner, deadline, clarity) and suggests improvements.
+        Phase 5: Follow-up Suggestions - Suggests related topics to discuss based on
+                 current conversation (open items, past decisions with implications).
 
         Args:
             session_id: Current session ID
@@ -658,7 +667,7 @@ class RealtimeMeetingInsightsService:
             context: Full conversation context
 
         Returns:
-            List of proactive assistance items (auto-answers, clarifications, conflicts, quality reports, etc.)
+            List of proactive assistance items (auto-answers, clarifications, conflicts, quality reports, follow-ups, etc.)
         """
         proactive_responses = []
 
@@ -807,8 +816,39 @@ class RealtimeMeetingInsightsService:
                             f"issues: {len(quality_report.issues)})"
                         )
 
+                # Phase 5: Follow-up Suggestions
+                # Suggest follow-ups for decisions and key discussion points
+                if insight.type in [InsightType.DECISION, InsightType.KEY_POINT]:
+                    follow_up_suggestions = await self.follow_up_service.suggest_follow_ups(
+                        current_topic=insight.content,
+                        insight_type=insight.type.value,
+                        project_id=project_id,
+                        organization_id=organization_id,
+                        context=context
+                    )
+
+                    for suggestion in follow_up_suggestions:
+                        proactive_responses.append({
+                            'type': 'follow_up_suggestion',
+                            'insight_id': insight.insight_id,
+                            'topic': suggestion.topic,
+                            'reason': suggestion.reason,
+                            'related_content_id': suggestion.related_content_id,
+                            'related_title': suggestion.related_title,
+                            'related_date': suggestion.related_date.isoformat(),
+                            'urgency': suggestion.urgency,
+                            'context_snippet': suggestion.context_snippet,
+                            'confidence': suggestion.confidence,
+                            'timestamp': datetime.now().isoformat()
+                        })
+
+                        logger.info(
+                            f"Suggested follow-up ({suggestion.urgency}) for session "
+                            f"{sanitize_for_log(session_id)}: '{suggestion.topic}' "
+                            f"(confidence: {suggestion.confidence:.2f})"
+                        )
+
                 # Future phases can add more assistance types here:
-                # - Follow-up suggestions (Phase 5)
                 # - Meeting efficiency features (Phase 6)
 
         except Exception as e:
