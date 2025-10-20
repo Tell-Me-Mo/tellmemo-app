@@ -260,7 +260,16 @@ class LiveInsightsWebSocketService {
           break;
 
         case LiveInsightMessageType.sessionFinalized:
-          final finalResult = SessionFinalizedResult.fromJson(data);
+          // Backend sends nested structure:
+          // { type, session_id, insights: {...}, metrics: {...} }
+          // Extract the nested 'insights' object and merge with metrics at top level
+          final insightsData = data['insights'] as Map<String, dynamic>? ?? {};
+          final metricsData = data['metrics'] as Map<String, dynamic>? ?? {};
+          final flattenedData = {
+            ...insightsData,  // Contains: session_id, total_insights, insights_by_type, insights
+            'metrics': metricsData,
+          };
+          final finalResult = SessionFinalizedResult.fromJson(flattenedData);
           _sessionStateController.add('completed');
           debugPrint(
             '[LiveInsightsWS] Session finalized: ${finalResult.totalInsights} total insights',

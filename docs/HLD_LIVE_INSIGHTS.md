@@ -344,17 +344,38 @@ class LiveInsightsConnectionManager:
 
 **Purpose:** Capture real-time audio and emit 10-second chunks for live transcription.
 
-**Implementation:** ✅ Completed
+**Implementation:** ✅ Completed with Buffering Layer
 - Uses flutter_sound's FlutterSoundRecorder with `toStream` API
 - PCM16 codec at 16kHz sample rate (optimal for speech recognition)
 - Mono channel (single audio channel)
-- Automatic buffering: accumulates 160,000 bytes = 10 seconds of audio
+- **Two-stream architecture:**
+  - Internal stream receives raw fragments from FlutterSoundRecorder
+  - Buffering layer accumulates fragments into proper 10-second chunks
+  - Output stream emits complete chunks to application
+- Automatic buffering: accumulates 320,000 bytes = 10 seconds of audio
 - Emits chunks via Stream<Uint8List>
 
 **Configuration:**
 ```dart
-static const int sampleRate = 16000;      // 16kHz for speech
-static const int bufferSize = 160000;     // 10 seconds worth of audio
+static const int sampleRate = 16000;              // 16kHz for speech
+static const int chunkDurationSeconds = 10;       // Buffer 10 seconds per chunk
+static const int bytesPerSample = 2;              // 16-bit PCM
+static const int targetChunkSize = 320000;        // sampleRate * duration * bytesPerSample
+```
+
+**Architecture:**
+```
+FlutterSoundRecorder (raw fragments ~512 bytes)
+       ↓
+_internalStreamController
+       ↓
+_handleAudioFragment() - Accumulates into buffer
+       ↓
+Buffer reaches 320KB (10 seconds)
+       ↓
+_audioChunkController - Emits complete chunk
+       ↓
+Application receives proper 10-second chunks
 ```
 
 **Key Methods:**

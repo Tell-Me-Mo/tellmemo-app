@@ -331,14 +331,68 @@ void main() {
         }
       });
 
-      // Simulate finalization (backend sends data at top level, not nested under 'insights')
+      // Simulate finalization (backend sends nested structure)
       final timestamp = DateTime.now().toIso8601String();
       mockChannel.simulateMessage({
         'type': 'session_finalized',
         'session_id': 'test_session_123',
-        'total_insights': 5,  // At top level, not nested
-        'insights_by_type': {  // At top level with lists of insights, not counts
-          'action_item': [
+        'insights': {  // Backend nests all insight data under 'insights' key
+          'session_id': 'test_session_123',
+          'total_insights': 5,
+          'insights_by_type': {  // Contains lists of insights, not counts
+            'action_item': [
+              {
+                'insight_id': 'ai_1',
+                'type': 'action_item',
+                'priority': 'high',
+                'content': 'Action 1',
+                'context': 'Context 1',
+                'timestamp': timestamp,
+                'confidence_score': 0.9,
+              },
+              {
+                'insight_id': 'ai_2',
+                'type': 'action_item',
+                'priority': 'medium',
+                'content': 'Action 2',
+                'context': 'Context 2',
+                'timestamp': timestamp,
+                'confidence_score': 0.85,
+              },
+              {
+                'insight_id': 'ai_3',
+                'type': 'action_item',
+                'priority': 'low',
+                'content': 'Action 3',
+                'context': 'Context 3',
+                'timestamp': timestamp,
+                'confidence_score': 0.8,
+              }
+            ],
+            'decision': [
+              {
+                'insight_id': 'dec_1',
+                'type': 'decision',
+                'priority': 'critical',
+                'content': 'Decision 1',
+                'context': 'Context',
+                'timestamp': timestamp,
+                'confidence_score': 0.95,
+              }
+            ],
+            'question': [
+              {
+                'insight_id': 'q_1',
+                'type': 'question',
+                'priority': 'medium',
+                'content': 'Question 1',
+                'context': 'Context',
+                'timestamp': timestamp,
+                'confidence_score': 0.75,
+              }
+            ],
+          },
+          'insights': [  // Flat list of all insights inside nested 'insights' object
             {
               'insight_id': 'ai_1',
               'type': 'action_item',
@@ -365,9 +419,7 @@ void main() {
               'context': 'Context 3',
               'timestamp': timestamp,
               'confidence_score': 0.8,
-            }
-          ],
-          'decision': [
+            },
             {
               'insight_id': 'dec_1',
               'type': 'decision',
@@ -376,9 +428,7 @@ void main() {
               'context': 'Context',
               'timestamp': timestamp,
               'confidence_score': 0.95,
-            }
-          ],
-          'question': [
+            },
             {
               'insight_id': 'q_1',
               'type': 'question',
@@ -389,54 +439,7 @@ void main() {
               'confidence_score': 0.75,
             }
           ],
-        },
-        'insights': [  // Flat list of all insights at top level
-          {
-            'insight_id': 'ai_1',
-            'type': 'action_item',
-            'priority': 'high',
-            'content': 'Action 1',
-            'context': 'Context 1',
-            'timestamp': timestamp,
-            'confidence_score': 0.9,
-          },
-          {
-            'insight_id': 'ai_2',
-            'type': 'action_item',
-            'priority': 'medium',
-            'content': 'Action 2',
-            'context': 'Context 2',
-            'timestamp': timestamp,
-            'confidence_score': 0.85,
-          },
-          {
-            'insight_id': 'ai_3',
-            'type': 'action_item',
-            'priority': 'low',
-            'content': 'Action 3',
-            'context': 'Context 3',
-            'timestamp': timestamp,
-            'confidence_score': 0.8,
-          },
-          {
-            'insight_id': 'dec_1',
-            'type': 'decision',
-            'priority': 'critical',
-            'content': 'Decision 1',
-            'context': 'Context',
-            'timestamp': timestamp,
-            'confidence_score': 0.95,
-          },
-          {
-            'insight_id': 'q_1',
-            'type': 'question',
-            'priority': 'medium',
-            'content': 'Question 1',
-            'context': 'Context',
-            'timestamp': timestamp,
-            'confidence_score': 0.75,
-          }
-        ],
+        },  // End of nested 'insights' object
         'metrics': {
           'session_duration_seconds': 600.0,
           'chunks_processed': 60,

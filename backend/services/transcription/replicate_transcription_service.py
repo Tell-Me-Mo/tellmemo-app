@@ -185,8 +185,13 @@ class ReplicateTranscriptionService:
             if progress_callback:
                 await progress_callback(5.0, "Preparing audio file...")
 
-            file_size_mb = Path(audio_path).stat().st_size / (1024 * 1024)
-            logger.info(f"Processing audio file: {audio_path} ({file_size_mb:.2f} MB)")
+            file_size_bytes = Path(audio_path).stat().st_size
+            file_size_kb = file_size_bytes / 1024
+            file_size_mb = file_size_bytes / (1024 * 1024)
+            logger.info(
+                f"Processing audio file: {audio_path} "
+                f"({file_size_kb:.2f} KB / {file_size_mb:.4f} MB, {file_size_bytes} bytes)"
+            )
 
             if progress_callback:
                 await progress_callback(15.0, "Submitting to Replicate API...")
@@ -265,7 +270,14 @@ class ReplicateTranscriptionService:
                 # Extract segments/chunks if available
                 # incredibly-fast-whisper may use "chunks" instead of "segments"
                 raw_segments = output.get("segments", output.get("chunks", []))
+
+                # Calculate average no_speech probability for diagnostics
+                no_speech_probs = []
+
                 for seg in raw_segments:
+                    no_speech_prob = seg.get("no_speech_prob", 0.0)
+                    no_speech_probs.append(no_speech_prob)
+
                     segments.append({
                         "id": seg.get("id", 0),
                         "start": seg.get("start", 0.0),
@@ -275,8 +287,17 @@ class ReplicateTranscriptionService:
                         "temperature": seg.get("temperature", 0.0),
                         "avg_logprob": seg.get("avg_logprob", 0.0),
                         "compression_ratio": seg.get("compression_ratio", 0.0),
-                        "no_speech_prob": seg.get("no_speech_prob", 0.0)
+                        "no_speech_prob": no_speech_prob
                     })
+
+                # Log audio quality diagnostics
+                if no_speech_probs:
+                    avg_no_speech = sum(no_speech_probs) / len(no_speech_probs)
+                    logger.info(
+                        f"Audio quality: {len(raw_segments)} segments, "
+                        f"avg no_speech_prob: {avg_no_speech:.3f} "
+                        f"(>0.5 indicates low/no speech)"
+                    )
             elif hasattr(output, '__iter__'):
                 # Iterator/generator output - join all parts
                 logger.info("Received iterable output from incredibly-fast-whisper")

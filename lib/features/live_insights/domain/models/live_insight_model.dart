@@ -227,8 +227,8 @@ class SessionFinalizedResult with _$SessionFinalizedResult {
   }) = _SessionFinalizedResult;
 
   factory SessionFinalizedResult.fromJson(Map<String, dynamic> json) {
-    // Backend sends: { session_id, total_insights, insights_by_type, insights, metrics }
-    // Not nested under 'insights' field!
+    // This parser expects flattened data: { session_id, total_insights, insights_by_type, insights, metrics }
+    // The WebSocket service extracts nested 'insights' object and flattens it before calling this.
 
     // Parse insights by type
     final insightsByType = <String, List<LiveInsightModel>>{};
