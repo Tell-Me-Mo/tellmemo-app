@@ -40,6 +40,7 @@ from utils.logger import get_logger, sanitize_for_log
 from services.intelligence.question_detector import QuestionDetector
 from services.intelligence.question_answering_service import QuestionAnsweringService
 from services.intelligence.clarification_service import ClarificationService
+from services.intelligence.conflict_detection_service import ConflictDetectionService
 
 logger = get_logger(__name__)
 
@@ -189,6 +190,12 @@ class RealtimeMeetingInsightsService:
         )
         # Phase 2: Proactive Clarification
         self.clarification_service = ClarificationService(llm_client=self.llm_client)
+        # Phase 3: Real-Time Conflict Detection
+        self.conflict_detection_service = ConflictDetectionService(
+            vector_store=multi_tenant_vector_store,
+            llm_client=self.llm_client,
+            embedding_service=embedding_service
+        )
 
     async def process_transcript_chunk(
         self,
@@ -635,6 +642,8 @@ class RealtimeMeetingInsightsService:
                  attempts to answer them automatically using RAG.
         Phase 2: Proactive Clarification - Detects vague statements in action items
                  and decisions, suggesting clarifying questions.
+        Phase 3: Real-Time Conflict Detection - Detects when current decisions conflict
+                 with past decisions and alerts the team immediately.
 
         Args:
             session_id: Current session ID
@@ -644,7 +653,7 @@ class RealtimeMeetingInsightsService:
             context: Full conversation context
 
         Returns:
-            List of proactive assistance items (auto-answers, clarifications, etc.)
+            List of proactive assistance items (auto-answers, clarifications, conflicts, etc.)
         """
         proactive_responses = []
 
@@ -723,9 +732,42 @@ class RealtimeMeetingInsightsService:
                             f"(confidence: {clarification.confidence:.2f})"
                         )
 
+                # Phase 3: Conflict detection for decisions
+                if insight.type == InsightType.DECISION:
+                    conflict = await self.conflict_detection_service.detect_conflicts(
+                        statement=insight.content,
+                        statement_type='decision',
+                        project_id=project_id,
+                        organization_id=organization_id,
+                        context=context
+                    )
+
+                    if conflict:
+                        proactive_responses.append({
+                            'type': 'conflict_detected',
+                            'insight_id': insight.insight_id,
+                            'current_statement': conflict.current_statement,
+                            'conflicting_content_id': conflict.conflicting_content_id,
+                            'conflicting_title': conflict.conflicting_title,
+                            'conflicting_snippet': conflict.conflicting_snippet,
+                            'conflicting_date': conflict.conflicting_date.isoformat(),
+                            'conflict_severity': conflict.conflict_severity,
+                            'confidence': conflict.confidence,
+                            'reasoning': conflict.reasoning,
+                            'resolution_suggestions': conflict.resolution_suggestions,
+                            'timestamp': datetime.now().isoformat()
+                        })
+
+                        logger.warning(
+                            f"Detected conflict ({conflict.conflict_severity}) for session "
+                            f"{sanitize_for_log(session_id)}: '{conflict.current_statement[:50]}...' "
+                            f"conflicts with '{conflict.conflicting_title}' "
+                            f"(confidence: {conflict.confidence:.2f})"
+                        )
+
                 # Future phases can add more assistance types here:
-                # - Conflict detection (Phase 3)
                 # - Action item quality checks (Phase 4)
+                # - Follow-up suggestions (Phase 5)
 
         except Exception as e:
             logger.error(f"Error processing proactive assistance: {e}", exc_info=True)

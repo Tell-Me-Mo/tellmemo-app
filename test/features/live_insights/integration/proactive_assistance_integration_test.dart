@@ -449,4 +449,237 @@ void main() {
       wsService.dispose();
     });
   });
+
+  group('Phase 3: Conflict Detection Tests', () {
+    late LiveInsightsWebSocketService wsService;
+    late MockWebSocketChannel mockChannel;
+
+    setUp(() {
+      wsService = LiveInsightsWebSocketService();
+      mockChannel = MockWebSocketChannel();
+      wsService.injectChannelForTesting(mockChannel);
+    });
+
+    tearDown(() {
+      mockChannel.close();
+      wsService.dispose();
+    });
+
+    test('WebSocket receives and parses conflict_detected message', () async {
+      final receivedAssistance = <List<ProactiveAssistanceModel>>[];
+      wsService.proactiveAssistanceStream.listen((assistance) {
+        receivedAssistance.add(assistance);
+      });
+
+      // Simulate backend sending conflict detection
+      final mockMessage = {
+        'type': 'insights_extracted',
+        'timestamp': DateTime.now().toIso8601String(),
+        'session_id': 'test_session',
+        'chunk_index': 5,
+        'insights': [],
+        'proactive_assistance': [
+          {
+            'type': 'conflict_detected',
+            'insight_id': 'insight_123',
+            'current_statement': 'Let\'s use REST APIs for all new services',
+            'conflicting_content_id': 'dec_xyz_789',
+            'conflicting_title': 'Q3 Architecture Decision - GraphQL for APIs',
+            'conflicting_snippet': 'Decided to use GraphQL for all new APIs to ensure consistency...',
+            'conflicting_date': DateTime.now().subtract(const Duration(days: 30)).toIso8601String(),
+            'conflict_severity': 'high',
+            'confidence': 0.91,
+            'reasoning': 'Current statement directly contradicts GraphQL decision from last month',
+            'resolution_suggestions': [
+              'Confirm if this is a strategic change from GraphQL to REST',
+              'Review the original GraphQL decision rationale',
+              'Consider hybrid approach for specific use cases'
+            ],
+            'timestamp': DateTime.now().toIso8601String(),
+          }
+        ],
+      };
+
+      mockChannel.addMessage(mockMessage);
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      expect(receivedAssistance, hasLength(1));
+      final assistance = receivedAssistance.first.first;
+      expect(assistance.type, ProactiveAssistanceType.conflictDetected);
+      expect(assistance.conflict, isNotNull);
+      expect(assistance.conflict!.conflictSeverity, 'high');
+      expect(assistance.conflict!.confidence, 0.91);
+      expect(assistance.conflict!.resolutionSuggestions, hasLength(3));
+    });
+
+    testWidgets('ProactiveAssistanceCard displays conflict correctly', (WidgetTester tester) async {
+      final assistance = ProactiveAssistanceModel(
+        type: ProactiveAssistanceType.conflictDetected,
+        conflict: ConflictAssistance(
+          insightId: 'test_123',
+          currentStatement: 'Let\'s use REST APIs for all new services',
+          conflictingContentId: 'dec_xyz_789',
+          conflictingTitle: 'Q3 Architecture Decision - GraphQL',
+          conflictingSnippet: 'Decided to use GraphQL for all new APIs to ensure consistency across services.',
+          conflictingDate: DateTime.now().subtract(const Duration(days: 30)),
+          conflictSeverity: 'high',
+          confidence: 0.91,
+          reasoning: 'Current statement directly contradicts GraphQL decision from last month',
+          resolutionSuggestions: [
+            'Confirm if this is a strategic change from GraphQL to REST',
+            'Review the original GraphQL decision rationale',
+          ],
+          timestamp: DateTime.now(),
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ProactiveAssistanceCard(
+              assistance: assistance,
+              onAccept: () {},
+              onDismiss: () {},
+            ),
+          ),
+        ),
+      );
+
+      // Verify conflict card is displayed
+      expect(find.text('⚠️ Potential Conflict'), findsOneWidget);
+      expect(find.text('Let\'s use REST APIs for all new services'), findsWidgets);
+      expect(find.text('91%'), findsWidgets); // Confidence badge (appears in header and content)
+      expect(find.text('High Severity'), findsOneWidget); // Severity badge
+
+      // Verify conflicting decision is shown
+      expect(find.text('Q3 Architecture Decision - GraphQL'), findsOneWidget);
+
+      // Verify reasoning is shown
+      expect(find.textContaining('directly contradicts'), findsOneWidget);
+
+      // Verify resolution suggestions are shown
+      expect(find.textContaining('strategic change'), findsOneWidget);
+      expect(find.textContaining('Review the original'), findsOneWidget);
+    });
+
+    testWidgets('Conflict severity badges display correctly', (WidgetTester tester) async {
+      // Test high severity (red)
+      final highSeverity = ProactiveAssistanceModel(
+        type: ProactiveAssistanceType.conflictDetected,
+        conflict: ConflictAssistance(
+          insightId: 'test',
+          currentStatement: 'Test statement',
+          conflictingContentId: 'test',
+          conflictingTitle: 'Test',
+          conflictingSnippet: 'Test snippet',
+          conflictingDate: DateTime.now(),
+          conflictSeverity: 'high',
+          confidence: 0.91,
+          reasoning: 'Test',
+          resolutionSuggestions: [],
+          timestamp: DateTime.now(),
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ProactiveAssistanceCard(
+              assistance: highSeverity,
+              onAccept: () {},
+              onDismiss: () {},
+            ),
+          ),
+        ),
+      );
+
+      // Verify high severity badge
+      expect(find.text('High Severity'), findsOneWidget);
+
+      // Test medium severity
+      final mediumSeverity = ProactiveAssistanceModel(
+        type: ProactiveAssistanceType.conflictDetected,
+        conflict: ConflictAssistance(
+          insightId: 'test',
+          currentStatement: 'Test statement',
+          conflictingContentId: 'test',
+          conflictingTitle: 'Test',
+          conflictingSnippet: 'Test snippet',
+          conflictingDate: DateTime.now(),
+          conflictSeverity: 'medium',
+          confidence: 0.75,
+          reasoning: 'Test',
+          resolutionSuggestions: [],
+          timestamp: DateTime.now(),
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ProactiveAssistanceCard(
+              assistance: mediumSeverity,
+              onAccept: () {},
+              onDismiss: () {},
+            ),
+          ),
+        ),
+      );
+
+      // Verify medium severity badge
+      expect(find.text('Medium Severity'), findsOneWidget);
+    });
+
+    test('Multiple conflict types can be received in one message', () async {
+      final receivedAssistance = <List<ProactiveAssistanceModel>>[];
+      wsService.proactiveAssistanceStream.listen((assistance) {
+        receivedAssistance.add(assistance);
+      });
+
+      // Message with both auto-answer and conflict
+      final mockMessage = {
+        'type': 'insights_extracted',
+        'timestamp': DateTime.now().toIso8601String(),
+        'session_id': 'test_session',
+        'chunk_index': 5,
+        'insights': [],
+        'proactive_assistance': [
+          {
+            'type': 'auto_answer',
+            'insight_id': 'insight_1',
+            'question': 'What was our budget?',
+            'answer': 'The budget was \$50K',
+            'confidence': 0.89,
+            'sources': [],
+            'reasoning': 'Found in notes',
+            'timestamp': DateTime.now().toIso8601String(),
+          },
+          {
+            'type': 'conflict_detected',
+            'insight_id': 'insight_2',
+            'current_statement': 'Use REST APIs',
+            'conflicting_content_id': 'dec_123',
+            'conflicting_title': 'GraphQL Decision',
+            'conflicting_snippet': 'Use GraphQL for APIs',
+            'conflicting_date': DateTime.now().toIso8601String(),
+            'conflict_severity': 'high',
+            'confidence': 0.91,
+            'reasoning': 'Contradiction detected',
+            'resolution_suggestions': ['Review decision'],
+            'timestamp': DateTime.now().toIso8601String(),
+          }
+        ],
+      };
+
+      mockChannel.addMessage(mockMessage);
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      expect(receivedAssistance, hasLength(1));
+      expect(receivedAssistance.first, hasLength(2));
+
+      final types = receivedAssistance.first.map((a) => a.type).toList();
+      expect(types, contains(ProactiveAssistanceType.autoAnswer));
+      expect(types, contains(ProactiveAssistanceType.conflictDetected));
+    });
+  });
 }

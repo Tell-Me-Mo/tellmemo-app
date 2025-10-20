@@ -77,3 +77,37 @@ Map<String, dynamic> _$$ClarificationAssistanceImplToJson(
   'reasoning': instance.reasoning,
   'timestamp': instance.timestamp.toIso8601String(),
 };
+
+_$ConflictAssistanceImpl _$$ConflictAssistanceImplFromJson(
+  Map<String, dynamic> json,
+) => _$ConflictAssistanceImpl(
+  insightId: json['insight_id'] as String,
+  currentStatement: json['current_statement'] as String,
+  conflictingContentId: json['conflicting_content_id'] as String,
+  conflictingTitle: json['conflicting_title'] as String,
+  conflictingSnippet: json['conflicting_snippet'] as String,
+  conflictingDate: DateTime.parse(json['conflicting_date'] as String),
+  conflictSeverity: json['conflict_severity'] as String,
+  confidence: (json['confidence'] as num).toDouble(),
+  reasoning: json['reasoning'] as String,
+  resolutionSuggestions: (json['resolution_suggestions'] as List<dynamic>)
+      .map((e) => e as String)
+      .toList(),
+  timestamp: DateTime.parse(json['timestamp'] as String),
+);
+
+Map<String, dynamic> _$$ConflictAssistanceImplToJson(
+  _$ConflictAssistanceImpl instance,
+) => <String, dynamic>{
+  'insight_id': instance.insightId,
+  'current_statement': instance.currentStatement,
+  'conflicting_content_id': instance.conflictingContentId,
+  'conflicting_title': instance.conflictingTitle,
+  'conflicting_snippet': instance.conflictingSnippet,
+  'conflicting_date': instance.conflictingDate.toIso8601String(),
+  'conflict_severity': instance.conflictSeverity,
+  'confidence': instance.confidence,
+  'reasoning': instance.reasoning,
+  'resolution_suggestions': instance.resolutionSuggestions,
+  'timestamp': instance.timestamp.toIso8601String(),
+};

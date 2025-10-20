@@ -935,12 +935,441 @@ abstract class _ClarificationAssistance implements ClarificationAssistance {
   get copyWith => throw _privateConstructorUsedError;
 }
 
+ConflictAssistance _$ConflictAssistanceFromJson(Map<String, dynamic> json) {
+  return _ConflictAssistance.fromJson(json);
+}
+
+/// @nodoc
+mixin _$ConflictAssistance {
+  @JsonKey(name: 'insight_id')
+  String get insightId => throw _privateConstructorUsedError;
+  @JsonKey(name: 'current_statement')
+  String get currentStatement => throw _privateConstructorUsedError;
+  @JsonKey(name: 'conflicting_content_id')
+  String get conflictingContentId => throw _privateConstructorUsedError;
+  @JsonKey(name: 'conflicting_title')
+  String get conflictingTitle => throw _privateConstructorUsedError;
+  @JsonKey(name: 'conflicting_snippet')
+  String get conflictingSnippet => throw _privateConstructorUsedError;
+  @JsonKey(name: 'conflicting_date')
+  DateTime get conflictingDate => throw _privateConstructorUsedError;
+  @JsonKey(name: 'conflict_severity')
+  String get conflictSeverity => throw _privateConstructorUsedError; // 'high', 'medium', 'low'
+  double get confidence => throw _privateConstructorUsedError;
+  String get reasoning => throw _privateConstructorUsedError;
+  @JsonKey(name: 'resolution_suggestions')
+  List<String> get resolutionSuggestions => throw _privateConstructorUsedError;
+  DateTime get timestamp => throw _privateConstructorUsedError;
+
+  /// Serializes this ConflictAssistance to a JSON map.
+  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
+
+  /// Create a copy of ConflictAssistance
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $ConflictAssistanceCopyWith<ConflictAssistance> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $ConflictAssistanceCopyWith<$Res> {
+  factory $ConflictAssistanceCopyWith(
+    ConflictAssistance value,
+    $Res Function(ConflictAssistance) then,
+  ) = _$ConflictAssistanceCopyWithImpl<$Res, ConflictAssistance>;
+  @useResult
+  $Res call({
+    @JsonKey(name: 'insight_id') String insightId,
+    @JsonKey(name: 'current_statement') String currentStatement,
+    @JsonKey(name: 'conflicting_content_id') String conflictingContentId,
+    @JsonKey(name: 'conflicting_title') String conflictingTitle,
+    @JsonKey(name: 'conflicting_snippet') String conflictingSnippet,
+    @JsonKey(name: 'conflicting_date') DateTime conflictingDate,
+    @JsonKey(name: 'conflict_severity') String conflictSeverity,
+    double confidence,
+    String reasoning,
+    @JsonKey(name: 'resolution_suggestions') List<String> resolutionSuggestions,
+    DateTime timestamp,
+  });
+}
+
+/// @nodoc
+class _$ConflictAssistanceCopyWithImpl<$Res, $Val extends ConflictAssistance>
+    implements $ConflictAssistanceCopyWith<$Res> {
+  _$ConflictAssistanceCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of ConflictAssistance
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? insightId = null,
+    Object? currentStatement = null,
+    Object? conflictingContentId = null,
+    Object? conflictingTitle = null,
+    Object? conflictingSnippet = null,
+    Object? conflictingDate = null,
+    Object? conflictSeverity = null,
+    Object? confidence = null,
+    Object? reasoning = null,
+    Object? resolutionSuggestions = null,
+    Object? timestamp = null,
+  }) {
+    return _then(
+      _value.copyWith(
+            insightId: null == insightId
+                ? _value.insightId
+                : insightId // ignore: cast_nullable_to_non_nullable
+                      as String,
+            currentStatement: null == currentStatement
+                ? _value.currentStatement
+                : currentStatement // ignore: cast_nullable_to_non_nullable
+                      as String,
+            conflictingContentId: null == conflictingContentId
+                ? _value.conflictingContentId
+                : conflictingContentId // ignore: cast_nullable_to_non_nullable
+                      as String,
+            conflictingTitle: null == conflictingTitle
+                ? _value.conflictingTitle
+                : conflictingTitle // ignore: cast_nullable_to_non_nullable
+                      as String,
+            conflictingSnippet: null == conflictingSnippet
+                ? _value.conflictingSnippet
+                : conflictingSnippet // ignore: cast_nullable_to_non_nullable
+                      as String,
+            conflictingDate: null == conflictingDate
+                ? _value.conflictingDate
+                : conflictingDate // ignore: cast_nullable_to_non_nullable
+                      as DateTime,
+            conflictSeverity: null == conflictSeverity
+                ? _value.conflictSeverity
+                : conflictSeverity // ignore: cast_nullable_to_non_nullable
+                      as String,
+            confidence: null == confidence
+                ? _value.confidence
+                : confidence // ignore: cast_nullable_to_non_nullable
+                      as double,
+            reasoning: null == reasoning
+                ? _value.reasoning
+                : reasoning // ignore: cast_nullable_to_non_nullable
+                      as String,
+            resolutionSuggestions: null == resolutionSuggestions
+                ? _value.resolutionSuggestions
+                : resolutionSuggestions // ignore: cast_nullable_to_non_nullable
+                      as List<String>,
+            timestamp: null == timestamp
+                ? _value.timestamp
+                : timestamp // ignore: cast_nullable_to_non_nullable
+                      as DateTime,
+          )
+          as $Val,
+    );
+  }
+}
+
+/// @nodoc
+abstract class _$$ConflictAssistanceImplCopyWith<$Res>
+    implements $ConflictAssistanceCopyWith<$Res> {
+  factory _$$ConflictAssistanceImplCopyWith(
+    _$ConflictAssistanceImpl value,
+    $Res Function(_$ConflictAssistanceImpl) then,
+  ) = __$$ConflictAssistanceImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({
+    @JsonKey(name: 'insight_id') String insightId,
+    @JsonKey(name: 'current_statement') String currentStatement,
+    @JsonKey(name: 'conflicting_content_id') String conflictingContentId,
+    @JsonKey(name: 'conflicting_title') String conflictingTitle,
+    @JsonKey(name: 'conflicting_snippet') String conflictingSnippet,
+    @JsonKey(name: 'conflicting_date') DateTime conflictingDate,
+    @JsonKey(name: 'conflict_severity') String conflictSeverity,
+    double confidence,
+    String reasoning,
+    @JsonKey(name: 'resolution_suggestions') List<String> resolutionSuggestions,
+    DateTime timestamp,
+  });
+}
+
+/// @nodoc
+class __$$ConflictAssistanceImplCopyWithImpl<$Res>
+    extends _$ConflictAssistanceCopyWithImpl<$Res, _$ConflictAssistanceImpl>
+    implements _$$ConflictAssistanceImplCopyWith<$Res> {
+  __$$ConflictAssistanceImplCopyWithImpl(
+    _$ConflictAssistanceImpl _value,
+    $Res Function(_$ConflictAssistanceImpl) _then,
+  ) : super(_value, _then);
+
+  /// Create a copy of ConflictAssistance
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? insightId = null,
+    Object? currentStatement = null,
+    Object? conflictingContentId = null,
+    Object? conflictingTitle = null,
+    Object? conflictingSnippet = null,
+    Object? conflictingDate = null,
+    Object? conflictSeverity = null,
+    Object? confidence = null,
+    Object? reasoning = null,
+    Object? resolutionSuggestions = null,
+    Object? timestamp = null,
+  }) {
+    return _then(
+      _$ConflictAssistanceImpl(
+        insightId: null == insightId
+            ? _value.insightId
+            : insightId // ignore: cast_nullable_to_non_nullable
+                  as String,
+        currentStatement: null == currentStatement
+            ? _value.currentStatement
+            : currentStatement // ignore: cast_nullable_to_non_nullable
+                  as String,
+        conflictingContentId: null == conflictingContentId
+            ? _value.conflictingContentId
+            : conflictingContentId // ignore: cast_nullable_to_non_nullable
+                  as String,
+        conflictingTitle: null == conflictingTitle
+            ? _value.conflictingTitle
+            : conflictingTitle // ignore: cast_nullable_to_non_nullable
+                  as String,
+        conflictingSnippet: null == conflictingSnippet
+            ? _value.conflictingSnippet
+            : conflictingSnippet // ignore: cast_nullable_to_non_nullable
+                  as String,
+        conflictingDate: null == conflictingDate
+            ? _value.conflictingDate
+            : conflictingDate // ignore: cast_nullable_to_non_nullable
+                  as DateTime,
+        conflictSeverity: null == conflictSeverity
+            ? _value.conflictSeverity
+            : conflictSeverity // ignore: cast_nullable_to_non_nullable
+                  as String,
+        confidence: null == confidence
+            ? _value.confidence
+            : confidence // ignore: cast_nullable_to_non_nullable
+                  as double,
+        reasoning: null == reasoning
+            ? _value.reasoning
+            : reasoning // ignore: cast_nullable_to_non_nullable
+                  as String,
+        resolutionSuggestions: null == resolutionSuggestions
+            ? _value._resolutionSuggestions
+            : resolutionSuggestions // ignore: cast_nullable_to_non_nullable
+                  as List<String>,
+        timestamp: null == timestamp
+            ? _value.timestamp
+            : timestamp // ignore: cast_nullable_to_non_nullable
+                  as DateTime,
+      ),
+    );
+  }
+}
+
+/// @nodoc
+@JsonSerializable()
+class _$ConflictAssistanceImpl implements _ConflictAssistance {
+  const _$ConflictAssistanceImpl({
+    @JsonKey(name: 'insight_id') required this.insightId,
+    @JsonKey(name: 'current_statement') required this.currentStatement,
+    @JsonKey(name: 'conflicting_content_id') required this.conflictingContentId,
+    @JsonKey(name: 'conflicting_title') required this.conflictingTitle,
+    @JsonKey(name: 'conflicting_snippet') required this.conflictingSnippet,
+    @JsonKey(name: 'conflicting_date') required this.conflictingDate,
+    @JsonKey(name: 'conflict_severity') required this.conflictSeverity,
+    required this.confidence,
+    required this.reasoning,
+    @JsonKey(name: 'resolution_suggestions')
+    required final List<String> resolutionSuggestions,
+    required this.timestamp,
+  }) : _resolutionSuggestions = resolutionSuggestions;
+
+  factory _$ConflictAssistanceImpl.fromJson(Map<String, dynamic> json) =>
+      _$$ConflictAssistanceImplFromJson(json);
+
+  @override
+  @JsonKey(name: 'insight_id')
+  final String insightId;
+  @override
+  @JsonKey(name: 'current_statement')
+  final String currentStatement;
+  @override
+  @JsonKey(name: 'conflicting_content_id')
+  final String conflictingContentId;
+  @override
+  @JsonKey(name: 'conflicting_title')
+  final String conflictingTitle;
+  @override
+  @JsonKey(name: 'conflicting_snippet')
+  final String conflictingSnippet;
+  @override
+  @JsonKey(name: 'conflicting_date')
+  final DateTime conflictingDate;
+  @override
+  @JsonKey(name: 'conflict_severity')
+  final String conflictSeverity;
+  // 'high', 'medium', 'low'
+  @override
+  final double confidence;
+  @override
+  final String reasoning;
+  final List<String> _resolutionSuggestions;
+  @override
+  @JsonKey(name: 'resolution_suggestions')
+  List<String> get resolutionSuggestions {
+    if (_resolutionSuggestions is EqualUnmodifiableListView)
+      return _resolutionSuggestions;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_resolutionSuggestions);
+  }
+
+  @override
+  final DateTime timestamp;
+
+  @override
+  String toString() {
+    return 'ConflictAssistance(insightId: $insightId, currentStatement: $currentStatement, conflictingContentId: $conflictingContentId, conflictingTitle: $conflictingTitle, conflictingSnippet: $conflictingSnippet, conflictingDate: $conflictingDate, conflictSeverity: $conflictSeverity, confidence: $confidence, reasoning: $reasoning, resolutionSuggestions: $resolutionSuggestions, timestamp: $timestamp)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$ConflictAssistanceImpl &&
+            (identical(other.insightId, insightId) ||
+                other.insightId == insightId) &&
+            (identical(other.currentStatement, currentStatement) ||
+                other.currentStatement == currentStatement) &&
+            (identical(other.conflictingContentId, conflictingContentId) ||
+                other.conflictingContentId == conflictingContentId) &&
+            (identical(other.conflictingTitle, conflictingTitle) ||
+                other.conflictingTitle == conflictingTitle) &&
+            (identical(other.conflictingSnippet, conflictingSnippet) ||
+                other.conflictingSnippet == conflictingSnippet) &&
+            (identical(other.conflictingDate, conflictingDate) ||
+                other.conflictingDate == conflictingDate) &&
+            (identical(other.conflictSeverity, conflictSeverity) ||
+                other.conflictSeverity == conflictSeverity) &&
+            (identical(other.confidence, confidence) ||
+                other.confidence == confidence) &&
+            (identical(other.reasoning, reasoning) ||
+                other.reasoning == reasoning) &&
+            const DeepCollectionEquality().equals(
+              other._resolutionSuggestions,
+              _resolutionSuggestions,
+            ) &&
+            (identical(other.timestamp, timestamp) ||
+                other.timestamp == timestamp));
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  int get hashCode => Object.hash(
+    runtimeType,
+    insightId,
+    currentStatement,
+    conflictingContentId,
+    conflictingTitle,
+    conflictingSnippet,
+    conflictingDate,
+    conflictSeverity,
+    confidence,
+    reasoning,
+    const DeepCollectionEquality().hash(_resolutionSuggestions),
+    timestamp,
+  );
+
+  /// Create a copy of ConflictAssistance
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$ConflictAssistanceImplCopyWith<_$ConflictAssistanceImpl> get copyWith =>
+      __$$ConflictAssistanceImplCopyWithImpl<_$ConflictAssistanceImpl>(
+        this,
+        _$identity,
+      );
+
+  @override
+  Map<String, dynamic> toJson() {
+    return _$$ConflictAssistanceImplToJson(this);
+  }
+}
+
+abstract class _ConflictAssistance implements ConflictAssistance {
+  const factory _ConflictAssistance({
+    @JsonKey(name: 'insight_id') required final String insightId,
+    @JsonKey(name: 'current_statement') required final String currentStatement,
+    @JsonKey(name: 'conflicting_content_id')
+    required final String conflictingContentId,
+    @JsonKey(name: 'conflicting_title') required final String conflictingTitle,
+    @JsonKey(name: 'conflicting_snippet')
+    required final String conflictingSnippet,
+    @JsonKey(name: 'conflicting_date') required final DateTime conflictingDate,
+    @JsonKey(name: 'conflict_severity') required final String conflictSeverity,
+    required final double confidence,
+    required final String reasoning,
+    @JsonKey(name: 'resolution_suggestions')
+    required final List<String> resolutionSuggestions,
+    required final DateTime timestamp,
+  }) = _$ConflictAssistanceImpl;
+
+  factory _ConflictAssistance.fromJson(Map<String, dynamic> json) =
+      _$ConflictAssistanceImpl.fromJson;
+
+  @override
+  @JsonKey(name: 'insight_id')
+  String get insightId;
+  @override
+  @JsonKey(name: 'current_statement')
+  String get currentStatement;
+  @override
+  @JsonKey(name: 'conflicting_content_id')
+  String get conflictingContentId;
+  @override
+  @JsonKey(name: 'conflicting_title')
+  String get conflictingTitle;
+  @override
+  @JsonKey(name: 'conflicting_snippet')
+  String get conflictingSnippet;
+  @override
+  @JsonKey(name: 'conflicting_date')
+  DateTime get conflictingDate;
+  @override
+  @JsonKey(name: 'conflict_severity')
+  String get conflictSeverity; // 'high', 'medium', 'low'
+  @override
+  double get confidence;
+  @override
+  String get reasoning;
+  @override
+  @JsonKey(name: 'resolution_suggestions')
+  List<String> get resolutionSuggestions;
+  @override
+  DateTime get timestamp;
+
+  /// Create a copy of ConflictAssistance
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$ConflictAssistanceImplCopyWith<_$ConflictAssistanceImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
 /// @nodoc
 mixin _$ProactiveAssistanceModel {
   ProactiveAssistanceType get type => throw _privateConstructorUsedError;
   AutoAnswerAssistance? get autoAnswer => throw _privateConstructorUsedError;
   ClarificationAssistance? get clarification =>
       throw _privateConstructorUsedError;
+  ConflictAssistance? get conflict => throw _privateConstructorUsedError;
 
   /// Create a copy of ProactiveAssistanceModel
   /// with the given fields replaced by the non-null parameter values.
@@ -960,10 +1389,12 @@ abstract class $ProactiveAssistanceModelCopyWith<$Res> {
     ProactiveAssistanceType type,
     AutoAnswerAssistance? autoAnswer,
     ClarificationAssistance? clarification,
+    ConflictAssistance? conflict,
   });
 
   $AutoAnswerAssistanceCopyWith<$Res>? get autoAnswer;
   $ClarificationAssistanceCopyWith<$Res>? get clarification;
+  $ConflictAssistanceCopyWith<$Res>? get conflict;
 }
 
 /// @nodoc
@@ -987,6 +1418,7 @@ class _$ProactiveAssistanceModelCopyWithImpl<
     Object? type = null,
     Object? autoAnswer = freezed,
     Object? clarification = freezed,
+    Object? conflict = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -1002,6 +1434,10 @@ class _$ProactiveAssistanceModelCopyWithImpl<
                 ? _value.clarification
                 : clarification // ignore: cast_nullable_to_non_nullable
                       as ClarificationAssistance?,
+            conflict: freezed == conflict
+                ? _value.conflict
+                : conflict // ignore: cast_nullable_to_non_nullable
+                      as ConflictAssistance?,
           )
           as $Val,
     );
@@ -1036,6 +1472,20 @@ class _$ProactiveAssistanceModelCopyWithImpl<
       return _then(_value.copyWith(clarification: value) as $Val);
     });
   }
+
+  /// Create a copy of ProactiveAssistanceModel
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $ConflictAssistanceCopyWith<$Res>? get conflict {
+    if (_value.conflict == null) {
+      return null;
+    }
+
+    return $ConflictAssistanceCopyWith<$Res>(_value.conflict!, (value) {
+      return _then(_value.copyWith(conflict: value) as $Val);
+    });
+  }
 }
 
 /// @nodoc
@@ -1051,12 +1501,15 @@ abstract class _$$ProactiveAssistanceModelImplCopyWith<$Res>
     ProactiveAssistanceType type,
     AutoAnswerAssistance? autoAnswer,
     ClarificationAssistance? clarification,
+    ConflictAssistance? conflict,
   });
 
   @override
   $AutoAnswerAssistanceCopyWith<$Res>? get autoAnswer;
   @override
   $ClarificationAssistanceCopyWith<$Res>? get clarification;
+  @override
+  $ConflictAssistanceCopyWith<$Res>? get conflict;
 }
 
 /// @nodoc
@@ -1080,6 +1533,7 @@ class __$$ProactiveAssistanceModelImplCopyWithImpl<$Res>
     Object? type = null,
     Object? autoAnswer = freezed,
     Object? clarification = freezed,
+    Object? conflict = freezed,
   }) {
     return _then(
       _$ProactiveAssistanceModelImpl(
@@ -1095,6 +1549,10 @@ class __$$ProactiveAssistanceModelImplCopyWithImpl<$Res>
             ? _value.clarification
             : clarification // ignore: cast_nullable_to_non_nullable
                   as ClarificationAssistance?,
+        conflict: freezed == conflict
+            ? _value.conflict
+            : conflict // ignore: cast_nullable_to_non_nullable
+                  as ConflictAssistance?,
       ),
     );
   }
@@ -1107,6 +1565,7 @@ class _$ProactiveAssistanceModelImpl implements _ProactiveAssistanceModel {
     required this.type,
     this.autoAnswer,
     this.clarification,
+    this.conflict,
   });
 
   @override
@@ -1115,10 +1574,12 @@ class _$ProactiveAssistanceModelImpl implements _ProactiveAssistanceModel {
   final AutoAnswerAssistance? autoAnswer;
   @override
   final ClarificationAssistance? clarification;
+  @override
+  final ConflictAssistance? conflict;
 
   @override
   String toString() {
-    return 'ProactiveAssistanceModel(type: $type, autoAnswer: $autoAnswer, clarification: $clarification)';
+    return 'ProactiveAssistanceModel(type: $type, autoAnswer: $autoAnswer, clarification: $clarification, conflict: $conflict)';
   }
 
   @override
@@ -1130,11 +1591,14 @@ class _$ProactiveAssistanceModelImpl implements _ProactiveAssistanceModel {
             (identical(other.autoAnswer, autoAnswer) ||
                 other.autoAnswer == autoAnswer) &&
             (identical(other.clarification, clarification) ||
-                other.clarification == clarification));
+                other.clarification == clarification) &&
+            (identical(other.conflict, conflict) ||
+                other.conflict == conflict));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, type, autoAnswer, clarification);
+  int get hashCode =>
+      Object.hash(runtimeType, type, autoAnswer, clarification, conflict);
 
   /// Create a copy of ProactiveAssistanceModel
   /// with the given fields replaced by the non-null parameter values.
@@ -1153,6 +1617,7 @@ abstract class _ProactiveAssistanceModel implements ProactiveAssistanceModel {
     required final ProactiveAssistanceType type,
     final AutoAnswerAssistance? autoAnswer,
     final ClarificationAssistance? clarification,
+    final ConflictAssistance? conflict,
   }) = _$ProactiveAssistanceModelImpl;
 
   @override
@@ -1161,6 +1626,8 @@ abstract class _ProactiveAssistanceModel implements ProactiveAssistanceModel {
   AutoAnswerAssistance? get autoAnswer;
   @override
   ClarificationAssistance? get clarification;
+  @override
+  ConflictAssistance? get conflict;
 
   /// Create a copy of ProactiveAssistanceModel
   /// with the given fields replaced by the non-null parameter values.

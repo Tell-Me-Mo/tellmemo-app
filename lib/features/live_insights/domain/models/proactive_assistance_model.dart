@@ -67,6 +67,27 @@ class ClarificationAssistance with _$ClarificationAssistance {
       _$ClarificationAssistanceFromJson(json);
 }
 
+/// Conflict alert for decisions that contradict past decisions
+@freezed
+class ConflictAssistance with _$ConflictAssistance {
+  const factory ConflictAssistance({
+    @JsonKey(name: 'insight_id') required String insightId,
+    @JsonKey(name: 'current_statement') required String currentStatement,
+    @JsonKey(name: 'conflicting_content_id') required String conflictingContentId,
+    @JsonKey(name: 'conflicting_title') required String conflictingTitle,
+    @JsonKey(name: 'conflicting_snippet') required String conflictingSnippet,
+    @JsonKey(name: 'conflicting_date') required DateTime conflictingDate,
+    @JsonKey(name: 'conflict_severity') required String conflictSeverity, // 'high', 'medium', 'low'
+    required double confidence,
+    required String reasoning,
+    @JsonKey(name: 'resolution_suggestions') required List<String> resolutionSuggestions,
+    required DateTime timestamp,
+  }) = _ConflictAssistance;
+
+  factory ConflictAssistance.fromJson(Map<String, dynamic> json) =>
+      _$ConflictAssistanceFromJson(json);
+}
+
 /// Main proactive assistance model
 @freezed
 class ProactiveAssistanceModel with _$ProactiveAssistanceModel {
@@ -74,9 +95,10 @@ class ProactiveAssistanceModel with _$ProactiveAssistanceModel {
     required ProactiveAssistanceType type,
     AutoAnswerAssistance? autoAnswer,
     ClarificationAssistance? clarification,
+    ConflictAssistance? conflict,
     // Future phases:
-    // ConflictAssistance? conflict,
     // ActionItemQualityAssistance? actionItemQuality,
+    // FollowUpSuggestionAssistance? followUpSuggestion,
   }) = _ProactiveAssistanceModel;
 
   factory ProactiveAssistanceModel.fromJson(Map<String, dynamic> json) {
@@ -93,6 +115,11 @@ class ProactiveAssistanceModel with _$ProactiveAssistanceModel {
         return ProactiveAssistanceModel(
           type: assistanceType,
           clarification: ClarificationAssistance.fromJson(json),
+        );
+      case ProactiveAssistanceType.conflictDetected:
+        return ProactiveAssistanceModel(
+          type: assistanceType,
+          conflict: ConflictAssistance.fromJson(json),
         );
       // Future phases will add other types here
       default:
