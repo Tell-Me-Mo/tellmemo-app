@@ -48,7 +48,7 @@ rank-bm25==0.2.2
 fast-langdetect==1.0.0
 
 # LLM Integration
-anthropic==0.69.0
+anthropic==0.71.0
 openai==2.1.0
 
 # Circuit Breaker
