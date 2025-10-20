@@ -57,6 +57,7 @@ class LiveInsightsWebSocketService {
   void injectChannelForTesting(WebSocketChannel channel) {
     _channel = channel;
     _isConnected = true;
+    _connectionStateController.add(true);  // Emit connection state for tests
 
     // Listen to messages
     _channel!.stream.listen(

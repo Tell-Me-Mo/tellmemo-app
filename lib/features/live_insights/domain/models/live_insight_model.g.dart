@@ -75,21 +75,3 @@ const _$LiveInsightPriorityEnumMap = {
   LiveInsightPriority.medium: 'medium',
   LiveInsightPriority.low: 'low',
 };
-
-_$TranscriptChunkImpl _$$TranscriptChunkImplFromJson(
-  Map<String, dynamic> json,
-) => _$TranscriptChunkImpl(
-  chunkIndex: (json['chunkIndex'] as num).toInt(),
-  text: json['text'] as String,
-  speaker: json['speaker'] as String?,
-  timestamp: DateTime.parse(json['timestamp'] as String),
-);
-
-Map<String, dynamic> _$$TranscriptChunkImplToJson(
-  _$TranscriptChunkImpl instance,
-) => <String, dynamic>{
-  'chunkIndex': instance.chunkIndex,
-  'text': instance.text,
-  'speaker': instance.speaker,
-  'timestamp': instance.timestamp.toIso8601String(),
-};

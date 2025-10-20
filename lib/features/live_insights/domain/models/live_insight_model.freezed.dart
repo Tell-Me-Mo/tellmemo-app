@@ -863,19 +863,12 @@ abstract class _LiveInsightMessage implements LiveInsightMessage {
       throw _privateConstructorUsedError;
 }
 
-TranscriptChunk _$TranscriptChunkFromJson(Map<String, dynamic> json) {
-  return _TranscriptChunk.fromJson(json);
-}
-
 /// @nodoc
 mixin _$TranscriptChunk {
   int get chunkIndex => throw _privateConstructorUsedError;
   String get text => throw _privateConstructorUsedError;
   String? get speaker => throw _privateConstructorUsedError;
   DateTime get timestamp => throw _privateConstructorUsedError;
-
-  /// Serializes this TranscriptChunk to a JSON map.
-  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
   /// Create a copy of TranscriptChunk
   /// with the given fields replaced by the non-null parameter values.
@@ -993,7 +986,7 @@ class __$$TranscriptChunkImplCopyWithImpl<$Res>
 }
 
 /// @nodoc
-@JsonSerializable()
+
 class _$TranscriptChunkImpl implements _TranscriptChunk {
   const _$TranscriptChunkImpl({
     required this.chunkIndex,
@@ -1001,9 +994,6 @@ class _$TranscriptChunkImpl implements _TranscriptChunk {
     this.speaker,
     required this.timestamp,
   });
-
-  factory _$TranscriptChunkImpl.fromJson(Map<String, dynamic> json) =>
-      _$$TranscriptChunkImplFromJson(json);
 
   @override
   final int chunkIndex;
@@ -1032,7 +1022,6 @@ class _$TranscriptChunkImpl implements _TranscriptChunk {
                 other.timestamp == timestamp));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode =>
       Object.hash(runtimeType, chunkIndex, text, speaker, timestamp);
@@ -1047,11 +1036,6 @@ class _$TranscriptChunkImpl implements _TranscriptChunk {
         this,
         _$identity,
       );
-
-  @override
-  Map<String, dynamic> toJson() {
-    return _$$TranscriptChunkImplToJson(this);
-  }
 }
 
 abstract class _TranscriptChunk implements TranscriptChunk {
@@ -1061,9 +1045,6 @@ abstract class _TranscriptChunk implements TranscriptChunk {
     final String? speaker,
     required final DateTime timestamp,
   }) = _$TranscriptChunkImpl;
-
-  factory _TranscriptChunk.fromJson(Map<String, dynamic> json) =
-      _$TranscriptChunkImpl.fromJson;
 
   @override
   int get chunkIndex;

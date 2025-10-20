@@ -78,7 +78,7 @@ void main() {
       // Setup expectations
       final sessionInitializedCompleter = Completer<String>();
       service.sessionStateStream.listen((state) {
-        if (state.startsWith('session_initialized')) {
+        if (state == 'initialized') {  // Service emits 'initialized' not 'session_initialized'
           sessionInitializedCompleter.complete(state);
         }
       });
@@ -119,7 +119,7 @@ void main() {
         insightsCompleter.complete(result);
       });
 
-      // Simulate insights message (use camelCase for Dart enum mapping)
+      // Simulate insights message (use snake_case to match backend format)
       final timestamp = DateTime.now().toIso8601String();
       mockChannel.simulateMessage({
         'type': 'insights_extracted',
@@ -127,7 +127,7 @@ void main() {
         'insights': [
           {
             'insight_id': 'insight_1',
-            'type': 'actionItem',
+            'type': 'action_item',  // Backend sends snake_case
             'priority': 'high',
             'content': 'Complete API documentation',
             'context': 'Team discussion',
@@ -180,7 +180,7 @@ void main() {
       final timestamp = DateTime.now().toIso8601String();
       mockChannel.simulateMessage({
         'type': 'transcript_chunk',
-        'chunkIndex': 0,  // Use camelCase for Dart
+        'chunk_index': 0,  // Backend sends snake_case
         'text': 'This is a test transcript of the meeting discussion.',
         'speaker': 'John Doe',
         'timestamp': timestamp,
@@ -256,7 +256,7 @@ void main() {
         'insights': [
           {
             'insight_id': 'insight_1',
-            'type': 'actionItem',  // camelCase
+            'type': 'action_item',  // Backend sends snake_case
             'priority': 'high',
             'content': 'Complete feature by Monday',
             'context': 'Sprint planning',
@@ -326,28 +326,130 @@ void main() {
       // Setup expectations
       final stateCompleter = Completer<String>();
       service.sessionStateStream.listen((state) {
-        if (state == 'finalized') {
+        if (state == 'completed') {  // Service emits 'completed' not 'finalized'
           stateCompleter.complete(state);
         }
       });
 
-      // Simulate finalization
+      // Simulate finalization (backend sends data at top level, not nested under 'insights')
+      final timestamp = DateTime.now().toIso8601String();
       mockChannel.simulateMessage({
         'type': 'session_finalized',
         'session_id': 'test_session_123',
-        'insights': {
+        'total_insights': 5,  // At top level, not nested
+        'insights_by_type': {  // At top level with lists of insights, not counts
+          'action_item': [
+            {
+              'insight_id': 'ai_1',
+              'type': 'action_item',
+              'priority': 'high',
+              'content': 'Action 1',
+              'context': 'Context 1',
+              'timestamp': timestamp,
+              'confidence_score': 0.9,
+            },
+            {
+              'insight_id': 'ai_2',
+              'type': 'action_item',
+              'priority': 'medium',
+              'content': 'Action 2',
+              'context': 'Context 2',
+              'timestamp': timestamp,
+              'confidence_score': 0.85,
+            },
+            {
+              'insight_id': 'ai_3',
+              'type': 'action_item',
+              'priority': 'low',
+              'content': 'Action 3',
+              'context': 'Context 3',
+              'timestamp': timestamp,
+              'confidence_score': 0.8,
+            }
+          ],
+          'decision': [
+            {
+              'insight_id': 'dec_1',
+              'type': 'decision',
+              'priority': 'critical',
+              'content': 'Decision 1',
+              'context': 'Context',
+              'timestamp': timestamp,
+              'confidence_score': 0.95,
+            }
+          ],
+          'question': [
+            {
+              'insight_id': 'q_1',
+              'type': 'question',
+              'priority': 'medium',
+              'content': 'Question 1',
+              'context': 'Context',
+              'timestamp': timestamp,
+              'confidence_score': 0.75,
+            }
+          ],
+        },
+        'insights': [  // Flat list of all insights at top level
+          {
+            'insight_id': 'ai_1',
+            'type': 'action_item',
+            'priority': 'high',
+            'content': 'Action 1',
+            'context': 'Context 1',
+            'timestamp': timestamp,
+            'confidence_score': 0.9,
+          },
+          {
+            'insight_id': 'ai_2',
+            'type': 'action_item',
+            'priority': 'medium',
+            'content': 'Action 2',
+            'context': 'Context 2',
+            'timestamp': timestamp,
+            'confidence_score': 0.85,
+          },
+          {
+            'insight_id': 'ai_3',
+            'type': 'action_item',
+            'priority': 'low',
+            'content': 'Action 3',
+            'context': 'Context 3',
+            'timestamp': timestamp,
+            'confidence_score': 0.8,
+          },
+          {
+            'insight_id': 'dec_1',
+            'type': 'decision',
+            'priority': 'critical',
+            'content': 'Decision 1',
+            'context': 'Context',
+            'timestamp': timestamp,
+            'confidence_score': 0.95,
+          },
+          {
+            'insight_id': 'q_1',
+            'type': 'question',
+            'priority': 'medium',
+            'content': 'Question 1',
+            'context': 'Context',
+            'timestamp': timestamp,
+            'confidence_score': 0.75,
+          }
+        ],
+        'metrics': {
+          'session_duration_seconds': 600.0,
+          'chunks_processed': 60,
           'total_insights': 5,
           'insights_by_type': {
             'action_item': 3,
             'decision': 1,
             'question': 1,
-          }
+          },
+          'avg_processing_time_ms': 1850.0,
+          'avg_transcription_time_ms': 850.0,
         },
-        'metrics': {
-          'session_duration_seconds': 600,
-          'chunks_processed': 60,
-        },
-        'timestamp': DateTime.now().toIso8601String(),
+        'timestamp': timestamp,
       });
 
       // Wait for processing
@@ -377,16 +479,24 @@ void main() {
     });
 
     test('handles connection state changes', () async {
-      // Inject mock channel
-      service.injectChannelForTesting(mockChannel);
-
-      // Setup expectations
+      // Setup expectations BEFORE injecting channel
       final connectionStates = <bool>[];
+      final connectedCompleter = Completer<bool>();
+
       service.connectionStateStream.listen((state) {
         connectionStates.add(state);
+        if (state == true && !connectedCompleter.isCompleted) {
+          connectedCompleter.complete(true);
+        }
       });
 
-      // Simulate connection
+      // Inject mock channel (triggers connection state = true)
+      service.injectChannelForTesting(mockChannel);
+
+      // Wait for connection state to be emitted
+      await connectedCompleter.future;
+
+      // Simulate connection message
       mockChannel.simulateMessage({
         'type': 'session_initialized',
         'session_id': 'test_session_123',
@@ -394,12 +504,12 @@ void main() {
         'timestamp': DateTime.now().toIso8601String(),
       });
 
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(Duration(milliseconds: 50));
 
       // Simulate disconnection
       mockChannel.simulateClose();
 
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(Duration(milliseconds: 50));
 
       // Should have received at least one true (connected) state
       expect(connectionStates.contains(true), isTrue);
