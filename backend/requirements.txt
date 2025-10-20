@@ -3,7 +3,7 @@
 
 # Core Framework
 fastapi==0.118.0
-uvicorn[standard]==0.37.0
+uvicorn[standard]==0.38.0
 gunicorn==23.0.0
 python-multipart==0.0.20
 websockets==15.0.1
