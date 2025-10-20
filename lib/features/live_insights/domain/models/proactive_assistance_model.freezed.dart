@@ -1910,6 +1910,408 @@ abstract class _ActionItemQualityAssistance
   get copyWith => throw _privateConstructorUsedError;
 }
 
+FollowUpSuggestionAssistance _$FollowUpSuggestionAssistanceFromJson(
+  Map<String, dynamic> json,
+) {
+  return _FollowUpSuggestionAssistance.fromJson(json);
+}
+
+/// @nodoc
+mixin _$FollowUpSuggestionAssistance {
+  @JsonKey(name: 'insight_id')
+  String get insightId => throw _privateConstructorUsedError;
+  String get topic => throw _privateConstructorUsedError;
+  String get reason => throw _privateConstructorUsedError;
+  @JsonKey(name: 'related_content_id')
+  String get relatedContentId => throw _privateConstructorUsedError;
+  @JsonKey(name: 'related_title')
+  String get relatedTitle => throw _privateConstructorUsedError;
+  @JsonKey(name: 'related_date')
+  DateTime get relatedDate => throw _privateConstructorUsedError;
+  String get urgency =>
+      throw _privateConstructorUsedError; // 'high', 'medium', 'low'
+  @JsonKey(name: 'context_snippet')
+  String get contextSnippet => throw _privateConstructorUsedError;
+  double get confidence => throw _privateConstructorUsedError;
+  DateTime get timestamp => throw _privateConstructorUsedError;
+
+  /// Serializes this FollowUpSuggestionAssistance to a JSON map.
+  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
+
+  /// Create a copy of FollowUpSuggestionAssistance
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $FollowUpSuggestionAssistanceCopyWith<FollowUpSuggestionAssistance>
+  get copyWith => throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $FollowUpSuggestionAssistanceCopyWith<$Res> {
+  factory $FollowUpSuggestionAssistanceCopyWith(
+    FollowUpSuggestionAssistance value,
+    $Res Function(FollowUpSuggestionAssistance) then,
+  ) =
+      _$FollowUpSuggestionAssistanceCopyWithImpl<
+        $Res,
+        FollowUpSuggestionAssistance
+      >;
+  @useResult
+  $Res call({
+    @JsonKey(name: 'insight_id') String insightId,
+    String topic,
+    String reason,
+    @JsonKey(name: 'related_content_id') String relatedContentId,
+    @JsonKey(name: 'related_title') String relatedTitle,
+    @JsonKey(name: 'related_date') DateTime relatedDate,
+    String urgency,
+    @JsonKey(name: 'context_snippet') String contextSnippet,
+    double confidence,
+    DateTime timestamp,
+  });
+}
+
+/// @nodoc
+class _$FollowUpSuggestionAssistanceCopyWithImpl<
+  $Res,
+  $Val extends FollowUpSuggestionAssistance
+>
+    implements $FollowUpSuggestionAssistanceCopyWith<$Res> {
+  _$FollowUpSuggestionAssistanceCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of FollowUpSuggestionAssistance
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? insightId = null,
+    Object? topic = null,
+    Object? reason = null,
+    Object? relatedContentId = null,
+    Object? relatedTitle = null,
+    Object? relatedDate = null,
+    Object? urgency = null,
+    Object? contextSnippet = null,
+    Object? confidence = null,
+    Object? timestamp = null,
+  }) {
+    return _then(
+      _value.copyWith(
+            insightId: null == insightId
+                ? _value.insightId
+                : insightId // ignore: cast_nullable_to_non_nullable
+                      as String,
+            topic: null == topic
+                ? _value.topic
+                : topic // ignore: cast_nullable_to_non_nullable
+                      as String,
+            reason: null == reason
+                ? _value.reason
+                : reason // ignore: cast_nullable_to_non_nullable
+                      as String,
+            relatedContentId: null == relatedContentId
+                ? _value.relatedContentId
+                : relatedContentId // ignore: cast_nullable_to_non_nullable
+                      as String,
+            relatedTitle: null == relatedTitle
+                ? _value.relatedTitle
+                : relatedTitle // ignore: cast_nullable_to_non_nullable
+                      as String,
+            relatedDate: null == relatedDate
+                ? _value.relatedDate
+                : relatedDate // ignore: cast_nullable_to_non_nullable
+                      as DateTime,
+            urgency: null == urgency
+                ? _value.urgency
+                : urgency // ignore: cast_nullable_to_non_nullable
+                      as String,
+            contextSnippet: null == contextSnippet
+                ? _value.contextSnippet
+                : contextSnippet // ignore: cast_nullable_to_non_nullable
+                      as String,
+            confidence: null == confidence
+                ? _value.confidence
+                : confidence // ignore: cast_nullable_to_non_nullable
+                      as double,
+            timestamp: null == timestamp
+                ? _value.timestamp
+                : timestamp // ignore: cast_nullable_to_non_nullable
+                      as DateTime,
+          )
+          as $Val,
+    );
+  }
+}
+
+/// @nodoc
+abstract class _$$FollowUpSuggestionAssistanceImplCopyWith<$Res>
+    implements $FollowUpSuggestionAssistanceCopyWith<$Res> {
+  factory _$$FollowUpSuggestionAssistanceImplCopyWith(
+    _$FollowUpSuggestionAssistanceImpl value,
+    $Res Function(_$FollowUpSuggestionAssistanceImpl) then,
+  ) = __$$FollowUpSuggestionAssistanceImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({
+    @JsonKey(name: 'insight_id') String insightId,
+    String topic,
+    String reason,
+    @JsonKey(name: 'related_content_id') String relatedContentId,
+    @JsonKey(name: 'related_title') String relatedTitle,
+    @JsonKey(name: 'related_date') DateTime relatedDate,
+    String urgency,
+    @JsonKey(name: 'context_snippet') String contextSnippet,
+    double confidence,
+    DateTime timestamp,
+  });
+}
+
+/// @nodoc
+class __$$FollowUpSuggestionAssistanceImplCopyWithImpl<$Res>
+    extends
+        _$FollowUpSuggestionAssistanceCopyWithImpl<
+          $Res,
+          _$FollowUpSuggestionAssistanceImpl
+        >
+    implements _$$FollowUpSuggestionAssistanceImplCopyWith<$Res> {
+  __$$FollowUpSuggestionAssistanceImplCopyWithImpl(
+    _$FollowUpSuggestionAssistanceImpl _value,
+    $Res Function(_$FollowUpSuggestionAssistanceImpl) _then,
+  ) : super(_value, _then);
+
+  /// Create a copy of FollowUpSuggestionAssistance
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? insightId = null,
+    Object? topic = null,
+    Object? reason = null,
+    Object? relatedContentId = null,
+    Object? relatedTitle = null,
+    Object? relatedDate = null,
+    Object? urgency = null,
+    Object? contextSnippet = null,
+    Object? confidence = null,
+    Object? timestamp = null,
+  }) {
+    return _then(
+      _$FollowUpSuggestionAssistanceImpl(
+        insightId: null == insightId
+            ? _value.insightId
+            : insightId // ignore: cast_nullable_to_non_nullable
+                  as String,
+        topic: null == topic
+            ? _value.topic
+            : topic // ignore: cast_nullable_to_non_nullable
+                  as String,
+        reason: null == reason
+            ? _value.reason
+            : reason // ignore: cast_nullable_to_non_nullable
+                  as String,
+        relatedContentId: null == relatedContentId
+            ? _value.relatedContentId
+            : relatedContentId // ignore: cast_nullable_to_non_nullable
+                  as String,
+        relatedTitle: null == relatedTitle
+            ? _value.relatedTitle
+            : relatedTitle // ignore: cast_nullable_to_non_nullable
+                  as String,
+        relatedDate: null == relatedDate
+            ? _value.relatedDate
+            : relatedDate // ignore: cast_nullable_to_non_nullable
+                  as DateTime,
+        urgency: null == urgency
+            ? _value.urgency
+            : urgency // ignore: cast_nullable_to_non_nullable
+                  as String,
+        contextSnippet: null == contextSnippet
+            ? _value.contextSnippet
+            : contextSnippet // ignore: cast_nullable_to_non_nullable
+                  as String,
+        confidence: null == confidence
+            ? _value.confidence
+            : confidence // ignore: cast_nullable_to_non_nullable
+                  as double,
+        timestamp: null == timestamp
+            ? _value.timestamp
+            : timestamp // ignore: cast_nullable_to_non_nullable
+                  as DateTime,
+      ),
+    );
+  }
+}
+
+/// @nodoc
+@JsonSerializable()
+class _$FollowUpSuggestionAssistanceImpl
+    implements _FollowUpSuggestionAssistance {
+  const _$FollowUpSuggestionAssistanceImpl({
+    @JsonKey(name: 'insight_id') required this.insightId,
+    required this.topic,
+    required this.reason,
+    @JsonKey(name: 'related_content_id') required this.relatedContentId,
+    @JsonKey(name: 'related_title') required this.relatedTitle,
+    @JsonKey(name: 'related_date') required this.relatedDate,
+    required this.urgency,
+    @JsonKey(name: 'context_snippet') required this.contextSnippet,
+    required this.confidence,
+    required this.timestamp,
+  });
+
+  factory _$FollowUpSuggestionAssistanceImpl.fromJson(
+    Map<String, dynamic> json,
+  ) => _$$FollowUpSuggestionAssistanceImplFromJson(json);
+
+  @override
+  @JsonKey(name: 'insight_id')
+  final String insightId;
+  @override
+  final String topic;
+  @override
+  final String reason;
+  @override
+  @JsonKey(name: 'related_content_id')
+  final String relatedContentId;
+  @override
+  @JsonKey(name: 'related_title')
+  final String relatedTitle;
+  @override
+  @JsonKey(name: 'related_date')
+  final DateTime relatedDate;
+  @override
+  final String urgency;
+  // 'high', 'medium', 'low'
+  @override
+  @JsonKey(name: 'context_snippet')
+  final String contextSnippet;
+  @override
+  final double confidence;
+  @override
+  final DateTime timestamp;
+
+  @override
+  String toString() {
+    return 'FollowUpSuggestionAssistance(insightId: $insightId, topic: $topic, reason: $reason, relatedContentId: $relatedContentId, relatedTitle: $relatedTitle, relatedDate: $relatedDate, urgency: $urgency, contextSnippet: $contextSnippet, confidence: $confidence, timestamp: $timestamp)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$FollowUpSuggestionAssistanceImpl &&
+            (identical(other.insightId, insightId) ||
+                other.insightId == insightId) &&
+            (identical(other.topic, topic) || other.topic == topic) &&
+            (identical(other.reason, reason) || other.reason == reason) &&
+            (identical(other.relatedContentId, relatedContentId) ||
+                other.relatedContentId == relatedContentId) &&
+            (identical(other.relatedTitle, relatedTitle) ||
+                other.relatedTitle == relatedTitle) &&
+            (identical(other.relatedDate, relatedDate) ||
+                other.relatedDate == relatedDate) &&
+            (identical(other.urgency, urgency) || other.urgency == urgency) &&
+            (identical(other.contextSnippet, contextSnippet) ||
+                other.contextSnippet == contextSnippet) &&
+            (identical(other.confidence, confidence) ||
+                other.confidence == confidence) &&
+            (identical(other.timestamp, timestamp) ||
+                other.timestamp == timestamp));
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  int get hashCode => Object.hash(
+    runtimeType,
+    insightId,
+    topic,
+    reason,
+    relatedContentId,
+    relatedTitle,
+    relatedDate,
+    urgency,
+    contextSnippet,
+    confidence,
+    timestamp,
+  );
+
+  /// Create a copy of FollowUpSuggestionAssistance
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$FollowUpSuggestionAssistanceImplCopyWith<
+    _$FollowUpSuggestionAssistanceImpl
+  >
+  get copyWith =>
+      __$$FollowUpSuggestionAssistanceImplCopyWithImpl<
+        _$FollowUpSuggestionAssistanceImpl
+      >(this, _$identity);
+
+  @override
+  Map<String, dynamic> toJson() {
+    return _$$FollowUpSuggestionAssistanceImplToJson(this);
+  }
+}
+
+abstract class _FollowUpSuggestionAssistance
+    implements FollowUpSuggestionAssistance {
+  const factory _FollowUpSuggestionAssistance({
+    @JsonKey(name: 'insight_id') required final String insightId,
+    required final String topic,
+    required final String reason,
+    @JsonKey(name: 'related_content_id') required final String relatedContentId,
+    @JsonKey(name: 'related_title') required final String relatedTitle,
+    @JsonKey(name: 'related_date') required final DateTime relatedDate,
+    required final String urgency,
+    @JsonKey(name: 'context_snippet') required final String contextSnippet,
+    required final double confidence,
+    required final DateTime timestamp,
+  }) = _$FollowUpSuggestionAssistanceImpl;
+
+  factory _FollowUpSuggestionAssistance.fromJson(Map<String, dynamic> json) =
+      _$FollowUpSuggestionAssistanceImpl.fromJson;
+
+  @override
+  @JsonKey(name: 'insight_id')
+  String get insightId;
+  @override
+  String get topic;
+  @override
+  String get reason;
+  @override
+  @JsonKey(name: 'related_content_id')
+  String get relatedContentId;
+  @override
+  @JsonKey(name: 'related_title')
+  String get relatedTitle;
+  @override
+  @JsonKey(name: 'related_date')
+  DateTime get relatedDate;
+  @override
+  String get urgency; // 'high', 'medium', 'low'
+  @override
+  @JsonKey(name: 'context_snippet')
+  String get contextSnippet;
+  @override
+  double get confidence;
+  @override
+  DateTime get timestamp;
+
+  /// Create a copy of FollowUpSuggestionAssistance
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$FollowUpSuggestionAssistanceImplCopyWith<
+    _$FollowUpSuggestionAssistanceImpl
+  >
+  get copyWith => throw _privateConstructorUsedError;
+}
+
 /// @nodoc
 mixin _$ProactiveAssistanceModel {
   ProactiveAssistanceType get type => throw _privateConstructorUsedError;
@@ -1918,6 +2320,8 @@ mixin _$ProactiveAssistanceModel {
       throw _privateConstructorUsedError;
   ConflictAssistance? get conflict => throw _privateConstructorUsedError;
   ActionItemQualityAssistance? get actionItemQuality =>
+      throw _privateConstructorUsedError;
+  FollowUpSuggestionAssistance? get followUpSuggestion =>
       throw _privateConstructorUsedError;
 
   /// Create a copy of ProactiveAssistanceModel
@@ -1940,12 +2344,14 @@ abstract class $ProactiveAssistanceModelCopyWith<$Res> {
     ClarificationAssistance? clarification,
     ConflictAssistance? conflict,
     ActionItemQualityAssistance? actionItemQuality,
+    FollowUpSuggestionAssistance? followUpSuggestion,
   });
 
   $AutoAnswerAssistanceCopyWith<$Res>? get autoAnswer;
   $ClarificationAssistanceCopyWith<$Res>? get clarification;
   $ConflictAssistanceCopyWith<$Res>? get conflict;
   $ActionItemQualityAssistanceCopyWith<$Res>? get actionItemQuality;
+  $FollowUpSuggestionAssistanceCopyWith<$Res>? get followUpSuggestion;
 }
 
 /// @nodoc
@@ -1971,6 +2377,7 @@ class _$ProactiveAssistanceModelCopyWithImpl<
     Object? clarification = freezed,
     Object? conflict = freezed,
     Object? actionItemQuality = freezed,
+    Object? followUpSuggestion = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -1994,6 +2401,10 @@ class _$ProactiveAssistanceModelCopyWithImpl<
                 ? _value.actionItemQuality
                 : actionItemQuality // ignore: cast_nullable_to_non_nullable
                       as ActionItemQualityAssistance?,
+            followUpSuggestion: freezed == followUpSuggestion
+                ? _value.followUpSuggestion
+                : followUpSuggestion // ignore: cast_nullable_to_non_nullable
+                      as FollowUpSuggestionAssistance?,
           )
           as $Val,
     );
@@ -2059,6 +2470,23 @@ class _$ProactiveAssistanceModelCopyWithImpl<
       },
     );
   }
+
+  /// Create a copy of ProactiveAssistanceModel
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $FollowUpSuggestionAssistanceCopyWith<$Res>? get followUpSuggestion {
+    if (_value.followUpSuggestion == null) {
+      return null;
+    }
+
+    return $FollowUpSuggestionAssistanceCopyWith<$Res>(
+      _value.followUpSuggestion!,
+      (value) {
+        return _then(_value.copyWith(followUpSuggestion: value) as $Val);
+      },
+    );
+  }
 }
 
 /// @nodoc
@@ -2076,6 +2504,7 @@ abstract class _$$ProactiveAssistanceModelImplCopyWith<$Res>
     ClarificationAssistance? clarification,
     ConflictAssistance? conflict,
     ActionItemQualityAssistance? actionItemQuality,
+    FollowUpSuggestionAssistance? followUpSuggestion,
   });
 
   @override
@@ -2086,6 +2515,8 @@ abstract class _$$ProactiveAssistanceModelImplCopyWith<$Res>
   $ConflictAssistanceCopyWith<$Res>? get conflict;
   @override
   $ActionItemQualityAssistanceCopyWith<$Res>? get actionItemQuality;
+  @override
+  $FollowUpSuggestionAssistanceCopyWith<$Res>? get followUpSuggestion;
 }
 
 /// @nodoc
@@ -2111,6 +2542,7 @@ class __$$ProactiveAssistanceModelImplCopyWithImpl<$Res>
     Object? clarification = freezed,
     Object? conflict = freezed,
     Object? actionItemQuality = freezed,
+    Object? followUpSuggestion = freezed,
   }) {
     return _then(
       _$ProactiveAssistanceModelImpl(
@@ -2134,6 +2566,10 @@ class __$$ProactiveAssistanceModelImplCopyWithImpl<$Res>
             ? _value.actionItemQuality
             : actionItemQuality // ignore: cast_nullable_to_non_nullable
                   as ActionItemQualityAssistance?,
+        followUpSuggestion: freezed == followUpSuggestion
+            ? _value.followUpSuggestion
+            : followUpSuggestion // ignore: cast_nullable_to_non_nullable
+                  as FollowUpSuggestionAssistance?,
       ),
     );
   }
@@ -2148,6 +2584,7 @@ class _$ProactiveAssistanceModelImpl implements _ProactiveAssistanceModel {
     this.clarification,
     this.conflict,
     this.actionItemQuality,
+    this.followUpSuggestion,
   });
 
   @override
@@ -2160,10 +2597,12 @@ class _$ProactiveAssistanceModelImpl implements _ProactiveAssistanceModel {
   final ConflictAssistance? conflict;
   @override
   final ActionItemQualityAssistance? actionItemQuality;
+  @override
+  final FollowUpSuggestionAssistance? followUpSuggestion;
 
   @override
   String toString() {
-    return 'ProactiveAssistanceModel(type: $type, autoAnswer: $autoAnswer, clarification: $clarification, conflict: $conflict, actionItemQuality: $actionItemQuality)';
+    return 'ProactiveAssistanceModel(type: $type, autoAnswer: $autoAnswer, clarification: $clarification, conflict: $conflict, actionItemQuality: $actionItemQuality, followUpSuggestion: $followUpSuggestion)';
   }
 
   @override
@@ -2179,7 +2618,9 @@ class _$ProactiveAssistanceModelImpl implements _ProactiveAssistanceModel {
             (identical(other.conflict, conflict) ||
                 other.conflict == conflict) &&
             (identical(other.actionItemQuality, actionItemQuality) ||
-                other.actionItemQuality == actionItemQuality));
+                other.actionItemQuality == actionItemQuality) &&
+            (identical(other.followUpSuggestion, followUpSuggestion) ||
+                other.followUpSuggestion == followUpSuggestion));
   }
 
   @override
@@ -2190,6 +2631,7 @@ class _$ProactiveAssistanceModelImpl implements _ProactiveAssistanceModel {
     clarification,
     conflict,
     actionItemQuality,
+    followUpSuggestion,
   );
 
   /// Create a copy of ProactiveAssistanceModel
@@ -2211,6 +2653,7 @@ abstract class _ProactiveAssistanceModel implements ProactiveAssistanceModel {
     final ClarificationAssistance? clarification,
     final ConflictAssistance? conflict,
     final ActionItemQualityAssistance? actionItemQuality,
+    final FollowUpSuggestionAssistance? followUpSuggestion,
   }) = _$ProactiveAssistanceModelImpl;
 
   @override
@@ -2223,6 +2666,8 @@ abstract class _ProactiveAssistanceModel implements ProactiveAssistanceModel {
   ConflictAssistance? get conflict;
   @override
   ActionItemQualityAssistance? get actionItemQuality;
+  @override
+  FollowUpSuggestionAssistance? get followUpSuggestion;
 
   /// Create a copy of ProactiveAssistanceModel
   /// with the given fields replaced by the non-null parameter values.

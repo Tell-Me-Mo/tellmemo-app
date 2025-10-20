@@ -151,3 +151,33 @@ Map<String, dynamic> _$$ActionItemQualityAssistanceImplToJson(
   'improved_version': instance.improvedVersion,
   'timestamp': instance.timestamp.toIso8601String(),
 };
+
+_$FollowUpSuggestionAssistanceImpl _$$FollowUpSuggestionAssistanceImplFromJson(
+  Map<String, dynamic> json,
+) => _$FollowUpSuggestionAssistanceImpl(
+  insightId: json['insight_id'] as String,
+  topic: json['topic'] as String,
+  reason: json['reason'] as String,
+  relatedContentId: json['related_content_id'] as String,
+  relatedTitle: json['related_title'] as String,
+  relatedDate: DateTime.parse(json['related_date'] as String),
+  urgency: json['urgency'] as String,
+  contextSnippet: json['context_snippet'] as String,
+  confidence: (json['confidence'] as num).toDouble(),
+  timestamp: DateTime.parse(json['timestamp'] as String),
+);
+
+Map<String, dynamic> _$$FollowUpSuggestionAssistanceImplToJson(
+  _$FollowUpSuggestionAssistanceImpl instance,
+) => <String, dynamic>{
+  'insight_id': instance.insightId,
+  'topic': instance.topic,
+  'reason': instance.reason,
+  'related_content_id': instance.relatedContentId,
+  'related_title': instance.relatedTitle,
+  'related_date': instance.relatedDate.toIso8601String(),
+  'urgency': instance.urgency,
+  'context_snippet': instance.contextSnippet,
+  'confidence': instance.confidence,
+  'timestamp': instance.timestamp.toIso8601String(),
+};
