@@ -111,3 +111,43 @@ Map<String, dynamic> _$$ConflictAssistanceImplToJson(
   'resolution_suggestions': instance.resolutionSuggestions,
   'timestamp': instance.timestamp.toIso8601String(),
 };
+
+_$QualityIssueImpl _$$QualityIssueImplFromJson(Map<String, dynamic> json) =>
+    _$QualityIssueImpl(
+      field: json['field'] as String,
+      severity: json['severity'] as String,
+      message: json['message'] as String,
+      suggestedFix: json['suggested_fix'] as String?,
+    );
+
+Map<String, dynamic> _$$QualityIssueImplToJson(_$QualityIssueImpl instance) =>
+    <String, dynamic>{
+      'field': instance.field,
+      'severity': instance.severity,
+      'message': instance.message,
+      'suggested_fix': instance.suggestedFix,
+    };
+
+_$ActionItemQualityAssistanceImpl _$$ActionItemQualityAssistanceImplFromJson(
+  Map<String, dynamic> json,
+) => _$ActionItemQualityAssistanceImpl(
+  insightId: json['insight_id'] as String,
+  actionItem: json['action_item'] as String,
+  completenessScore: (json['completeness_score'] as num).toDouble(),
+  issues: (json['issues'] as List<dynamic>)
+      .map((e) => QualityIssue.fromJson(e as Map<String, dynamic>))
+      .toList(),
+  improvedVersion: json['improved_version'] as String?,
+  timestamp: DateTime.parse(json['timestamp'] as String),
+);
+
+Map<String, dynamic> _$$ActionItemQualityAssistanceImplToJson(
+  _$ActionItemQualityAssistanceImpl instance,
+) => <String, dynamic>{
+  'insight_id': instance.insightId,
+  'action_item': instance.actionItem,
+  'completeness_score': instance.completenessScore,
+  'issues': instance.issues,
+  'improved_version': instance.improvedVersion,
+  'timestamp': instance.timestamp.toIso8601String(),
+};

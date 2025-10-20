@@ -1363,6 +1363,553 @@ abstract class _ConflictAssistance implements ConflictAssistance {
       throw _privateConstructorUsedError;
 }
 
+QualityIssue _$QualityIssueFromJson(Map<String, dynamic> json) {
+  return _QualityIssue.fromJson(json);
+}
+
+/// @nodoc
+mixin _$QualityIssue {
+  String get field =>
+      throw _privateConstructorUsedError; // 'owner', 'deadline', 'description', 'success_criteria'
+  String get severity =>
+      throw _privateConstructorUsedError; // 'critical', 'important', 'suggestion'
+  String get message => throw _privateConstructorUsedError;
+  @JsonKey(name: 'suggested_fix')
+  String? get suggestedFix => throw _privateConstructorUsedError;
+
+  /// Serializes this QualityIssue to a JSON map.
+  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
+
+  /// Create a copy of QualityIssue
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $QualityIssueCopyWith<QualityIssue> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $QualityIssueCopyWith<$Res> {
+  factory $QualityIssueCopyWith(
+    QualityIssue value,
+    $Res Function(QualityIssue) then,
+  ) = _$QualityIssueCopyWithImpl<$Res, QualityIssue>;
+  @useResult
+  $Res call({
+    String field,
+    String severity,
+    String message,
+    @JsonKey(name: 'suggested_fix') String? suggestedFix,
+  });
+}
+
+/// @nodoc
+class _$QualityIssueCopyWithImpl<$Res, $Val extends QualityIssue>
+    implements $QualityIssueCopyWith<$Res> {
+  _$QualityIssueCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of QualityIssue
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? field = null,
+    Object? severity = null,
+    Object? message = null,
+    Object? suggestedFix = freezed,
+  }) {
+    return _then(
+      _value.copyWith(
+            field: null == field
+                ? _value.field
+                : field // ignore: cast_nullable_to_non_nullable
+                      as String,
+            severity: null == severity
+                ? _value.severity
+                : severity // ignore: cast_nullable_to_non_nullable
+                      as String,
+            message: null == message
+                ? _value.message
+                : message // ignore: cast_nullable_to_non_nullable
+                      as String,
+            suggestedFix: freezed == suggestedFix
+                ? _value.suggestedFix
+                : suggestedFix // ignore: cast_nullable_to_non_nullable
+                      as String?,
+          )
+          as $Val,
+    );
+  }
+}
+
+/// @nodoc
+abstract class _$$QualityIssueImplCopyWith<$Res>
+    implements $QualityIssueCopyWith<$Res> {
+  factory _$$QualityIssueImplCopyWith(
+    _$QualityIssueImpl value,
+    $Res Function(_$QualityIssueImpl) then,
+  ) = __$$QualityIssueImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({
+    String field,
+    String severity,
+    String message,
+    @JsonKey(name: 'suggested_fix') String? suggestedFix,
+  });
+}
+
+/// @nodoc
+class __$$QualityIssueImplCopyWithImpl<$Res>
+    extends _$QualityIssueCopyWithImpl<$Res, _$QualityIssueImpl>
+    implements _$$QualityIssueImplCopyWith<$Res> {
+  __$$QualityIssueImplCopyWithImpl(
+    _$QualityIssueImpl _value,
+    $Res Function(_$QualityIssueImpl) _then,
+  ) : super(_value, _then);
+
+  /// Create a copy of QualityIssue
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? field = null,
+    Object? severity = null,
+    Object? message = null,
+    Object? suggestedFix = freezed,
+  }) {
+    return _then(
+      _$QualityIssueImpl(
+        field: null == field
+            ? _value.field
+            : field // ignore: cast_nullable_to_non_nullable
+                  as String,
+        severity: null == severity
+            ? _value.severity
+            : severity // ignore: cast_nullable_to_non_nullable
+                  as String,
+        message: null == message
+            ? _value.message
+            : message // ignore: cast_nullable_to_non_nullable
+                  as String,
+        suggestedFix: freezed == suggestedFix
+            ? _value.suggestedFix
+            : suggestedFix // ignore: cast_nullable_to_non_nullable
+                  as String?,
+      ),
+    );
+  }
+}
+
+/// @nodoc
+@JsonSerializable()
+class _$QualityIssueImpl implements _QualityIssue {
+  const _$QualityIssueImpl({
+    required this.field,
+    required this.severity,
+    required this.message,
+    @JsonKey(name: 'suggested_fix') this.suggestedFix,
+  });
+
+  factory _$QualityIssueImpl.fromJson(Map<String, dynamic> json) =>
+      _$$QualityIssueImplFromJson(json);
+
+  @override
+  final String field;
+  // 'owner', 'deadline', 'description', 'success_criteria'
+  @override
+  final String severity;
+  // 'critical', 'important', 'suggestion'
+  @override
+  final String message;
+  @override
+  @JsonKey(name: 'suggested_fix')
+  final String? suggestedFix;
+
+  @override
+  String toString() {
+    return 'QualityIssue(field: $field, severity: $severity, message: $message, suggestedFix: $suggestedFix)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$QualityIssueImpl &&
+            (identical(other.field, field) || other.field == field) &&
+            (identical(other.severity, severity) ||
+                other.severity == severity) &&
+            (identical(other.message, message) || other.message == message) &&
+            (identical(other.suggestedFix, suggestedFix) ||
+                other.suggestedFix == suggestedFix));
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  int get hashCode =>
+      Object.hash(runtimeType, field, severity, message, suggestedFix);
+
+  /// Create a copy of QualityIssue
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$QualityIssueImplCopyWith<_$QualityIssueImpl> get copyWith =>
+      __$$QualityIssueImplCopyWithImpl<_$QualityIssueImpl>(this, _$identity);
+
+  @override
+  Map<String, dynamic> toJson() {
+    return _$$QualityIssueImplToJson(this);
+  }
+}
+
+abstract class _QualityIssue implements QualityIssue {
+  const factory _QualityIssue({
+    required final String field,
+    required final String severity,
+    required final String message,
+    @JsonKey(name: 'suggested_fix') final String? suggestedFix,
+  }) = _$QualityIssueImpl;
+
+  factory _QualityIssue.fromJson(Map<String, dynamic> json) =
+      _$QualityIssueImpl.fromJson;
+
+  @override
+  String get field; // 'owner', 'deadline', 'description', 'success_criteria'
+  @override
+  String get severity; // 'critical', 'important', 'suggestion'
+  @override
+  String get message;
+  @override
+  @JsonKey(name: 'suggested_fix')
+  String? get suggestedFix;
+
+  /// Create a copy of QualityIssue
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$QualityIssueImplCopyWith<_$QualityIssueImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+ActionItemQualityAssistance _$ActionItemQualityAssistanceFromJson(
+  Map<String, dynamic> json,
+) {
+  return _ActionItemQualityAssistance.fromJson(json);
+}
+
+/// @nodoc
+mixin _$ActionItemQualityAssistance {
+  @JsonKey(name: 'insight_id')
+  String get insightId => throw _privateConstructorUsedError;
+  @JsonKey(name: 'action_item')
+  String get actionItem => throw _privateConstructorUsedError;
+  @JsonKey(name: 'completeness_score')
+  double get completenessScore => throw _privateConstructorUsedError;
+  List<QualityIssue> get issues => throw _privateConstructorUsedError;
+  @JsonKey(name: 'improved_version')
+  String? get improvedVersion => throw _privateConstructorUsedError;
+  DateTime get timestamp => throw _privateConstructorUsedError;
+
+  /// Serializes this ActionItemQualityAssistance to a JSON map.
+  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
+
+  /// Create a copy of ActionItemQualityAssistance
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $ActionItemQualityAssistanceCopyWith<ActionItemQualityAssistance>
+  get copyWith => throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $ActionItemQualityAssistanceCopyWith<$Res> {
+  factory $ActionItemQualityAssistanceCopyWith(
+    ActionItemQualityAssistance value,
+    $Res Function(ActionItemQualityAssistance) then,
+  ) =
+      _$ActionItemQualityAssistanceCopyWithImpl<
+        $Res,
+        ActionItemQualityAssistance
+      >;
+  @useResult
+  $Res call({
+    @JsonKey(name: 'insight_id') String insightId,
+    @JsonKey(name: 'action_item') String actionItem,
+    @JsonKey(name: 'completeness_score') double completenessScore,
+    List<QualityIssue> issues,
+    @JsonKey(name: 'improved_version') String? improvedVersion,
+    DateTime timestamp,
+  });
+}
+
+/// @nodoc
+class _$ActionItemQualityAssistanceCopyWithImpl<
+  $Res,
+  $Val extends ActionItemQualityAssistance
+>
+    implements $ActionItemQualityAssistanceCopyWith<$Res> {
+  _$ActionItemQualityAssistanceCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of ActionItemQualityAssistance
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? insightId = null,
+    Object? actionItem = null,
+    Object? completenessScore = null,
+    Object? issues = null,
+    Object? improvedVersion = freezed,
+    Object? timestamp = null,
+  }) {
+    return _then(
+      _value.copyWith(
+            insightId: null == insightId
+                ? _value.insightId
+                : insightId // ignore: cast_nullable_to_non_nullable
+                      as String,
+            actionItem: null == actionItem
+                ? _value.actionItem
+                : actionItem // ignore: cast_nullable_to_non_nullable
+                      as String,
+            completenessScore: null == completenessScore
+                ? _value.completenessScore
+                : completenessScore // ignore: cast_nullable_to_non_nullable
+                      as double,
+            issues: null == issues
+                ? _value.issues
+                : issues // ignore: cast_nullable_to_non_nullable
+                      as List<QualityIssue>,
+            improvedVersion: freezed == improvedVersion
+                ? _value.improvedVersion
+                : improvedVersion // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            timestamp: null == timestamp
+                ? _value.timestamp
+                : timestamp // ignore: cast_nullable_to_non_nullable
+                      as DateTime,
+          )
+          as $Val,
+    );
+  }
+}
+
+/// @nodoc
+abstract class _$$ActionItemQualityAssistanceImplCopyWith<$Res>
+    implements $ActionItemQualityAssistanceCopyWith<$Res> {
+  factory _$$ActionItemQualityAssistanceImplCopyWith(
+    _$ActionItemQualityAssistanceImpl value,
+    $Res Function(_$ActionItemQualityAssistanceImpl) then,
+  ) = __$$ActionItemQualityAssistanceImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({
+    @JsonKey(name: 'insight_id') String insightId,
+    @JsonKey(name: 'action_item') String actionItem,
+    @JsonKey(name: 'completeness_score') double completenessScore,
+    List<QualityIssue> issues,
+    @JsonKey(name: 'improved_version') String? improvedVersion,
+    DateTime timestamp,
+  });
+}
+
+/// @nodoc
+class __$$ActionItemQualityAssistanceImplCopyWithImpl<$Res>
+    extends
+        _$ActionItemQualityAssistanceCopyWithImpl<
+          $Res,
+          _$ActionItemQualityAssistanceImpl
+        >
+    implements _$$ActionItemQualityAssistanceImplCopyWith<$Res> {
+  __$$ActionItemQualityAssistanceImplCopyWithImpl(
+    _$ActionItemQualityAssistanceImpl _value,
+    $Res Function(_$ActionItemQualityAssistanceImpl) _then,
+  ) : super(_value, _then);
+
+  /// Create a copy of ActionItemQualityAssistance
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? insightId = null,
+    Object? actionItem = null,
+    Object? completenessScore = null,
+    Object? issues = null,
+    Object? improvedVersion = freezed,
+    Object? timestamp = null,
+  }) {
+    return _then(
+      _$ActionItemQualityAssistanceImpl(
+        insightId: null == insightId
+            ? _value.insightId
+            : insightId // ignore: cast_nullable_to_non_nullable
+                  as String,
+        actionItem: null == actionItem
+            ? _value.actionItem
+            : actionItem // ignore: cast_nullable_to_non_nullable
+                  as String,
+        completenessScore: null == completenessScore
+            ? _value.completenessScore
+            : completenessScore // ignore: cast_nullable_to_non_nullable
+                  as double,
+        issues: null == issues
+            ? _value._issues
+            : issues // ignore: cast_nullable_to_non_nullable
+                  as List<QualityIssue>,
+        improvedVersion: freezed == improvedVersion
+            ? _value.improvedVersion
+            : improvedVersion // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        timestamp: null == timestamp
+            ? _value.timestamp
+            : timestamp // ignore: cast_nullable_to_non_nullable
+                  as DateTime,
+      ),
+    );
+  }
+}
+
+/// @nodoc
+@JsonSerializable()
+class _$ActionItemQualityAssistanceImpl
+    implements _ActionItemQualityAssistance {
+  const _$ActionItemQualityAssistanceImpl({
+    @JsonKey(name: 'insight_id') required this.insightId,
+    @JsonKey(name: 'action_item') required this.actionItem,
+    @JsonKey(name: 'completeness_score') required this.completenessScore,
+    required final List<QualityIssue> issues,
+    @JsonKey(name: 'improved_version') this.improvedVersion,
+    required this.timestamp,
+  }) : _issues = issues;
+
+  factory _$ActionItemQualityAssistanceImpl.fromJson(
+    Map<String, dynamic> json,
+  ) => _$$ActionItemQualityAssistanceImplFromJson(json);
+
+  @override
+  @JsonKey(name: 'insight_id')
+  final String insightId;
+  @override
+  @JsonKey(name: 'action_item')
+  final String actionItem;
+  @override
+  @JsonKey(name: 'completeness_score')
+  final double completenessScore;
+  final List<QualityIssue> _issues;
+  @override
+  List<QualityIssue> get issues {
+    if (_issues is EqualUnmodifiableListView) return _issues;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_issues);
+  }
+
+  @override
+  @JsonKey(name: 'improved_version')
+  final String? improvedVersion;
+  @override
+  final DateTime timestamp;
+
+  @override
+  String toString() {
+    return 'ActionItemQualityAssistance(insightId: $insightId, actionItem: $actionItem, completenessScore: $completenessScore, issues: $issues, improvedVersion: $improvedVersion, timestamp: $timestamp)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$ActionItemQualityAssistanceImpl &&
+            (identical(other.insightId, insightId) ||
+                other.insightId == insightId) &&
+            (identical(other.actionItem, actionItem) ||
+                other.actionItem == actionItem) &&
+            (identical(other.completenessScore, completenessScore) ||
+                other.completenessScore == completenessScore) &&
+            const DeepCollectionEquality().equals(other._issues, _issues) &&
+            (identical(other.improvedVersion, improvedVersion) ||
+                other.improvedVersion == improvedVersion) &&
+            (identical(other.timestamp, timestamp) ||
+                other.timestamp == timestamp));
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  int get hashCode => Object.hash(
+    runtimeType,
+    insightId,
+    actionItem,
+    completenessScore,
+    const DeepCollectionEquality().hash(_issues),
+    improvedVersion,
+    timestamp,
+  );
+
+  /// Create a copy of ActionItemQualityAssistance
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$ActionItemQualityAssistanceImplCopyWith<_$ActionItemQualityAssistanceImpl>
+  get copyWith =>
+      __$$ActionItemQualityAssistanceImplCopyWithImpl<
+        _$ActionItemQualityAssistanceImpl
+      >(this, _$identity);
+
+  @override
+  Map<String, dynamic> toJson() {
+    return _$$ActionItemQualityAssistanceImplToJson(this);
+  }
+}
+
+abstract class _ActionItemQualityAssistance
+    implements ActionItemQualityAssistance {
+  const factory _ActionItemQualityAssistance({
+    @JsonKey(name: 'insight_id') required final String insightId,
+    @JsonKey(name: 'action_item') required final String actionItem,
+    @JsonKey(name: 'completeness_score')
+    required final double completenessScore,
+    required final List<QualityIssue> issues,
+    @JsonKey(name: 'improved_version') final String? improvedVersion,
+    required final DateTime timestamp,
+  }) = _$ActionItemQualityAssistanceImpl;
+
+  factory _ActionItemQualityAssistance.fromJson(Map<String, dynamic> json) =
+      _$ActionItemQualityAssistanceImpl.fromJson;
+
+  @override
+  @JsonKey(name: 'insight_id')
+  String get insightId;
+  @override
+  @JsonKey(name: 'action_item')
+  String get actionItem;
+  @override
+  @JsonKey(name: 'completeness_score')
+  double get completenessScore;
+  @override
+  List<QualityIssue> get issues;
+  @override
+  @JsonKey(name: 'improved_version')
+  String? get improvedVersion;
+  @override
+  DateTime get timestamp;
+
+  /// Create a copy of ActionItemQualityAssistance
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$ActionItemQualityAssistanceImplCopyWith<_$ActionItemQualityAssistanceImpl>
+  get copyWith => throw _privateConstructorUsedError;
+}
+
 /// @nodoc
 mixin _$ProactiveAssistanceModel {
   ProactiveAssistanceType get type => throw _privateConstructorUsedError;
@@ -1370,6 +1917,8 @@ mixin _$ProactiveAssistanceModel {
   ClarificationAssistance? get clarification =>
       throw _privateConstructorUsedError;
   ConflictAssistance? get conflict => throw _privateConstructorUsedError;
+  ActionItemQualityAssistance? get actionItemQuality =>
+      throw _privateConstructorUsedError;
 
   /// Create a copy of ProactiveAssistanceModel
   /// with the given fields replaced by the non-null parameter values.
@@ -1390,11 +1939,13 @@ abstract class $ProactiveAssistanceModelCopyWith<$Res> {
     AutoAnswerAssistance? autoAnswer,
     ClarificationAssistance? clarification,
     ConflictAssistance? conflict,
+    ActionItemQualityAssistance? actionItemQuality,
   });
 
   $AutoAnswerAssistanceCopyWith<$Res>? get autoAnswer;
   $ClarificationAssistanceCopyWith<$Res>? get clarification;
   $ConflictAssistanceCopyWith<$Res>? get conflict;
+  $ActionItemQualityAssistanceCopyWith<$Res>? get actionItemQuality;
 }
 
 /// @nodoc
@@ -1419,6 +1970,7 @@ class _$ProactiveAssistanceModelCopyWithImpl<
     Object? autoAnswer = freezed,
     Object? clarification = freezed,
     Object? conflict = freezed,
+    Object? actionItemQuality = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -1438,6 +1990,10 @@ class _$ProactiveAssistanceModelCopyWithImpl<
                 ? _value.conflict
                 : conflict // ignore: cast_nullable_to_non_nullable
                       as ConflictAssistance?,
+            actionItemQuality: freezed == actionItemQuality
+                ? _value.actionItemQuality
+                : actionItemQuality // ignore: cast_nullable_to_non_nullable
+                      as ActionItemQualityAssistance?,
           )
           as $Val,
     );
@@ -1486,6 +2042,23 @@ class _$ProactiveAssistanceModelCopyWithImpl<
       return _then(_value.copyWith(conflict: value) as $Val);
     });
   }
+
+  /// Create a copy of ProactiveAssistanceModel
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $ActionItemQualityAssistanceCopyWith<$Res>? get actionItemQuality {
+    if (_value.actionItemQuality == null) {
+      return null;
+    }
+
+    return $ActionItemQualityAssistanceCopyWith<$Res>(
+      _value.actionItemQuality!,
+      (value) {
+        return _then(_value.copyWith(actionItemQuality: value) as $Val);
+      },
+    );
+  }
 }
 
 /// @nodoc
@@ -1502,6 +2075,7 @@ abstract class _$$ProactiveAssistanceModelImplCopyWith<$Res>
     AutoAnswerAssistance? autoAnswer,
     ClarificationAssistance? clarification,
     ConflictAssistance? conflict,
+    ActionItemQualityAssistance? actionItemQuality,
   });
 
   @override
@@ -1510,6 +2084,8 @@ abstract class _$$ProactiveAssistanceModelImplCopyWith<$Res>
   $ClarificationAssistanceCopyWith<$Res>? get clarification;
   @override
   $ConflictAssistanceCopyWith<$Res>? get conflict;
+  @override
+  $ActionItemQualityAssistanceCopyWith<$Res>? get actionItemQuality;
 }
 
 /// @nodoc
@@ -1534,6 +2110,7 @@ class __$$ProactiveAssistanceModelImplCopyWithImpl<$Res>
     Object? autoAnswer = freezed,
     Object? clarification = freezed,
     Object? conflict = freezed,
+    Object? actionItemQuality = freezed,
   }) {
     return _then(
       _$ProactiveAssistanceModelImpl(
@@ -1553,6 +2130,10 @@ class __$$ProactiveAssistanceModelImplCopyWithImpl<$Res>
             ? _value.conflict
             : conflict // ignore: cast_nullable_to_non_nullable
                   as ConflictAssistance?,
+        actionItemQuality: freezed == actionItemQuality
+            ? _value.actionItemQuality
+            : actionItemQuality // ignore: cast_nullable_to_non_nullable
+                  as ActionItemQualityAssistance?,
       ),
     );
   }
@@ -1566,6 +2147,7 @@ class _$ProactiveAssistanceModelImpl implements _ProactiveAssistanceModel {
     this.autoAnswer,
     this.clarification,
     this.conflict,
+    this.actionItemQuality,
   });
 
   @override
@@ -1576,10 +2158,12 @@ class _$ProactiveAssistanceModelImpl implements _ProactiveAssistanceModel {
   final ClarificationAssistance? clarification;
   @override
   final ConflictAssistance? conflict;
+  @override
+  final ActionItemQualityAssistance? actionItemQuality;
 
   @override
   String toString() {
-    return 'ProactiveAssistanceModel(type: $type, autoAnswer: $autoAnswer, clarification: $clarification, conflict: $conflict)';
+    return 'ProactiveAssistanceModel(type: $type, autoAnswer: $autoAnswer, clarification: $clarification, conflict: $conflict, actionItemQuality: $actionItemQuality)';
   }
 
   @override
@@ -1593,12 +2177,20 @@ class _$ProactiveAssistanceModelImpl implements _ProactiveAssistanceModel {
             (identical(other.clarification, clarification) ||
                 other.clarification == clarification) &&
             (identical(other.conflict, conflict) ||
-                other.conflict == conflict));
+                other.conflict == conflict) &&
+            (identical(other.actionItemQuality, actionItemQuality) ||
+                other.actionItemQuality == actionItemQuality));
   }
 
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, type, autoAnswer, clarification, conflict);
+  int get hashCode => Object.hash(
+    runtimeType,
+    type,
+    autoAnswer,
+    clarification,
+    conflict,
+    actionItemQuality,
+  );
 
   /// Create a copy of ProactiveAssistanceModel
   /// with the given fields replaced by the non-null parameter values.
@@ -1618,6 +2210,7 @@ abstract class _ProactiveAssistanceModel implements ProactiveAssistanceModel {
     final AutoAnswerAssistance? autoAnswer,
     final ClarificationAssistance? clarification,
     final ConflictAssistance? conflict,
+    final ActionItemQualityAssistance? actionItemQuality,
   }) = _$ProactiveAssistanceModelImpl;
 
   @override
@@ -1628,6 +2221,8 @@ abstract class _ProactiveAssistanceModel implements ProactiveAssistanceModel {
   ClarificationAssistance? get clarification;
   @override
   ConflictAssistance? get conflict;
+  @override
+  ActionItemQualityAssistance? get actionItemQuality;
 
   /// Create a copy of ProactiveAssistanceModel
   /// with the given fields replaced by the non-null parameter values.
