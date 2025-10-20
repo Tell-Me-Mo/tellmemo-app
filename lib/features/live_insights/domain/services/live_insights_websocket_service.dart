@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../models/live_insight_model.dart';
+import '../models/proactive_assistance_model.dart';
 import '../../../../core/config/api_config.dart';
 
 /// Service for managing WebSocket connection for live meeting insights.
@@ -29,6 +30,8 @@ class LiveInsightsWebSocketService {
   final _sessionStateController = StreamController<String>.broadcast();
   final _errorController = StreamController<String>.broadcast();
   final _connectionStateController = StreamController<bool>.broadcast();
+  final _proactiveAssistanceController =
+      StreamController<List<ProactiveAssistanceModel>>.broadcast();
 
   // Reconnection settings
   Timer? _reconnectTimer;
@@ -47,6 +50,8 @@ class LiveInsightsWebSocketService {
   Stream<String> get sessionStateStream => _sessionStateController.stream;
   Stream<String> get errorStream => _errorController.stream;
   Stream<bool> get connectionStateStream => _connectionStateController.stream;
+  Stream<List<ProactiveAssistanceModel>> get proactiveAssistanceStream =>
+      _proactiveAssistanceController.stream;
 
   bool get isConnected => _isConnected;
   String? get sessionId => _sessionId;
@@ -242,6 +247,25 @@ class LiveInsightsWebSocketService {
           debugPrint(
             '[LiveInsightsWS] Received ${result.insights.length} new insights',
           );
+
+          // PHASE 1: Handle proactive assistance (auto-answers, etc.)
+          if (data.containsKey('proactive_assistance')) {
+            final assistanceList = data['proactive_assistance'] as List;
+            if (assistanceList.isNotEmpty) {
+              try {
+                final assistance = assistanceList
+                    .map((item) => ProactiveAssistanceModel.fromJson(
+                        item as Map<String, dynamic>))
+                    .toList();
+                _proactiveAssistanceController.add(assistance);
+                debugPrint(
+                  '[LiveInsightsWS] Received ${assistance.length} proactive assistance items',
+                );
+              } catch (e) {
+                debugPrint('[LiveInsightsWS] Error parsing proactive assistance: $e');
+              }
+            }
+          }
           break;
 
         case LiveInsightMessageType.metricsUpdate:
@@ -388,6 +412,7 @@ class LiveInsightsWebSocketService {
     await _sessionStateController.close();
     await _errorController.close();
     await _connectionStateController.close();
+    await _proactiveAssistanceController.close();
 
     debugPrint('[LiveInsightsWS] Service disposed');
   }

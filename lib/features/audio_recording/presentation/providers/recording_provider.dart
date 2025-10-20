@@ -119,6 +119,9 @@ class RecordingNotifier extends _$RecordingNotifier {
   StreamSubscription? _liveInsightsSubscription;
   StreamSubscription? _liveTranscriptsSubscription;
 
+  // Getter to expose WebSocket service for UI components
+  LiveInsightsWebSocketService? get liveInsightsService => _liveInsightsService;
+
   @override
   RecordingStateModel build() {
     _audioService = ref.watch(audioRecordingServiceProvider);
