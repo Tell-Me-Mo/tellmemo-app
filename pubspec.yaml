@@ -83,7 +83,7 @@ dependencies:
   # PDF & Document Generation
   pdf: ^3.11.3
   printing: ^5.14.2
-  share_plus: ^12.0.0
+  share_plus: ^12.0.1
 
   # Data Export
   csv: ^6.0.0
