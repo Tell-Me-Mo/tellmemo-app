@@ -37,6 +37,8 @@ from services.prompts.realtime_insights_prompts import (
 from db.multi_tenant_vector_store import multi_tenant_vector_store
 from config import get_settings
 from utils.logger import get_logger, sanitize_for_log
+from services.intelligence.question_detector import QuestionDetector
+from services.intelligence.question_answering_service import QuestionAnsweringService
 
 logger = get_logger(__name__)
 
@@ -175,6 +177,15 @@ class RealtimeMeetingInsightsService:
         self.last_semantic_search: Dict[str, float] = {}
         self.semantic_search_interval = 30.0  # seconds
 
+        # Active Intelligence services (Phase 1: Question Auto-Answering)
+        self.question_detector = QuestionDetector(llm_client=self.llm_client)
+        self.qa_service = QuestionAnsweringService(
+            vector_store=multi_tenant_vector_store,
+            llm_client=self.llm_client,
+            embedding_service=embedding_service,
+            min_confidence_threshold=0.7
+        )
+
     async def process_transcript_chunk(
         self,
         session_id: str,
@@ -231,12 +242,22 @@ class RealtimeMeetingInsightsService:
             # Store new insights
             self.extracted_insights[session_id].extend(new_insights)
 
+            # PHASE 1: Active Intelligence - Auto-answer questions
+            proactive_assistance = await self._process_proactive_assistance(
+                session_id=session_id,
+                project_id=project_id,
+                organization_id=organization_id,
+                insights=new_insights,
+                context=full_context
+            )
+
             processing_time = time.time() - start_time
 
             result = {
                 'session_id': session_id,
                 'chunk_index': chunk.index,
                 'insights': [insight.to_dict() for insight in new_insights],
+                'proactive_assistance': proactive_assistance,  # NEW: AI assistant responses
                 'total_insights_count': len(self.extracted_insights[session_id]),
                 'processing_time_ms': int(processing_time * 1000),
                 'context_window_size': len(context.chunks)
@@ -594,6 +615,93 @@ class RealtimeMeetingInsightsService:
             'insights_by_type': insights_by_type,
             'insights': [insight.to_dict() for insight in insights]
         }
+
+    async def _process_proactive_assistance(
+        self,
+        session_id: str,
+        project_id: str,
+        organization_id: str,
+        insights: List[MeetingInsight],
+        context: str
+    ) -> List[Dict[str, Any]]:
+        """
+        Process insights to provide proactive assistance (Phase 1: Question Auto-Answering).
+
+        Checks if any insights are questions and attempts to answer them automatically
+        using RAG.
+
+        Args:
+            session_id: Current session ID
+            project_id: Project ID
+            organization_id: Organization ID
+            insights: List of newly extracted insights
+            context: Full conversation context
+
+        Returns:
+            List of proactive assistance items (auto-answers, clarifications, etc.)
+        """
+        proactive_responses = []
+
+        try:
+            for insight in insights:
+                # Phase 1: Auto-answer questions
+                if insight.type == InsightType.QUESTION:
+                    # Detect and classify the question
+                    detected_question = await self.question_detector.detect_and_classify_question(
+                        text=insight.content,
+                        context=context
+                    )
+
+                    if detected_question:
+                        # Attempt to auto-answer
+                        answer = await self.qa_service.answer_question(
+                            question=detected_question.text,
+                            question_type=detected_question.type,
+                            project_id=project_id,
+                            organization_id=organization_id,
+                            context=context
+                        )
+
+                        if answer:
+                            # Convert AnswerSource objects to dicts
+                            sources_dict = [
+                                {
+                                    'content_id': source.content_id,
+                                    'title': source.title,
+                                    'snippet': source.snippet,
+                                    'date': source.date.isoformat(),
+                                    'relevance_score': source.relevance_score,
+                                    'meeting_type': source.meeting_type
+                                }
+                                for source in answer.sources
+                            ]
+
+                            proactive_responses.append({
+                                'type': 'auto_answer',
+                                'insight_id': insight.insight_id,
+                                'question': detected_question.text,
+                                'answer': answer.answer_text,
+                                'confidence': answer.confidence,
+                                'sources': sources_dict,
+                                'reasoning': answer.reasoning,
+                                'timestamp': datetime.now().isoformat()
+                            })
+
+                            logger.info(
+                                f"Auto-answered question for session {sanitize_for_log(session_id)}: "
+                                f"'{detected_question.text[:50]}...' (confidence: {answer.confidence:.2f})"
+                            )
+
+                # Future phases can add more assistance types here:
+                # - Clarification suggestions (Phase 2)
+                # - Conflict detection (Phase 3)
+                # - Action item quality checks (Phase 4)
+
+        except Exception as e:
+            logger.error(f"Error processing proactive assistance: {e}", exc_info=True)
+            # Don't fail the entire pipeline if proactive assistance fails
+
+        return proactive_responses
 
     def cleanup_stale_sessions(self, max_age_hours: int = 4) -> int:
         """

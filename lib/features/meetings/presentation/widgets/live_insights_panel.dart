@@ -1,5 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../live_insights/domain/models/proactive_assistance_model.dart';
+import '../../../live_insights/presentation/widgets/proactive_assistance_card.dart';
+import '../../../audio_recording/presentation/providers/recording_provider.dart';
 
 /// Types of insights that can be displayed
 enum InsightType {
@@ -119,16 +123,59 @@ class _LiveInsightsPanelState extends ConsumerState<LiveInsightsPanel>
   Set<InsightPriority> _selectedPriorities = {};
   bool _showFilters = false;
 
+  // Proactive assistance state
+  List<ProactiveAssistanceModel> _proactiveAssistance = [];
+  StreamSubscription<List<ProactiveAssistanceModel>>? _assistanceSubscription;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _setupProactiveAssistanceListener();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _assistanceSubscription?.cancel();
     super.dispose();
+  }
+
+  void _setupProactiveAssistanceListener() {
+    // Get the WebSocket service from the recording provider
+    final recordingNotifier = ref.read(recordingNotifierProvider.notifier);
+    final wsService = recordingNotifier.liveInsightsService;
+
+    if (wsService != null) {
+      _assistanceSubscription = wsService.proactiveAssistanceStream.listen(
+        (assistance) {
+          if (mounted) {
+            setState(() {
+              _proactiveAssistance.addAll(assistance);
+            });
+          }
+        },
+        onError: (error) {
+          debugPrint('[LiveInsightsPanel] Proactive assistance stream error: $error');
+        },
+      );
+    }
+  }
+
+  void _handleAcceptAssistance(int index) {
+    // TODO: Track feedback for ML improvement
+    setState(() {
+      _proactiveAssistance.removeAt(index);
+    });
+    debugPrint('[LiveInsightsPanel] User accepted assistance at index $index');
+  }
+
+  void _handleDismissAssistance(int index) {
+    // TODO: Track feedback for ML improvement
+    setState(() {
+      _proactiveAssistance.removeAt(index);
+    });
+    debugPrint('[LiveInsightsPanel] User dismissed assistance at index $index');
   }
 
   List<MeetingInsight> get _filteredInsights {
@@ -195,6 +242,70 @@ class _LiveInsightsPanelState extends ConsumerState<LiveInsightsPanel>
 
           // Status indicator
           if (widget.isRecording) _buildRecordingIndicator(theme),
+
+          // NEW: Proactive Assistance Section (AI Auto-Answers)
+          if (_proactiveAssistance.isNotEmpty) ...[
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.05),
+                border: Border(
+                  bottom: BorderSide(color: theme.dividerColor),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.auto_awesome, color: Colors.blue[700], size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'AI Assistant',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue[900],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${_proactiveAssistance.length}',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: Colors.blue[900],
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 250,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _proactiveAssistance.length,
+                      itemBuilder: (context, index) {
+                        return SizedBox(
+                          width: 350,
+                          child: ProactiveAssistanceCard(
+                            assistance: _proactiveAssistance[index],
+                            onAccept: () => _handleAcceptAssistance(index),
+                            onDismiss: () => _handleDismissAssistance(index),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
 
           // Statistics
           _buildStatistics(theme),
