@@ -147,8 +147,16 @@ class TranscriptChunk with _$TranscriptChunk {
     required DateTime timestamp,
   }) = _TranscriptChunk;
 
-  factory TranscriptChunk.fromJson(Map<String, dynamic> json) =>
-      _$TranscriptChunkFromJson(json);
+  factory TranscriptChunk.fromJson(Map<String, dynamic> json) {
+    return TranscriptChunk(
+      chunkIndex: (json['chunk_index'] as num?)?.toInt() ?? 0,
+      text: json['text'] as String? ?? '',
+      speaker: json['speaker'] as String?,
+      timestamp: json['timestamp'] != null
+          ? DateTime.parse(json['timestamp'] as String)
+          : DateTime.now(),
+    );
+  }
 }
 
 /// Insights extraction result
@@ -163,14 +171,17 @@ class InsightsExtractionResult with _$InsightsExtractionResult {
   }) = _InsightsExtractionResult;
 
   factory InsightsExtractionResult.fromJson(Map<String, dynamic> json) {
+    final insightsList = json['insights'] as List<dynamic>? ?? [];
     return InsightsExtractionResult(
-      chunkIndex: json['chunk_index'] as int,
-      insights: (json['insights'] as List<dynamic>)
+      chunkIndex: (json['chunk_index'] as num?)?.toInt() ?? 0,
+      insights: insightsList
           .map((e) => LiveInsightModel.fromJson(e as Map<String, dynamic>))
           .toList(),
-      totalInsights: json['total_insights'] as int,
-      processingTimeMs: json['processing_time_ms'] as int,
-      timestamp: DateTime.parse(json['timestamp'] as String),
+      totalInsights: (json['total_insights'] as num?)?.toInt() ?? 0,
+      processingTimeMs: (json['processing_time_ms'] as num?)?.toInt() ?? 0,
+      timestamp: json['timestamp'] != null
+          ? DateTime.parse(json['timestamp'] as String)
+          : DateTime.now(),
     );
   }
 }
@@ -190,13 +201,16 @@ class SessionMetrics with _$SessionMetrics {
   factory SessionMetrics.fromJson(Map<String, dynamic> json) {
     return SessionMetrics(
       sessionDurationSeconds:
-          (json['session_duration_seconds'] as num).toDouble(),
-      chunksProcessed: json['chunks_processed'] as int,
-      totalInsights: json['total_insights'] as int,
-      insightsByType: Map<String, int>.from(json['insights_by_type'] as Map),
-      avgProcessingTimeMs: (json['avg_processing_time_ms'] as num).toDouble(),
+          (json['session_duration_seconds'] as num?)?.toDouble() ?? 0.0,
+      chunksProcessed: (json['chunks_processed'] as num?)?.toInt() ?? 0,
+      totalInsights: (json['total_insights'] as num?)?.toInt() ?? 0,
+      insightsByType: json['insights_by_type'] != null
+          ? Map<String, int>.from(json['insights_by_type'] as Map)
+          : {},
+      avgProcessingTimeMs:
+          (json['avg_processing_time_ms'] as num?)?.toDouble() ?? 0.0,
       avgTranscriptionTimeMs:
-          (json['avg_transcription_time_ms'] as num).toDouble(),
+          (json['avg_transcription_time_ms'] as num?)?.toDouble() ?? 0.0,
     );
   }
 }
@@ -213,12 +227,13 @@ class SessionFinalizedResult with _$SessionFinalizedResult {
   }) = _SessionFinalizedResult;
 
   factory SessionFinalizedResult.fromJson(Map<String, dynamic> json) {
-    final insightsData = json['insights'] as Map<String, dynamic>;
+    // Backend sends: { session_id, total_insights, insights_by_type, insights, metrics }
+    // Not nested under 'insights' field!
 
     // Parse insights by type
     final insightsByType = <String, List<LiveInsightModel>>{};
     final insightsByTypeData =
-        insightsData['insights_by_type'] as Map<String, dynamic>?;
+        json['insights_by_type'] as Map<String, dynamic>?;
 
     if (insightsByTypeData != null) {
       insightsByTypeData.forEach((key, value) {
@@ -228,17 +243,18 @@ class SessionFinalizedResult with _$SessionFinalizedResult {
       });
     }
 
-    // Parse all insights
-    final allInsights = (insightsData['insights'] as List<dynamic>)
+    // Parse all insights - it's at top level, not nested
+    final insightsListData = json['insights'] as List<dynamic>? ?? [];
+    final allInsights = insightsListData
         .map((e) => LiveInsightModel.fromJson(e as Map<String, dynamic>))
         .toList();
 
     return SessionFinalizedResult(
-      sessionId: json['session_id'] as String,
-      totalInsights: insightsData['total_insights'] as int,
+      sessionId: json['session_id'] as String? ?? '',
+      totalInsights: (json['total_insights'] as num?)?.toInt() ?? 0,
       insightsByType: insightsByType,
       allInsights: allInsights,
-      metrics: SessionMetrics.fromJson(json['metrics'] as Map<String, dynamic>),
+      metrics: SessionMetrics.fromJson(json['metrics'] as Map<String, dynamic>? ?? {}),
     );
   }
 }
