@@ -139,6 +139,8 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
       confidence = widget.assistance.autoAnswer?.confidence;
     } else if (widget.assistance.type == ProactiveAssistanceType.clarificationNeeded) {
       confidence = widget.assistance.clarification?.confidence;
+    } else if (widget.assistance.type == ProactiveAssistanceType.conflictDetected) {
+      confidence = widget.assistance.conflict?.confidence;
     }
 
     if (confidence == null) return const SizedBox.shrink();
@@ -174,6 +176,8 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
         return _buildAutoAnswerContent();
       case ProactiveAssistanceType.clarificationNeeded:
         return _buildClarificationContent();
+      case ProactiveAssistanceType.conflictDetected:
+        return _buildConflictContent();
       default:
         return const SizedBox.shrink();
     }
@@ -499,6 +503,255 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
     );
   }
 
+  Widget _buildConflictContent() {
+    final conflict = widget.assistance.conflict;
+    if (conflict == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Current statement
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.red[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.red[300]!, width: 2),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.red[700], size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Current Decision:',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red[900],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        conflict.currentStatement,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.red[900],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Conflict severity badge
+          Row(
+            children: [
+              _buildSeverityBadge(conflict.conflictSeverity),
+              const SizedBox(width: 8),
+              _buildConfidenceBadge(),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Conflicting past decision
+          Text(
+            'Conflicts with past decision:',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.history, size: 16, color: Colors.grey[600]),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        conflict.conflictingTitle,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      _formatDate(conflict.conflictingDate),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  conflict.conflictingSnippet,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[700],
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Reasoning
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.amber[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.amber[200]!),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.lightbulb_outline, color: Colors.amber[700], size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    conflict.reasoning,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.amber[900],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Resolution suggestions
+          if (conflict.resolutionSuggestions.isNotEmpty) ...[
+            Text(
+              'Suggested resolutions:',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...conflict.resolutionSuggestions.map((suggestion) =>
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.check_circle_outline, size: 16, color: Colors.green[600]),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        suggestion,
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSeverityBadge(String severity) {
+    Color color;
+    IconData icon;
+    String label;
+
+    switch (severity.toLowerCase()) {
+      case 'high':
+        color = Colors.red;
+        icon = Icons.error;
+        label = 'High Severity';
+        break;
+      case 'medium':
+        color = Colors.orange;
+        icon = Icons.warning;
+        label = 'Medium Severity';
+        break;
+      case 'low':
+        color = Colors.yellow[700]!;
+        icon = Icons.info;
+        label = 'Low Severity';
+        break;
+      default:
+        color = Colors.grey;
+        icon = Icons.help;
+        label = 'Unknown Severity';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color, width: 1.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inDays == 0) {
+      return 'Today';
+    } else if (difference.inDays == 1) {
+      return 'Yesterday';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} days ago';
+    } else if (difference.inDays < 30) {
+      final weeks = (difference.inDays / 7).floor();
+      return '$weeks ${weeks == 1 ? "week" : "weeks"} ago';
+    } else {
+      return '${date.month}/${date.day}/${date.year}';
+    }
+  }
+
   String _getVaguenessLabel(String type) {
     switch (type) {
       case 'time':
@@ -580,6 +833,8 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
         return widget.assistance.autoAnswer?.question;
       case ProactiveAssistanceType.clarificationNeeded:
         return widget.assistance.clarification?.statement;
+      case ProactiveAssistanceType.conflictDetected:
+        return widget.assistance.conflict?.currentStatement;
       default:
         return null;
     }
@@ -591,6 +846,8 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
         return Colors.blue[50]!;
       case ProactiveAssistanceType.clarificationNeeded:
         return Colors.orange[50]!;
+      case ProactiveAssistanceType.conflictDetected:
+        return Colors.red[50]!;
       default:
         return Colors.grey[100]!;
     }
@@ -602,6 +859,8 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
         return Colors.blue[300]!;
       case ProactiveAssistanceType.clarificationNeeded:
         return Colors.orange[300]!;
+      case ProactiveAssistanceType.conflictDetected:
+        return Colors.red[300]!;
       default:
         return Colors.grey[300]!;
     }
