@@ -72,16 +72,19 @@ void main() {
     });
 
     test('processes session_initialized message correctly', () async {
-      // Inject mock channel
-      service.injectChannelForTesting(mockChannel);
-
-      // Setup expectations
+      // Setup expectations FIRST
       final sessionInitializedCompleter = Completer<String>();
       service.sessionStateStream.listen((state) {
         if (state == 'initialized') {  // Service emits 'initialized' not 'session_initialized'
           sessionInitializedCompleter.complete(state);
         }
       });
+
+      // Inject mock channel (this starts listening to channel stream)
+      service.injectChannelForTesting(mockChannel);
+
+      // Small delay to ensure stream subscription is active
+      await Future.delayed(const Duration(milliseconds: 10));
 
       // Simulate server response
       mockChannel.simulateMessage({
@@ -102,8 +105,17 @@ void main() {
     });
 
     test('processes insights_extracted message and emits insights', () async {
+      // Setup expectations FIRST
+      final insightsCompleter = Completer<InsightsExtractionResult>();
+      service.insightsStream.listen((result) {
+        insightsCompleter.complete(result);
+      });
+
       // Inject mock channel
       service.injectChannelForTesting(mockChannel);
+
+      // Small delay to ensure stream subscription is active
+      await Future.delayed(const Duration(milliseconds: 10));
 
       // Setup session first
       mockChannel.simulateMessage({
@@ -111,12 +123,6 @@ void main() {
         'session_id': 'test_session_123',
         'project_id': 'project_456',
         'timestamp': DateTime.now().toIso8601String(),
-      });
-
-      // Setup expectations
-      final insightsCompleter = Completer<InsightsExtractionResult>();
-      service.insightsStream.listen((result) {
-        insightsCompleter.complete(result);
       });
 
       // Simulate insights message (use snake_case to match backend format)
@@ -159,8 +165,17 @@ void main() {
     });
 
     test('processes transcript_chunk message correctly', () async {
+      // Setup expectations FIRST
+      final transcriptCompleter = Completer<TranscriptChunk>();
+      service.transcriptsStream.listen((chunk) {
+        transcriptCompleter.complete(chunk);
+      });
+
       // Inject mock channel
       service.injectChannelForTesting(mockChannel);
+
+      // Small delay to ensure stream subscription is active
+      await Future.delayed(const Duration(milliseconds: 10));
 
       // Setup session first
       mockChannel.simulateMessage({
@@ -168,12 +183,6 @@ void main() {
         'session_id': 'test_session_123',
         'project_id': 'project_456',
         'timestamp': DateTime.now().toIso8601String(),
-      });
-
-      // Setup expectations
-      final transcriptCompleter = Completer<TranscriptChunk>();
-      service.transcriptsStream.listen((chunk) {
-        transcriptCompleter.complete(chunk);
       });
 
       // Simulate transcript message
@@ -229,8 +238,19 @@ void main() {
     });
 
     test('handles multiple insight types correctly', () async {
+      // Setup expectations FIRST
+      final insightsCompleter = Completer<InsightsExtractionResult>();
+      service.insightsStream.listen((result) {
+        if (result.insights.length >= 3) {
+          insightsCompleter.complete(result);
+        }
+      });
+
       // Inject mock channel
       service.injectChannelForTesting(mockChannel);
+
+      // Small delay to ensure stream subscription is active
+      await Future.delayed(const Duration(milliseconds: 10));
 
       // Setup session first
       mockChannel.simulateMessage({
@@ -238,14 +258,6 @@ void main() {
         'session_id': 'test_session_123',
         'project_id': 'project_456',
         'timestamp': DateTime.now().toIso8601String(),
-      });
-
-      // Setup expectations
-      final insightsCompleter = Completer<InsightsExtractionResult>();
-      service.insightsStream.listen((result) {
-        if (result.insights.length >= 3) {
-          insightsCompleter.complete(result);
-        }
       });
 
       // Simulate insights message with multiple types
@@ -312,8 +324,19 @@ void main() {
     });
 
     test('handles session_finalized message correctly', () async {
+      // Setup expectations FIRST
+      final stateCompleter = Completer<String>();
+      service.sessionStateStream.listen((state) {
+        if (state == 'completed') {  // Service emits 'completed' not 'finalized'
+          stateCompleter.complete(state);
+        }
+      });
+
       // Inject mock channel
       service.injectChannelForTesting(mockChannel);
+
+      // Small delay to ensure stream subscription is active
+      await Future.delayed(const Duration(milliseconds: 10));
 
       // Setup session first
       mockChannel.simulateMessage({
@@ -321,14 +344,6 @@ void main() {
         'session_id': 'test_session_123',
         'project_id': 'project_456',
         'timestamp': DateTime.now().toIso8601String(),
-      });
-
-      // Setup expectations
-      final stateCompleter = Completer<String>();
-      service.sessionStateStream.listen((state) {
-        if (state == 'completed') {  // Service emits 'completed' not 'finalized'
-          stateCompleter.complete(state);
-        }
       });
 
       // Simulate finalization (backend sends nested structure)
@@ -493,11 +508,14 @@ void main() {
         }
       });
 
+      // Small delay to ensure stream subscription is active
+      await Future.delayed(const Duration(milliseconds: 10));
+
       // Inject mock channel (triggers connection state = true)
       service.injectChannelForTesting(mockChannel);
 
       // Wait for connection state to be emitted
-      await connectedCompleter.future;
+      await connectedCompleter.future.timeout(const Duration(seconds: 2));
 
       // Simulate connection message
       mockChannel.simulateMessage({
