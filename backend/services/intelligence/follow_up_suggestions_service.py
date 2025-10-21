@@ -165,20 +165,16 @@ class FollowUpSuggestionsService:
             # Generate embedding for topic
             topic_embedding = await self.embedding_service.generate_embedding(topic)
 
-            # Search Qdrant for action items and questions
-            results = await self.vector_store.search(
-                collection_name=f"org_{organization_id}",
+            # Search Qdrant using the correct API
+            results = await self.vector_store.search_vectors(
+                organization_id=organization_id,
                 query_vector=topic_embedding,
+                collection_type="content",
                 limit=top_k,
-                filter={
-                    "must": [
-                        {"key": "project_id", "match": {"value": project_id}},
-                        {
-                            "key": "content_type",
-                            "match": {"any": ["action_item", "question", "summary"]}
-                        }
-                    ]
-                }
+                filter_dict={
+                    "project_id": project_id
+                },
+                score_threshold=self.SIMILARITY_THRESHOLD
             )
 
             # Format results
@@ -187,10 +183,10 @@ class FollowUpSuggestionsService:
                 if r['score'] >= self.SIMILARITY_THRESHOLD:
                     related_items.append({
                         'id': r['id'],
-                        'title': r['payload'].get('title', 'Untitled'),
-                        'text': r['payload'].get('text', ''),
-                        'date': r['payload'].get('created_at', datetime.now(timezone.utc).isoformat()),
-                        'content_type': r['payload'].get('content_type', 'unknown'),
+                        'title': r.get('payload', {}).get('title', 'Untitled'),
+                        'text': r.get('payload', {}).get('text', ''),
+                        'date': r.get('payload', {}).get('created_at', datetime.now(timezone.utc).isoformat()),
+                        'content_type': r.get('payload', {}).get('content_type', 'unknown'),
                         'score': r['score']
                     })
 
@@ -224,17 +220,16 @@ class FollowUpSuggestionsService:
             # Generate embedding for topic
             topic_embedding = await self.embedding_service.generate_embedding(topic)
 
-            # Search Qdrant for decisions
-            results = await self.vector_store.search(
-                collection_name=f"org_{organization_id}",
+            # Search Qdrant using the correct API
+            results = await self.vector_store.search_vectors(
+                organization_id=organization_id,
                 query_vector=topic_embedding,
+                collection_type="content",
                 limit=top_k,
-                filter={
-                    "must": [
-                        {"key": "project_id", "match": {"value": project_id}},
-                        {"key": "content_type", "match": {"value": "decision"}}
-                    ]
-                }
+                filter_dict={
+                    "project_id": project_id
+                },
+                score_threshold=self.SIMILARITY_THRESHOLD
             )
 
             # Format results
@@ -243,9 +238,9 @@ class FollowUpSuggestionsService:
                 if r['score'] >= self.SIMILARITY_THRESHOLD:
                     related_decisions.append({
                         'id': r['id'],
-                        'title': r['payload'].get('title', 'Untitled'),
-                        'text': r['payload'].get('text', ''),
-                        'date': r['payload'].get('created_at', datetime.now(timezone.utc).isoformat()),
+                        'title': r.get('payload', {}).get('title', 'Untitled'),
+                        'text': r.get('payload', {}).get('text', ''),
+                        'date': r.get('payload', {}).get('created_at', datetime.now(timezone.utc).isoformat()),
                         'content_type': 'decision',
                         'score': r['score']
                     })

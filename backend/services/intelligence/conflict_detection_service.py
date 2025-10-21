@@ -107,15 +107,16 @@ class ConflictDetectionService:
 
         # Step 4: Build ConflictAlert
         conflicting_decision = similar_decisions[0]  # Highest similarity
+        payload = conflicting_decision.get('payload', {})
 
         alert = ConflictAlert(
             current_statement=statement,
             current_type=statement_type,
             conflicting_content_id=conflicting_decision['id'],
-            conflicting_title=conflicting_decision['payload']['title'],
-            conflicting_snippet=conflicting_decision['payload']['text'][:300],
+            conflicting_title=payload.get('title', 'Untitled'),
+            conflicting_snippet=payload.get('text', '')[:300],
             conflicting_date=datetime.fromisoformat(
-                conflicting_decision['payload']['created_at']
+                payload.get('created_at', datetime.now().isoformat())
             ),
             conflict_severity=conflict_analysis['severity'],
             confidence=conflict_analysis['confidence'],
@@ -148,20 +149,16 @@ class ConflictDetectionService:
         # Generate embedding for current statement
         statement_embedding = await self.embedding_service.generate_embedding(statement)
 
-        # Search Qdrant for similar decisions
-        search_results = await self.vector_store.search(
-            collection_name=f"org_{organization_id}",
+        # Search Qdrant using the correct API
+        search_results = await self.vector_store.search_vectors(
+            organization_id=organization_id,
             query_vector=statement_embedding,
+            collection_type="content",
             limit=top_k,
-            filter={
-                "must": [
-                    {"key": "project_id", "match": {"value": project_id}},
-                    {
-                        "key": "content_type",
-                        "match": {"any": ["decision", "summary"]}
-                    }
-                ]
-            }
+            filter_dict={
+                "project_id": project_id
+            },
+            score_threshold=self.SIMILARITY_THRESHOLD
         )
 
         # Filter by similarity threshold
@@ -193,9 +190,9 @@ class ConflictDetectionService:
 
         # Build prompt with similar decisions
         past_decisions_text = "\n\n".join([
-            f"[Decision {i+1}] {result['payload']['title']} "
-            f"({result['payload']['created_at'][:10]})\n"
-            f"{result['payload']['text'][:400]}..."
+            f"[Decision {i+1}] {result.get('payload', {}).get('title', 'Untitled')} "
+            f"({result.get('payload', {}).get('created_at', '')[:10]})\n"
+            f"{result.get('payload', {}).get('text', '')[:400]}..."
             for i, result in enumerate(similar_decisions[:3])
         ])
 
