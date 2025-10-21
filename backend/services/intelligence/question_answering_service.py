@@ -121,17 +121,17 @@ class QuestionAnsweringService:
             # Generate embedding for question
             question_embedding = await self.embedding_service.generate_embedding(question)
 
-            # Search Qdrant
-            search_results = await self.vector_store.search(
-                collection_name=f"org_{organization_id}",
+            # Search Qdrant using the correct API
+            search_results = await self.vector_store.search_vectors(
+                organization_id=organization_id,
                 query_vector=question_embedding,
+                collection_type="content",
                 limit=top_k,
-                filter={
-                    "must": [
-                        {"key": "project_id", "match": {"value": project_id}},
-                        {"key": "content_type", "match": {"any": ["transcript", "summary"]}}
-                    ]
-                }
+                filter_dict={
+                    "project_id": project_id,
+                    "content_type": "transcript"  # Single value, not array
+                },
+                score_threshold=0.5  # Minimum relevance threshold
             )
 
             return search_results
