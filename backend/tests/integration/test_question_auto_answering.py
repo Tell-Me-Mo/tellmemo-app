@@ -32,14 +32,16 @@ def llm_client():
         mock_response = Mock()
         mock_content = Mock()
 
-        # DEBUG: Print what we're checking
-        # print(f"DEBUG: Checking prompt: {prompt[:100]}...")
+        # Extract the actual statement from the prompt (it's in quotes after "Statement:")
+        import re
+        statement_match = re.search(r'Statement:\s*"([^"]+)"', prompt)
+        statement = statement_match.group(1).lower() if statement_match else prompt.lower()
 
-        # Check if the prompt contains certain phrases to determine response
-        if "not sure" in prompt.lower() and "deadline" in prompt.lower():
+        # Check the statement (not the full prompt) for patterns
+        if "not sure" in statement or "i'm not sure" in statement:
             # Implicit question - should return rephrased question
             mock_content.text = "What is the deadline for the project?"
-        elif "budget" in prompt.lower() and "approved" in prompt.lower():
+        elif "budget" in statement and "approved" in statement:
             # Not a question - should return NOT_A_QUESTION
             mock_content.text = "NOT_A_QUESTION"
         else:
