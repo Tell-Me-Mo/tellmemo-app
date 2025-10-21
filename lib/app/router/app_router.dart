@@ -30,6 +30,7 @@ import '../../features/risks/presentation/screens/risks_aggregation_screen_v2.da
 import '../../features/tasks/presentation/screens/tasks_screen_v2.dart';
 import '../../features/lessons_learned/presentation/screens/lessons_learned_screen_v2.dart';
 import '../../features/support_tickets/presentation/screens/support_tickets_screen.dart';
+import '../../features/live_insights/presentation/pages/live_insights_window_page.dart';
 
 part 'app_router.g.dart';
 
@@ -119,6 +120,16 @@ GoRouter goRouter(Ref ref) {
             },
           ),
         ],
+      ),
+
+      // Live Insights Window (full-screen, no shell)
+      GoRoute(
+        path: '/live-insights/:sessionId',
+        name: 'live-insights-window',
+        builder: (context, state) {
+          final sessionId = state.pathParameters['sessionId'] ?? '';
+          return LiveInsightsWindowPage(sessionId: sessionId);
+        },
       ),
 
       // Shell route that wraps main screens with navigation

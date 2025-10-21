@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:html' as html;
 import '../../features/projects/domain/entities/project.dart';
 import '../../features/audio_recording/domain/services/audio_recording_service.dart';
 import '../../features/projects/presentation/providers/projects_provider.dart';
@@ -7,8 +8,6 @@ import '../../features/meetings/presentation/providers/upload_provider.dart';
 import '../../features/audio_recording/presentation/providers/recording_provider.dart';
 import '../../features/audio_recording/presentation/widgets/recording_button.dart';
 import '../../features/content/presentation/providers/processing_jobs_provider.dart';
-import '../../features/meetings/presentation/widgets/live_insights_panel.dart';
-import '../../features/live_insights/domain/models/live_insight_model.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/services/auth_service.dart';
 
@@ -66,6 +65,33 @@ class _RecordMeetingDialogState extends ConsumerState<RecordMeetingDialog> {
   void dispose() {
     _titleController.dispose();
     super.dispose();
+  }
+
+  /// Opens the Live Insights in a new browser window/tab
+  void _openLiveInsightsWindow() {
+    final recordingState = ref.read(recordingNotifierProvider);
+
+    if (recordingState.sessionId == null) {
+      ref.read(notificationServiceProvider.notifier).showWarning(
+        'No active recording session found'
+      );
+      return;
+    }
+
+    // Open new window with Live Insights page
+    // Use current base URL and append the route
+    final baseUrl = html.window.location.origin;
+    final url = '$baseUrl/#/live-insights/${recordingState.sessionId}';
+
+    html.window.open(
+      url,
+      'live_insights_${recordingState.sessionId}',
+      'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no,scrollbars=yes,resizable=yes',
+    );
+
+    ref.read(notificationServiceProvider.notifier).showSuccess(
+      'Live Insights window opened - position it on your second monitor!'
+    );
   }
 
   Future<void> _handleRecordingComplete(String? filePath) async {
@@ -239,6 +265,21 @@ class _RecordMeetingDialogState extends ConsumerState<RecordMeetingDialog> {
                           ? colorScheme.primaryContainer.withValues(alpha: 0.3)
                           : null,
                     ),
+
+                    // Open Live Insights Window Button
+                    if (_enableLiveInsights &&
+                        recordingState.state == RecordingState.recording) ...[
+                      const SizedBox(height: _DialogConstants.smallSpacing),
+                      OutlinedButton.icon(
+                        onPressed: _openLiveInsightsWindow,
+                        icon: const Icon(Icons.open_in_new, size: 18),
+                        label: const Text('Open Live Insights in New Window'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: colorScheme.primary,
+                          minimumSize: const Size(double.infinity, 48),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: _DialogConstants.spacing),
 
                   // Recording Button Container with dynamic sizing
@@ -278,33 +319,6 @@ class _RecordMeetingDialogState extends ConsumerState<RecordMeetingDialog> {
                       ),
                     ),
                   ),
-
-                  // Live Insights Panel (shown during recording if enabled)
-                  if (recordingState.liveInsightsEnabled &&
-                      (recordingState.state == RecordingState.recording ||
-                       recordingState.state == RecordingState.paused)) ...[
-                    const SizedBox(height: _DialogConstants.spacing),
-                    SizedBox(
-                      height: 400, // Fixed height to prevent intrinsic dimension issues
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: colorScheme.primary.withValues(alpha: 0.3),
-                            width: 2,
-                          ),
-                          borderRadius: BorderRadius.circular(_DialogConstants.borderRadius),
-                          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.05),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(_DialogConstants.borderRadius),
-                          child: _LiveInsightsPanelWrapper(
-                            liveInsights: recordingState.liveInsights,
-                            isRecording: recordingState.state == RecordingState.recording,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -846,78 +860,6 @@ class _DialogActions extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-// Wrapper widget to prevent rebuild issues with live insights panel
-class _LiveInsightsPanelWrapper extends StatelessWidget {
-  final List<LiveInsightModel> liveInsights;
-  final bool isRecording;
-
-  const _LiveInsightsPanelWrapper({
-    required this.liveInsights,
-    required this.isRecording,
-  });
-
-  // Helper function to map LiveInsightType to InsightType for the panel
-  InsightType _mapInsightType(LiveInsightType type) {
-    switch (type) {
-      case LiveInsightType.actionItem:
-        return InsightType.actionItem;
-      case LiveInsightType.decision:
-        return InsightType.decision;
-      case LiveInsightType.question:
-        return InsightType.question;
-      case LiveInsightType.risk:
-        return InsightType.risk;
-      case LiveInsightType.keyPoint:
-        return InsightType.keyPoint;
-      case LiveInsightType.relatedDiscussion:
-        return InsightType.relatedDiscussion;
-      case LiveInsightType.contradiction:
-        return InsightType.contradiction;
-      case LiveInsightType.missingInfo:
-        return InsightType.missingInfo;
-    }
-  }
-
-  // Helper function to map LiveInsightPriority to InsightPriority
-  InsightPriority _mapInsightPriority(LiveInsightPriority priority) {
-    switch (priority) {
-      case LiveInsightPriority.critical:
-        return InsightPriority.critical;
-      case LiveInsightPriority.high:
-        return InsightPriority.high;
-      case LiveInsightPriority.medium:
-        return InsightPriority.medium;
-      case LiveInsightPriority.low:
-        return InsightPriority.low;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Create the mapped insights list outside of the LiveInsightsPanel widget
-    // This prevents rebuilds during the mapping process
-    final mappedInsights = liveInsights.map((insight) {
-      return MeetingInsight(
-        insightId: insight.insightId ?? insight.id ?? '',
-        type: _mapInsightType(insight.type),
-        priority: _mapInsightPriority(insight.priority),
-        content: insight.content,
-        context: insight.context,
-        timestamp: insight.timestamp ?? insight.createdAt ?? DateTime.now(),
-        assignedTo: insight.assignedTo,
-        dueDate: insight.dueDate,
-        confidenceScore: insight.confidenceScore,
-      );
-    }).toList();
-
-    return LiveInsightsPanel(
-      insights: mappedInsights,
-      isRecording: isRecording,
-      onClose: null, // Don't allow closing during recording
     );
   }
 }
