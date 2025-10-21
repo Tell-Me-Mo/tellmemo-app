@@ -141,6 +141,10 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
       confidence = widget.assistance.clarification?.confidence;
     } else if (widget.assistance.type == ProactiveAssistanceType.conflictDetected) {
       confidence = widget.assistance.conflict?.confidence;
+    } else if (widget.assistance.type == ProactiveAssistanceType.followUpSuggestion) {
+      confidence = widget.assistance.followUpSuggestion?.confidence;
+    } else if (widget.assistance.type == ProactiveAssistanceType.repetitionDetected) {
+      confidence = widget.assistance.repetitionDetection?.confidence;
     }
 
     if (confidence == null) return const SizedBox.shrink();
@@ -180,8 +184,10 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
         return _buildConflictContent();
       case ProactiveAssistanceType.incompleteActionItem:
         return _buildActionItemQualityContent();
-      default:
-        return const SizedBox.shrink();
+      case ProactiveAssistanceType.followUpSuggestion:
+        return _buildFollowUpSuggestionContent();
+      case ProactiveAssistanceType.repetitionDetected:
+        return _buildRepetitionDetectionContent();
     }
   }
 
@@ -834,6 +840,436 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
     );
   }
 
+  Widget _buildFollowUpSuggestionContent() {
+    final followUp = widget.assistance.followUpSuggestion;
+    if (followUp == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Topic
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.purple[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.purple[200]!),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.tips_and_updates, color: Colors.purple[700], size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Suggested Topic',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.purple[900],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        followUp.topic,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.purple[900],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Urgency badge
+          _buildUrgencyBadge(followUp.urgency),
+          const SizedBox(height: 16),
+
+          // Reason
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue[200]!),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.info_outline, color: Colors.blue[700], size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Why now?',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue[900],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        followUp.reason,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.blue[900],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Related content
+          if (followUp.relatedTitle.isNotEmpty) ...[
+            Text(
+              'Related Content',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.description, size: 18, color: Colors.grey[700]),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          followUp.relatedTitle,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatDate(followUp.relatedDate),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  if (followUp.contextSnippet.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      followUp.contextSnippet,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[700],
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+
+          // Action buttons
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton.icon(
+                onPressed: _handleDismiss,
+                icon: const Icon(Icons.close, size: 18),
+                label: const Text('Dismiss'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton.icon(
+                onPressed: _handleAccept,
+                icon: const Icon(Icons.check, size: 18),
+                label: const Text('Discuss'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.purple,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRepetitionDetectionContent() {
+    final repetition = widget.assistance.repetitionDetection;
+    if (repetition == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Topic
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.deepOrange[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.deepOrange[300]!, width: 2),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.loop, color: Colors.deepOrange[700], size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Repeated Topic',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.deepOrange[900],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        repetition.topic,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.deepOrange[900],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Occurrences and time span
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.deepOrange[200]!),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.history, color: Colors.deepOrange[700], size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Discussed ${repetition.occurrences} times over ${repetition.timeSpanMinutes.toStringAsFixed(1)} minutes',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Reasoning
+          Text(
+            'Why this matters:',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.amber[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.amber[200]!),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.lightbulb_outline, color: Colors.amber[700], size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    repetition.reasoning,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.amber[900],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Suggestions
+          if (repetition.suggestions.isNotEmpty) ...[
+            Text(
+              'Suggestions to move forward:',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...repetition.suggestions.take(4).map((suggestion) =>
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(top: 6),
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: Colors.deepOrange[700],
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        suggestion,
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            ),
+          ],
+
+          // Action buttons
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton.icon(
+                onPressed: _handleDismiss,
+                icon: const Icon(Icons.close, size: 18),
+                label: const Text('Dismiss'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(width: 8),
+              TextButton.icon(
+                onPressed: () {
+                  // Handle continue action
+                  widget.onDismiss?.call();
+                  _animateDismiss();
+                },
+                icon: const Icon(Icons.arrow_forward, size: 18),
+                label: const Text('Continue'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton.icon(
+                onPressed: _handleAccept,
+                icon: const Icon(Icons.pause_circle_outline, size: 18),
+                label: const Text('Table Discussion'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepOrange,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUrgencyBadge(String urgency) {
+    Color color;
+    IconData icon;
+    String label;
+
+    switch (urgency.toLowerCase()) {
+      case 'high':
+        color = Colors.red;
+        icon = Icons.priority_high;
+        label = 'High Urgency';
+        break;
+      case 'medium':
+        color = Colors.orange;
+        icon = Icons.remove;
+        label = 'Medium Urgency';
+        break;
+      default: // low
+        color = Colors.blue;
+        icon = Icons.low_priority;
+        label = 'Low Urgency';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildQualityIssueChip(QualityIssue issue) {
     IconData icon;
     Color color;
@@ -1045,6 +1481,8 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
         return Icons.error_outline;
       case ProactiveAssistanceType.followUpSuggestion:
         return Icons.tips_and_updates;
+      case ProactiveAssistanceType.repetitionDetected:
+        return Icons.loop;
     }
   }
 
@@ -1060,6 +1498,8 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
         return Colors.amber[700]!;
       case ProactiveAssistanceType.followUpSuggestion:
         return Colors.purple[700]!;
+      case ProactiveAssistanceType.repetitionDetected:
+        return Colors.deepOrange[700]!;
     }
   }
 
@@ -1075,6 +1515,8 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
         return '📝 Incomplete Action Item';
       case ProactiveAssistanceType.followUpSuggestion:
         return '💭 Follow-up Suggestion';
+      case ProactiveAssistanceType.repetitionDetected:
+        return 'Repetitive Discussion Detected';
     }
   }
 
@@ -1086,6 +1528,10 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
         return widget.assistance.clarification?.statement;
       case ProactiveAssistanceType.conflictDetected:
         return widget.assistance.conflict?.currentStatement;
+      case ProactiveAssistanceType.followUpSuggestion:
+        return widget.assistance.followUpSuggestion?.topic;
+      case ProactiveAssistanceType.repetitionDetected:
+        return widget.assistance.repetitionDetection?.topic;
       default:
         return null;
     }
@@ -1099,8 +1545,12 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
         return Colors.orange[50]!;
       case ProactiveAssistanceType.conflictDetected:
         return Colors.red[50]!;
-      default:
-        return Colors.grey[100]!;
+      case ProactiveAssistanceType.incompleteActionItem:
+        return Colors.amber[50]!;
+      case ProactiveAssistanceType.followUpSuggestion:
+        return Colors.purple[50]!;
+      case ProactiveAssistanceType.repetitionDetected:
+        return Colors.deepOrange[50]!;
     }
   }
 
@@ -1112,8 +1562,12 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
         return Colors.orange[300]!;
       case ProactiveAssistanceType.conflictDetected:
         return Colors.red[300]!;
-      default:
-        return Colors.grey[300]!;
+      case ProactiveAssistanceType.incompleteActionItem:
+        return Colors.amber[300]!;
+      case ProactiveAssistanceType.followUpSuggestion:
+        return Colors.purple[300]!;
+      case ProactiveAssistanceType.repetitionDetected:
+        return Colors.deepOrange[300]!;
     }
   }
 }

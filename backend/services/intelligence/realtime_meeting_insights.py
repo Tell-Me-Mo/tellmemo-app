@@ -43,6 +43,8 @@ from services.intelligence.clarification_service import ClarificationService
 from services.intelligence.conflict_detection_service import ConflictDetectionService
 from services.intelligence.action_item_quality_service import ActionItemQualityService
 from services.intelligence.follow_up_suggestions_service import FollowUpSuggestionsService
+from services.intelligence.repetition_detector_service import RepetitionDetectorService
+from services.intelligence.meeting_time_tracker_service import MeetingTimeTrackerService
 
 logger = get_logger(__name__)
 
@@ -206,6 +208,12 @@ class RealtimeMeetingInsightsService:
             llm_client=self.llm_client,
             embedding_service=embedding_service
         )
+        # Phase 6: Meeting Efficiency Features
+        self.repetition_detector = RepetitionDetectorService(
+            llm_client=self.llm_client,
+            embedding_service=embedding_service
+        )
+        self.time_tracker = MeetingTimeTrackerService()
 
     async def process_transcript_chunk(
         self,
@@ -263,13 +271,14 @@ class RealtimeMeetingInsightsService:
             # Store new insights
             self.extracted_insights[session_id].extend(new_insights)
 
-            # PHASE 1: Active Intelligence - Auto-answer questions
+            # PHASE 1-6: Active Intelligence - Process all proactive assistance
             proactive_assistance = await self._process_proactive_assistance(
                 session_id=session_id,
                 project_id=project_id,
                 organization_id=organization_id,
                 insights=new_insights,
-                context=full_context
+                context=full_context,
+                current_chunk=chunk
             )
 
             processing_time = time.time() - start_time
@@ -628,6 +637,10 @@ class RealtimeMeetingInsightsService:
         if session_id in self.last_semantic_search:
             del self.last_semantic_search[session_id]
 
+        # Phase 6: Clean up repetition detector and time tracker session history
+        self.repetition_detector.clear_session(session_id)
+        self.time_tracker.clear_session(session_id)
+
         logger.info(f"Finalized session {sanitize_for_log(session_id)}: {len(insights)} total insights")
 
         return {
@@ -643,7 +656,8 @@ class RealtimeMeetingInsightsService:
         project_id: str,
         organization_id: str,
         insights: List[MeetingInsight],
-        context: str
+        context: str,
+        current_chunk: TranscriptChunk
     ) -> List[Dict[str, Any]]:
         """
         Process insights to provide proactive assistance.
@@ -658,6 +672,8 @@ class RealtimeMeetingInsightsService:
                  (owner, deadline, clarity) and suggests improvements.
         Phase 5: Follow-up Suggestions - Suggests related topics to discuss based on
                  current conversation (open items, past decisions with implications).
+        Phase 6: Meeting Efficiency Features - Detects repetitive discussions, tracks
+                 meeting time usage, and monitors agenda completion.
 
         Args:
             session_id: Current session ID
@@ -665,6 +681,7 @@ class RealtimeMeetingInsightsService:
             organization_id: Organization ID
             insights: List of newly extracted insights
             context: Full conversation context
+            current_chunk: Current transcript chunk being processed
 
         Returns:
             List of proactive assistance items (auto-answers, clarifications, conflicts, quality reports, follow-ups, etc.)
@@ -848,8 +865,62 @@ class RealtimeMeetingInsightsService:
                             f"(confidence: {suggestion.confidence:.2f})"
                         )
 
-                # Future phases can add more assistance types here:
-                # - Meeting efficiency features (Phase 6)
+            # Phase 6: Meeting Efficiency Features - Repetition Detection
+            # Check once per chunk if discussion is becoming repetitive
+            repetition_alert = await self.repetition_detector.detect_repetition(
+                session_id=session_id,
+                current_text=current_chunk.text,
+                chunk_index=current_chunk.index,
+                chunk_timestamp=current_chunk.timestamp
+            )
+
+            if repetition_alert:
+                proactive_responses.append({
+                    'type': 'repetition_detected',
+                    'topic': repetition_alert.topic,
+                    'first_mention_index': repetition_alert.first_mention_index,
+                    'current_mention_index': repetition_alert.current_mention_index,
+                    'occurrences': repetition_alert.occurrences,
+                    'time_span_minutes': repetition_alert.time_span_minutes,
+                    'confidence': repetition_alert.confidence,
+                    'reasoning': repetition_alert.reasoning,
+                    'suggestions': repetition_alert.suggestions,
+                    'timestamp': repetition_alert.timestamp.isoformat()
+                })
+
+                logger.warning(
+                    f"Detected repetitive discussion for session {sanitize_for_log(session_id)}: "
+                    f"'{repetition_alert.topic}' discussed {repetition_alert.occurrences} times "
+                    f"over {repetition_alert.time_span_minutes:.1f} minutes "
+                    f"(confidence: {repetition_alert.confidence:.2f})"
+                )
+
+            # Phase 6: Meeting Efficiency Features - Time Tracking
+            # Track meeting time usage and alert if running long
+            time_usage_alert = await self.time_tracker.track_time_usage(
+                session_id=session_id,
+                current_text=current_chunk.text,
+                chunk_timestamp=current_chunk.timestamp,
+                current_topic=repetition_alert.topic if repetition_alert else None
+            )
+
+            if time_usage_alert:
+                proactive_responses.append({
+                    'type': 'time_usage_alert',
+                    'alert_type': time_usage_alert.alert_type,
+                    'topic': time_usage_alert.topic,
+                    'time_spent_minutes': time_usage_alert.time_spent_minutes,
+                    'severity': time_usage_alert.severity,
+                    'reasoning': time_usage_alert.reasoning,
+                    'suggestions': time_usage_alert.suggestions,
+                    'timestamp': time_usage_alert.timestamp.isoformat()
+                })
+
+                logger.warning(
+                    f"Time usage alert ({time_usage_alert.alert_type}) for session "
+                    f"{sanitize_for_log(session_id)}: '{time_usage_alert.topic}' "
+                    f"({time_usage_alert.time_spent_minutes:.1f} minutes, severity: {time_usage_alert.severity})"
+                )
 
         except Exception as e:
             logger.error(f"Error processing proactive assistance: {e}", exc_info=True)

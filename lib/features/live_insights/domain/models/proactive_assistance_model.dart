@@ -15,6 +15,8 @@ enum ProactiveAssistanceType {
   incompleteActionItem,
   @JsonValue('follow_up_suggestion')
   followUpSuggestion,
+  @JsonValue('repetition_detected')
+  repetitionDetected,
 }
 
 /// Source document used to answer a question
@@ -138,6 +140,25 @@ class FollowUpSuggestionAssistance with _$FollowUpSuggestionAssistance {
       _$FollowUpSuggestionAssistanceFromJson(json);
 }
 
+/// Repetition detection alert for circular discussions
+@freezed
+class RepetitionDetectionAssistance with _$RepetitionDetectionAssistance {
+  const factory RepetitionDetectionAssistance({
+    required String topic,
+    @JsonKey(name: 'first_mention_index') required int firstMentionIndex,
+    @JsonKey(name: 'current_mention_index') required int currentMentionIndex,
+    required int occurrences,
+    @JsonKey(name: 'time_span_minutes') required double timeSpanMinutes,
+    required double confidence,
+    required String reasoning,
+    required List<String> suggestions,
+    required DateTime timestamp,
+  }) = _RepetitionDetectionAssistance;
+
+  factory RepetitionDetectionAssistance.fromJson(Map<String, dynamic> json) =>
+      _$RepetitionDetectionAssistanceFromJson(json);
+}
+
 /// Main proactive assistance model
 @freezed
 class ProactiveAssistanceModel with _$ProactiveAssistanceModel {
@@ -148,6 +169,7 @@ class ProactiveAssistanceModel with _$ProactiveAssistanceModel {
     ConflictAssistance? conflict,
     ActionItemQualityAssistance? actionItemQuality,
     FollowUpSuggestionAssistance? followUpSuggestion,
+    RepetitionDetectionAssistance? repetitionDetection,
   }) = _ProactiveAssistanceModel;
 
   factory ProactiveAssistanceModel.fromJson(Map<String, dynamic> json) {
@@ -180,6 +202,11 @@ class ProactiveAssistanceModel with _$ProactiveAssistanceModel {
           type: assistanceType,
           followUpSuggestion: FollowUpSuggestionAssistance.fromJson(json),
         );
+      case ProactiveAssistanceType.repetitionDetected:
+        return ProactiveAssistanceModel(
+          type: assistanceType,
+          repetitionDetection: RepetitionDetectionAssistance.fromJson(json),
+        );
       default:
         return ProactiveAssistanceModel(type: assistanceType);
     }
@@ -197,6 +224,8 @@ class ProactiveAssistanceModel with _$ProactiveAssistanceModel {
         return ProactiveAssistanceType.incompleteActionItem;
       case 'follow_up_suggestion':
         return ProactiveAssistanceType.followUpSuggestion;
+      case 'repetition_detected':
+        return ProactiveAssistanceType.repetitionDetected;
       default:
         throw ArgumentError('Unknown assistance type: $type');
     }
