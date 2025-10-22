@@ -2,15 +2,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/proactive_assistance_model.dart';
-import '../../domain/models/live_insight_model.dart';
 import '../widgets/proactive_assistance_card.dart';
 import '../../../audio_recording/presentation/providers/recording_provider.dart';
-import '../../../meetings/presentation/widgets/live_insights_panel.dart';
 
 /// Live Insights Window Page
 ///
-/// Displays in a separate window/tab for multi-monitor setups.
-/// Includes feature toggles for enabling/disabling each AI assistance feature.
+/// Clean, responsive separate window for AI meeting assistance.
+/// Displays AI suggestion cards in a responsive grid layout.
 class LiveInsightsWindowPage extends ConsumerStatefulWidget {
   final String sessionId;
 
@@ -30,18 +28,17 @@ class _LiveInsightsWindowPageState
   List<ProactiveAssistanceModel> _proactiveAssistance = [];
   StreamSubscription<List<ProactiveAssistanceModel>>? _assistanceSubscription;
 
-  // Feature toggles (persisted to localStorage via provider)
+  // Feature toggles
   final Map<ProactiveAssistanceType, bool> _featureToggles = {
-    ProactiveAssistanceType.autoAnswer: true, // Phase 1
-    ProactiveAssistanceType.clarificationNeeded: true, // Phase 2
-    ProactiveAssistanceType.conflictDetected: true, // Phase 3
-    ProactiveAssistanceType.incompleteActionItem: true, // Phase 4
-    ProactiveAssistanceType.followUpSuggestion: true, // Phase 5
-    ProactiveAssistanceType.repetitionDetected: true, // Phase 6
+    ProactiveAssistanceType.autoAnswer: true,
+    ProactiveAssistanceType.clarificationNeeded: true,
+    ProactiveAssistanceType.conflictDetected: true,
+    ProactiveAssistanceType.incompleteActionItem: true,
+    ProactiveAssistanceType.followUpSuggestion: true,
+    ProactiveAssistanceType.repetitionDetected: true,
   };
 
   bool _showSettings = false;
-  InsightsExtractionResult? _latestInsights;
 
   @override
   void initState() {
@@ -65,7 +62,6 @@ class _LiveInsightsWindowPageState
         (assistance) {
           if (mounted) {
             setState(() {
-              // Filter based on feature toggles
               final filteredAssistance = assistance.where((item) {
                 return _featureToggles[item.type] ?? false;
               }).toList();
@@ -74,21 +70,11 @@ class _LiveInsightsWindowPageState
           }
         },
       );
-
-      // Also listen to insights stream
-      wsService.insightsStream.listen((insights) {
-        if (mounted) {
-          setState(() {
-            _latestInsights = insights;
-          });
-        }
-      });
     }
   }
 
   void _loadFeatureToggles() {
     // TODO: Load from localStorage/SharedPreferences
-    // For now, all features enabled by default
   }
 
   void _saveFeatureToggles() {
@@ -108,189 +94,76 @@ class _LiveInsightsWindowPageState
     }).toList();
   }
 
-  String _mapInsightTypeToString(LiveInsightType type) {
-    switch (type) {
-      case LiveInsightType.actionItem:
-        return 'action_item';
-      case LiveInsightType.decision:
-        return 'decision';
-      case LiveInsightType.question:
-        return 'question';
-      case LiveInsightType.risk:
-        return 'risk';
-      case LiveInsightType.keyPoint:
-        return 'key_point';
-      case LiveInsightType.relatedDiscussion:
-        return 'related_discussion';
-      case LiveInsightType.contradiction:
-        return 'contradiction';
-      case LiveInsightType.missingInfo:
-        return 'missing_info';
-    }
-  }
-
-  String _mapInsightPriorityToString(LiveInsightPriority priority) {
-    switch (priority) {
-      case LiveInsightPriority.critical:
-        return 'critical';
-      case LiveInsightPriority.high:
-        return 'high';
-      case LiveInsightPriority.medium:
-        return 'medium';
-      case LiveInsightPriority.low:
-        return 'low';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final filteredAssistance = _getFilteredAssistance();
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // Responsive card width
+    final cardWidth = screenWidth > 1400
+        ? 420.0
+        : screenWidth > 1000
+            ? 380.0
+            : screenWidth > 600
+                ? 340.0
+                : screenWidth * 0.9;
 
     return Scaffold(
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
+        elevation: 0,
+        backgroundColor: theme.colorScheme.surface,
+        automaticallyImplyLeading: false,
         title: Row(
           children: [
-            Icon(Icons.auto_awesome, color: theme.colorScheme.primary),
+            Icon(Icons.auto_awesome,
+                color: theme.colorScheme.primary, size: 20),
             const SizedBox(width: 8),
-            const Text('Live Insights - AI Assistant'),
+            Text(
+              'AI Meeting Assistant',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
         actions: [
-          // Feature toggles button
           IconButton(
-            icon: const Icon(Icons.tune),
-            tooltip: 'Configure AI Features',
+            icon: Icon(
+              _showSettings ? Icons.close : Icons.tune,
+              size: 20,
+            ),
+            tooltip: _showSettings ? 'Close Settings' : 'Settings',
             onPressed: () {
               setState(() {
                 _showSettings = !_showSettings;
               });
             },
           ),
-          // Close window button
-          IconButton(
-            icon: const Icon(Icons.close),
-            tooltip: 'Close Window',
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: Row(
         children: [
-          // Main content
+          // Main content area
           Expanded(
-            child: Column(
-              children: [
-                // AI Assistant Section
-                if (filteredAssistance.isNotEmpty) ...[
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.05),
-                      border: Border(
-                        bottom: BorderSide(color: theme.dividerColor),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.auto_awesome,
-                                color: Colors.blue[700], size: 24),
-                            const SizedBox(width: 12),
-                            Text(
-                              'AI Proactive Assistance',
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue[900],
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Text(
-                                '${filteredAssistance.length}',
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  color: Colors.blue[900],
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          height: 280,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: filteredAssistance.length,
-                            itemBuilder: (context, index) {
-                              return Container(
-                                width: 400,
-                                margin: const EdgeInsets.only(right: 16),
-                                child: ProactiveAssistanceCard(
-                                  assistance: filteredAssistance[index],
-                                  onAccept: () => _handleAcceptAssistance(index),
-                                  onDismiss: () =>
-                                      _handleDismissAssistance(index),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-
-                // Regular Insights Panel
-                Expanded(
-                  child: LiveInsightsPanel(
-                    insights: _latestInsights?.insights.map((insight) {
-                      return MeetingInsight(
-                        insightId: insight.insightId ?? insight.id ?? '',
-                        type: InsightType.fromString(_mapInsightTypeToString(insight.type)),
-                        priority: InsightPriority.fromString(_mapInsightPriorityToString(insight.priority)),
-                        content: insight.content,
-                        context: insight.context,
-                        timestamp: insight.timestamp ?? insight.createdAt ?? DateTime.now(),
-                        assignedTo: insight.assignedTo,
-                        dueDate: insight.dueDate,
-                        confidenceScore: insight.confidenceScore,
-                      );
-                    }).toList() ?? [],
-                    isRecording: true,
-                    onClose: null,
-                  ),
-                ),
-              ],
-            ),
+            child: filteredAssistance.isEmpty
+                ? _buildEmptyState(theme)
+                : _buildAssistanceCards(theme, filteredAssistance, cardWidth),
           ),
 
-          // Settings Panel (slide in from right)
+          // Settings sidebar
           if (_showSettings)
             Container(
-              width: 350,
+              width: 320,
               decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
+                color: theme.colorScheme.surfaceContainerHighest,
                 border: Border(
-                  left: BorderSide(color: theme.dividerColor, width: 2),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(-2, 0),
+                  left: BorderSide(
+                    color: theme.dividerColor.withValues(alpha: 0.1),
                   ),
-                ],
+                ),
               ),
               child: _buildSettingsPanel(theme),
             ),
@@ -299,34 +172,89 @@ class _LiveInsightsWindowPageState
     );
   }
 
+  Widget _buildEmptyState(ThemeData theme) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.psychology_outlined,
+            size: 64,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Listening for insights...',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'AI suggestions will appear here as the meeting progresses',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAssistanceCards(
+    ThemeData theme,
+    List<ProactiveAssistanceModel> assistance,
+    double cardWidth,
+  ) {
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.all(24),
+          sliver: SliverGrid(
+            gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: cardWidth,
+              mainAxisExtent: 280,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                return ProactiveAssistanceCard(
+                  assistance: assistance[index],
+                  onAccept: () => _handleAcceptAssistance(index),
+                  onDismiss: () => _handleDismissAssistance(index),
+                );
+              },
+              childCount: assistance.length,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildSettingsPanel(ThemeData theme) {
     return Column(
       children: [
         // Header
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: theme.colorScheme.primaryContainer.withOpacity(0.3),
-            border: Border(bottom: BorderSide(color: theme.dividerColor)),
+            border: Border(
+              bottom: BorderSide(
+                color: theme.dividerColor.withValues(alpha: 0.1),
+              ),
+            ),
           ),
           child: Row(
             children: [
-              Icon(Icons.tune, color: theme.colorScheme.primary),
+              Icon(Icons.tune, size: 20, color: theme.colorScheme.primary),
               const SizedBox(width: 12),
               Text(
                 'AI Features',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
                 ),
-              ),
-              const Spacer(),
-              IconButton(
-                icon: const Icon(Icons.close, size: 20),
-                onPressed: () {
-                  setState(() {
-                    _showSettings = false;
-                  });
-                },
               ),
             ],
           ),
@@ -339,70 +267,64 @@ class _LiveInsightsWindowPageState
             children: [
               Text(
                 'Enable or disable AI assistance features:',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurface.withOpacity(0.7),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
               const SizedBox(height: 16),
 
               _buildFeatureToggle(
                 type: ProactiveAssistanceType.autoAnswer,
-                title: '💡 Question Auto-Answering',
+                title: 'Question Auto-Answering',
                 description:
                     'Automatically answers questions using past meeting content',
-                icon: Icons.auto_awesome,
+                icon: Icons.lightbulb_outline,
                 color: Colors.blue,
-                phase: 'Phase 1',
               ),
 
               _buildFeatureToggle(
                 type: ProactiveAssistanceType.clarificationNeeded,
-                title: '❓ Proactive Clarification',
+                title: 'Proactive Clarification',
                 description:
                     'Detects vague statements and suggests clarifying questions',
                 icon: Icons.help_outline,
                 color: Colors.orange,
-                phase: 'Phase 2',
               ),
 
               _buildFeatureToggle(
                 type: ProactiveAssistanceType.conflictDetected,
-                title: '⚠️ Conflict Detection',
+                title: 'Conflict Detection',
                 description:
                     'Alerts when current decisions conflict with past decisions',
-                icon: Icons.warning_amber,
+                icon: Icons.warning_amber_outlined,
                 color: Colors.red,
-                phase: 'Phase 3',
               ),
 
               _buildFeatureToggle(
                 type: ProactiveAssistanceType.incompleteActionItem,
-                title: '📝 Action Item Quality',
+                title: 'Action Item Quality',
                 description:
                     'Ensures action items have owners, deadlines, and clear descriptions',
-                icon: Icons.error_outline,
+                icon: Icons.task_outlined,
                 color: Colors.amber,
-                phase: 'Phase 4',
               ),
 
               _buildFeatureToggle(
                 type: ProactiveAssistanceType.followUpSuggestion,
-                title: '💭 Follow-up Suggestions',
+                title: 'Follow-up Suggestions',
                 description:
                     'Recommends related topics and open items from past meetings',
-                icon: Icons.tips_and_updates,
+                icon: Icons.tips_and_updates_outlined,
                 color: Colors.purple,
-                phase: 'Phase 5',
               ),
 
               _buildFeatureToggle(
                 type: ProactiveAssistanceType.repetitionDetected,
-                title: '🔁 Repetition Detection & Time Alerts',
+                title: 'Repetition & Time Alerts',
                 description:
                     'Detects circular discussions and tracks meeting duration',
                 icon: Icons.loop,
                 color: Colors.deepOrange,
-                phase: 'Phase 6',
               ),
 
               const SizedBox(height: 24),
@@ -410,7 +332,7 @@ class _LiveInsightsWindowPageState
               const SizedBox(height: 16),
 
               // Quick actions
-              ElevatedButton.icon(
+              FilledButton.icon(
                 onPressed: () {
                   setState(() {
                     for (final key in _featureToggles.keys) {
@@ -419,8 +341,8 @@ class _LiveInsightsWindowPageState
                   });
                   _saveFeatureToggles();
                 },
-                icon: const Icon(Icons.check_circle),
-                label: const Text('Enable All Features'),
+                icon: const Icon(Icons.check_circle_outline, size: 18),
+                label: const Text('Enable All'),
               ),
               const SizedBox(height: 8),
               OutlinedButton.icon(
@@ -432,8 +354,8 @@ class _LiveInsightsWindowPageState
                   });
                   _saveFeatureToggles();
                 },
-                icon: const Icon(Icons.cancel),
-                label: const Text('Disable All Features'),
+                icon: const Icon(Icons.cancel_outlined, size: 18),
+                label: const Text('Disable All'),
               ),
             ],
           ),
@@ -448,67 +370,70 @@ class _LiveInsightsWindowPageState
     required String description,
     required IconData icon,
     required Color color,
-    required String phase,
   }) {
     final isEnabled = _featureToggles[type] ?? false;
+    final theme = Theme.of(context);
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: isEnabled ? 2 : 0,
-      color: isEnabled ? color.withOpacity(0.05) : Colors.grey.withOpacity(0.05),
-      child: SwitchListTile(
-        value: isEnabled,
-        onChanged: (value) => _toggleFeature(type, value),
-        title: Row(
-          children: [
-            Icon(icon, color: isEnabled ? color : Colors.grey, size: 20),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: isEnabled ? Colors.black : Colors.grey,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: isEnabled
+            ? color.withValues(alpha: 0.08)
+            : theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => _toggleFeature(type, !isEnabled),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Icon(
+                  icon,
+                  color: isEnabled ? color : theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                  size: 20,
                 ),
-              ),
-            ),
-          ],
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Text(
-              description,
-              style: TextStyle(
-                fontSize: 12,
-                color: isEnabled ? Colors.black87 : Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                phase,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: color,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                          color: isEnabled
+                              ? theme.colorScheme.onSurface
+                              : theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        description,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: isEnabled
+                              ? theme.colorScheme.onSurface.withValues(alpha: 0.7)
+                              : theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+                const SizedBox(width: 8),
+                Switch(
+                  value: isEnabled,
+                  onChanged: (value) => _toggleFeature(type, value),
+                  activeTrackColor: color,
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
   void _handleAcceptAssistance(int index) {
-    // Track positive feedback
     debugPrint('User accepted assistance: ${_proactiveAssistance[index].type}');
     setState(() {
       _proactiveAssistance.removeAt(index);
@@ -516,7 +441,6 @@ class _LiveInsightsWindowPageState
   }
 
   void _handleDismissAssistance(int index) {
-    // Track dismissal
     debugPrint('User dismissed assistance: ${_proactiveAssistance[index].type}');
     setState(() {
       _proactiveAssistance.removeAt(index);

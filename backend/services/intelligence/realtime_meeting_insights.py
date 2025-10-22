@@ -363,8 +363,8 @@ class RealtimeMeetingInsightsService:
             for idx, item in enumerate(extracted_data.get('insights', [])):
                 insight = MeetingInsight(
                     insight_id=f"{session_id}_{current_chunk.index}_{idx}",
-                    type=InsightType(item.get('type', 'key_point')),
-                    priority=InsightPriority(item.get('priority', 'medium')),
+                    type=InsightType(item.get('type', 'key_point').lower()),
+                    priority=InsightPriority(item.get('priority', 'medium').lower()),
                     content=item.get('content', ''),
                     context=recent_context,
                     timestamp=current_chunk.timestamp,
