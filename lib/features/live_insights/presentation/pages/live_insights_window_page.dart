@@ -51,6 +51,22 @@ class _LiveInsightsWindowPageState
     _setupProactiveAssistanceListener();
     _setupInsightsListener();
     _loadFeatureToggles();
+
+    // Retry setup after first frame in case service becomes available
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          final recordingNotifier = ref.read(recordingNotifierProvider.notifier);
+          if (recordingNotifier.liveInsightsService != null) {
+            debugPrint('🎨 [LiveInsightsWindow] Service available on retry, setting up listeners');
+            _setupProactiveAssistanceListener();
+            _setupInsightsListener();
+          } else {
+            debugPrint('⚠️  [LiveInsightsWindow] Service still not available after 500ms');
+          }
+        }
+      });
+    });
   }
 
   @override

@@ -48,7 +48,8 @@ class AIModel(str, enum.Enum):
     CLAUDE_SONNET_4 = "claude-sonnet-4-20250514"
     # Claude 3.5 models
     CLAUDE_3_5_SONNET = "claude-3-5-sonnet-20241022"
-    CLAUDE_3_5_HAIKU = "claude-3-5-haiku-latest"
+    CLAUDE_3_5_HAIKU_LATEST = "claude-3-5-haiku-latest"
+    CLAUDE_3_5_HAIKU_20241022 = "claude-3-5-haiku-20241022"
     # OpenAI GPT-5 models (Released August 2025)
     GPT_5 = "gpt-5"
     GPT_5_MINI = "gpt-5-mini"
@@ -71,7 +72,8 @@ MODEL_PROVIDER_MAP = {
     AIModel.CLAUDE_OPUS_4: AIProvider.CLAUDE,
     AIModel.CLAUDE_SONNET_4: AIProvider.CLAUDE,
     AIModel.CLAUDE_3_5_SONNET: AIProvider.CLAUDE,
-    AIModel.CLAUDE_3_5_HAIKU: AIProvider.CLAUDE,
+    AIModel.CLAUDE_3_5_HAIKU_LATEST: AIProvider.CLAUDE,
+    AIModel.CLAUDE_3_5_HAIKU_20241022: AIProvider.CLAUDE,
     # OpenAI GPT-5 models
     AIModel.GPT_5: AIProvider.OPENAI,
     AIModel.GPT_5_MINI: AIProvider.OPENAI,
@@ -92,7 +94,8 @@ MODEL_PROVIDER_MAP = {
 MODEL_EQUIVALENCE_MAP = {
     # Claude → OpenAI equivalents (based on capability & cost)
     AIModel.CLAUDE_HAIKU_4_5: AIModel.GPT_5_MINI,       # Latest Haiku → GPT-5 Mini (cost/speed optimized)
-    AIModel.CLAUDE_3_5_HAIKU: AIModel.GPT_5_MINI,       # Cost/speed optimized
+    AIModel.CLAUDE_3_5_HAIKU_LATEST: AIModel.GPT_4O_MINI,       # Cost/speed optimized
+    AIModel.CLAUDE_3_5_HAIKU_20241022: AIModel.GPT_4O_MINI,     # Specific version → GPT-4o Mini
     AIModel.CLAUDE_3_5_SONNET: AIModel.GPT_5,           # Balanced performance → GPT-5
     AIModel.CLAUDE_SONNET_4: AIModel.GPT_5,             # Latest Sonnet → GPT-5
     AIModel.CLAUDE_OPUS_4: AIModel.GPT_5,               # High capability flagship → GPT-5
