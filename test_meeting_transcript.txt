@@ -1,0 +1,106 @@
+LIVE INSIGHTS DEMO - COMPREHENSIVE TEST TRANSCRIPT
+=================================================
+
+This transcript is designed to trigger all insight types and proactive assistance features.
+Duration: ~3 minutes
+Speaker: Single speaker for simplicity (can be read by text-to-speech)
+
+---
+
+[START RECORDING]
+
+Hi everyone, thanks for joining today's sprint planning meeting. Let me share the agenda quickly.
+
+First, we need to discuss the authentication module deadline. Sarah, you mentioned last week that the OAuth integration was at 70% completion. Can you give us an update on that? I'm wondering if we're still on track for the Friday deadline.
+
+Actually, I just realized something. In our last meeting on October 15th, we decided to use JWT tokens for session management. But I heard from the backend team yesterday that they're now implementing OAuth2. That seems contradictory. We should clarify this before moving forward.
+
+Okay, moving on. The payment gateway integration is critical. We absolutely must complete this by next Monday. This is a major risk if we don't deliver on time. The client specifically said this is their top priority, and any delay could jeopardize the entire project.
+
+Now, about the testing strategy. We talked about this before. We discussed this last sprint too. And I think we covered it in the retrospective as well. We keep coming back to this same topic. Maybe we need to make a final decision today and move on.
+
+Let me assign some action items. John, can you handle the API documentation? We need that completed. Also, someone needs to review the security audit report. And we should schedule a client demo. These are all important tasks that need owners.
+
+One more thing - the database migration. Last month, we agreed to use PostgreSQL for production. But in yesterday's architecture meeting, someone mentioned using MongoDB. Wait, that doesn't make sense. We can't change the database at this stage. That conflicts with what we decided earlier.
+
+I have a question about the deployment pipeline. Do we have monitoring set up? Are we tracking error rates? What about performance metrics? We need visibility into production health.
+
+Also, there's some information missing here. We don't have the staging environment credentials. Nobody documented the API endpoints. And I don't see any information about backup procedures. These gaps need to be filled.
+
+Let me make this clear - we will launch the beta version on November 1st. That's our firm deadline. Mark it on your calendars. We cannot miss this date.
+
+Quick decision point: Should we use TypeScript or plain JavaScript for the new microservice? Let's decide now. I think TypeScript is better for maintainability. Everyone agree? Okay, settled - we're going with TypeScript.
+
+Sarah raised a good point earlier about the OAuth situation. Based on our discussion from the October 10th technical review meeting, we actually standardized on OAuth2 with refresh tokens. The JWT approach was only for the internal admin panel. So there's no conflict - they're for different use cases.
+
+One key insight here: The client wants real-time notifications. That's a crucial requirement we haven't addressed yet. Push notifications will be essential for user engagement.
+
+Oh, and speaking of things we discussed before - remember the caching strategy discussion? We covered that in Q3 planning. It ties directly to what we're talking about now with performance.
+
+Mike needs to complete the code review by Wednesday. Lisa, you're responsible for the load testing. Everyone should update their Jira tickets daily. These are clear action items with owners and deadlines.
+
+There's a potential issue with the third-party API we're using. Their rate limits are lower than we expected. This could cause problems under high load. We need to evaluate alternatives or implement request queuing. This is a risk we need to mitigate.
+
+What's our contingency plan if the deployment fails? Do we have rollback procedures documented? How long would downtime last? These are critical questions that need answers before we proceed.
+
+To summarize the key points: OAuth2 for public API, JWT for admin panel. Launch date is November 1st. Mike handles code review, Lisa handles load testing. Database stays PostgreSQL - no changes. TypeScript for new microservices.
+
+That's everything for today. Let's stay focused and hit our deadlines. Thanks everyone!
+
+[END RECORDING]
+
+---
+
+EXPECTED INSIGHTS TO BE GENERATED:
+===================================
+
+INSIGHTS STREAM (8 types):
+1. ACTION_ITEM: "Complete API documentation" (assigned to John)
+2. ACTION_ITEM: "Review security audit report" (needs owner)
+3. ACTION_ITEM: "Schedule client demo" (needs owner)
+4. ACTION_ITEM: "Complete code review by Wednesday" (assigned to Mike)
+5. ACTION_ITEM: "Complete load testing" (assigned to Lisa)
+6. ACTION_ITEM: "Update Jira tickets daily" (all team members)
+7. DECISION: "Using TypeScript for new microservice"
+8. DECISION: "OAuth2 for public API, JWT for admin panel"
+9. DECISION: "Database remains PostgreSQL"
+10. DECISION: "Launch beta version on November 1st"
+11. QUESTION: "Can Sarah give update on OAuth integration?"
+12. QUESTION: "Are we still on track for Friday deadline?"
+13. QUESTION: "Do we have monitoring set up?"
+14. QUESTION: "Are we tracking error rates?"
+15. QUESTION: "What about performance metrics?"
+16. QUESTION: "What's our contingency plan if deployment fails?"
+17. QUESTION: "Do we have rollback procedures documented?"
+18. QUESTION: "How long would downtime last?"
+19. RISK: "Payment gateway integration delay could jeopardize entire project"
+20. RISK: "Third-party API rate limits lower than expected"
+21. RISK: "Potential problems under high load"
+22. KEY_POINT: "Client wants real-time notifications - crucial requirement"
+23. KEY_POINT: "Push notifications essential for user engagement"
+24. KEY_POINT: "Launch date is November 1st - firm deadline"
+25. RELATED_DISCUSSION: "OAuth integration was discussed in October 15th meeting (70% completion)"
+26. RELATED_DISCUSSION: "Testing strategy discussed in last sprint and retrospective"
+27. RELATED_DISCUSSION: "PostgreSQL decision made last month"
+28. RELATED_DISCUSSION: "Caching strategy covered in Q3 planning"
+29. RELATED_DISCUSSION: "OAuth2 standardization from October 10th technical review"
+30. CONTRADICTION: "Backend team implementing OAuth2 vs previous JWT decision"
+31. CONTRADICTION: "MongoDB mentioned vs PostgreSQL agreement"
+32. MISSING_INFO: "Staging environment credentials not available"
+33. MISSING_INFO: "API endpoints not documented"
+34. MISSING_INFO: "Backup procedures not documented"
+35. MISSING_INFO: "Contingency plan not defined"
+
+PROACTIVE ASSISTANCE STREAM (6 types):
+1. AUTO_ANSWER: "Regarding OAuth status - In the October 15th meeting, Sarah reported 70% completion on OAuth integration..."
+2. AUTO_ANSWER: "About the caching strategy question - In Q3 planning meeting, the team decided on Redis for session caching..."
+3. CLARIFICATION_NEEDED: "You mentioned 'someone needs to review security audit' - Who specifically should own this task? Should we assign it now?"
+4. CLARIFICATION_NEEDED: "The client demo needs scheduling - What's the target date? Who should attend from our side?"
+5. CONFLICT_DETECTED: "Warning: Current discussion about MongoDB conflicts with last month's decision to use PostgreSQL for production"
+6. CONFLICT_DETECTED: "Alert: Backend team implementing OAuth2 may conflict with previous JWT decision - Clarification from October 10th: OAuth2 for public API, JWT for admin only"
+7. INCOMPLETE_ACTION_ITEM: "Action item 'review security audit report' is missing: Owner assignment and due date"
+8. INCOMPLETE_ACTION_ITEM: "Action item 'schedule client demo' is missing: Owner, deadline, and specific date/time"
+9. FOLLOW_UP_SUGGESTION: "Related to testing discussion: In last retrospective (Oct 20), team committed to automated E2E tests - Should we revisit that decision?"
+10. FOLLOW_UP_SUGGESTION: "About staging credentials: The DevOps ticket #1247 from last week is still open - Should someone follow up?"
+11. REPETITION_DETECTED: "Notice: Testing strategy has been discussed 3 times (last sprint, retrospective, today) without resolution - Recommend making final decision now"
+12. REPETITION_DETECTED: "Alert: Meeting duration 45 minutes - Consider wrapping up to stay within scheduled time"
