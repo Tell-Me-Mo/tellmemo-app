@@ -459,10 +459,15 @@ async def websocket_live_insights(
                         'message': f'Unknown action: {action}'
                     })
 
+            except WebSocketDisconnect:
+                # Handle graceful disconnection
+                logger.info(f"WebSocket disconnected during receive for session {session.session_id}")
+                break
+
             except RuntimeError as e:
                 # Handle "WebSocket is not connected" errors
-                if "not connected" in str(e).lower():
-                    logger.info(f"WebSocket disconnected during receive for session {session.session_id}")
+                if "not connected" in str(e).lower() or "close message" in str(e).lower():
+                    logger.info(f"WebSocket connection lost for session {session.session_id}")
                     break
                 raise  # Re-raise other RuntimeErrors
 
@@ -599,13 +604,19 @@ async def handle_audio_chunk(
         )
 
         # Send transcription update
-        await live_insights_manager.send_message(session, {
+        # Check WebSocket connection before sending
+        sent = await live_insights_manager.send_message(session, {
             'type': 'transcript_chunk',
             'chunk_index': session.chunk_index,
             'text': transcript_text,
             'speaker': speaker,
             'timestamp': datetime.utcnow().isoformat()
         })
+
+        # If WebSocket is closed, abort processing
+        if not sent:
+            logger.info(f"Session {session.session_id} WebSocket already closed")
+            return
 
         # Create transcript chunk
         chunk = TranscriptChunk(
@@ -663,25 +674,38 @@ async def handle_audio_chunk(
             session.increment_insight_count(insight_type)
 
         # Send insights update
-        await live_insights_manager.send_message(session, {
+        # Check WebSocket connection before sending
+        sent = await live_insights_manager.send_message(session, {
             'type': 'insights_extracted',
             'chunk_index': chunk.index,
             'insights': result.get('insights', []),
             'total_insights': result.get('total_insights_count', 0),
             'processing_time_ms': result.get('processing_time_ms', 0),
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.utcnow().isoformat(),
+            'proactive_assistance': result.get('proactive_assistance', [])
         })
+
+        # If WebSocket is closed, abort processing
+        if not sent:
+            logger.info(f"Session {session.session_id} WebSocket closed before insights sent")
+            return
 
         # Send metrics update every 10 chunks
         if session.chunk_index % 10 == 0:
-            await live_insights_manager.send_message(session, {
+            sent = await live_insights_manager.send_message(session, {
                 'type': 'metrics_update',
                 'metrics': session.get_metrics(),
                 'timestamp': datetime.utcnow().isoformat()
             })
 
+            # If WebSocket is closed, abort processing
+            if not sent:
+                logger.info(f"Session {session.session_id} WebSocket closed before metrics sent")
+                return
+
     except Exception as e:
         logger.error(f"Error handling audio chunk: {e}", exc_info=True)
+        # Try to send error message, but don't fail if WebSocket is closed
         await live_insights_manager.send_message(session, {
             'type': 'error',
             'message': f'Failed to process audio chunk: {str(e)}'
