@@ -65,6 +65,7 @@ class _LiveInsightsWindowPageState
     final wsService = recordingNotifier.liveInsightsService;
 
     if (wsService != null) {
+      debugPrint('🎨 [LiveInsightsWindow] Setting up proactive assistance listener');
       _assistanceSubscription = wsService.proactiveAssistanceStream.listen(
         (assistance) {
           if (mounted) {
@@ -77,6 +78,8 @@ class _LiveInsightsWindowPageState
           }
         },
       );
+    } else {
+      debugPrint('⚠️  [LiveInsightsWindow] WebSocket service not available yet for proactive assistance');
     }
   }
 
@@ -85,6 +88,7 @@ class _LiveInsightsWindowPageState
     final wsService = recordingNotifier.liveInsightsService;
 
     if (wsService != null) {
+      debugPrint('🎨 [LiveInsightsWindow] Setting up insights listener');
       _insightsSubscription = wsService.insightsStream.listen(
         (result) {
           if (mounted) {
@@ -103,6 +107,8 @@ class _LiveInsightsWindowPageState
           debugPrint('❌ [LiveInsightsWindow] Insights stream error: $error');
         },
       );
+    } else {
+      debugPrint('⚠️  [LiveInsightsWindow] WebSocket service not available yet for insights');
     }
   }
 
@@ -129,6 +135,16 @@ class _LiveInsightsWindowPageState
 
   @override
   Widget build(BuildContext context) {
+    // Watch for recording state changes to set up listeners when service becomes available
+    ref.listen(recordingNotifierProvider, (previous, next) {
+      if (previous?.liveInsightsSessionId != next.liveInsightsSessionId &&
+          next.liveInsightsSessionId != null) {
+        debugPrint('🎨 [LiveInsightsWindow] Recording started, setting up listeners...');
+        _setupProactiveAssistanceListener();
+        _setupInsightsListener();
+      }
+    });
+
     final theme = Theme.of(context);
     final filteredAssistance = _getFilteredAssistance();
     final screenWidth = MediaQuery.of(context).size.width;
