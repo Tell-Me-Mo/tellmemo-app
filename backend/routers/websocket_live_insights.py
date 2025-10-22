@@ -283,6 +283,11 @@ class LiveInsightsConnectionManager:
             session.update_activity()
             return True
 
+        except WebSocketDisconnect:
+            # Client disconnected gracefully (e.g., user stopped recording)
+            logger.info(f"Session {session.session_id} WebSocket closed before insights sent")
+            return False
+
         except RuntimeError as e:
             # Handle "Cannot call send once a close message has been sent"
             if "close message" in str(e) or "not connected" in str(e).lower():
@@ -292,6 +297,13 @@ class LiveInsightsConnectionManager:
             return False
 
         except Exception as e:
+            # Check if it's a known disconnection error
+            error_str = str(e).lower()
+            if any(keyword in error_str for keyword in ['disconnect', 'closed', 'connection']):
+                logger.info(f"Session {session.session_id} WebSocket connection lost")
+                return False
+
+            # Log unexpected errors with full traceback
             logger.error(
                 f"Unexpected error sending message to session {session.session_id}: {e}",
                 exc_info=True
@@ -687,7 +699,6 @@ async def handle_audio_chunk(
 
         # If WebSocket is closed, abort processing
         if not sent:
-            logger.info(f"Session {session.session_id} WebSocket closed before insights sent")
             return
 
         # Send metrics update every 10 chunks
@@ -700,7 +711,6 @@ async def handle_audio_chunk(
 
             # If WebSocket is closed, abort processing
             if not sent:
-                logger.info(f"Session {session.session_id} WebSocket closed before metrics sent")
                 return
 
     except Exception as e:
