@@ -494,16 +494,28 @@ class RecordingNotifier extends _$RecordingNotifier {
     // Listen to insights stream
     _liveInsightsSubscription = _liveInsightsService!.insightsStream.listen(
       (result) {
-        print('[RecordingProvider] Received ${result.insights.length} new insights');
+        print('🔍 [RecordingProvider] ========================================');
+        print('🔍 [RecordingProvider] Received ${result.insights.length} new insights from chunk ${result.chunkIndex}');
+
+        // Log each insight for debugging
+        for (var insight in result.insights) {
+          print('🔍 [RecordingProvider]   - ${insight.type}: ${insight.content.substring(0, insight.content.length > 50 ? 50 : insight.content.length)}...');
+        }
 
         // Add new insights to the list
         final updatedInsights = List<LiveInsightModel>.from(state.liveInsights);
         updatedInsights.addAll(result.insights);
 
+        print('🔍 [RecordingProvider] Total insights now: ${updatedInsights.length} (was: ${state.liveInsights.length})');
+        print('🔍 [RecordingProvider] Updating state...');
+
         state = state.copyWith(liveInsights: updatedInsights);
+
+        print('🔍 [RecordingProvider] State updated! New state has ${state.liveInsights.length} insights');
+        print('🔍 [RecordingProvider] ========================================');
       },
       onError: (error) {
-        print('[RecordingProvider] Live insights error: $error');
+        print('❌ [RecordingProvider] Live insights error: $error');
       },
     );
 

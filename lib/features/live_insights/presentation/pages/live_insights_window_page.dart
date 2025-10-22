@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/proactive_assistance_model.dart';
+import '../../domain/models/live_insight_model.dart';
 import '../widgets/proactive_assistance_card.dart';
 import '../../../audio_recording/presentation/providers/recording_provider.dart';
 
@@ -28,6 +29,10 @@ class _LiveInsightsWindowPageState
   List<ProactiveAssistanceModel> _proactiveAssistance = [];
   StreamSubscription<List<ProactiveAssistanceModel>>? _assistanceSubscription;
 
+  // Live insights state
+  List<LiveInsightModel> _liveInsights = [];
+  StreamSubscription<InsightsExtractionResult>? _insightsSubscription;
+
   // Feature toggles
   final Map<ProactiveAssistanceType, bool> _featureToggles = {
     ProactiveAssistanceType.autoAnswer: true,
@@ -44,12 +49,14 @@ class _LiveInsightsWindowPageState
   void initState() {
     super.initState();
     _setupProactiveAssistanceListener();
+    _setupInsightsListener();
     _loadFeatureToggles();
   }
 
   @override
   void dispose() {
     _assistanceSubscription?.cancel();
+    _insightsSubscription?.cancel();
     super.dispose();
   }
 
@@ -68,6 +75,32 @@ class _LiveInsightsWindowPageState
               _proactiveAssistance.addAll(filteredAssistance);
             });
           }
+        },
+      );
+    }
+  }
+
+  void _setupInsightsListener() {
+    final recordingNotifier = ref.read(recordingNotifierProvider.notifier);
+    final wsService = recordingNotifier.liveInsightsService;
+
+    if (wsService != null) {
+      _insightsSubscription = wsService.insightsStream.listen(
+        (result) {
+          if (mounted) {
+            debugPrint('🎨 [LiveInsightsWindow] ========================================');
+            debugPrint('🎨 [LiveInsightsWindow] Received ${result.insights.length} insights from chunk ${result.chunkIndex}');
+
+            setState(() {
+              _liveInsights.addAll(result.insights);
+            });
+
+            debugPrint('🎨 [LiveInsightsWindow] Total insights now: ${_liveInsights.length}');
+            debugPrint('🎨 [LiveInsightsWindow] ========================================');
+          }
+        },
+        onError: (error) {
+          debugPrint('❌ [LiveInsightsWindow] Insights stream error: $error');
         },
       );
     }
@@ -109,6 +142,11 @@ class _LiveInsightsWindowPageState
                 ? 340.0
                 : screenWidth * 0.9;
 
+    // Debug log
+    debugPrint('🎨 [LiveInsightsWindow] build() - ${_liveInsights.length} insights, ${filteredAssistance.length} assistance cards');
+
+    final hasContent = _liveInsights.isNotEmpty || filteredAssistance.isNotEmpty;
+
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
@@ -126,6 +164,23 @@ class _LiveInsightsWindowPageState
                 fontWeight: FontWeight.w600,
               ),
             ),
+            if (hasContent) ...[
+              const SizedBox(width: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${_liveInsights.length + filteredAssistance.length} items',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
         actions: [
@@ -148,9 +203,40 @@ class _LiveInsightsWindowPageState
         children: [
           // Main content area
           Expanded(
-            child: filteredAssistance.isEmpty
+            child: !hasContent
                 ? _buildEmptyState(theme)
-                : _buildAssistanceCards(theme, filteredAssistance, cardWidth),
+                : CustomScrollView(
+                    slivers: [
+                      // Live Insights Section
+                      if (_liveInsights.isNotEmpty) ...[
+                        SliverToBoxAdapter(
+                          child: _buildSectionHeader(
+                            theme,
+                            'Live Insights',
+                            Icons.lightbulb_outline,
+                            _liveInsights.length,
+                            Colors.blue,
+                          ),
+                        ),
+                        _buildInsightsSection(theme, cardWidth),
+                      ],
+
+                      // Proactive Assistance Section
+                      if (filteredAssistance.isNotEmpty) ...[
+                        SliverToBoxAdapter(
+                          child: _buildSectionHeader(
+                            theme,
+                            'Proactive Suggestions',
+                            Icons.auto_awesome,
+                            filteredAssistance.length,
+                            Colors.purple,
+                          ),
+                        ),
+                        _buildAssistanceSection(
+                            theme, filteredAssistance, cardWidth),
+                      ],
+                    ],
+                  ),
           ),
 
           // Settings sidebar
@@ -168,6 +254,190 @@ class _LiveInsightsWindowPageState
               child: _buildSettingsPanel(theme),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(
+    ThemeData theme,
+    String title,
+    IconData icon,
+    int count,
+    Color color,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: color),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '$count',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInsightsSection(ThemeData theme, double cardWidth) {
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      sliver: SliverGrid(
+        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: cardWidth,
+          mainAxisExtent: 200,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            final insight = _liveInsights[index];
+            return _buildInsightCard(theme, insight, index);
+          },
+          childCount: _liveInsights.length,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInsightCard(ThemeData theme, LiveInsightModel insight, int index) {
+    final typeColors = {
+      LiveInsightType.actionItem: Colors.blue,
+      LiveInsightType.decision: Colors.green,
+      LiveInsightType.question: Colors.orange,
+      LiveInsightType.risk: Colors.red,
+      LiveInsightType.keyPoint: Colors.purple,
+      LiveInsightType.relatedDiscussion: Colors.teal,
+      LiveInsightType.contradiction: Colors.deepOrange,
+      LiveInsightType.missingInfo: Colors.amber,
+    };
+
+    final typeIcons = {
+      LiveInsightType.actionItem: Icons.assignment,
+      LiveInsightType.decision: Icons.check_circle,
+      LiveInsightType.question: Icons.help_outline,
+      LiveInsightType.risk: Icons.warning,
+      LiveInsightType.keyPoint: Icons.lightbulb_outline,
+      LiveInsightType.relatedDiscussion: Icons.history,
+      LiveInsightType.contradiction: Icons.error_outline,
+      LiveInsightType.missingInfo: Icons.info_outline,
+    };
+
+    final color = typeColors[insight.type] ?? Colors.grey;
+    final icon = typeIcons[insight.type] ?? Icons.info;
+
+    return Material(
+      color: theme.colorScheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(12),
+      elevation: 1,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          // TODO: Show detailed view
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, size: 18, color: color),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      insight.type.toString().split('.').last.replaceAllMapped(
+                            RegExp(r'([A-Z])'),
+                            (match) => ' ${match.group(0)}',
+                          ).trim(),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: color,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 16),
+                    onPressed: () {
+                      setState(() {
+                        _liveInsights.removeAt(index);
+                      });
+                    },
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: Text(
+                  insight.content,
+                  style: theme.textTheme.bodyMedium,
+                  maxLines: 4,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (insight.context.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Context: ${insight.context}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    fontStyle: FontStyle.italic,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAssistanceSection(
+    ThemeData theme,
+    List<ProactiveAssistanceModel> assistance,
+    double cardWidth,
+  ) {
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      sliver: SliverGrid(
+        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: cardWidth,
+          mainAxisExtent: 280,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            return ProactiveAssistanceCard(
+              assistance: assistance[index],
+              onAccept: () => _handleAcceptAssistance(index),
+              onDismiss: () => _handleDismissAssistance(index),
+            );
+          },
+          childCount: assistance.length,
+        ),
       ),
     );
   }
@@ -198,38 +468,6 @@ class _LiveInsightsWindowPageState
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildAssistanceCards(
-    ThemeData theme,
-    List<ProactiveAssistanceModel> assistance,
-    double cardWidth,
-  ) {
-    return CustomScrollView(
-      slivers: [
-        SliverPadding(
-          padding: const EdgeInsets.all(24),
-          sliver: SliverGrid(
-            gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: cardWidth,
-              mainAxisExtent: 280,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-            ),
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                return ProactiveAssistanceCard(
-                  assistance: assistance[index],
-                  onAccept: () => _handleAcceptAssistance(index),
-                  onDismiss: () => _handleDismissAssistance(index),
-                );
-              },
-              childCount: assistance.length,
-            ),
-          ),
-        ),
-      ],
     );
   }
 

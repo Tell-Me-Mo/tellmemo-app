@@ -31,7 +31,7 @@ import uuid
 import base64
 import tempfile
 import os
-from typing import Dict, Optional, Set
+from typing import Dict, Optional, Set, List
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -47,6 +47,7 @@ from services.intelligence.realtime_meeting_insights import (
     TranscriptChunk,
     InsightType
 )
+from services.intelligence.adaptive_insight_processor import get_adaptive_processor
 from services.transcription.replicate_transcription_service import get_replicate_service
 from dependencies.auth import get_current_user_ws
 from utils.logger import get_logger, sanitize_for_log
@@ -55,9 +56,10 @@ from config import get_settings
 logger = get_logger(__name__)
 router = APIRouter(prefix="/ws", tags=["websocket", "live-insights"])
 
-# Smart Batching Configuration
-MIN_TRANSCRIPT_LENGTH = 15  # Skip transcripts shorter than this (chars)
-BATCH_SIZE = 3  # Process insights every Nth chunk (reduces API calls by ~66%)
+# Adaptive Processing Configuration (replaces blind batching)
+USE_ADAPTIVE_PROCESSING = True  # Set to False to revert to old BATCH_SIZE behavior
+MIN_TRANSCRIPT_LENGTH = 15  # Skip transcripts shorter than this (chars) - DEPRECATED with adaptive
+BATCH_SIZE = 3  # Process insights every Nth chunk (reduces API calls by ~66%) - DEPRECATED with adaptive
 
 
 class MeetingPhase(Enum):
@@ -96,6 +98,10 @@ class LiveMeetingSession:
         self.chunk_index = 0
         self.total_audio_duration = 0.0
         self.accumulated_transcript = []
+
+        # Adaptive processing state
+        self.chunks_since_last_process = 0
+        self.accumulated_context: List[str] = []
 
         # Insight tracking
         self.total_insights_extracted = 0
@@ -640,25 +646,60 @@ async def handle_audio_chunk(
             duration_seconds=duration
         )
 
-        # Smart batching: Only process insights when we have meaningful content
-        # and we've accumulated enough chunks
-        should_process_insights = (
-            is_meaningful and
-            (session.chunk_index % BATCH_SIZE == 0 or session.chunk_index == 0)
-        )
+        # Adaptive Processing: Intelligently decide when to process based on content
+        if USE_ADAPTIVE_PROCESSING:
+            adaptive_processor = get_adaptive_processor()
 
-        if not is_meaningful:
+            # Get semantic analysis
+            should_process_insights, reason = adaptive_processor.should_process_now(
+                current_text=transcript_text,
+                chunk_index=session.chunk_index,
+                chunks_since_last_process=session.chunks_since_last_process,
+                accumulated_context=session.accumulated_context
+            )
+
+            # Add to accumulated context (up to context window size)
+            if is_meaningful:
+                session.accumulated_context.append(transcript_text)
+                if len(session.accumulated_context) > adaptive_processor.context_window_size:
+                    session.accumulated_context.pop(0)
+                session.chunks_since_last_process += 1
+
+            # Log processing decision
+            stats = adaptive_processor.get_stats(transcript_text)
             logger.info(
-                f"Skipping insight extraction for chunk {session.chunk_index}: "
-                f"transcript too short ({len(transcript_text)} chars)"
-            )
-        elif not should_process_insights:
-            logger.debug(
-                f"Batching chunk {session.chunk_index}: "
-                f"will process at chunk {(session.chunk_index // BATCH_SIZE + 1) * BATCH_SIZE}"
+                f"Chunk {session.chunk_index} analysis: "
+                f"{reason} | "
+                f"priority={stats['priority']} | "
+                f"score={stats['semantic_score']:.2f} | "
+                f"words={stats['word_count']}"
             )
 
-        # Extract insights (only for meaningful, batched chunks)
+            # Reset counters if processing
+            if should_process_insights:
+                session.chunks_since_last_process = 0
+                session.accumulated_context.clear()
+
+        else:
+            # Legacy batching: Only process insights when we have meaningful content
+            # and we've accumulated enough chunks
+            should_process_insights = (
+                is_meaningful and
+                (session.chunk_index % BATCH_SIZE == 0 or session.chunk_index == 0)
+            )
+
+            if not is_meaningful:
+                logger.info(
+                    f"Skipping insight extraction for chunk {session.chunk_index}: "
+                    f"transcript too short ({len(transcript_text)} chars)"
+                )
+            elif not should_process_insights:
+                logger.debug(
+                    f"Batching chunk {session.chunk_index}: "
+                    f"will process at chunk {(session.chunk_index // BATCH_SIZE + 1) * BATCH_SIZE}"
+                )
+
+        # Extract insights (only when adaptive processor or batching decides to)
         result = {'insights': [], 'total_insights_count': 0, 'processing_time_ms': 0}
 
         if should_process_insights:
