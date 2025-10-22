@@ -216,6 +216,12 @@ class _LiveInsightsPanelState extends ConsumerState<LiveInsightsPanel>
     final theme = Theme.of(context);
     final width = widget.width ?? 400.0;
 
+    // Debug: Log insights count on every build
+    debugPrint('🎨 [LiveInsightsPanel] build() called - ${widget.insights.length} insights passed to panel');
+    if (widget.insights.isNotEmpty) {
+      debugPrint('🎨 [LiveInsightsPanel] First insight: ${widget.insights.first.content.substring(0, widget.insights.first.content.length > 50 ? 50 : widget.insights.first.content.length)}...');
+    }
+
     return Container(
       width: width,
       decoration: BoxDecoration(

@@ -69,8 +69,7 @@ class AudioStreamingService {
     // Add fragment to buffer
     _audioBuffer.addAll(fragment);
 
-    print('[AudioStreamingService] Buffered ${fragment.length} bytes, total: ${_audioBuffer.length}/${targetChunkSize} bytes (${(_audioBuffer.length / targetChunkSize * 100).toStringAsFixed(1)}%)');
-
+    // Only log when chunk is ready (remove noisy per-fragment logs)
     // Check if we've accumulated enough audio for a full chunk
     if (_audioBuffer.length >= targetChunkSize) {
       // Extract exactly targetChunkSize bytes for this chunk
@@ -80,7 +79,7 @@ class AudioStreamingService {
       _audioBuffer.removeRange(0, targetChunkSize);
 
       final durationSeconds = chunkBytes.length / (sampleRate * bytesPerSample);
-      print('[AudioStreamingService] Emitting chunk: ${chunkBytes.length} bytes (~${durationSeconds.toStringAsFixed(1)}s), remaining buffer: ${_audioBuffer.length} bytes');
+      print('[AudioStreamingService] ✅ Emitting chunk: ${chunkBytes.length} bytes (~${durationSeconds.toStringAsFixed(1)}s)');
 
       // Emit the complete chunk
       _audioChunkController.add(chunkBytes);

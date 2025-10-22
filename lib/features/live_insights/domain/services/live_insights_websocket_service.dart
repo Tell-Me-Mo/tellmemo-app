@@ -243,10 +243,19 @@ class LiveInsightsWebSocketService {
 
         case LiveInsightMessageType.insightsExtracted:
           final result = InsightsExtractionResult.fromJson(data);
+
+          debugPrint('📥 [LiveInsightsWS] ========================================');
+          debugPrint('📥 [LiveInsightsWS] Received ${result.insights.length} new insights from chunk ${result.chunkIndex}');
+
+          // Log each insight for debugging
+          for (var insight in result.insights) {
+            debugPrint('📥 [LiveInsightsWS]   - ${insight.type}: ${insight.content.substring(0, insight.content.length > 50 ? 50 : insight.content.length)}...');
+          }
+
+          debugPrint('📥 [LiveInsightsWS] Adding to stream controller...');
           _insightsController.add(result);
-          debugPrint(
-            '[LiveInsightsWS] Received ${result.insights.length} new insights',
-          );
+          debugPrint('📥 [LiveInsightsWS] Insight added to stream! Has listeners: ${_insightsController.hasListener}');
+          debugPrint('📥 [LiveInsightsWS] ========================================');
 
           // PHASE 1: Handle proactive assistance (auto-answers, etc.)
           if (data.containsKey('proactive_assistance')) {
