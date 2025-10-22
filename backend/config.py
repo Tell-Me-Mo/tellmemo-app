@@ -49,13 +49,13 @@ class Settings(BaseSettings):
 
     # LLM Provider Configuration
     # Primary provider: which provider to use first (claude, openai, or deepseek)
-    primary_llm_provider: str = Field(default="deepseek", env="PRIMARY_LLM_PROVIDER")
+    primary_llm_provider: str = Field(default="claude", env="PRIMARY_LLM_PROVIDER")
     # Primary model: which model to use for the primary provider
-    primary_llm_model: str = Field(default="deepseek-chat", env="PRIMARY_LLM_MODEL")
+    primary_llm_model: str = Field(default="claude-3-5-haiku-20241022", env="PRIMARY_LLM_MODEL")
     # Fallback provider: which provider to fallback to if primary fails (claude, openai, or deepseek)
     fallback_llm_provider: str = Field(default="openai", env="FALLBACK_LLM_PROVIDER")
     # Fallback model: which model to use for the fallback provider
-    fallback_llm_model: str = Field(default="gpt-4o", env="FALLBACK_LLM_MODEL")
+    fallback_llm_model: str = Field(default="gpt-4o-mini", env="FALLBACK_LLM_MODEL")
 
     # LLM Fallback Configuration
     enable_llm_fallback: bool = Field(default=True, env="ENABLE_LLM_FALLBACK")
