@@ -46,6 +46,7 @@ from services.intelligence.follow_up_suggestions_service import FollowUpSuggesti
 from services.intelligence.repetition_detector_service import RepetitionDetectorService
 from services.intelligence.meeting_time_tracker_service import MeetingTimeTrackerService
 from services.intelligence.shared_search_cache import shared_search_cache
+from services.intelligence.insight_evolution_tracker import get_evolution_tracker, EvolutionType
 
 logger = get_logger(__name__)
 
@@ -188,6 +189,7 @@ class ProcessingResult:
     chunk_index: int
     insights: List[MeetingInsight] = field(default_factory=list)
     proactive_assistance: List[Dict[str, Any]] = field(default_factory=list)
+    evolved_insights: List[Dict[str, Any]] = field(default_factory=list)  # Insights that updated existing ones
 
     # Status tracking
     overall_status: ProcessingStatus = ProcessingStatus.OK
@@ -216,6 +218,7 @@ class ProcessingResult:
             'chunk_index': self.chunk_index,
             'insights': [insight.to_dict() for insight in self.insights],
             'proactive_assistance': self.proactive_assistance,
+            'evolved_insights': self.evolved_insights,
             'status': self.overall_status.value,
             'phase_status': {k: v.value for k, v in self.phase_status.items()},
             'total_insights': self.total_insights_count,
@@ -378,6 +381,9 @@ class RealtimeMeetingInsightsService:
         )
         self.time_tracker = MeetingTimeTrackerService()
 
+        # Insight Evolution Tracker - tracks how insights change over time
+        self.evolution_tracker = get_evolution_tracker()
+
     async def process_transcript_chunk(
         self,
         session_id: str,
@@ -507,16 +513,25 @@ class RealtimeMeetingInsightsService:
             # PHASE 2: Deduplicate insights (insight-level semantic similarity)
             new_insights = await self._deduplicate_insights(session_id, insights)
 
-            # Store new insights
-            self.extracted_insights[session_id].extend(new_insights)
+            # PHASE 2.5: Check for insight evolution (priority escalation, content expansion)
+            # This happens AFTER deduplication but BEFORE storing
+            truly_new_insights, evolved_insights = await self._check_insight_evolution(
+                session_id=session_id,
+                insights=new_insights,
+                chunk_index=chunk.index
+            )
+
+            # Store truly new insights (not evolutions)
+            self.extracted_insights[session_id].extend(truly_new_insights)
 
             # PHASE 1-6: Active Intelligence - Process all proactive assistance
+            # Note: Process proactive assistance on truly_new_insights (not evolved ones)
             # Returns: (proactive_responses, phase_status, error_messages, phase_timings)
             proactive_assistance, phase_status, error_messages, phase_timings = await self._process_proactive_assistance(
                 session_id=session_id,
                 project_id=project_id,
                 organization_id=organization_id,
-                insights=new_insights,
+                insights=truly_new_insights,
                 context=full_context,
                 current_chunk=chunk
             )
@@ -543,8 +558,9 @@ class RealtimeMeetingInsightsService:
             result = ProcessingResult(
                 session_id=session_id,
                 chunk_index=chunk.index,
-                insights=new_insights,
+                insights=truly_new_insights,
                 proactive_assistance=proactive_assistance,
+                evolved_insights=evolved_insights,
                 overall_status=overall_status,
                 phase_status=phase_status,
                 total_insights_count=len(self.extracted_insights[session_id]),
@@ -557,7 +573,7 @@ class RealtimeMeetingInsightsService:
 
             logger.info(
                 f"Processed chunk {chunk.index} for session {sanitize_for_log(session_id)}: "
-                f"{len(new_insights)} new insights extracted in {processing_time:.2f}s "
+                f"{len(truly_new_insights)} new insights, {len(evolved_insights)} evolved in {processing_time:.2f}s "
                 f"(status: {overall_status.value})"
             )
 
@@ -814,6 +830,62 @@ class RealtimeMeetingInsightsService:
         logger.debug(f"Deduplication: {len(new_insights)} -> {len(unique_insights)} unique insights")
         return unique_insights
 
+    async def _check_insight_evolution(
+        self,
+        session_id: str,
+        insights: List[MeetingInsight],
+        chunk_index: int
+    ) -> Tuple[List[MeetingInsight], List[Dict[str, Any]]]:
+        """
+        Check if insights are evolutions of previous insights.
+
+        This detects:
+        - Priority escalation (e.g., LOW → CRITICAL)
+        - Content expansion (e.g., vague → detailed)
+        - Refinement (e.g., added owner/deadline)
+
+        Args:
+            session_id: Meeting session ID
+            insights: List of deduplicated insights
+            chunk_index: Current chunk index
+
+        Returns:
+            Tuple of (truly_new_insights, evolved_insights)
+            - truly_new_insights: Brand new insights to add
+            - evolved_insights: Insights that updated existing ones (for WebSocket)
+        """
+        truly_new = []
+        evolved = []
+
+        for insight in insights:
+            # Convert MeetingInsight to dict for evolution tracker
+            insight_dict = insight.to_dict()
+
+            # Check if this is an evolution
+            evolution_result = await self.evolution_tracker.check_evolution(
+                session_id=session_id,
+                new_insight=insight_dict,
+                chunk_index=chunk_index
+            )
+
+            if evolution_result.is_evolution:
+                # This insight evolved from a previous one
+                if evolution_result.evolution_type in (EvolutionType.ESCALATED, EvolutionType.EXPANDED, EvolutionType.REFINED):
+                    # Use the merged insight from evolution tracker
+                    evolved.append(evolution_result.merged_insight)
+
+                    logger.info(
+                        f"Insight evolution detected: {evolution_result.evolution_type.value} "
+                        f"(similarity: {evolution_result.similarity_score:.2f})"
+                    )
+                # If DUPLICATE, skip it entirely (already logged in evolution tracker)
+
+            else:
+                # Brand new insight - add to truly new list
+                truly_new.append(insight)
+
+        return truly_new, evolved
+
     async def _is_duplicate_chunk(
         self,
         session_id: str,
@@ -987,6 +1059,16 @@ class RealtimeMeetingInsightsService:
 
         # Clean up shared search cache for this session
         self.search_cache.clear_session(session_id)
+
+        # Clean up insight evolution tracker for this session
+        self.evolution_tracker.cleanup_session(session_id)
+
+        # Log evolution summary before cleanup
+        evolution_summary = self.evolution_tracker.get_evolution_summary(session_id)
+        logger.info(
+            f"Session evolution summary: {evolution_summary['evolved_insights']}/{evolution_summary['total_insights']} "
+            f"insights evolved ({evolution_summary.get('evolution_rate', 0.0):.1%} evolution rate)"
+        )
 
         logger.info(f"Finalized session {sanitize_for_log(session_id)}: {len(insights)} total insights")
 
