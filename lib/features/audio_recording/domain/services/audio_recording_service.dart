@@ -255,12 +255,29 @@ class AudioRecordingService {
   
   // Cancel recording and delete file
   Future<void> cancelRecording() async {
+    print('[AudioRecordingService] Cancelling recording...');
+
     _durationTimer?.cancel();
     _amplitudeTimer?.cancel();
 
-    // Cancel recording - this automatically discards the recording file
-    // The recorder.cancel() method handles file cleanup internally
-    await _recorder.cancel();
+    // Check if recorder is actually recording or paused
+    final isRecording = await _recorder.isRecording();
+    final isPaused = await _recorder.isPaused();
+
+    if (isRecording || isPaused) {
+      print('[AudioRecordingService] Recorder active (recording=$isRecording, paused=$isPaused) - stopping...');
+
+      // For web platform, we need to explicitly stop before cancel to release microphone
+      // The cancel() method alone might not release the MediaRecorder properly
+      try {
+        await _recorder.stop();
+        print('[AudioRecordingService] Recorder stopped, microphone should be released');
+      } catch (e) {
+        print('[AudioRecordingService] Error stopping recorder: $e');
+      }
+    } else {
+      print('[AudioRecordingService] Recorder not active, no need to stop');
+    }
 
     print('[AudioRecordingService] Recording cancelled and file discarded');
 

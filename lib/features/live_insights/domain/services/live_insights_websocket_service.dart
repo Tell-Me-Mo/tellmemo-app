@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../models/live_insight_model.dart';
@@ -21,6 +20,7 @@ class LiveInsightsWebSocketService {
   String? _projectId;
   bool _isConnected = false;
   bool _isConnecting = false;
+  bool _isDisconnecting = false;  // Flag to prevent reconnection during manual disconnect
 
   // Stream controllers for different message types
   final _insightsController =
@@ -102,6 +102,7 @@ class LiveInsightsWebSocketService {
     }
 
     _isConnecting = true;
+    _isDisconnecting = false;  // Reset flag when reconnecting intentionally
     _projectId = projectId;
 
     try {
@@ -372,7 +373,13 @@ class LiveInsightsWebSocketService {
     _isConnected = false;
     _connectionStateController.add(false);
     _cancelPingTimer();
-    _scheduleReconnect();
+
+    // Only schedule reconnection if this is NOT a manual disconnect
+    if (!_isDisconnecting) {
+      _scheduleReconnect();
+    } else {
+      debugPrint('[LiveInsightsWS] Manual disconnect - not scheduling reconnection');
+    }
   }
 
   /// Schedule reconnection attempt
@@ -423,6 +430,9 @@ class LiveInsightsWebSocketService {
   /// Disconnect from WebSocket server
   Future<void> disconnect() async {
     debugPrint('[LiveInsightsWS] Disconnecting...');
+
+    // Set flag to prevent reconnection
+    _isDisconnecting = true;
 
     _cancelReconnectTimer();
     _cancelPingTimer();

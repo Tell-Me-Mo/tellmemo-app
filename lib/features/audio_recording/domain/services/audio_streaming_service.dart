@@ -66,12 +66,22 @@ class AudioStreamingService {
 
   /// Handle incoming audio fragments and buffer them into proper chunks
   void _handleAudioFragment(Uint8List fragment) {
+    // Stop processing if recording has been stopped
+    if (!_isRecording) {
+      return;
+    }
+
     // Add fragment to buffer
     _audioBuffer.addAll(fragment);
 
     // Only log when chunk is ready (remove noisy per-fragment logs)
     // Check if we've accumulated enough audio for a full chunk
     if (_audioBuffer.length >= targetChunkSize) {
+      // Double-check recording status before emitting
+      if (!_isRecording) {
+        return;
+      }
+
       // Extract exactly targetChunkSize bytes for this chunk
       final chunkBytes = Uint8List.fromList(_audioBuffer.sublist(0, targetChunkSize));
 
@@ -130,25 +140,30 @@ class AudioStreamingService {
         return;
       }
 
-      await _recorder.stopRecorder();
+      print('[AudioStreamingService] Stopping streaming...');
 
-      // Flush any remaining buffered audio (if there's at least 1 second of audio)
-      if (_audioBuffer.isNotEmpty && _audioBuffer.length >= sampleRate * bytesPerSample) {
-        final remainingBytes = Uint8List.fromList(_audioBuffer);
-        final durationSeconds = remainingBytes.length / (sampleRate * bytesPerSample);
+      // Set flag FIRST to prevent _handleAudioFragment from processing new fragments
+      _isRecording = false;
 
-        print('[AudioStreamingService] Flushing final chunk: ${remainingBytes.length} bytes (~${durationSeconds.toStringAsFixed(1)}s)');
-        _audioChunkController.add(remainingBytes);
-        _audioBuffer.clear();
-      } else if (_audioBuffer.isNotEmpty) {
-        print('[AudioStreamingService] Discarding ${_audioBuffer.length} bytes (< 1s, too short)');
+      // Stop the recorder to release microphone
+      try {
+        await _recorder.stopRecorder();
+        print('[AudioStreamingService] Recorder stopped, microphone released');
+      } catch (e) {
+        print('[AudioStreamingService] Error stopping recorder: $e');
+        // Continue cleanup even if stop fails
+      }
+
+      // Clear buffer immediately
+      if (_audioBuffer.isNotEmpty) {
+        print('[AudioStreamingService] Discarding ${_audioBuffer.length} buffered bytes');
         _audioBuffer.clear();
       }
 
-      _isRecording = false;
       print('[AudioStreamingService] Stopped streaming audio');
     } catch (e) {
       print('[AudioStreamingService] Error stopping stream: $e');
+      _isRecording = false;  // Ensure flag is set even on error
     }
   }
 

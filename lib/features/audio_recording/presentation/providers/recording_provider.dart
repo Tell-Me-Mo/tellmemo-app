@@ -602,16 +602,12 @@ class RecordingNotifier extends _$RecordingNotifier {
   Future<void> _stopLiveInsights() async {
     print('[RecordingProvider] Stopping live insights...');
 
-    // Cancel all subscriptions first
-    print('[RecordingProvider] Cancelling subscriptions...');
-    await _audioChunkSubscription?.cancel();
-    await _liveInsightsSubscription?.cancel();
-    await _liveTranscriptsSubscription?.cancel();
-    _audioChunkSubscription = null;
-    _liveInsightsSubscription = null;
-    _liveTranscriptsSubscription = null;
+    // CRITICAL ORDER FOR CLEAN CANCELLATION:
+    // 1. Stop audio streaming FIRST (stops new chunks from being sent)
+    // 2. Disconnect WebSocket SECOND (closes connection gracefully)
+    // 3. Cancel subscriptions LAST (cleanup listeners)
 
-    // Stop and dispose audio streaming service
+    // 1. Stop and dispose audio streaming service FIRST
     if (_audioStreamingService != null) {
       try {
         print('[RecordingProvider] Stopping audio streaming service...');
@@ -626,18 +622,27 @@ class RecordingNotifier extends _$RecordingNotifier {
       _audioStreamingService = null;
     }
 
-    // Stop live insights WebSocket
+    // 2. Stop live insights WebSocket SECOND (no more chunks will be sent)
     if (_liveInsightsService != null) {
       try {
         print('[RecordingProvider] Disconnecting live insights WebSocket...');
-        await _liveInsightsService!.endSession();
+        // Don't call endSession() on cancellation - just disconnect immediately
         await _liveInsightsService!.disconnect();
         print('[RecordingProvider] Live insights WebSocket disconnected');
       } catch (e) {
-        print('[RecordingProvider] Error stopping live insights: $e');
+        print('[RecordingProvider] Error disconnecting WebSocket: $e');
       }
       _liveInsightsService = null;
     }
+
+    // 3. Cancel all subscriptions LAST (after everything is stopped)
+    print('[RecordingProvider] Cancelling subscriptions...');
+    await _audioChunkSubscription?.cancel();
+    await _liveInsightsSubscription?.cancel();
+    await _liveTranscriptsSubscription?.cancel();
+    _audioChunkSubscription = null;
+    _liveInsightsSubscription = null;
+    _liveTranscriptsSubscription = null;
 
     state = state.copyWith(
       liveInsightsEnabled: false,
