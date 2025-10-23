@@ -1,7 +1,7 @@
 # High-Level Design: Real-Time Meeting Insights
 
-**Document Version:** 4.1
-**Last Updated:** October 22, 2025
+**Document Version:** 4.2
+**Last Updated:** October 23, 2025
 **Status:** ✅ **Production Ready with Adaptive Intelligence** (100% Complete)
 **Feature:** Live Meeting Insights with Real-Time Audio Streaming, Historical Access, Active Meeting Intelligence & Adaptive Processing
 
@@ -728,10 +728,18 @@ class AdaptiveInsightProcessor:
 
 **Configuration:**
 ```python
-min_word_count = 5              # At least 5 words (was 15 chars)
-semantic_threshold = 0.3        # 30% semantic density → immediate
-context_window_size = 3         # Accumulate 3 chunks before forcing
-max_batch_size = 5              # Never wait more than 50 seconds
+# Priority-to-context mapping (class constants)
+PRIORITY_CONTEXT_MAP = {
+    ChunkPriority.IMMEDIATE: 0,  # Process instantly, no context needed
+    ChunkPriority.HIGH: 2,       # Wait for 2 chunks of context
+    ChunkPriority.MEDIUM: 3,     # Accumulate 3 chunks
+    ChunkPriority.LOW: 4,        # Batch 4 chunks
+}
+
+# Processing thresholds (class constants)
+MAX_BATCH_SIZE = 5              # Hard limit - force process regardless
+MIN_WORD_COUNT = 5              # Minimum words to consider chunk valid
+MIN_ACCUMULATED_WORDS = 30      # Minimum total words before forcing
 ```
 
 **Performance vs Blind Batching:**
@@ -752,15 +760,16 @@ max_batch_size = 5              # Never wait more than 50 seconds
 **Example Decision Flow:**
 ```
 Chunk 0: "Let's finish the API by Friday"
-→ IMMEDIATE (action+time) → Process now
+→ IMMEDIATE priority → required_context=0 → Process now
 
 Chunk 1: "John can handle the database"
-→ HIGH (assignment) → Wait for context
+→ HIGH priority → required_context=2 → Wait (only 1 chunk since last)
 
 Chunk 2: "The testing framework is ready"
-→ MEDIUM (meaningful) → Accumulate (30 words total)
+→ MEDIUM priority → required_context=3 → Wait (only 2 chunks)
 
-Chunk 3: → HIGH + 2 chunks context → Process now with accumulated context
+Chunk 3: "We should also update the docs"
+→ HIGH priority → required_context=2, chunks_since_last=3 → Process now (threshold met)
 ```
 
 **Status:** ✅ Production Ready (October 22, 2025)
@@ -2249,6 +2258,7 @@ curl http://localhost:8000/api/v1/health
 | 3.0 | 2025-10-19 | Claude | Added insights persistence: Created LiveMeetingInsight database model, added migration (78bd477668c3), implemented persistence in finalize_session(), created REST API endpoints for historical access, added filtering and pagination support |
 | 4.0 | 2025-10-20 | Claude | **MAJOR UPDATE - Active Meeting Intelligence**: Documented complete transformation from passive observer to active AI assistant with 6 phases: (1) Question Auto-Answering with RAG, (2) Proactive Clarification for vague statements, (3) Real-Time Conflict Detection, (4) Action Item Quality Enhancement, (5) Follow-up Suggestions, (6) Meeting Efficiency Features (repetition detection + time tracking). Added 11 new backend services (QuestionDetector, QuestionAnsweringService, ClarificationService, ConflictDetectionService, ActionItemQualityService, FollowUpSuggestionsService, RepetitionDetectorService, MeetingTimeTrackerService), 7 new Freezed data models, ProactiveAssistanceCard UI component with 6 color themes, proactive_assistance field in WebSocket messages, performance metrics for each phase, cost analysis ($0.18 additional per 30-min meeting), accuracy rates (60-90% across features). System now provides reactive assistance (answers questions), proactive assistance (prevents ambiguity), preventive alerts (detects conflicts), quality improvement (ensures complete action items), continuity assistance (maintains context), and efficiency coaching (reduces meeting time by 15%). All 6 phases production ready with comprehensive implementation summaries. Updated Executive Summary, Business Requirements, System Architecture, Component Design (added Active Intelligence section), API Specification, Data Models, Performance metrics, Future Enhancements (moved completed features), Glossary, and References. |
 | 4.1 | 2025-10-22 | Claude | **Adaptive Insight Processing**: Replaced blind 3-chunk batching with intelligent semantic trigger-based processing. Added AdaptiveInsightProcessor service with pattern-based detection (action verbs, time refs, questions, decisions, assignments, risks). Implements 5-tier priority classification (IMMEDIATE/HIGH/MEDIUM/LOW/SKIP) with automatic gibberish detection (repetitive text filter). Processing triggers: IMMEDIATE for action+time or decision+assignment combos, HIGH for any actionable content with 2+ chunks context, forced processing at 5-chunk limit (50s) or 30+ word context accumulation. Performance improvements: Reduced latency from 30s (blind batching) to <10s for actionable content while maintaining ~50% cost reduction (vs ~66% with blind batching). Eliminates 30-second blind spots, processes short but actionable statements (5+ words vs previous 15 chars), and provides real-time semantic analysis logging. Configuration: min_word_count=5, semantic_threshold=0.3, context_window=3, max_batch=5. Added USE_ADAPTIVE_PROCESSING flag to routers/websocket_live_insights.py with backward compatibility to legacy BATCH_SIZE. Updated LiveMeetingSession with chunks_since_last_process and accumulated_context tracking. |
+| 4.2 | 2025-10-23 | Claude | **Configuration Refactoring**: Fixed context window configuration inconsistency by introducing explicit `PRIORITY_CONTEXT_MAP` class constant that maps each priority level to required context chunks (IMMEDIATE:0, HIGH:2, MEDIUM:3, LOW:4). Removed scattered configuration parameters (`semantic_threshold`, `context_window_size`) and consolidated into clear class constants (`MAX_BATCH_SIZE=5`, `MIN_WORD_COUNT=5`, `MIN_ACCUMULATED_WORDS=30`). Refactored `should_process_now()` to use priority-based lookup instead of hardcoded conditions, making logic more maintainable and extensible. Simplified `__init__()` to accept only override parameters with sensible defaults. Updated decision flow examples and configuration documentation to reflect new architecture. This eliminates ambiguity between "wait for 2 chunks" (HIGH), "accumulate 3 chunks" (MEDIUM), and "5-chunk limit" (MAX_BATCH_SIZE) by making the mapping explicit and centralized. |
 
 ---
 

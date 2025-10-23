@@ -65,6 +65,23 @@ class AdaptiveInsightProcessor:
     semantic content, not fixed batching schedules.
     """
 
+    # Priority-to-context mapping: defines how many chunks to wait before processing
+    PRIORITY_CONTEXT_MAP = {
+        ChunkPriority.IMMEDIATE: 0,  # Process instantly, no context needed
+        ChunkPriority.HIGH: 2,       # Wait for 2 chunks of context
+        ChunkPriority.MEDIUM: 3,     # Accumulate 3 chunks
+        ChunkPriority.LOW: 4,        # Batch 4 chunks
+    }
+
+    # Hard limit - force process regardless of priority
+    MAX_BATCH_SIZE = 5
+
+    # Minimum words to consider chunk valid
+    MIN_WORD_COUNT = 5
+
+    # Minimum total words accumulated before forcing processing
+    MIN_ACCUMULATED_WORDS = 30
+
     # Semantic pattern detection (lightweight, no LLM needed)
     ACTION_VERBS = {
         'complete', 'finish', 'implement', 'create', 'build', 'design',
@@ -105,24 +122,21 @@ class AdaptiveInsightProcessor:
 
     def __init__(
         self,
-        min_word_count: int = 5,
-        semantic_threshold: float = 0.3,
-        context_window_size: int = 3,
-        max_batch_size: int = 5
+        min_word_count: int = None,
+        max_batch_size: int = None,
+        min_accumulated_words: int = None
     ):
         """
         Initialize adaptive processor.
 
         Args:
-            min_word_count: Minimum words required to process
-            semantic_threshold: Min semantic score to trigger immediate processing
-            context_window_size: How many chunks to accumulate before forcing processing
-            max_batch_size: Maximum chunks to batch before forcing processing
+            min_word_count: Minimum words required to process (default: MIN_WORD_COUNT)
+            max_batch_size: Maximum chunks to batch before forcing processing (default: MAX_BATCH_SIZE)
+            min_accumulated_words: Minimum accumulated words before forcing (default: MIN_ACCUMULATED_WORDS)
         """
-        self.min_word_count = min_word_count
-        self.semantic_threshold = semantic_threshold
-        self.context_window_size = context_window_size
-        self.max_batch_size = max_batch_size
+        self.min_word_count = min_word_count or self.MIN_WORD_COUNT
+        self.max_batch_size = max_batch_size or self.MAX_BATCH_SIZE
+        self.min_accumulated_words = min_accumulated_words or self.MIN_ACCUMULATED_WORDS
 
         # Compile regex patterns once for performance
         self.time_regex = re.compile('|'.join(self.TIME_PATTERNS), re.IGNORECASE)
@@ -133,7 +147,8 @@ class AdaptiveInsightProcessor:
 
         logger.info(
             f"Initialized AdaptiveInsightProcessor "
-            f"(threshold: {semantic_threshold}, context_window: {context_window_size})"
+            f"(min_words: {self.min_word_count}, max_batch: {self.max_batch_size}, "
+            f"min_accumulated: {self.min_accumulated_words})"
         )
 
     def analyze_chunk(self, text: str) -> SemanticSignals:
@@ -211,6 +226,8 @@ class AdaptiveInsightProcessor:
         """
         Decide if we should process insights NOW or wait for more context.
 
+        Uses PRIORITY_CONTEXT_MAP to determine required context chunks per priority level.
+
         Returns:
             Tuple of (should_process: bool, reason: str)
         """
@@ -222,26 +239,24 @@ class AdaptiveInsightProcessor:
         if priority == ChunkPriority.SKIP:
             return False, f"skipped_unintelligible ({signals.word_count} words)"
 
-        # IMMEDIATE: Process right away
-        if priority == ChunkPriority.IMMEDIATE:
-            return True, f"immediate_trigger (score: {signals.get_score():.2f})"
+        # Get required context chunks for this priority level
+        required_context = self.PRIORITY_CONTEXT_MAP.get(priority, 0)
 
-        # HIGH: Process if we have some context (2+ chunks)
-        if priority == ChunkPriority.HIGH and chunks_since_last_process >= 2:
-            return True, f"high_priority_with_context (chunks: {chunks_since_last_process})"
+        # Check if we have enough context for this priority level
+        if chunks_since_last_process >= required_context:
+            return True, f"{priority.value}_priority_threshold (required: {required_context}, actual: {chunks_since_last_process})"
 
         # FORCE PROCESS: Hit max batch size (prevent indefinite delays)
         if chunks_since_last_process >= self.max_batch_size:
             return True, f"max_batch_reached ({self.max_batch_size} chunks)"
 
-        # FORCE PROCESS: Accumulated enough context
-        if len(accumulated_context) >= self.context_window_size:
-            total_words = sum(len(chunk.split()) for chunk in accumulated_context)
-            if total_words >= 30:  # At least 30 words of conversation
-                return True, f"context_accumulated ({total_words} words, {len(accumulated_context)} chunks)"
+        # FORCE PROCESS: Accumulated enough words (regardless of chunk count)
+        total_words = sum(len(chunk.split()) for chunk in accumulated_context) + signals.word_count
+        if total_words >= self.min_accumulated_words:
+            return True, f"word_threshold_reached ({total_words} words, {len(accumulated_context) + 1} chunks)"
 
         # Wait for more context
-        return False, f"waiting_for_context (priority: {priority.value}, chunks: {chunks_since_last_process})"
+        return False, f"waiting_for_context (priority: {priority.value}, need: {required_context - chunks_since_last_process} more chunks)"
 
     def get_stats(self, text: str) -> dict:
         """Get analysis stats for debugging/monitoring."""
@@ -268,13 +283,8 @@ _adaptive_processor: Optional[AdaptiveInsightProcessor] = None
 
 
 def get_adaptive_processor() -> AdaptiveInsightProcessor:
-    """Get or create adaptive processor singleton."""
+    """Get or create adaptive processor singleton with default configuration."""
     global _adaptive_processor
     if _adaptive_processor is None:
-        _adaptive_processor = AdaptiveInsightProcessor(
-            min_word_count=5,           # At least 5 words (was 15 chars, too strict)
-            semantic_threshold=0.3,      # 30% semantic density triggers immediate processing
-            context_window_size=3,       # Accumulate 3 chunks before forcing process
-            max_batch_size=5             # Never wait more than 5 chunks (50 seconds)
-        )
+        _adaptive_processor = AdaptiveInsightProcessor()
     return _adaptive_processor
