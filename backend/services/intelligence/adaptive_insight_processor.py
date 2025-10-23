@@ -109,8 +109,11 @@ class AdaptiveInsightProcessor:
     # Minimum words to consider chunk valid
     MIN_WORD_COUNT = 5
 
-    # Minimum total words accumulated before forcing processing
-    MIN_ACCUMULATED_WORDS = 30
+    # Minimum meaningful words to force processing (excluding filler words)
+    MIN_MEANINGFUL_WORDS = 25
+
+    # Minimum meaningful words required at MAX_BATCH_SIZE before forcing
+    MIN_MEANINGFUL_WORDS_AT_MAX_BATCH = 15
 
     # Minimum chunks before topic change triggers processing (Topic Coherence)
     MIN_TOPIC_CHUNKS = 2
@@ -172,7 +175,8 @@ class AdaptiveInsightProcessor:
         self,
         min_word_count: int = None,
         max_batch_size: int = None,
-        min_accumulated_words: int = None,
+        min_meaningful_words: int = None,
+        min_meaningful_words_at_max_batch: int = None,
         min_topic_chunks: int = None
     ):
         """
@@ -181,12 +185,14 @@ class AdaptiveInsightProcessor:
         Args:
             min_word_count: Minimum words required to process (default: MIN_WORD_COUNT)
             max_batch_size: Maximum chunks to batch before forcing processing (default: MAX_BATCH_SIZE)
-            min_accumulated_words: Minimum accumulated words before forcing (default: MIN_ACCUMULATED_WORDS)
+            min_meaningful_words: Minimum meaningful words to force processing (default: MIN_MEANINGFUL_WORDS)
+            min_meaningful_words_at_max_batch: Minimum meaningful words at max batch (default: MIN_MEANINGFUL_WORDS_AT_MAX_BATCH)
             min_topic_chunks: Minimum chunks before topic change triggers processing (default: MIN_TOPIC_CHUNKS)
         """
         self.min_word_count = min_word_count or self.MIN_WORD_COUNT
         self.max_batch_size = max_batch_size or self.MAX_BATCH_SIZE
-        self.min_accumulated_words = min_accumulated_words or self.MIN_ACCUMULATED_WORDS
+        self.min_meaningful_words = min_meaningful_words or self.MIN_MEANINGFUL_WORDS
+        self.min_meaningful_words_at_max_batch = min_meaningful_words_at_max_batch or self.MIN_MEANINGFUL_WORDS_AT_MAX_BATCH
         self.min_topic_chunks = min_topic_chunks or self.MIN_TOPIC_CHUNKS
 
         # Compile regex patterns once for performance
@@ -199,7 +205,9 @@ class AdaptiveInsightProcessor:
         logger.info(
             f"Initialized AdaptiveInsightProcessor "
             f"(min_words: {self.min_word_count}, max_batch: {self.max_batch_size}, "
-            f"min_accumulated: {self.min_accumulated_words}, min_topic_chunks: {self.min_topic_chunks})"
+            f"min_meaningful: {self.min_meaningful_words}, "
+            f"min_meaningful_at_max: {self.min_meaningful_words_at_max_batch}, "
+            f"min_topic_chunks: {self.min_topic_chunks})"
         )
 
     def analyze_chunk(self, text: str) -> SemanticSignals:
@@ -287,6 +295,43 @@ class AdaptiveInsightProcessor:
 
         return False
 
+    def count_meaningful_words(self, accumulated_chunks: List[str]) -> int:
+        """
+        Count meaningful words across accumulated chunks.
+
+        Meaningful words are defined as:
+        - Not in FILLER_WORDS set (um, uh, like, etc.)
+        - Length >= 2 characters
+        - Not single-letter words
+
+        Args:
+            accumulated_chunks: List of accumulated chunk texts
+
+        Returns:
+            int: Count of meaningful words across all chunks
+        """
+        if not accumulated_chunks:
+            return 0
+
+        # Combine all chunks
+        all_text = " ".join(accumulated_chunks)
+        words = all_text.lower().split()
+
+        # Count meaningful words
+        meaningful_count = 0
+        for word in words:
+            # Skip filler words
+            if word in self.FILLER_WORDS:
+                continue
+
+            # Skip very short words (likely articles, prepositions)
+            if len(word) < 2:
+                continue
+
+            meaningful_count += 1
+
+        return meaningful_count
+
     def classify_priority(self, text: str, signals: SemanticSignals) -> ChunkPriority:
         """
         Classify chunk priority based on semantic signals.
@@ -363,17 +408,27 @@ class AdaptiveInsightProcessor:
         if chunks_since_last_process >= required_context:
             return True, f"{priority.value}_priority_threshold (required: {required_context}, actual: {chunks_since_last_process})"
 
-        # FORCE PROCESS: Hit max batch size (prevent indefinite delays)
+        # FORCE PROCESS: Hit max batch size (with quality check)
         if chunks_since_last_process >= self.max_batch_size:
-            return True, f"max_batch_reached ({self.max_batch_size} chunks)"
+            # Quality check: Only force if we have enough meaningful content
+            all_chunks = accumulated_context + [current_text]
+            meaningful_count = self.count_meaningful_words(all_chunks)
 
-        # FORCE PROCESS: Accumulated enough words (regardless of chunk count)
-        total_words = sum(len(chunk.split()) for chunk in accumulated_context) + signals.word_count
-        if total_words >= self.min_accumulated_words:
-            return True, f"word_threshold_reached ({total_words} words, {len(accumulated_context) + 1} chunks)"
+            if meaningful_count >= self.min_meaningful_words_at_max_batch:
+                return True, f"max_batch_reached ({self.max_batch_size} chunks, {meaningful_count} meaningful words)"
+            else:
+                return False, f"max_batch_size_but_insufficient_content ({meaningful_count} meaningful words, need {self.min_meaningful_words_at_max_batch})"
+
+        # FORCE PROCESS: Accumulated enough meaningful words
+        all_chunks = accumulated_context + [current_text]
+        meaningful_count = self.count_meaningful_words(all_chunks)
+
+        if meaningful_count >= self.min_meaningful_words:
+            total_words = sum(len(chunk.split()) for chunk in all_chunks)
+            return True, f"meaningful_word_threshold_reached ({meaningful_count} meaningful words, {total_words} total words, {len(all_chunks)} chunks)"
 
         # Wait for more context
-        return False, f"waiting_for_context (priority: {priority.value}, need: {required_context - chunks_since_last_process} more chunks)"
+        return False, f"waiting_for_context (priority: {priority.value}, need: {required_context - chunks_since_last_process} more chunks, {meaningful_count} meaningful words)"
 
     def get_stats(self, text: str) -> dict:
         """Get analysis stats for debugging/monitoring."""
