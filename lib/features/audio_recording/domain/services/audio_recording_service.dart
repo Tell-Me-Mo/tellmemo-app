@@ -294,29 +294,14 @@ class AudioRecordingService {
     // Subscribe to recorder's onProgress stream for real-time decibel updates
     _recorderSubscription = _recorder.onProgress?.listen((event) {
       if (_currentState == RecordingState.recording && event.decibels != null) {
-        // Convert decibels to normalized amplitude (0.0 to 1.0)
-        // Decibels typically range from -160 (silence) to 0 (max)
-        // We'll map this to 0.0-1.0 for visualization
-        final double normalizedAmplitude = _normalizeDecibels(event.decibels!);
-        _amplitudeController.add(normalizedAmplitude);
+        // Emit raw decibel values for UI to normalize
+        // flutter_sound provides decibels in range -160 (silence) to 0 (max)
+        // UI expects raw decibels and handles normalization
+        _amplitudeController.add(event.decibels!);
       }
     }, onError: (error) {
       print('[AudioRecordingService] onProgress error: $error');
     });
-  }
-
-  // Convert decibel value to normalized amplitude (0.0 to 1.0)
-  double _normalizeDecibels(double decibels) {
-    // Decibels range: -160 (silence) to 0 (maximum)
-    // Map to 0.0 (silence) to 1.0 (maximum)
-    const double minDb = -60.0; // Practical minimum for speech
-    const double maxDb = 0.0;   // Maximum (clipping)
-
-    // Clamp and normalize
-    final clampedDb = decibels.clamp(minDb, maxDb);
-    final normalized = (clampedDb - minDb) / (maxDb - minDb);
-
-    return normalized.clamp(0.0, 1.0);
   }
   
   // Get recording duration
