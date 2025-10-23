@@ -52,7 +52,7 @@ class FollowUpSuggestionsService:
     # Maximum days back to search for related content
     MAX_DAYS_LOOKBACK = 30
 
-    def __init__(self, vector_store, llm_client, embedding_service):
+    def __init__(self, vector_store, llm_client, embedding_service, search_cache=None):
         """
         Initialize follow-up suggestions service.
 
@@ -60,10 +60,12 @@ class FollowUpSuggestionsService:
             vector_store: Qdrant vector store for semantic search
             llm_client: Claude LLM client for analysis
             embedding_service: Service for generating embeddings
+            search_cache: Optional shared search cache for optimization
         """
         self.vector_store = vector_store
         self.llm_client = llm_client
         self.embedding_service = embedding_service
+        self.search_cache = search_cache  # Shared search cache for optimization
 
     async def suggest_follow_ups(
         self,
@@ -71,7 +73,8 @@ class FollowUpSuggestionsService:
         insight_type: str,
         project_id: str,
         organization_id: str,
-        context: str = ""
+        context: str = "",
+        session_id: Optional[str] = None
     ) -> List[FollowUpSuggestion]:
         """
         Based on current topic, suggest related follow-ups.
@@ -82,24 +85,27 @@ class FollowUpSuggestionsService:
             project_id: Current project ID
             organization_id: Current organization ID
             context: Current meeting context
+            session_id: Optional session ID for cache optimization
 
         Returns:
             List of follow-up suggestions, sorted by urgency
         """
 
         try:
-            # 1. Search for related content with open items
+            # 1. Search for related content with open items (using shared cache)
             related_open_items = await self._search_open_items(
                 topic=current_topic,
                 project_id=project_id,
-                organization_id=organization_id
+                organization_id=organization_id,
+                session_id=session_id
             )
 
-            # 2. Search for related decisions with implications
+            # 2. Search for related decisions with implications (using shared cache)
             related_decisions = await self._search_related_decisions(
                 topic=current_topic,
                 project_id=project_id,
-                organization_id=organization_id
+                organization_id=organization_id,
+                session_id=session_id
             )
 
             # Combine results
@@ -146,15 +152,19 @@ class FollowUpSuggestionsService:
         topic: str,
         project_id: str,
         organization_id: str,
+        session_id: Optional[str] = None,
         top_k: int = 5
     ) -> List[dict]:
         """
         Search for related content with open items (action items, questions).
 
+        Uses shared search cache if available and session_id is provided.
+
         Args:
             topic: Topic to search for
             project_id: Project ID
             organization_id: Organization ID
+            session_id: Optional session ID for cache optimization
             top_k: Number of results to return
 
         Returns:
@@ -162,20 +172,38 @@ class FollowUpSuggestionsService:
         """
 
         try:
-            # Generate embedding for topic
-            topic_embedding = await self.embedding_service.generate_embedding(topic)
-
-            # Search Qdrant using the correct API
-            results = await self.vector_store.search_vectors(
-                organization_id=organization_id,
-                query_vector=topic_embedding,
-                collection_type="content",
-                limit=top_k,
-                filter_dict={
-                    "project_id": project_id
-                },
-                score_threshold=self.SIMILARITY_THRESHOLD
-            )
+            # Use shared cache if available
+            if self.search_cache and session_id:
+                logger.debug(f"[Phase 5] Attempting to use shared search cache for session {session_id[:8]}...")
+                results = await self.search_cache.get_or_search(
+                    session_id=session_id,
+                    query=topic,
+                    project_id=project_id,
+                    organization_id=organization_id,
+                    embedding_service=self.embedding_service,
+                    vector_store=self.vector_store,
+                    search_params={
+                        'limit': top_k,
+                        'filter_dict': {
+                            "project_id": project_id
+                        },
+                        'score_threshold': self.SIMILARITY_THRESHOLD
+                    }
+                )
+            else:
+                # Fallback to direct search if no cache
+                logger.debug("[Phase 5] No cache available, performing direct search")
+                topic_embedding = await self.embedding_service.generate_embedding(topic)
+                results = await self.vector_store.search_vectors(
+                    organization_id=organization_id,
+                    query_vector=topic_embedding,
+                    collection_type="content",
+                    limit=top_k,
+                    filter_dict={
+                        "project_id": project_id
+                    },
+                    score_threshold=self.SIMILARITY_THRESHOLD
+                )
 
             # Format results
             related_items = []
@@ -201,15 +229,20 @@ class FollowUpSuggestionsService:
         topic: str,
         project_id: str,
         organization_id: str,
+        session_id: Optional[str] = None,
         top_k: int = 5
     ) -> List[dict]:
         """
         Search for related past decisions with potential implications.
 
+        Uses shared search cache if available and session_id is provided.
+        Note: This will reuse the cache from _search_open_items if the query is similar enough.
+
         Args:
             topic: Topic to search for
             project_id: Project ID
             organization_id: Organization ID
+            session_id: Optional session ID for cache optimization
             top_k: Number of results to return
 
         Returns:
@@ -217,20 +250,38 @@ class FollowUpSuggestionsService:
         """
 
         try:
-            # Generate embedding for topic
-            topic_embedding = await self.embedding_service.generate_embedding(topic)
-
-            # Search Qdrant using the correct API
-            results = await self.vector_store.search_vectors(
-                organization_id=organization_id,
-                query_vector=topic_embedding,
-                collection_type="content",
-                limit=top_k,
-                filter_dict={
-                    "project_id": project_id
-                },
-                score_threshold=self.SIMILARITY_THRESHOLD
-            )
+            # Use shared cache if available (may reuse results from _search_open_items!)
+            if self.search_cache and session_id:
+                logger.debug(f"[Phase 5] Attempting to use shared search cache for session {session_id[:8]}...")
+                results = await self.search_cache.get_or_search(
+                    session_id=session_id,
+                    query=topic,
+                    project_id=project_id,
+                    organization_id=organization_id,
+                    embedding_service=self.embedding_service,
+                    vector_store=self.vector_store,
+                    search_params={
+                        'limit': top_k,
+                        'filter_dict': {
+                            "project_id": project_id
+                        },
+                        'score_threshold': self.SIMILARITY_THRESHOLD
+                    }
+                )
+            else:
+                # Fallback to direct search if no cache
+                logger.debug("[Phase 5] No cache available, performing direct search")
+                topic_embedding = await self.embedding_service.generate_embedding(topic)
+                results = await self.vector_store.search_vectors(
+                    organization_id=organization_id,
+                    query_vector=topic_embedding,
+                    collection_type="content",
+                    limit=top_k,
+                    filter_dict={
+                        "project_id": project_id
+                    },
+                    score_threshold=self.SIMILARITY_THRESHOLD
+                )
 
             # Format results
             related_decisions = []
