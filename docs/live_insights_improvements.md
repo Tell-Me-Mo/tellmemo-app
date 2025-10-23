@@ -202,36 +202,9 @@ async def process_transcript_chunk(chunk: TranscriptChunk):
     proactive = await run_active_intelligence(unique_insights)
     
     return {"insights": unique_insights, "proactive_assistance": proactive}
-8. Sliding Window Context Too Large (100 seconds)
-Problem: Sending 10 chunks of full context to LLM is expensive.
-
-Improvement:
-
-def build_tiered_context(chunks: List[TranscriptChunk]) -> str:
-    """Use progressive summarization"""
-    if len(chunks) <= 3:
-        return " ".join([c.text for c in chunks])
-    
-    # Recent context (last 2 chunks): Full detail
-    recent = " ".join([c.text for c in chunks[-2:]])
-    
-    # Medium context (chunks 3-5): Key points only
-    medium = chunks[-5:-2]
-    medium_summary = extract_key_points(medium)
-    
-    # Old context (chunks 6-10): High-level summary
-    old = chunks[:-5]
-    old_summary = summarize_briefly(old)
-    
-    return f"""
-    [Background Context]: {old_summary}
-    [Recent Discussion]: {medium_summary}
-    [Current Focus]: {recent}
-    """
-Expected Savings: ~30-40% token reduction = ~$0.05 per meeting
 
 🛡️ RELIABILITY & ERROR HANDLING
-9. No LLM Failure Graceful Degradation
+9. DONE: No LLM Failure Graceful Degradation
 Problem: If one phase fails, entire processing might fail.
 
 Improvement:
