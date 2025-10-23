@@ -159,6 +159,47 @@ class TranscriptChunk with _$TranscriptChunk {
   }
 }
 
+/// Processing metadata for debugging and transparency
+@freezed
+class ProcessingMetadata with _$ProcessingMetadata {
+  const factory ProcessingMetadata({
+    String? trigger,
+    String? priority,
+    double? semanticScore,
+    @Default([]) List<String> signalsDetected,
+    @Default(0) int chunksAccumulated,
+    String? decisionReason,
+    @Default([]) List<String> activePhases,
+    @Default([]) List<String> skippedPhases,
+    @Default({}) Map<String, double> phaseExecutionTimesMs,
+  }) = _ProcessingMetadata;
+
+  factory ProcessingMetadata.fromJson(Map<String, dynamic> json) {
+    return ProcessingMetadata(
+      trigger: json['trigger'] as String?,
+      priority: json['priority'] as String?,
+      semanticScore: (json['semantic_score'] as num?)?.toDouble(),
+      signalsDetected: (json['signals_detected'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+      chunksAccumulated: (json['chunks_accumulated'] as num?)?.toInt() ?? 0,
+      decisionReason: json['decision_reason'] as String?,
+      activePhases: (json['active_phases'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+      skippedPhases: (json['skipped_phases'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+      phaseExecutionTimesMs: (json['phase_execution_times_ms'] as Map?)
+              ?.map((k, v) => MapEntry(k.toString(), (v as num).toDouble())) ??
+          {},
+    );
+  }
+}
+
 /// Insights extraction result
 @freezed
 class InsightsExtractionResult with _$InsightsExtractionResult {
@@ -168,6 +209,7 @@ class InsightsExtractionResult with _$InsightsExtractionResult {
     required int totalInsights,
     required int processingTimeMs,
     required DateTime timestamp,
+    ProcessingMetadata? processingMetadata,
   }) = _InsightsExtractionResult;
 
   factory InsightsExtractionResult.fromJson(Map<String, dynamic> json) {
@@ -182,6 +224,10 @@ class InsightsExtractionResult with _$InsightsExtractionResult {
       timestamp: json['timestamp'] != null
           ? DateTime.parse(json['timestamp'] as String)
           : DateTime.now(),
+      processingMetadata: json['processing_metadata'] != null
+          ? ProcessingMetadata.fromJson(
+              json['processing_metadata'] as Map<String, dynamic>)
+          : null,
     );
   }
 }

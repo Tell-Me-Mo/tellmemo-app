@@ -755,6 +755,9 @@ async def handle_audio_chunk(
         )
 
         # Adaptive Processing: Intelligently decide when to process based on content
+        processing_stats = None  # Will hold stats for metadata
+        adaptive_reason = None
+
         if USE_ADAPTIVE_PROCESSING:
             adaptive_processor = get_adaptive_processor()
 
@@ -766,6 +769,8 @@ async def handle_audio_chunk(
                 accumulated_context=session.accumulated_context
             )
 
+            adaptive_reason = reason
+
             # Add to accumulated context (up to context window size)
             if is_meaningful:
                 session.accumulated_context.append(transcript_text)
@@ -773,14 +778,16 @@ async def handle_audio_chunk(
                     session.accumulated_context.pop(0)
                 session.chunks_since_last_process += 1
 
+            # Get stats for processing metadata
+            processing_stats = adaptive_processor.get_stats(transcript_text)
+
             # Log processing decision
-            stats = adaptive_processor.get_stats(transcript_text)
             logger.info(
                 f"Chunk {session.chunk_index} analysis: "
                 f"{reason} | "
-                f"priority={stats['priority']} | "
-                f"score={stats['semantic_score']:.2f} | "
-                f"words={stats['word_count']}"
+                f"priority={processing_stats['priority']} | "
+                f"score={processing_stats['semantic_score']:.2f} | "
+                f"words={processing_stats['word_count']}"
             )
 
             # Reset counters if processing
@@ -795,6 +802,8 @@ async def handle_audio_chunk(
                 is_meaningful and
                 (session.chunk_index % BATCH_SIZE == 0 or session.chunk_index == 0)
             )
+
+            adaptive_reason = "legacy_batching" if should_process_insights else "batching_accumulation"
 
             if not is_meaningful:
                 logger.info(
@@ -818,7 +827,10 @@ async def handle_audio_chunk(
                 project_id=session.project_id,
                 organization_id=session.organization_id,
                 chunk=chunk,
-                db=db
+                db=db,
+                # Pass processing stats for metadata
+                adaptive_stats=processing_stats,
+                adaptive_reason=adaptive_reason
             )
 
             insights_time = time.time() - insights_start

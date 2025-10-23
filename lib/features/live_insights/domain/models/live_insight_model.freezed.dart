@@ -1064,12 +1064,381 @@ abstract class _TranscriptChunk implements TranscriptChunk {
 }
 
 /// @nodoc
+mixin _$ProcessingMetadata {
+  String? get trigger => throw _privateConstructorUsedError;
+  String? get priority => throw _privateConstructorUsedError;
+  double? get semanticScore => throw _privateConstructorUsedError;
+  List<String> get signalsDetected => throw _privateConstructorUsedError;
+  int get chunksAccumulated => throw _privateConstructorUsedError;
+  String? get decisionReason => throw _privateConstructorUsedError;
+  List<String> get activePhases => throw _privateConstructorUsedError;
+  List<String> get skippedPhases => throw _privateConstructorUsedError;
+  Map<String, double> get phaseExecutionTimesMs =>
+      throw _privateConstructorUsedError;
+
+  /// Create a copy of ProcessingMetadata
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $ProcessingMetadataCopyWith<ProcessingMetadata> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $ProcessingMetadataCopyWith<$Res> {
+  factory $ProcessingMetadataCopyWith(
+    ProcessingMetadata value,
+    $Res Function(ProcessingMetadata) then,
+  ) = _$ProcessingMetadataCopyWithImpl<$Res, ProcessingMetadata>;
+  @useResult
+  $Res call({
+    String? trigger,
+    String? priority,
+    double? semanticScore,
+    List<String> signalsDetected,
+    int chunksAccumulated,
+    String? decisionReason,
+    List<String> activePhases,
+    List<String> skippedPhases,
+    Map<String, double> phaseExecutionTimesMs,
+  });
+}
+
+/// @nodoc
+class _$ProcessingMetadataCopyWithImpl<$Res, $Val extends ProcessingMetadata>
+    implements $ProcessingMetadataCopyWith<$Res> {
+  _$ProcessingMetadataCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of ProcessingMetadata
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? trigger = freezed,
+    Object? priority = freezed,
+    Object? semanticScore = freezed,
+    Object? signalsDetected = null,
+    Object? chunksAccumulated = null,
+    Object? decisionReason = freezed,
+    Object? activePhases = null,
+    Object? skippedPhases = null,
+    Object? phaseExecutionTimesMs = null,
+  }) {
+    return _then(
+      _value.copyWith(
+            trigger: freezed == trigger
+                ? _value.trigger
+                : trigger // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            priority: freezed == priority
+                ? _value.priority
+                : priority // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            semanticScore: freezed == semanticScore
+                ? _value.semanticScore
+                : semanticScore // ignore: cast_nullable_to_non_nullable
+                      as double?,
+            signalsDetected: null == signalsDetected
+                ? _value.signalsDetected
+                : signalsDetected // ignore: cast_nullable_to_non_nullable
+                      as List<String>,
+            chunksAccumulated: null == chunksAccumulated
+                ? _value.chunksAccumulated
+                : chunksAccumulated // ignore: cast_nullable_to_non_nullable
+                      as int,
+            decisionReason: freezed == decisionReason
+                ? _value.decisionReason
+                : decisionReason // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            activePhases: null == activePhases
+                ? _value.activePhases
+                : activePhases // ignore: cast_nullable_to_non_nullable
+                      as List<String>,
+            skippedPhases: null == skippedPhases
+                ? _value.skippedPhases
+                : skippedPhases // ignore: cast_nullable_to_non_nullable
+                      as List<String>,
+            phaseExecutionTimesMs: null == phaseExecutionTimesMs
+                ? _value.phaseExecutionTimesMs
+                : phaseExecutionTimesMs // ignore: cast_nullable_to_non_nullable
+                      as Map<String, double>,
+          )
+          as $Val,
+    );
+  }
+}
+
+/// @nodoc
+abstract class _$$ProcessingMetadataImplCopyWith<$Res>
+    implements $ProcessingMetadataCopyWith<$Res> {
+  factory _$$ProcessingMetadataImplCopyWith(
+    _$ProcessingMetadataImpl value,
+    $Res Function(_$ProcessingMetadataImpl) then,
+  ) = __$$ProcessingMetadataImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({
+    String? trigger,
+    String? priority,
+    double? semanticScore,
+    List<String> signalsDetected,
+    int chunksAccumulated,
+    String? decisionReason,
+    List<String> activePhases,
+    List<String> skippedPhases,
+    Map<String, double> phaseExecutionTimesMs,
+  });
+}
+
+/// @nodoc
+class __$$ProcessingMetadataImplCopyWithImpl<$Res>
+    extends _$ProcessingMetadataCopyWithImpl<$Res, _$ProcessingMetadataImpl>
+    implements _$$ProcessingMetadataImplCopyWith<$Res> {
+  __$$ProcessingMetadataImplCopyWithImpl(
+    _$ProcessingMetadataImpl _value,
+    $Res Function(_$ProcessingMetadataImpl) _then,
+  ) : super(_value, _then);
+
+  /// Create a copy of ProcessingMetadata
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? trigger = freezed,
+    Object? priority = freezed,
+    Object? semanticScore = freezed,
+    Object? signalsDetected = null,
+    Object? chunksAccumulated = null,
+    Object? decisionReason = freezed,
+    Object? activePhases = null,
+    Object? skippedPhases = null,
+    Object? phaseExecutionTimesMs = null,
+  }) {
+    return _then(
+      _$ProcessingMetadataImpl(
+        trigger: freezed == trigger
+            ? _value.trigger
+            : trigger // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        priority: freezed == priority
+            ? _value.priority
+            : priority // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        semanticScore: freezed == semanticScore
+            ? _value.semanticScore
+            : semanticScore // ignore: cast_nullable_to_non_nullable
+                  as double?,
+        signalsDetected: null == signalsDetected
+            ? _value._signalsDetected
+            : signalsDetected // ignore: cast_nullable_to_non_nullable
+                  as List<String>,
+        chunksAccumulated: null == chunksAccumulated
+            ? _value.chunksAccumulated
+            : chunksAccumulated // ignore: cast_nullable_to_non_nullable
+                  as int,
+        decisionReason: freezed == decisionReason
+            ? _value.decisionReason
+            : decisionReason // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        activePhases: null == activePhases
+            ? _value._activePhases
+            : activePhases // ignore: cast_nullable_to_non_nullable
+                  as List<String>,
+        skippedPhases: null == skippedPhases
+            ? _value._skippedPhases
+            : skippedPhases // ignore: cast_nullable_to_non_nullable
+                  as List<String>,
+        phaseExecutionTimesMs: null == phaseExecutionTimesMs
+            ? _value._phaseExecutionTimesMs
+            : phaseExecutionTimesMs // ignore: cast_nullable_to_non_nullable
+                  as Map<String, double>,
+      ),
+    );
+  }
+}
+
+/// @nodoc
+
+class _$ProcessingMetadataImpl implements _ProcessingMetadata {
+  const _$ProcessingMetadataImpl({
+    this.trigger,
+    this.priority,
+    this.semanticScore,
+    final List<String> signalsDetected = const [],
+    this.chunksAccumulated = 0,
+    this.decisionReason,
+    final List<String> activePhases = const [],
+    final List<String> skippedPhases = const [],
+    final Map<String, double> phaseExecutionTimesMs = const {},
+  }) : _signalsDetected = signalsDetected,
+       _activePhases = activePhases,
+       _skippedPhases = skippedPhases,
+       _phaseExecutionTimesMs = phaseExecutionTimesMs;
+
+  @override
+  final String? trigger;
+  @override
+  final String? priority;
+  @override
+  final double? semanticScore;
+  final List<String> _signalsDetected;
+  @override
+  @JsonKey()
+  List<String> get signalsDetected {
+    if (_signalsDetected is EqualUnmodifiableListView) return _signalsDetected;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_signalsDetected);
+  }
+
+  @override
+  @JsonKey()
+  final int chunksAccumulated;
+  @override
+  final String? decisionReason;
+  final List<String> _activePhases;
+  @override
+  @JsonKey()
+  List<String> get activePhases {
+    if (_activePhases is EqualUnmodifiableListView) return _activePhases;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_activePhases);
+  }
+
+  final List<String> _skippedPhases;
+  @override
+  @JsonKey()
+  List<String> get skippedPhases {
+    if (_skippedPhases is EqualUnmodifiableListView) return _skippedPhases;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_skippedPhases);
+  }
+
+  final Map<String, double> _phaseExecutionTimesMs;
+  @override
+  @JsonKey()
+  Map<String, double> get phaseExecutionTimesMs {
+    if (_phaseExecutionTimesMs is EqualUnmodifiableMapView)
+      return _phaseExecutionTimesMs;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableMapView(_phaseExecutionTimesMs);
+  }
+
+  @override
+  String toString() {
+    return 'ProcessingMetadata(trigger: $trigger, priority: $priority, semanticScore: $semanticScore, signalsDetected: $signalsDetected, chunksAccumulated: $chunksAccumulated, decisionReason: $decisionReason, activePhases: $activePhases, skippedPhases: $skippedPhases, phaseExecutionTimesMs: $phaseExecutionTimesMs)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$ProcessingMetadataImpl &&
+            (identical(other.trigger, trigger) || other.trigger == trigger) &&
+            (identical(other.priority, priority) ||
+                other.priority == priority) &&
+            (identical(other.semanticScore, semanticScore) ||
+                other.semanticScore == semanticScore) &&
+            const DeepCollectionEquality().equals(
+              other._signalsDetected,
+              _signalsDetected,
+            ) &&
+            (identical(other.chunksAccumulated, chunksAccumulated) ||
+                other.chunksAccumulated == chunksAccumulated) &&
+            (identical(other.decisionReason, decisionReason) ||
+                other.decisionReason == decisionReason) &&
+            const DeepCollectionEquality().equals(
+              other._activePhases,
+              _activePhases,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other._skippedPhases,
+              _skippedPhases,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other._phaseExecutionTimesMs,
+              _phaseExecutionTimesMs,
+            ));
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    runtimeType,
+    trigger,
+    priority,
+    semanticScore,
+    const DeepCollectionEquality().hash(_signalsDetected),
+    chunksAccumulated,
+    decisionReason,
+    const DeepCollectionEquality().hash(_activePhases),
+    const DeepCollectionEquality().hash(_skippedPhases),
+    const DeepCollectionEquality().hash(_phaseExecutionTimesMs),
+  );
+
+  /// Create a copy of ProcessingMetadata
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$ProcessingMetadataImplCopyWith<_$ProcessingMetadataImpl> get copyWith =>
+      __$$ProcessingMetadataImplCopyWithImpl<_$ProcessingMetadataImpl>(
+        this,
+        _$identity,
+      );
+}
+
+abstract class _ProcessingMetadata implements ProcessingMetadata {
+  const factory _ProcessingMetadata({
+    final String? trigger,
+    final String? priority,
+    final double? semanticScore,
+    final List<String> signalsDetected,
+    final int chunksAccumulated,
+    final String? decisionReason,
+    final List<String> activePhases,
+    final List<String> skippedPhases,
+    final Map<String, double> phaseExecutionTimesMs,
+  }) = _$ProcessingMetadataImpl;
+
+  @override
+  String? get trigger;
+  @override
+  String? get priority;
+  @override
+  double? get semanticScore;
+  @override
+  List<String> get signalsDetected;
+  @override
+  int get chunksAccumulated;
+  @override
+  String? get decisionReason;
+  @override
+  List<String> get activePhases;
+  @override
+  List<String> get skippedPhases;
+  @override
+  Map<String, double> get phaseExecutionTimesMs;
+
+  /// Create a copy of ProcessingMetadata
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$ProcessingMetadataImplCopyWith<_$ProcessingMetadataImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
 mixin _$InsightsExtractionResult {
   int get chunkIndex => throw _privateConstructorUsedError;
   List<LiveInsightModel> get insights => throw _privateConstructorUsedError;
   int get totalInsights => throw _privateConstructorUsedError;
   int get processingTimeMs => throw _privateConstructorUsedError;
   DateTime get timestamp => throw _privateConstructorUsedError;
+  ProcessingMetadata? get processingMetadata =>
+      throw _privateConstructorUsedError;
 
   /// Create a copy of InsightsExtractionResult
   /// with the given fields replaced by the non-null parameter values.
@@ -1091,7 +1460,10 @@ abstract class $InsightsExtractionResultCopyWith<$Res> {
     int totalInsights,
     int processingTimeMs,
     DateTime timestamp,
+    ProcessingMetadata? processingMetadata,
   });
+
+  $ProcessingMetadataCopyWith<$Res>? get processingMetadata;
 }
 
 /// @nodoc
@@ -1117,6 +1489,7 @@ class _$InsightsExtractionResultCopyWithImpl<
     Object? totalInsights = null,
     Object? processingTimeMs = null,
     Object? timestamp = null,
+    Object? processingMetadata = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -1140,9 +1513,29 @@ class _$InsightsExtractionResultCopyWithImpl<
                 ? _value.timestamp
                 : timestamp // ignore: cast_nullable_to_non_nullable
                       as DateTime,
+            processingMetadata: freezed == processingMetadata
+                ? _value.processingMetadata
+                : processingMetadata // ignore: cast_nullable_to_non_nullable
+                      as ProcessingMetadata?,
           )
           as $Val,
     );
+  }
+
+  /// Create a copy of InsightsExtractionResult
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $ProcessingMetadataCopyWith<$Res>? get processingMetadata {
+    if (_value.processingMetadata == null) {
+      return null;
+    }
+
+    return $ProcessingMetadataCopyWith<$Res>(_value.processingMetadata!, (
+      value,
+    ) {
+      return _then(_value.copyWith(processingMetadata: value) as $Val);
+    });
   }
 }
 
@@ -1161,7 +1554,11 @@ abstract class _$$InsightsExtractionResultImplCopyWith<$Res>
     int totalInsights,
     int processingTimeMs,
     DateTime timestamp,
+    ProcessingMetadata? processingMetadata,
   });
+
+  @override
+  $ProcessingMetadataCopyWith<$Res>? get processingMetadata;
 }
 
 /// @nodoc
@@ -1187,6 +1584,7 @@ class __$$InsightsExtractionResultImplCopyWithImpl<$Res>
     Object? totalInsights = null,
     Object? processingTimeMs = null,
     Object? timestamp = null,
+    Object? processingMetadata = freezed,
   }) {
     return _then(
       _$InsightsExtractionResultImpl(
@@ -1210,6 +1608,10 @@ class __$$InsightsExtractionResultImplCopyWithImpl<$Res>
             ? _value.timestamp
             : timestamp // ignore: cast_nullable_to_non_nullable
                   as DateTime,
+        processingMetadata: freezed == processingMetadata
+            ? _value.processingMetadata
+            : processingMetadata // ignore: cast_nullable_to_non_nullable
+                  as ProcessingMetadata?,
       ),
     );
   }
@@ -1224,6 +1626,7 @@ class _$InsightsExtractionResultImpl implements _InsightsExtractionResult {
     required this.totalInsights,
     required this.processingTimeMs,
     required this.timestamp,
+    this.processingMetadata,
   }) : _insights = insights;
 
   @override
@@ -1242,10 +1645,12 @@ class _$InsightsExtractionResultImpl implements _InsightsExtractionResult {
   final int processingTimeMs;
   @override
   final DateTime timestamp;
+  @override
+  final ProcessingMetadata? processingMetadata;
 
   @override
   String toString() {
-    return 'InsightsExtractionResult(chunkIndex: $chunkIndex, insights: $insights, totalInsights: $totalInsights, processingTimeMs: $processingTimeMs, timestamp: $timestamp)';
+    return 'InsightsExtractionResult(chunkIndex: $chunkIndex, insights: $insights, totalInsights: $totalInsights, processingTimeMs: $processingTimeMs, timestamp: $timestamp, processingMetadata: $processingMetadata)';
   }
 
   @override
@@ -1261,7 +1666,9 @@ class _$InsightsExtractionResultImpl implements _InsightsExtractionResult {
             (identical(other.processingTimeMs, processingTimeMs) ||
                 other.processingTimeMs == processingTimeMs) &&
             (identical(other.timestamp, timestamp) ||
-                other.timestamp == timestamp));
+                other.timestamp == timestamp) &&
+            (identical(other.processingMetadata, processingMetadata) ||
+                other.processingMetadata == processingMetadata));
   }
 
   @override
@@ -1272,6 +1679,7 @@ class _$InsightsExtractionResultImpl implements _InsightsExtractionResult {
     totalInsights,
     processingTimeMs,
     timestamp,
+    processingMetadata,
   );
 
   /// Create a copy of InsightsExtractionResult
@@ -1293,6 +1701,7 @@ abstract class _InsightsExtractionResult implements InsightsExtractionResult {
     required final int totalInsights,
     required final int processingTimeMs,
     required final DateTime timestamp,
+    final ProcessingMetadata? processingMetadata,
   }) = _$InsightsExtractionResultImpl;
 
   @override
@@ -1305,6 +1714,8 @@ abstract class _InsightsExtractionResult implements InsightsExtractionResult {
   int get processingTimeMs;
   @override
   DateTime get timestamp;
+  @override
+  ProcessingMetadata? get processingMetadata;
 
   /// Create a copy of InsightsExtractionResult
   /// with the given fields replaced by the non-null parameter values.

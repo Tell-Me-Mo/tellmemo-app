@@ -140,6 +140,42 @@ class TranscriptChunk:
 
 
 @dataclass
+class ProcessingMetadata:
+    """
+    Metadata about why and how processing occurred.
+
+    Provides visibility into the adaptive processing decision logic
+    for debugging and user transparency.
+    """
+    # Insight Processing Decision
+    trigger: Optional[str] = None  # e.g., "semantic_score_threshold", "max_batch_reached"
+    priority: Optional[str] = None  # e.g., "IMMEDIATE", "HIGH", "MEDIUM", "LOW"
+    semantic_score: Optional[float] = None
+    signals_detected: List[str] = field(default_factory=list)  # e.g., ["action_verbs", "time_references"]
+    chunks_accumulated: int = 0
+    decision_reason: Optional[str] = None  # Human-readable explanation
+
+    # Proactive Assistance Processing
+    active_phases: List[str] = field(default_factory=list)  # Which phases ran
+    skipped_phases: List[str] = field(default_factory=list)  # Which phases were skipped
+    phase_execution_times_ms: Dict[str, float] = field(default_factory=dict)  # Timing per phase
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for WebSocket serialization."""
+        return {
+            'trigger': self.trigger,
+            'priority': self.priority,
+            'semantic_score': self.semantic_score,
+            'signals_detected': self.signals_detected,
+            'chunks_accumulated': self.chunks_accumulated,
+            'decision_reason': self.decision_reason,
+            'active_phases': self.active_phases,
+            'skipped_phases': self.skipped_phases,
+            'phase_execution_times_ms': self.phase_execution_times_ms,
+        }
+
+
+@dataclass
 class ProcessingResult:
     """
     Result of insight extraction with phase-level status tracking.
@@ -170,9 +206,12 @@ class ProcessingResult:
     skipped_reason: Optional[str] = None
     similarity_score: Optional[float] = None
 
+    # Processing decision visibility (NEW)
+    processing_metadata: Optional[ProcessingMetadata] = None
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for WebSocket serialization."""
-        return {
+        result = {
             'session_id': self.session_id,
             'chunk_index': self.chunk_index,
             'insights': [insight.to_dict() for insight in self.insights],
@@ -187,6 +226,12 @@ class ProcessingResult:
             'skipped_reason': self.skipped_reason,
             'similarity_score': self.similarity_score,
         }
+
+        # Include processing metadata if available
+        if self.processing_metadata:
+            result['processing_metadata'] = self.processing_metadata.to_dict()
+
+        return result
 
     def get_warning_message(self) -> Optional[str]:
         """Generate user-friendly warning message for degraded status."""
@@ -339,7 +384,9 @@ class RealtimeMeetingInsightsService:
         project_id: str,
         organization_id: str,
         chunk: TranscriptChunk,
-        db: AsyncSession
+        db: AsyncSession,
+        adaptive_stats: Optional[Dict[str, Any]] = None,
+        adaptive_reason: Optional[str] = None
     ) -> ProcessingResult:
         """
         Process a single transcript chunk and extract insights.
@@ -360,11 +407,39 @@ class RealtimeMeetingInsightsService:
             organization_id: Organization UUID
             chunk: Transcript chunk to process
             db: Database session
+            adaptive_stats: Optional stats from AdaptiveInsightProcessor for metadata
+            adaptive_reason: Optional reason for processing decision
 
         Returns:
             ProcessingResult with insights, status, and phase-level error tracking
         """
         start_time = time.time()
+
+        # Initialize processing metadata
+        metadata = ProcessingMetadata()
+
+        # Populate metadata from adaptive processor if available
+        if adaptive_stats:
+            metadata.priority = adaptive_stats.get('priority')
+            metadata.semantic_score = adaptive_stats.get('semantic_score')
+            metadata.decision_reason = adaptive_reason
+
+            # Extract signals detected from stats
+            signals = adaptive_stats.get('signals', {})
+            metadata.signals_detected = [
+                signal for signal, detected in signals.items() if detected
+            ]
+
+        if adaptive_reason:
+            # Parse trigger from reason string
+            if 'threshold' in adaptive_reason:
+                metadata.trigger = 'semantic_score_threshold'
+            elif 'max_batch' in adaptive_reason:
+                metadata.trigger = 'max_batch_reached'
+            elif 'word_threshold' in adaptive_reason:
+                metadata.trigger = 'word_threshold_reached'
+            else:
+                metadata.trigger = adaptive_reason
 
         try:
             # Initialize context if first chunk
@@ -395,6 +470,10 @@ class RealtimeMeetingInsightsService:
                     f"Saved ~$0.002 in LLM costs"
                 )
 
+                # Populate metadata for skipped (duplicate) processing
+                metadata.decision_reason = "Chunk is semantically duplicate of recent chunk"
+                metadata.trigger = "duplicate_detection"
+
                 return ProcessingResult(
                     session_id=session_id,
                     chunk_index=chunk.index,
@@ -406,7 +485,8 @@ class RealtimeMeetingInsightsService:
                     processing_time_ms=int(processing_time * 1000),
                     context_window_size=len(context.chunks),
                     skipped_reason='duplicate_chunk',
-                    similarity_score=similarity_score
+                    similarity_score=similarity_score,
+                    processing_metadata=metadata
                 )
 
             # Get conversation context
@@ -431,8 +511,8 @@ class RealtimeMeetingInsightsService:
             self.extracted_insights[session_id].extend(new_insights)
 
             # PHASE 1-6: Active Intelligence - Process all proactive assistance
-            # Returns: (proactive_responses, phase_status, error_messages)
-            proactive_assistance, phase_status, error_messages = await self._process_proactive_assistance(
+            # Returns: (proactive_responses, phase_status, error_messages, phase_timings)
+            proactive_assistance, phase_status, error_messages, phase_timings = await self._process_proactive_assistance(
                 session_id=session_id,
                 project_id=project_id,
                 organization_id=organization_id,
@@ -453,6 +533,12 @@ class RealtimeMeetingInsightsService:
             else:
                 overall_status = ProcessingStatus.OK
 
+            # Populate processing metadata for active phases
+            metadata.active_phases = [phase for phase, status in phase_status.items() if status == PhaseStatus.SUCCESS]
+            metadata.skipped_phases = [phase for phase, status in phase_status.items() if status == PhaseStatus.SKIPPED]
+            metadata.phase_execution_times_ms = phase_timings
+            metadata.chunks_accumulated = len(context.chunks)
+
             # Build processing result
             result = ProcessingResult(
                 session_id=session_id,
@@ -465,7 +551,8 @@ class RealtimeMeetingInsightsService:
                 processing_time_ms=int(processing_time * 1000),
                 context_window_size=len(context.chunks),
                 failed_phases=failed_phases,
-                error_messages=error_messages
+                error_messages=error_messages,
+                processing_metadata=metadata
             )
 
             logger.info(
@@ -479,6 +566,11 @@ class RealtimeMeetingInsightsService:
         except Exception as e:
             # Core extraction failed - return FAILED status
             logger.error(f"Error processing transcript chunk: {e}", exc_info=True)
+
+            # Populate metadata for failed processing
+            metadata.decision_reason = f"Core extraction failed: {str(e)}"
+            metadata.trigger = "error"
+
             return ProcessingResult(
                 session_id=session_id,
                 chunk_index=chunk.index,
@@ -490,7 +582,8 @@ class RealtimeMeetingInsightsService:
                 processing_time_ms=0,
                 context_window_size=0,
                 failed_phases=['core_extraction'],
-                error_messages={'core_extraction': str(e)}
+                error_messages={'core_extraction': str(e)},
+                processing_metadata=metadata
             )
 
     async def _extract_insights(
@@ -998,7 +1091,7 @@ class RealtimeMeetingInsightsService:
         insights: List[MeetingInsight],
         context: str,
         current_chunk: TranscriptChunk
-    ) -> Tuple[List[Dict[str, Any]], Dict[str, PhaseStatus], Dict[str, str]]:
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, PhaseStatus], Dict[str, str], Dict[str, float]]:
         """
         Process insights to provide proactive assistance with selective phase execution.
 
@@ -1035,10 +1128,12 @@ class RealtimeMeetingInsightsService:
             - List of proactive assistance items (auto-answers, clarifications, etc.)
             - Dict mapping phase names to their status (success/failed/skipped)
             - Dict mapping phase names to error messages (only for failed phases)
+            - Dict mapping phase names to execution times in milliseconds
         """
         proactive_responses = []
         phase_status: Dict[str, PhaseStatus] = {}
         error_messages: Dict[str, str] = {}
+        phase_timings: Dict[str, float] = {}
 
         # OPTIMIZATION: Pre-determine which phases are relevant to avoid unnecessary processing
         active_phases = self._determine_active_phases(
@@ -1061,6 +1156,7 @@ class RealtimeMeetingInsightsService:
         for insight in insights:
             # Phase 1: Auto-answer questions (only if phase 1 is active)
             if 'question_answering' in active_phases and insight.type == InsightType.QUESTION:
+                phase_start = time.time()
                 try:
                     # Detect and classify the question
                     detected_question = await self.question_detector.detect_and_classify_question(
@@ -1111,11 +1207,13 @@ class RealtimeMeetingInsightsService:
 
                     # Mark Phase 1 as successful
                     phase_status['question_answering'] = PhaseStatus.SUCCESS
+                    phase_timings['question_answering'] = (time.time() - phase_start) * 1000
 
                 except Exception as e:
                     # Phase 1 failed - log error but continue processing
                     phase_status['question_answering'] = PhaseStatus.FAILED
                     error_messages['question_answering'] = str(e)
+                    phase_timings['question_answering'] = (time.time() - phase_start) * 1000
                     logger.error(
                         f"Phase 1 (question_answering) failed for session {sanitize_for_log(session_id)}: {e}",
                         exc_info=True
@@ -1373,7 +1471,7 @@ class RealtimeMeetingInsightsService:
                 exc_info=True
             )
 
-        return proactive_responses, phase_status, error_messages
+        return proactive_responses, phase_status, error_messages, phase_timings
 
     def cleanup_stale_sessions(self, max_age_hours: int = 4) -> int:
         """
