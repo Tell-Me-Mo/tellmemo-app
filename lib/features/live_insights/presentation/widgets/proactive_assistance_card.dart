@@ -28,12 +28,16 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
-  bool _isExpanded = true;
+  late bool _isExpanded;
   bool _dismissed = false;
 
   @override
   void initState() {
     super.initState();
+    // Determine initial expanded state based on display mode
+    final displayMode = widget.assistance.displayMode;
+    _isExpanded = displayMode == DisplayMode.immediate;
+
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -85,6 +89,7 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
     final iconColor = _getIconColorForType(type);
     final title = _getTitleForType(type);
     final subtitle = _getSubtitleForType();
+    final displayMode = widget.assistance.displayMode;
 
     return InkWell(
       onTap: () => setState(() => _isExpanded = !_isExpanded),
@@ -98,22 +103,40 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      // Show display mode indicator for collapsed items
+                      if (displayMode == DisplayMode.collapsed && !_isExpanded) ...[
+                        const SizedBox(width: 8),
+                        Tooltip(
+                          message: 'Medium confidence - tap to expand',
+                          child: Icon(
+                            Icons.visibility_outlined,
+                            size: 16,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   if (subtitle != null) ...[
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
                       style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[700],
-                      fontStyle: FontStyle.italic,
-                    ),
+                        fontSize: 14,
+                        color: Colors.grey[700],
+                        fontStyle: FontStyle.italic,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),

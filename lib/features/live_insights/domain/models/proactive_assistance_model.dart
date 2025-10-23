@@ -19,6 +19,18 @@ enum ProactiveAssistanceType {
   repetitionDetected,
 }
 
+/// Display mode for proactive assistance based on confidence thresholds
+enum DisplayMode {
+  /// High confidence - show expanded immediately
+  immediate,
+
+  /// Medium confidence - show collapsed
+  collapsed,
+
+  /// Low confidence - don't show
+  hidden,
+}
+
 /// Source document used to answer a question
 @freezed
 class AnswerSource with _$AnswerSource {
@@ -162,6 +174,8 @@ class RepetitionDetectionAssistance with _$RepetitionDetectionAssistance {
 /// Main proactive assistance model
 @freezed
 class ProactiveAssistanceModel with _$ProactiveAssistanceModel {
+  const ProactiveAssistanceModel._();
+
   const factory ProactiveAssistanceModel({
     required ProactiveAssistanceType type,
     AutoAnswerAssistance? autoAnswer,
@@ -171,6 +185,62 @@ class ProactiveAssistanceModel with _$ProactiveAssistanceModel {
     FollowUpSuggestionAssistance? followUpSuggestion,
     RepetitionDetectionAssistance? repetitionDetection,
   }) = _ProactiveAssistanceModel;
+
+  /// Get the confidence score for this assistance
+  double get confidence {
+    switch (type) {
+      case ProactiveAssistanceType.autoAnswer:
+        return autoAnswer?.confidence ?? 0.0;
+      case ProactiveAssistanceType.clarificationNeeded:
+        return clarification?.confidence ?? 0.0;
+      case ProactiveAssistanceType.conflictDetected:
+        return conflict?.confidence ?? 0.0;
+      case ProactiveAssistanceType.incompleteActionItem:
+        return 1.0; // Quality checks always shown (completeness score is different)
+      case ProactiveAssistanceType.followUpSuggestion:
+        return followUpSuggestion?.confidence ?? 0.0;
+      case ProactiveAssistanceType.repetitionDetected:
+        return repetitionDetection?.confidence ?? 0.0;
+    }
+  }
+
+  /// Determine display mode based on confidence thresholds and assistance type
+  DisplayMode get displayMode {
+    final conf = confidence;
+
+    return switch (type) {
+      // Auto-answers: High threshold (85%) for immediate display
+      ProactiveAssistanceType.autoAnswer when conf > 0.85 => DisplayMode.immediate,
+      ProactiveAssistanceType.autoAnswer when conf > 0.75 => DisplayMode.collapsed,
+      ProactiveAssistanceType.autoAnswer => DisplayMode.hidden,
+
+      // Conflicts: Critical, so slightly lower threshold (80%)
+      ProactiveAssistanceType.conflictDetected when conf > 0.80 => DisplayMode.immediate,
+      ProactiveAssistanceType.conflictDetected when conf > 0.70 => DisplayMode.collapsed,
+      ProactiveAssistanceType.conflictDetected => DisplayMode.hidden,
+
+      // Clarifications: Moderately important (80%)
+      ProactiveAssistanceType.clarificationNeeded when conf > 0.80 => DisplayMode.immediate,
+      ProactiveAssistanceType.clarificationNeeded when conf > 0.70 => DisplayMode.collapsed,
+      ProactiveAssistanceType.clarificationNeeded => DisplayMode.hidden,
+
+      // Action item quality: Always show if there are issues (completeness < 0.7)
+      ProactiveAssistanceType.incompleteActionItem =>
+        (actionItemQuality?.completenessScore ?? 1.0) < 0.7
+          ? DisplayMode.immediate
+          : DisplayMode.collapsed,
+
+      // Follow-up suggestions: Lower priority (75%)
+      ProactiveAssistanceType.followUpSuggestion when conf > 0.75 => DisplayMode.immediate,
+      ProactiveAssistanceType.followUpSuggestion when conf > 0.65 => DisplayMode.collapsed,
+      ProactiveAssistanceType.followUpSuggestion => DisplayMode.hidden,
+
+      // Repetition detection: High threshold, important for efficiency (80%)
+      ProactiveAssistanceType.repetitionDetected when conf > 0.80 => DisplayMode.immediate,
+      ProactiveAssistanceType.repetitionDetected when conf > 0.70 => DisplayMode.collapsed,
+      ProactiveAssistanceType.repetitionDetected => DisplayMode.hidden,
+    };
+  }
 
   factory ProactiveAssistanceModel.fromJson(Map<String, dynamic> json) {
     final type = json['type'] as String;

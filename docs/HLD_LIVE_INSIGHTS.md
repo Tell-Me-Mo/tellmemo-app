@@ -1425,6 +1425,13 @@ enum ProactiveAssistanceType {
   timeUsageAlert,           // Phase 6 🔶
 }
 
+// NEW - Oct 2025: Confidence-based display control
+enum DisplayMode {
+  immediate,  // High confidence - show expanded
+  collapsed,  // Medium confidence - show collapsed
+  hidden,     // Low confidence - don't show
+}
+
 @freezed
 class AutoAnswerAssistance {
   String insightId;
@@ -1517,12 +1524,13 @@ class ProactiveAssistanceModel {
 }
 ```
 
-#### 5. ProactiveAssistanceCard (UI Widget - Active Intelligence)
+#### 5. ProactiveAssistanceCard (UI Widget - Active Intelligence) ✅ Updated Oct 2025
 
-**Purpose:** Display proactive assistance with color-coded themes.
+**Purpose:** Display proactive assistance with color-coded themes and confidence-based display modes.
 
 **Features:**
 - Six distinct visual themes (blue, orange, red, yellow, purple, deep orange)
+- **Confidence-based display thresholds** (NEW - Oct 2025)
 - Expandable/collapsible design
 - Confidence badges
 - Accept/Dismiss actions
@@ -1537,6 +1545,55 @@ class ProactiveAssistanceModel {
 - 💜 **Purple** - Follow-up suggestions
 - 🔶 **Deep Orange** - Repetition/efficiency alerts
 
+**Confidence-Based Display Thresholds (NEW - Oct 2025):**
+
+```dart
+enum DisplayMode {
+  immediate,  // High confidence - show expanded immediately
+  collapsed,  // Medium confidence - show collapsed
+  hidden,     // Low confidence - don't show
+}
+
+// Thresholds per assistance type:
+DisplayMode get displayMode {
+  return switch (type) {
+    // Auto-answers: High threshold (85%)
+    ProactiveAssistanceType.autoAnswer when confidence > 0.85 => immediate,
+    ProactiveAssistanceType.autoAnswer when confidence > 0.75 => collapsed,
+
+    // Conflicts: Critical, slightly lower (80%)
+    ProactiveAssistanceType.conflictDetected when confidence > 0.80 => immediate,
+    ProactiveAssistanceType.conflictDetected when confidence > 0.70 => collapsed,
+
+    // Clarifications: Moderately important (80%)
+    ProactiveAssistanceType.clarificationNeeded when confidence > 0.80 => immediate,
+    ProactiveAssistanceType.clarificationNeeded when confidence > 0.70 => collapsed,
+
+    // Action item quality: Based on completeness score
+    ProactiveAssistanceType.incompleteActionItem =>
+      completenessScore < 0.7 ? immediate : collapsed,
+
+    // Follow-up suggestions: Lower priority (75%)
+    ProactiveAssistanceType.followUpSuggestion when confidence > 0.75 => immediate,
+    ProactiveAssistanceType.followUpSuggestion when confidence > 0.65 => collapsed,
+
+    // Repetition: Important for efficiency (80%)
+    ProactiveAssistanceType.repetitionDetected when confidence > 0.80 => immediate,
+    ProactiveAssistanceType.repetitionDetected when confidence > 0.70 => collapsed,
+
+    // Default: Hide low-confidence items
+    _ => hidden,
+  };
+}
+```
+
+**Benefits:**
+1. **Reduced Noise:** Low-confidence items (< 65-75%) are automatically hidden
+2. **User Focus:** Only high-confidence items shown expanded by default
+3. **Optional Review:** Medium-confidence items shown collapsed for manual review
+4. **Type-Specific Thresholds:** Critical alerts (conflicts) have lower thresholds
+5. **Visual Indicators:** Collapsed items show hint icon to indicate medium confidence
+
 **Key Methods:**
 ```dart
 class ProactiveAssistanceCard extends StatefulWidget {
@@ -1549,6 +1606,8 @@ class ProactiveAssistanceCard extends StatefulWidget {
   Widget _buildTimeUsageAlertContent(TimeUsageAlertAssistance);
 }
 ```
+
+**Status:** ✅ Production Ready (October 23, 2025)
 
 ---
 
