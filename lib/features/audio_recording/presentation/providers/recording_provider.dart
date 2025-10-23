@@ -420,14 +420,19 @@ class RecordingNotifier extends _$RecordingNotifier {
 
   // Cancel recording without saving
   Future<void> cancelRecording() async {
+    print('[RecordingProvider] Cancelling recording...');
+
     // Stop live insights if enabled
     if (state.liveInsightsEnabled) {
+      print('[RecordingProvider] Stopping live insights...');
       await _stopLiveInsights();
     }
 
     // Cancel recording and delete file
+    print('[RecordingProvider] Cancelling audio recording...');
     await _audioService.cancelRecording();
 
+    // Reset state completely, including live insights
     state = state.copyWith(
       state: RecordingState.idle,
       transcriptionText: '',
@@ -436,7 +441,12 @@ class RecordingNotifier extends _$RecordingNotifier {
       sessionId: null,
       errorMessage: null,
       currentRecordingPath: null,
+      liveInsightsEnabled: false,
+      liveInsightsSessionId: null,
+      liveInsights: [],
     );
+
+    print('[RecordingProvider] Recording cancelled successfully');
   }
 
   // Retry transcription with existing file
@@ -499,7 +509,9 @@ class RecordingNotifier extends _$RecordingNotifier {
 
         // Log each insight for debugging
         for (var insight in result.insights) {
-          print('🔍 [RecordingProvider]   - ${insight.type}: ${insight.content.substring(0, insight.content.length > 50 ? 50 : insight.content.length)}...');
+          final content = insight.content ?? '';
+          final preview = content.length > 50 ? content.substring(0, 50) : content;
+          print('🔍 [RecordingProvider]   - ${insight.type}: $preview...');
         }
 
         // Add new insights to the list
@@ -588,15 +600,26 @@ class RecordingNotifier extends _$RecordingNotifier {
 
   // Stop live insights session
   Future<void> _stopLiveInsights() async {
-    _audioChunkSubscription?.cancel();
-    _liveInsightsSubscription?.cancel();
-    _liveTranscriptsSubscription?.cancel();
+    print('[RecordingProvider] Stopping live insights...');
 
-    // Stop audio streaming
+    // Cancel all subscriptions first
+    print('[RecordingProvider] Cancelling subscriptions...');
+    await _audioChunkSubscription?.cancel();
+    await _liveInsightsSubscription?.cancel();
+    await _liveTranscriptsSubscription?.cancel();
+    _audioChunkSubscription = null;
+    _liveInsightsSubscription = null;
+    _liveTranscriptsSubscription = null;
+
+    // Stop and dispose audio streaming service
     if (_audioStreamingService != null) {
       try {
-        await _audioStreamingService!.stopStreaming();
+        print('[RecordingProvider] Stopping audio streaming service...');
+        if (_audioStreamingService!.isRecording) {
+          await _audioStreamingService!.stopStreaming();
+        }
         await _audioStreamingService!.dispose();
+        print('[RecordingProvider] Audio streaming service disposed');
       } catch (e) {
         print('[RecordingProvider] Error stopping audio streaming: $e');
       }
@@ -606,8 +629,10 @@ class RecordingNotifier extends _$RecordingNotifier {
     // Stop live insights WebSocket
     if (_liveInsightsService != null) {
       try {
+        print('[RecordingProvider] Disconnecting live insights WebSocket...');
         await _liveInsightsService!.endSession();
         await _liveInsightsService!.disconnect();
+        print('[RecordingProvider] Live insights WebSocket disconnected');
       } catch (e) {
         print('[RecordingProvider] Error stopping live insights: $e');
       }
@@ -618,6 +643,8 @@ class RecordingNotifier extends _$RecordingNotifier {
       liveInsightsEnabled: false,
       liveInsightsSessionId: null,
     );
+
+    print('[RecordingProvider] Live insights stopped successfully');
   }
 
   // Clean up subscriptions

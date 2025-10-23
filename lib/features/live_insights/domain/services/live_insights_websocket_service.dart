@@ -279,7 +279,9 @@ class LiveInsightsWebSocketService {
 
           // Log each insight for debugging
           for (var insight in result.insights) {
-            debugPrint('📥 [LiveInsightsWS]   - ${insight.type}: ${insight.content.substring(0, insight.content.length > 50 ? 50 : insight.content.length)}...');
+            final content = insight.content ?? '';
+            final preview = content.length > 50 ? content.substring(0, 50) : content;
+            debugPrint('📥 [LiveInsightsWS]   - ${insight.type}: $preview...');
           }
 
           debugPrint('📥 [LiveInsightsWS] Adding to stream controller...');

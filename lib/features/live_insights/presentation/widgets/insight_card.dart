@@ -68,7 +68,7 @@ class InsightCard extends StatelessWidget {
 
               // Content
               Text(
-                insight.content,
+                insight.content ?? '',
                 style: theme.textTheme.bodyLarge?.copyWith(
                   fontWeight: FontWeight.w500,
                 ),

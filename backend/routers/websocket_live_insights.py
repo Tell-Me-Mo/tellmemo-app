@@ -852,7 +852,20 @@ async def handle_audio_chunk(
                 )
 
         # Extract insights (only when adaptive processor or batching decides to)
-        result = {'insights': [], 'total_insights_count': 0, 'processing_time_ms': 0}
+        # Create empty ProcessingResult for when we skip processing
+        from services.intelligence.realtime_meeting_insights import ProcessingResult, ProcessingStatus
+
+        result = ProcessingResult(
+            session_id=session.session_id,
+            chunk_index=chunk.index,
+            insights=[],
+            proactive_assistance=[],
+            evolved_insights=[],
+            overall_status=ProcessingStatus.OK,
+            phase_status={},
+            total_insights_count=0,
+            processing_time_ms=0
+        )
 
         if should_process_insights:
             insights_start = time.time()

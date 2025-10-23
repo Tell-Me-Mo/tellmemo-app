@@ -180,27 +180,45 @@ class AudioStreamingService {
   /// Dispose of the service and clean up resources
   Future<void> dispose() async {
     try {
+      print('[AudioStreamingService] Starting disposal...');
+
+      // Stop recording first if active
       if (_isRecording) {
+        print('[AudioStreamingService] Stopping active recording...');
         await stopStreaming();
       }
 
       // Cancel buffer subscription
+      print('[AudioStreamingService] Cancelling buffer subscription...');
       await _bufferSubscription?.cancel();
       _bufferSubscription = null;
 
+      // Close recorder session
       if (_isInitialized) {
-        await _recorder.closeRecorder();
-        _isInitialized = false;
+        print('[AudioStreamingService] Closing recorder session...');
+        try {
+          await _recorder.closeRecorder();
+          _isInitialized = false;
+          print('[AudioStreamingService] Recorder session closed');
+        } catch (e) {
+          print('[AudioStreamingService] Error closing recorder: $e');
+          // Continue cleanup even if this fails
+        }
       }
 
-      // Close stream controllers
-      await _internalStreamController.close();
-      await _audioChunkController.close();
+      // Close stream controllers (don't await, just close them)
+      print('[AudioStreamingService] Closing stream controllers...');
+      if (!_internalStreamController.isClosed) {
+        await _internalStreamController.close();
+      }
+      if (!_audioChunkController.isClosed) {
+        await _audioChunkController.close();
+      }
 
       // Clear buffer
       _audioBuffer.clear();
 
-      print('[AudioStreamingService] Disposed');
+      print('[AudioStreamingService] Disposed successfully');
     } catch (e) {
       print('[AudioStreamingService] Error disposing: $e');
     }

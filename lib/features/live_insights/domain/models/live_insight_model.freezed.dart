@@ -29,7 +29,7 @@ mixin _$LiveInsightModel {
   @JsonKey(name: 'type')
   LiveInsightType get type => throw _privateConstructorUsedError;
   LiveInsightPriority get priority => throw _privateConstructorUsedError;
-  String get content => throw _privateConstructorUsedError;
+  String? get content => throw _privateConstructorUsedError;
   String get context => throw _privateConstructorUsedError;
   @JsonKey(name: 'created_at')
   DateTime? get createdAt => throw _privateConstructorUsedError;
@@ -78,7 +78,7 @@ abstract class $LiveInsightModelCopyWith<$Res> {
     @JsonKey(name: 'insight_id') String? insightId,
     @JsonKey(name: 'type') LiveInsightType type,
     LiveInsightPriority priority,
-    String content,
+    String? content,
     String context,
     @JsonKey(name: 'created_at') DateTime? createdAt,
     DateTime? timestamp,
@@ -116,7 +116,7 @@ class _$LiveInsightModelCopyWithImpl<$Res, $Val extends LiveInsightModel>
     Object? insightId = freezed,
     Object? type = null,
     Object? priority = null,
-    Object? content = null,
+    Object? content = freezed,
     Object? context = null,
     Object? createdAt = freezed,
     Object? timestamp = freezed,
@@ -151,10 +151,10 @@ class _$LiveInsightModelCopyWithImpl<$Res, $Val extends LiveInsightModel>
                 ? _value.priority
                 : priority // ignore: cast_nullable_to_non_nullable
                       as LiveInsightPriority,
-            content: null == content
+            content: freezed == content
                 ? _value.content
                 : content // ignore: cast_nullable_to_non_nullable
-                      as String,
+                      as String?,
             context: null == context
                 ? _value.context
                 : context // ignore: cast_nullable_to_non_nullable
@@ -235,7 +235,7 @@ abstract class _$$LiveInsightModelImplCopyWith<$Res>
     @JsonKey(name: 'insight_id') String? insightId,
     @JsonKey(name: 'type') LiveInsightType type,
     LiveInsightPriority priority,
-    String content,
+    String? content,
     String context,
     @JsonKey(name: 'created_at') DateTime? createdAt,
     DateTime? timestamp,
@@ -272,7 +272,7 @@ class __$$LiveInsightModelImplCopyWithImpl<$Res>
     Object? insightId = freezed,
     Object? type = null,
     Object? priority = null,
-    Object? content = null,
+    Object? content = freezed,
     Object? context = null,
     Object? createdAt = freezed,
     Object? timestamp = freezed,
@@ -307,10 +307,10 @@ class __$$LiveInsightModelImplCopyWithImpl<$Res>
             ? _value.priority
             : priority // ignore: cast_nullable_to_non_nullable
                   as LiveInsightPriority,
-        content: null == content
+        content: freezed == content
             ? _value.content
             : content // ignore: cast_nullable_to_non_nullable
-                  as String,
+                  as String?,
         context: null == context
             ? _value.context
             : context // ignore: cast_nullable_to_non_nullable
@@ -384,7 +384,7 @@ class _$LiveInsightModelImpl implements _LiveInsightModel {
     @JsonKey(name: 'insight_id') this.insightId,
     @JsonKey(name: 'type') required this.type,
     required this.priority,
-    required this.content,
+    this.content,
     this.context = '',
     @JsonKey(name: 'created_at') this.createdAt,
     this.timestamp,
@@ -421,7 +421,7 @@ class _$LiveInsightModelImpl implements _LiveInsightModel {
   @override
   final LiveInsightPriority priority;
   @override
-  final String content;
+  final String? content;
   @override
   @JsonKey()
   final String context;
@@ -595,7 +595,7 @@ abstract class _LiveInsightModel implements LiveInsightModel {
     @JsonKey(name: 'insight_id') final String? insightId,
     @JsonKey(name: 'type') required final LiveInsightType type,
     required final LiveInsightPriority priority,
-    required final String content,
+    final String? content,
     final String context,
     @JsonKey(name: 'created_at') final DateTime? createdAt,
     final DateTime? timestamp,
@@ -629,7 +629,7 @@ abstract class _LiveInsightModel implements LiveInsightModel {
   @override
   LiveInsightPriority get priority;
   @override
-  String get content;
+  String? get content;
   @override
   String get context;
   @override
