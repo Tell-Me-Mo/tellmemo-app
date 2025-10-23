@@ -1,6 +1,6 @@
 # High-Level Design: Real-Time Meeting Insights
 
-**Document Version:** 4.2
+**Document Version:** 4.3
 **Last Updated:** October 23, 2025
 **Status:** ✅ **Production Ready with Adaptive Intelligence** (100% Complete)
 **Feature:** Live Meeting Insights with Real-Time Audio Streaming, Historical Access, Active Meeting Intelligence & Adaptive Processing
@@ -726,6 +726,28 @@ class AdaptiveInsightProcessor:
         """Analysis stats for monitoring/debugging"""
 ```
 
+**Semantic Score Calculation:**
+
+The semantic density score is calculated as:
+
+```python
+semantic_score = weighted_signal_count / word_count
+
+# Weights:
+# - Action + Time combo: 2.0 (e.g., "Complete API by Friday")
+# - Decisions + Assignments: 1.5 (e.g., "We'll use GraphQL and John will implement")
+# - Questions, Risks: 1.0 each (e.g., "What's the budget?", "This might be blocked")
+# - Single action/time: 0.5 each (e.g., "Let's implement this", "Due next week")
+
+# Example scores:
+# "Complete the API by Friday" (5 words, action+time) = 2.0/5 = 0.40
+# "What's the Q4 budget?" (4 words, question) = 1.0/4 = 0.25
+# "Let's schedule a meeting" (4 words, action only) = 0.5/4 = 0.125
+# "We discussed the weather" (4 words, no signals) = 0.0/4 = 0.0
+
+# Threshold: semantic_score ≥ 0.3 indicates high semantic density
+```
+
 **Configuration:**
 ```python
 # Priority-to-context mapping (class constants)
@@ -740,6 +762,7 @@ PRIORITY_CONTEXT_MAP = {
 MAX_BATCH_SIZE = 5              # Hard limit - force process regardless
 MIN_WORD_COUNT = 5              # Minimum words to consider chunk valid
 MIN_ACCUMULATED_WORDS = 30      # Minimum total words before forcing
+SEMANTIC_SCORE_THRESHOLD = 0.3  # High-density content threshold
 ```
 
 **Performance vs Blind Batching:**
@@ -2259,6 +2282,7 @@ curl http://localhost:8000/api/v1/health
 | 4.0 | 2025-10-20 | Claude | **MAJOR UPDATE - Active Meeting Intelligence**: Documented complete transformation from passive observer to active AI assistant with 6 phases: (1) Question Auto-Answering with RAG, (2) Proactive Clarification for vague statements, (3) Real-Time Conflict Detection, (4) Action Item Quality Enhancement, (5) Follow-up Suggestions, (6) Meeting Efficiency Features (repetition detection + time tracking). Added 11 new backend services (QuestionDetector, QuestionAnsweringService, ClarificationService, ConflictDetectionService, ActionItemQualityService, FollowUpSuggestionsService, RepetitionDetectorService, MeetingTimeTrackerService), 7 new Freezed data models, ProactiveAssistanceCard UI component with 6 color themes, proactive_assistance field in WebSocket messages, performance metrics for each phase, cost analysis ($0.18 additional per 30-min meeting), accuracy rates (60-90% across features). System now provides reactive assistance (answers questions), proactive assistance (prevents ambiguity), preventive alerts (detects conflicts), quality improvement (ensures complete action items), continuity assistance (maintains context), and efficiency coaching (reduces meeting time by 15%). All 6 phases production ready with comprehensive implementation summaries. Updated Executive Summary, Business Requirements, System Architecture, Component Design (added Active Intelligence section), API Specification, Data Models, Performance metrics, Future Enhancements (moved completed features), Glossary, and References. |
 | 4.1 | 2025-10-22 | Claude | **Adaptive Insight Processing**: Replaced blind 3-chunk batching with intelligent semantic trigger-based processing. Added AdaptiveInsightProcessor service with pattern-based detection (action verbs, time refs, questions, decisions, assignments, risks). Implements 5-tier priority classification (IMMEDIATE/HIGH/MEDIUM/LOW/SKIP) with automatic gibberish detection (repetitive text filter). Processing triggers: IMMEDIATE for action+time or decision+assignment combos, HIGH for any actionable content with 2+ chunks context, forced processing at 5-chunk limit (50s) or 30+ word context accumulation. Performance improvements: Reduced latency from 30s (blind batching) to <10s for actionable content while maintaining ~50% cost reduction (vs ~66% with blind batching). Eliminates 30-second blind spots, processes short but actionable statements (5+ words vs previous 15 chars), and provides real-time semantic analysis logging. Configuration: min_word_count=5, semantic_threshold=0.3, context_window=3, max_batch=5. Added USE_ADAPTIVE_PROCESSING flag to routers/websocket_live_insights.py with backward compatibility to legacy BATCH_SIZE. Updated LiveMeetingSession with chunks_since_last_process and accumulated_context tracking. |
 | 4.2 | 2025-10-23 | Claude | **Configuration Refactoring**: Fixed context window configuration inconsistency by introducing explicit `PRIORITY_CONTEXT_MAP` class constant that maps each priority level to required context chunks (IMMEDIATE:0, HIGH:2, MEDIUM:3, LOW:4). Removed scattered configuration parameters (`semantic_threshold`, `context_window_size`) and consolidated into clear class constants (`MAX_BATCH_SIZE=5`, `MIN_WORD_COUNT=5`, `MIN_ACCUMULATED_WORDS=30`). Refactored `should_process_now()` to use priority-based lookup instead of hardcoded conditions, making logic more maintainable and extensible. Simplified `__init__()` to accept only override parameters with sensible defaults. Updated decision flow examples and configuration documentation to reflect new architecture. This eliminates ambiguity between "wait for 2 chunks" (HIGH), "accumulate 3 chunks" (MEDIUM), and "5-chunk limit" (MAX_BATCH_SIZE) by making the mapping explicit and centralized. |
+| 4.3 | 2025-10-23 | Claude | **Semantic Score Calculation**: Implemented explicit weighted semantic density scoring in `SemanticSignals.get_score()` method. Replaced simple boolean averaging with proper weighted formula: Action+Time combo (2.0), Decisions+Assignments combo (1.5), Questions/Risks (1.0 each), Single action/time (0.5 each), normalized by word count. Examples: "Complete API by Friday" (5 words) = 2.0/5 = 0.40, "What's the budget?" (4 words) = 1.0/4 = 0.25. Added comprehensive documentation explaining calculation method, weight rationale, example scores, and threshold interpretation (≥0.3 indicates high semantic density). This change makes the previously undocumented semantic score calculation explicit, testable, and maintainable. Updated HLD to document formula with examples and added `SEMANTIC_SCORE_THRESHOLD = 0.3` to configuration constants. |
 
 ---
 

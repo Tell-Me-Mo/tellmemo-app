@@ -47,16 +47,42 @@ class SemanticSignals:
     word_count: int = 0
 
     def get_score(self) -> float:
-        """Calculate semantic density score (0.0-1.0)."""
-        signals = [
-            self.has_action_verbs,
-            self.has_time_references,
-            self.has_questions,
-            self.has_decisions,
-            self.has_assignments,
-            self.has_risks
-        ]
-        return sum(signals) / len(signals)
+        """
+        Calculate semantic density score = weighted signal count / word count
+
+        Weights:
+        - Action + Time combo: 2.0 (highest urgency)
+        - Decisions + Assignments combo: 1.5
+        - Questions, Risks: 1.0 each
+        - Single action/time: 0.5 each
+
+        Returns:
+            float: Semantic density score (0.0+), typically 0.0-0.5 range
+                  Score ≥ 0.3 indicates high semantic density
+        """
+        if self.word_count < 5:
+            return 0.0
+
+        score = 0.0
+
+        # Critical combinations (highest weight)
+        if self.has_action_verbs and self.has_time_references:
+            score += 2.0  # "Complete the API by Friday"
+        elif self.has_decisions and self.has_assignments:
+            score += 1.5  # "We'll use GraphQL and John will implement it"
+        else:
+            # Individual signal weights
+            if self.has_questions:
+                score += 1.0  # "What's the budget?"
+            if self.has_risks:
+                score += 1.0  # "This might be blocked"
+            if self.has_action_verbs:
+                score += 0.5  # "Let's implement this"
+            if self.has_time_references:
+                score += 0.5  # "Due next week"
+
+        # Normalize by word count to get density
+        return score / self.word_count
 
 
 class AdaptiveInsightProcessor:
