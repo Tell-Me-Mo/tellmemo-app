@@ -1,38 +1,25 @@
 import 'dart:async';
-import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:file_picker/file_picker.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../core/utils/datetime_utils.dart';
 import '../../../../app/router/routes.dart';
 import '../../domain/entities/project.dart';
 import '../providers/projects_provider.dart';
-import '../../../../core/constants/layout_constants.dart';
 import '../../../meetings/presentation/providers/meetings_provider.dart';
 import '../../../meetings/domain/entities/content.dart';
 import '../../../summaries/presentation/providers/summary_provider.dart';
 import '../../../summaries/data/models/summary_model.dart';
 import '../../../summaries/presentation/widgets/summary_generation_dialog.dart';
 import '../../../summaries/data/services/content_availability_service.dart';
-import '../../../audio_recording/presentation/providers/recording_provider.dart';
-import '../../../audio_recording/domain/services/audio_recording_service.dart';
-import '../../../audio_recording/presentation/widgets/recording_button.dart';
-import '../../../content/presentation/providers/content_status_provider.dart';
-import '../../../../core/network/api_service.dart';
-import '../../../../shared/providers/api_client_provider.dart';
 import '../widgets/edit_project_dialog.dart';
 import '../../../activities/presentation/providers/activity_provider.dart';
 import '../../../activities/domain/entities/activity.dart';
-import '../../../meetings/presentation/providers/upload_provider.dart';
 import '../../../hierarchy/presentation/providers/hierarchy_providers.dart';
-import './content_processing_dialog.dart';
 import '../../../content/presentation/providers/processing_jobs_provider.dart';
 import '../../../../shared/widgets/upload_content_dialog.dart';
-import '../../../../shared/widgets/record_meeting_dialog.dart';
+import '../../../audio_recording/presentation/widgets/recording_panel.dart';
 import '../../../content/presentation/widgets/processing_skeleton_loader.dart';
 import '../../../content/presentation/providers/new_items_provider.dart';
 import '../../../jobs/presentation/providers/job_websocket_provider.dart';
@@ -3833,25 +3820,24 @@ class _SimplifiedProjectDetailsScreenState
   }
 
   void _showRecordingDialog(BuildContext context, Project project) {
-    showDialog(
+    showGeneralDialog(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: IntrinsicHeight(
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: RecordMeetingDialog(
-              project: project,
-              onRecordingComplete: () {
-                // Refresh data if needed
-                ref.invalidate(projectsListProvider);
-                ref.invalidate(meetingsListProvider);
-              },
-            ),
-          ),
-        ),
-      ),
+      barrierColor: Colors.transparent,
+      transitionDuration: Duration.zero,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return RecordingPanel(
+          project: project,
+          onClose: () {
+            Navigator.of(context).pop();
+          },
+          onRecordingComplete: () {
+            // Refresh data if needed
+            ref.invalidate(projectsListProvider);
+            ref.invalidate(meetingsListProvider);
+          },
+        );
+      },
     );
   }
 
