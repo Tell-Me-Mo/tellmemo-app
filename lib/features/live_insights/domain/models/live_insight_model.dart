@@ -59,6 +59,10 @@ class LiveInsightModel with _$LiveInsightModel {
     List<double>? similarityScores,
     String? contradictsContentId,
     String? contradictionExplanation,
+    // Evolution tracking fields (NEW - Oct 2025)
+    @JsonKey(name: 'evolution_type') String? evolutionType,  // escalated, expanded, refined
+    @JsonKey(name: 'evolution_note') String? evolutionNote,  // Human-readable evolution description
+    @JsonKey(name: 'original_priority') String? originalPriority,  // Priority before evolution
   }) = _LiveInsightModel;
 
   factory LiveInsightModel.fromJson(Map<String, dynamic> json) =>

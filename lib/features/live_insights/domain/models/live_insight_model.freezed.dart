@@ -47,7 +47,14 @@ mixin _$LiveInsightModel {
   List<String>? get relatedContentIds => throw _privateConstructorUsedError;
   List<double>? get similarityScores => throw _privateConstructorUsedError;
   String? get contradictsContentId => throw _privateConstructorUsedError;
-  String? get contradictionExplanation => throw _privateConstructorUsedError;
+  String? get contradictionExplanation =>
+      throw _privateConstructorUsedError; // Evolution tracking fields (NEW - Oct 2025)
+  @JsonKey(name: 'evolution_type')
+  String? get evolutionType => throw _privateConstructorUsedError; // escalated, expanded, refined
+  @JsonKey(name: 'evolution_note')
+  String? get evolutionNote => throw _privateConstructorUsedError; // Human-readable evolution description
+  @JsonKey(name: 'original_priority')
+  String? get originalPriority => throw _privateConstructorUsedError;
 
   /// Serializes this LiveInsightModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -84,6 +91,9 @@ abstract class $LiveInsightModelCopyWith<$Res> {
     List<double>? similarityScores,
     String? contradictsContentId,
     String? contradictionExplanation,
+    @JsonKey(name: 'evolution_type') String? evolutionType,
+    @JsonKey(name: 'evolution_note') String? evolutionNote,
+    @JsonKey(name: 'original_priority') String? originalPriority,
   });
 }
 
@@ -119,6 +129,9 @@ class _$LiveInsightModelCopyWithImpl<$Res, $Val extends LiveInsightModel>
     Object? similarityScores = freezed,
     Object? contradictsContentId = freezed,
     Object? contradictionExplanation = freezed,
+    Object? evolutionType = freezed,
+    Object? evolutionNote = freezed,
+    Object? originalPriority = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -190,6 +203,18 @@ class _$LiveInsightModelCopyWithImpl<$Res, $Val extends LiveInsightModel>
                 ? _value.contradictionExplanation
                 : contradictionExplanation // ignore: cast_nullable_to_non_nullable
                       as String?,
+            evolutionType: freezed == evolutionType
+                ? _value.evolutionType
+                : evolutionType // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            evolutionNote: freezed == evolutionNote
+                ? _value.evolutionNote
+                : evolutionNote // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            originalPriority: freezed == originalPriority
+                ? _value.originalPriority
+                : originalPriority // ignore: cast_nullable_to_non_nullable
+                      as String?,
           )
           as $Val,
     );
@@ -223,6 +248,9 @@ abstract class _$$LiveInsightModelImplCopyWith<$Res>
     List<double>? similarityScores,
     String? contradictsContentId,
     String? contradictionExplanation,
+    @JsonKey(name: 'evolution_type') String? evolutionType,
+    @JsonKey(name: 'evolution_note') String? evolutionNote,
+    @JsonKey(name: 'original_priority') String? originalPriority,
   });
 }
 
@@ -257,6 +285,9 @@ class __$$LiveInsightModelImplCopyWithImpl<$Res>
     Object? similarityScores = freezed,
     Object? contradictsContentId = freezed,
     Object? contradictionExplanation = freezed,
+    Object? evolutionType = freezed,
+    Object? evolutionNote = freezed,
+    Object? originalPriority = freezed,
   }) {
     return _then(
       _$LiveInsightModelImpl(
@@ -328,6 +359,18 @@ class __$$LiveInsightModelImplCopyWithImpl<$Res>
             ? _value.contradictionExplanation
             : contradictionExplanation // ignore: cast_nullable_to_non_nullable
                   as String?,
+        evolutionType: freezed == evolutionType
+            ? _value.evolutionType
+            : evolutionType // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        evolutionNote: freezed == evolutionNote
+            ? _value.evolutionNote
+            : evolutionNote // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        originalPriority: freezed == originalPriority
+            ? _value.originalPriority
+            : originalPriority // ignore: cast_nullable_to_non_nullable
+                  as String?,
       ),
     );
   }
@@ -354,6 +397,9 @@ class _$LiveInsightModelImpl implements _LiveInsightModel {
     final List<double>? similarityScores,
     this.contradictsContentId,
     this.contradictionExplanation,
+    @JsonKey(name: 'evolution_type') this.evolutionType,
+    @JsonKey(name: 'evolution_note') this.evolutionNote,
+    @JsonKey(name: 'original_priority') this.originalPriority,
   }) : _metadata = metadata,
        _relatedContentIds = relatedContentIds,
        _similarityScores = similarityScores;
@@ -434,10 +480,22 @@ class _$LiveInsightModelImpl implements _LiveInsightModel {
   final String? contradictsContentId;
   @override
   final String? contradictionExplanation;
+  // Evolution tracking fields (NEW - Oct 2025)
+  @override
+  @JsonKey(name: 'evolution_type')
+  final String? evolutionType;
+  // escalated, expanded, refined
+  @override
+  @JsonKey(name: 'evolution_note')
+  final String? evolutionNote;
+  // Human-readable evolution description
+  @override
+  @JsonKey(name: 'original_priority')
+  final String? originalPriority;
 
   @override
   String toString() {
-    return 'LiveInsightModel(id: $id, insightId: $insightId, type: $type, priority: $priority, content: $content, context: $context, createdAt: $createdAt, timestamp: $timestamp, assignedTo: $assignedTo, dueDate: $dueDate, confidenceScore: $confidenceScore, sourceChunkIndex: $sourceChunkIndex, metadata: $metadata, relatedContentIds: $relatedContentIds, similarityScores: $similarityScores, contradictsContentId: $contradictsContentId, contradictionExplanation: $contradictionExplanation)';
+    return 'LiveInsightModel(id: $id, insightId: $insightId, type: $type, priority: $priority, content: $content, context: $context, createdAt: $createdAt, timestamp: $timestamp, assignedTo: $assignedTo, dueDate: $dueDate, confidenceScore: $confidenceScore, sourceChunkIndex: $sourceChunkIndex, metadata: $metadata, relatedContentIds: $relatedContentIds, similarityScores: $similarityScores, contradictsContentId: $contradictsContentId, contradictionExplanation: $contradictionExplanation, evolutionType: $evolutionType, evolutionNote: $evolutionNote, originalPriority: $originalPriority)';
   }
 
   @override
@@ -479,12 +537,18 @@ class _$LiveInsightModelImpl implements _LiveInsightModel {
                   other.contradictionExplanation,
                   contradictionExplanation,
                 ) ||
-                other.contradictionExplanation == contradictionExplanation));
+                other.contradictionExplanation == contradictionExplanation) &&
+            (identical(other.evolutionType, evolutionType) ||
+                other.evolutionType == evolutionType) &&
+            (identical(other.evolutionNote, evolutionNote) ||
+                other.evolutionNote == evolutionNote) &&
+            (identical(other.originalPriority, originalPriority) ||
+                other.originalPriority == originalPriority));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     runtimeType,
     id,
     insightId,
@@ -503,7 +567,10 @@ class _$LiveInsightModelImpl implements _LiveInsightModel {
     const DeepCollectionEquality().hash(_similarityScores),
     contradictsContentId,
     contradictionExplanation,
-  );
+    evolutionType,
+    evolutionNote,
+    originalPriority,
+  ]);
 
   /// Create a copy of LiveInsightModel
   /// with the given fields replaced by the non-null parameter values.
@@ -541,6 +608,9 @@ abstract class _LiveInsightModel implements LiveInsightModel {
     final List<double>? similarityScores,
     final String? contradictsContentId,
     final String? contradictionExplanation,
+    @JsonKey(name: 'evolution_type') final String? evolutionType,
+    @JsonKey(name: 'evolution_note') final String? evolutionNote,
+    @JsonKey(name: 'original_priority') final String? originalPriority,
   }) = _$LiveInsightModelImpl;
 
   factory _LiveInsightModel.fromJson(Map<String, dynamic> json) =
@@ -588,7 +658,16 @@ abstract class _LiveInsightModel implements LiveInsightModel {
   @override
   String? get contradictsContentId;
   @override
-  String? get contradictionExplanation;
+  String? get contradictionExplanation; // Evolution tracking fields (NEW - Oct 2025)
+  @override
+  @JsonKey(name: 'evolution_type')
+  String? get evolutionType; // escalated, expanded, refined
+  @override
+  @JsonKey(name: 'evolution_note')
+  String? get evolutionNote; // Human-readable evolution description
+  @override
+  @JsonKey(name: 'original_priority')
+  String? get originalPriority;
 
   /// Create a copy of LiveInsightModel
   /// with the given fields replaced by the non-null parameter values.

@@ -850,7 +850,8 @@ async def handle_audio_chunk(
         message = {
             'type': 'insights_extracted',
             'chunk_index': chunk.index,
-            'insights': [insight.to_dict() for insight in result.insights],
+            'insights': [insight.to_dict() for insight in result.insights],  # New insights
+            'evolved_insights': result.evolved_insights,  # Insights that evolved from previous ones
             'total_insights': result.total_insights_count,
             'processing_time_ms': result.processing_time_ms,
             'timestamp': datetime.utcnow().isoformat(),

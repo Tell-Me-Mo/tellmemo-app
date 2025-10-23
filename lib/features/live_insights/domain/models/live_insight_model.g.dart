@@ -34,6 +34,9 @@ _$LiveInsightModelImpl _$$LiveInsightModelImplFromJson(
       .toList(),
   contradictsContentId: json['contradictsContentId'] as String?,
   contradictionExplanation: json['contradictionExplanation'] as String?,
+  evolutionType: json['evolution_type'] as String?,
+  evolutionNote: json['evolution_note'] as String?,
+  originalPriority: json['original_priority'] as String?,
 );
 
 Map<String, dynamic> _$$LiveInsightModelImplToJson(
@@ -56,6 +59,9 @@ Map<String, dynamic> _$$LiveInsightModelImplToJson(
   'similarityScores': instance.similarityScores,
   'contradictsContentId': instance.contradictsContentId,
   'contradictionExplanation': instance.contradictionExplanation,
+  'evolution_type': instance.evolutionType,
+  'evolution_note': instance.evolutionNote,
+  'original_priority': instance.originalPriority,
 };
 
 const _$LiveInsightTypeEnumMap = {
