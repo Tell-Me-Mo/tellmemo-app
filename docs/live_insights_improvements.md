@@ -139,7 +139,7 @@ async def process_with_selective_phases(chunk_text: str, insights: List[MeetingI
     return await run_phases(active_phases, chunk_text, insights)
 Expected Savings: ~40-60% reduction in LLM calls
 
-6. Redundant Vector Searches Across Phases
+6. DONE: Redundant Vector Searches Across Phases
 Problem: Phases 1, 3, and 5 all do Qdrant searches independently.
 
 Improvement:
@@ -181,7 +181,7 @@ class IntelligentPhasePipeline:
         return results
 Expected Savings: ~$0.08 per meeting (vector search costs)
 
-7. Deduplication Happens Too Late
+7. DONE: Deduplication Happens Too Late
 Problem: LLM extraction happens before deduplication check.
 
 Improvement:
