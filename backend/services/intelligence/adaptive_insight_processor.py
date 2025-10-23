@@ -9,6 +9,8 @@ Key Improvements:
 2. **Context Accumulation**: Build up conversation context across chunks
 3. **Smart Thresholds**: Process when semantic density reaches threshold
 4. **Cost Optimization**: Batch low-value chunks, process high-value immediately
+5. **Enhanced Gibberish Detection**: Multi-layer filtering (uniqueness, filler ratio,
+   repeated words, content words) to catch transcription errors
 
 Performance:
 - Before: Fixed 3-chunk batching = 66% cost reduction, 30s latency
@@ -146,6 +148,21 @@ class AdaptiveInsightProcessor:
         r'\b(worried|concerning|challenge|difficult)\b',
     ]
 
+    # Filler words for gibberish detection
+    FILLER_WORDS = {
+        'um', 'uh', 'like', 'so', 'yeah', 'okay', 'well', 'you', 'know',
+        'just', 'really', 'actually', 'basically', 'literally', 'i', 'mean'
+    }
+
+    # Common English stopwords for content detection
+    STOPWORDS = {
+        'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
+        'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'be', 'been',
+        'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would',
+        'should', 'could', 'may', 'might', 'must', 'can', 'this', 'that',
+        'these', 'those', 'it', 'its', 'he', 'she', 'they', 'we', 'you'
+    }
+
     def __init__(
         self,
         min_word_count: int = None,
@@ -211,6 +228,57 @@ class AdaptiveInsightProcessor:
 
         return signals
 
+    def is_gibberish(self, text: str) -> bool:
+        """
+        Enhanced gibberish detection with multi-layer filtering.
+
+        Detects:
+        1. Too short (< 3 words)
+        2. Low uniqueness ratio (< 50%) - repetitive text like "the the the"
+        3. High filler word ratio (> 60%) - mostly "um", "uh", "like", etc.
+        4. Consecutive repeated words (3+ in a row)
+        5. No content words (all stopwords/fillers)
+
+        Returns:
+            bool: True if text appears to be gibberish, False if legitimate
+        """
+        if not text or len(text.strip()) < 3:
+            return True
+
+        words = text.lower().split()
+
+        # Check 1: Too short
+        if len(words) < 3:
+            return True
+
+        # Check 2: Uniqueness ratio (existing check)
+        unique_ratio = len(set(words)) / len(words)
+        if unique_ratio < 0.5:
+            logger.debug(f"Gibberish (low uniqueness: {unique_ratio:.2f}): {text[:50]}...")
+            return True
+
+        # Check 3: Filler word ratio
+        filler_count = sum(1 for w in words if w in self.FILLER_WORDS)
+        filler_ratio = filler_count / len(words)
+        if filler_ratio > 0.6:
+            logger.debug(f"Gibberish (high filler ratio: {filler_ratio:.2f}): {text[:50]}...")
+            return True
+
+        # Check 4: Consecutive repeated words
+        for i in range(len(words) - 2):
+            if words[i] == words[i+1] == words[i+2]:
+                logger.debug(f"Gibberish (repeated word '{words[i]}'): {text[:50]}...")
+                return True
+
+        # Check 5: No content words (all stopwords/fillers)
+        all_stopwords = self.STOPWORDS | self.FILLER_WORDS
+        content_words = [w for w in words if w not in all_stopwords and len(w) > 2]
+        if len(content_words) < 2:
+            logger.debug(f"Gibberish (no content words): {text[:50]}...")
+            return True
+
+        return False
+
     def classify_priority(self, text: str, signals: SemanticSignals) -> ChunkPriority:
         """
         Classify chunk priority based on semantic signals.
@@ -219,10 +287,8 @@ class AdaptiveInsightProcessor:
         if signals.word_count < self.min_word_count:
             return ChunkPriority.SKIP
 
-        # Check for gibberish (repetitive text)
-        words = text.lower().split()
-        if len(words) > 3 and len(set(words)) / len(words) < 0.5:
-            logger.debug(f"Detected repetitive text: {text[:50]}...")
+        # Check for gibberish using enhanced detection
+        if self.is_gibberish(text):
             return ChunkPriority.SKIP
 
         # Immediate processing for high-value content

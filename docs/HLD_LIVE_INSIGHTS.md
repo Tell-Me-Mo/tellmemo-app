@@ -698,8 +698,12 @@ class MeetingTimeTrackerService:
   - `LOW`: Filler talk → Batch until threshold
   - `SKIP`: Too short or gibberish → Discard
 
-- **Gibberish Detection:** Filters repetitive text (e.g., "the the the the")
-  - Uniqueness ratio < 50% = skip
+- **Enhanced Gibberish Detection:** Multi-layer filtering to catch transcription errors
+  - Check 1: Too short (< 3 words)
+  - Check 2: Low uniqueness ratio (< 50%) - repetitive text like "the the the"
+  - Check 3: High filler word ratio (> 60%) - mostly "um", "uh", "like", etc.
+  - Check 4: Consecutive repeated words (3+ in a row)
+  - Check 5: No content words (all stopwords/fillers, < 2 content words)
 
 - **Smart Thresholds:**
   - Min 5 words (vs old 15 chars - more permissive)
@@ -712,6 +716,15 @@ class MeetingTimeTrackerService:
 class AdaptiveInsightProcessor:
     def analyze_chunk(self, text: str) -> SemanticSignals:
         """Fast pattern matching - detects 6 signal types"""
+
+    def is_gibberish(self, text: str) -> bool:
+        """Enhanced gibberish detection with 5 checks:
+        1. Too short (< 3 words)
+        2. Low uniqueness ratio (< 50%)
+        3. High filler word ratio (> 60%)
+        4. Consecutive repeated words (3+ in a row)
+        5. No content words (< 2 content words)
+        """
 
     def classify_priority(self, text: str, signals: SemanticSignals) -> ChunkPriority:
         """5-tier classification based on semantic density"""
@@ -772,7 +785,8 @@ SEMANTIC_SCORE_THRESHOLD = 0.3  # High-density content threshold
 | **Cost reduction** | 66% | ~50% (more intelligent) |
 | **Missed insights** | High (30s blind spots) | Low (instant detection) |
 | **Short statements** | Rejected (< 15 chars) | Processed (5+ words) |
-| **Gibberish handling** | No filter | Auto-detected & skipped |
+| **Gibberish handling** | No filter | Enhanced 5-layer detection |
+| **Transcription errors** | Not filtered | Filler ratio + content check |
 
 **Integration:**
 - Added to `routers/websocket_live_insights.py` with `USE_ADAPTIVE_PROCESSING` flag
@@ -2248,6 +2262,9 @@ curl http://localhost:8000/api/v1/health
 | **Follow-up Suggestion** | Recommending related topics or open items from past meetings |
 | **Repetition Detection** | Identifying circular discussions without progress |
 | **Time Tracking** | Monitoring meeting and topic-level duration |
+| **Gibberish Detection** | Multi-layer filtering to identify and skip unintelligible text (5 checks) |
+| **Filler Words** | Common speech disfluencies like "um", "uh", "like", "so" (16 words tracked) |
+| **Content Words** | Meaningful words excluding stopwords and fillers (min 2 required) |
 
 ### B. References
 
@@ -2283,6 +2300,7 @@ curl http://localhost:8000/api/v1/health
 | 4.1 | 2025-10-22 | Claude | **Adaptive Insight Processing**: Replaced blind 3-chunk batching with intelligent semantic trigger-based processing. Added AdaptiveInsightProcessor service with pattern-based detection (action verbs, time refs, questions, decisions, assignments, risks). Implements 5-tier priority classification (IMMEDIATE/HIGH/MEDIUM/LOW/SKIP) with automatic gibberish detection (repetitive text filter). Processing triggers: IMMEDIATE for action+time or decision+assignment combos, HIGH for any actionable content with 2+ chunks context, forced processing at 5-chunk limit (50s) or 30+ word context accumulation. Performance improvements: Reduced latency from 30s (blind batching) to <10s for actionable content while maintaining ~50% cost reduction (vs ~66% with blind batching). Eliminates 30-second blind spots, processes short but actionable statements (5+ words vs previous 15 chars), and provides real-time semantic analysis logging. Configuration: min_word_count=5, semantic_threshold=0.3, context_window=3, max_batch=5. Added USE_ADAPTIVE_PROCESSING flag to routers/websocket_live_insights.py with backward compatibility to legacy BATCH_SIZE. Updated LiveMeetingSession with chunks_since_last_process and accumulated_context tracking. |
 | 4.2 | 2025-10-23 | Claude | **Configuration Refactoring**: Fixed context window configuration inconsistency by introducing explicit `PRIORITY_CONTEXT_MAP` class constant that maps each priority level to required context chunks (IMMEDIATE:0, HIGH:2, MEDIUM:3, LOW:4). Removed scattered configuration parameters (`semantic_threshold`, `context_window_size`) and consolidated into clear class constants (`MAX_BATCH_SIZE=5`, `MIN_WORD_COUNT=5`, `MIN_ACCUMULATED_WORDS=30`). Refactored `should_process_now()` to use priority-based lookup instead of hardcoded conditions, making logic more maintainable and extensible. Simplified `__init__()` to accept only override parameters with sensible defaults. Updated decision flow examples and configuration documentation to reflect new architecture. This eliminates ambiguity between "wait for 2 chunks" (HIGH), "accumulate 3 chunks" (MEDIUM), and "5-chunk limit" (MAX_BATCH_SIZE) by making the mapping explicit and centralized. |
 | 4.3 | 2025-10-23 | Claude | **Semantic Score Calculation**: Implemented explicit weighted semantic density scoring in `SemanticSignals.get_score()` method. Replaced simple boolean averaging with proper weighted formula: Action+Time combo (2.0), Decisions+Assignments combo (1.5), Questions/Risks (1.0 each), Single action/time (0.5 each), normalized by word count. Examples: "Complete API by Friday" (5 words) = 2.0/5 = 0.40, "What's the budget?" (4 words) = 1.0/4 = 0.25. Added comprehensive documentation explaining calculation method, weight rationale, example scores, and threshold interpretation (≥0.3 indicates high semantic density). This change makes the previously undocumented semantic score calculation explicit, testable, and maintainable. Updated HLD to document formula with examples and added `SEMANTIC_SCORE_THRESHOLD = 0.3` to configuration constants. |
+| 4.4 | 2025-10-23 | Claude | **Enhanced Gibberish Detection**: Replaced simplistic uniqueness ratio check with sophisticated 5-layer filtering system in `AdaptiveInsightProcessor.is_gibberish()` method. New checks: (1) Too short (< 3 words), (2) Low uniqueness ratio (< 50%), (3) High filler word ratio (> 60%) detecting "um, uh, like, so", (4) Consecutive repeated words (3+ in a row) catching "the the the", (5) No content words (< 2 content words after removing stopwords/fillers). Added `FILLER_WORDS` set (16 words) and `STOPWORDS` set (46 words) as class constants. Enhanced logging with specific reason for each gibberish type detected. This improvement catches common transcription errors that the previous single-check method missed, reducing false positives and improving insight quality. Updated HLD documentation with detailed description of all 5 checks and performance comparison table. |
 
 ---
 
