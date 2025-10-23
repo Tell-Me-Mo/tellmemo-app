@@ -1276,6 +1276,186 @@ Assuming 10% of chunks are duplicates in typical meetings:
 
 **Status:** ✅ Production Ready (October 23, 2025)
 
+#### 17. ProactiveAssistanceFeedbackService ✅ NEW Oct 2025
+
+**Purpose:** Collect and analyze user feedback to continuously improve AI assistance quality.
+
+**Problem Solved:**
+- **Before:** No way for users to indicate if AI suggestions were helpful → No data to improve accuracy
+- **After:** Users can thumbs up/down each suggestion → Analytics drive threshold adjustments and prompt improvements
+
+**Features:**
+- **Feedback Collection** - Store user ratings (helpful/not helpful) with metadata
+- **Acceptance Rate Tracking** - Calculate % of helpful feedback per assistance type
+- **Confidence Correlation Analysis** - Identify if high confidence → high acceptance
+- **Threshold Recommendations** - Suggest confidence threshold adjustments based on data
+- **Problematic Pattern Detection** - Identify recurring issues from negative feedback
+
+**Key Methods:**
+```python
+class ProactiveAssistanceFeedbackService:
+    async def record_feedback(
+        db: AsyncSession,
+        session_id: str,
+        insight_id: str,
+        project_id: str,
+        organization_id: str,
+        user_id: str,
+        assistance_type: str,
+        is_helpful: bool,
+        confidence_score: Optional[float] = None,
+        feedback_text: Optional[str] = None,
+        feedback_category: Optional[str] = None,
+        metadata: Optional[Dict] = None
+    ) -> ProactiveAssistanceFeedback:
+        """Record user feedback for a proactive assistance suggestion"""
+
+    async def get_feedback_metrics(
+        db: AsyncSession,
+        assistance_type: Optional[str] = None,
+        project_id: Optional[str] = None,
+        organization_id: Optional[str] = None,
+        days: int = 30
+    ) -> FeedbackMetrics:
+        """Get aggregate feedback metrics"""
+
+    async def get_metrics_by_type(
+        db: AsyncSession,
+        project_id: Optional[str] = None,
+        organization_id: Optional[str] = None,
+        days: int = 30
+    ) -> List[AssistanceTypeMetrics]:
+        """Get feedback metrics broken down by assistance type"""
+
+    async def get_problematic_patterns(
+        db: AsyncSession,
+        organization_id: Optional[str] = None,
+        days: int = 7
+    ) -> Dict[str, List[str]]:
+        """Identify problematic patterns from negative feedback"""
+```
+
+**Database Schema:**
+```sql
+CREATE TABLE proactive_assistance_feedback (
+    id UUID PRIMARY KEY,
+    session_id VARCHAR(255) NOT NULL,
+    insight_id VARCHAR(255) NOT NULL,
+    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    assistance_type VARCHAR(50) NOT NULL,  -- auto_answer, clarification_needed, etc.
+    is_helpful BOOLEAN NOT NULL,  -- True = thumbs up, False = thumbs down
+    confidence_score FLOAT,  -- Original confidence for correlation analysis
+    feedback_text TEXT,  -- Optional detailed feedback
+    feedback_category VARCHAR(50),  -- wrong_answer, not_relevant, too_verbose, etc.
+    feedback_metadata JSONB,  -- Additional context
+    created_at TIMESTAMP NOT NULL,
+    INDEX (session_id),
+    INDEX (insight_id),
+    INDEX (project_id),
+    INDEX (organization_id),
+    INDEX (user_id),
+    INDEX (assistance_type),
+    INDEX (is_helpful),
+    INDEX (created_at),
+    INDEX (assistance_type, is_helpful),  -- For acceptance rate queries
+    INDEX (project_id, assistance_type),  -- For project-level analysis
+    INDEX (organization_id, created_at)  -- For temporal trends
+);
+```
+
+**Analytics Metrics:**
+
+```python
+@dataclass
+class FeedbackMetrics:
+    total_feedback: int
+    helpful_count: int
+    not_helpful_count: int
+    acceptance_rate: float  # helpful_count / total_feedback
+    avg_confidence_helpful: float  # Average confidence of helpful items
+    avg_confidence_not_helpful: float  # Average confidence of not helpful items
+    confidence_correlation: float  # Positive = higher confidence → more helpful
+    sample_size_sufficient: bool  # True if >= 30 samples
+
+@dataclass
+class AssistanceTypeMetrics:
+    assistance_type: str
+    metrics: FeedbackMetrics
+    recommended_confidence_threshold: Optional[float]  # Based on analysis
+    needs_improvement: bool  # True if acceptance rate < 70%
+```
+
+**Threshold Recommendation Logic:**
+
+If acceptance rate < 70% (target) and sample size >= 30:
+- Calculate average confidence for helpful items
+- If avg_confidence_helpful > current_threshold (e.g., 0.75):
+  - **Recommend raising threshold** to min(0.95, avg_confidence_helpful + 0.05)
+  - Example: If helpful items avg 0.82 confidence, recommend 0.87 threshold
+
+**Use Cases:**
+
+1. **Real-time Feedback Collection:**
+   - User clicks thumbs up/down on proactive assistance card
+   - Frontend sends feedback via WebSocket
+   - Backend stores feedback with metadata
+   - Confirmation sent back to user
+
+2. **Weekly Analysis:**
+   - Run `get_metrics_by_type()` for past 7 days
+   - Identify assistance types with acceptance < 70%
+   - Review problematic patterns
+   - Adjust prompts or thresholds
+
+3. **A/B Testing:**
+   - Test different confidence thresholds
+   - Compare acceptance rates
+   - Roll out winning threshold to all users
+
+**Integration:**
+
+- **WebSocket:** New `feedback` action handler
+- **Frontend:** Feedback buttons in `ProactiveAssistanceCard`
+- **Backend:** `ProactiveAssistanceFeedbackService` for analytics
+- **Database:** `proactive_assistance_feedback` table
+
+**Performance:**
+
+- **Storage:** ~200 bytes per feedback record
+- **Query speed:** <50ms for aggregate metrics (with indexes)
+- **Cost:** $0 (pure database operations)
+
+**Example Workflow:**
+
+```
+1. User sees auto-answered question (confidence: 0.89)
+2. User clicks thumbs down button
+3. Frontend sends WebSocket message:
+   {
+     "action": "feedback",
+     "insight_id": "session_0_2",
+     "helpful": false,
+     "assistance_type": "auto_answer",
+     "confidence_score": 0.89
+   }
+4. Backend stores feedback in database
+5. Weekly analysis shows auto_answer acceptance rate: 65%
+6. System recommends raising threshold from 0.85 to 0.90
+7. Update deployed, acceptance rate improves to 78%
+```
+
+**Benefits:**
+
+1. **Continuous Improvement:** Data-driven threshold adjustments
+2. **User Empowerment:** Users can correct wrong suggestions
+3. **Quality Monitoring:** Track acceptance rates over time
+4. **Cost Optimization:** Reduce false positives by raising thresholds
+5. **Pattern Detection:** Identify systematic issues (e.g., "API questions always wrong")
+
+**Status:** ✅ Production Ready (October 23, 2025)
+
 ### Frontend Components
 
 #### 1. AudioStreamingService
@@ -1876,6 +2056,29 @@ else:
 }
 ```
 
+#### 7. Send Feedback (NEW - Oct 2025)
+```json
+{
+  "action": "feedback",
+  "insight_id": "session_0_2",
+  "helpful": true,
+  "assistance_type": "auto_answer",
+  "confidence_score": 0.89,
+  "feedback_text": "Answer was accurate and helpful",
+  "feedback_category": "helpful"
+}
+```
+
+**Required fields:**
+- `insight_id` (string): Unique ID of the proactive assistance
+- `helpful` (boolean): True = thumbs up, False = thumbs down
+- `assistance_type` (string): Type of assistance (auto_answer, clarification_needed, etc.)
+
+**Optional fields:**
+- `confidence_score` (float): Original confidence score for correlation analysis
+- `feedback_text` (string): Detailed feedback from user
+- `feedback_category` (string): Category (wrong_answer, not_relevant, too_verbose, etc.)
+
 ### Server → Client Messages
 
 #### 1. Session Initialized
@@ -2045,6 +2248,29 @@ else:
   "timestamp": "2025-10-19T12:00:30Z"
 }
 ```
+
+#### 8. Feedback Recorded (NEW - Oct 2025)
+```json
+{
+  "type": "feedback_recorded",
+  "feedback_id": "550e8400-e29b-41d4-a716-446655440000",
+  "insight_id": "session_0_2",
+  "timestamp": "2025-10-23T12:00:30Z"
+}
+```
+
+Sent after successfully recording user feedback to database.
+
+#### 9. Feedback Error (NEW - Oct 2025)
+```json
+{
+  "type": "feedback_error",
+  "message": "Missing required feedback fields (insight_id, helpful, assistance_type)",
+  "timestamp": "2025-10-23T12:00:30Z"
+}
+```
+
+Sent when feedback recording fails (validation errors, database errors, etc.).
 
 ---
 
