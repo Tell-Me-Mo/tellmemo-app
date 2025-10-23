@@ -45,6 +45,7 @@ from services.intelligence.action_item_quality_service import ActionItemQualityS
 from services.intelligence.follow_up_suggestions_service import FollowUpSuggestionsService
 from services.intelligence.repetition_detector_service import RepetitionDetectorService
 from services.intelligence.meeting_time_tracker_service import MeetingTimeTrackerService
+from services.intelligence.shared_search_cache import shared_search_cache
 
 logger = get_logger(__name__)
 
@@ -183,6 +184,9 @@ class RealtimeMeetingInsightsService:
         self.last_semantic_search: Dict[str, float] = {}
         self.semantic_search_interval = 30.0  # seconds
 
+        # Shared Search Cache for Active Intelligence (reduces redundant vector searches)
+        self.search_cache = shared_search_cache
+
         # Active Intelligence services
         # Phase 1: Question Auto-Answering
         self.question_detector = QuestionDetector(llm_client=self.llm_client)
@@ -190,6 +194,7 @@ class RealtimeMeetingInsightsService:
             vector_store=multi_tenant_vector_store,
             llm_client=self.llm_client,
             embedding_service=embedding_service,
+            search_cache=self.search_cache,
             min_confidence_threshold=0.7
         )
         # Phase 2: Proactive Clarification
@@ -198,7 +203,8 @@ class RealtimeMeetingInsightsService:
         self.conflict_detection_service = ConflictDetectionService(
             vector_store=multi_tenant_vector_store,
             llm_client=self.llm_client,
-            embedding_service=embedding_service
+            embedding_service=embedding_service,
+            search_cache=self.search_cache
         )
         # Phase 4: Action Item Quality Enhancement
         self.quality_service = ActionItemQualityService(llm_client=self.llm_client)
@@ -206,7 +212,8 @@ class RealtimeMeetingInsightsService:
         self.follow_up_service = FollowUpSuggestionsService(
             vector_store=multi_tenant_vector_store,
             llm_client=self.llm_client,
-            embedding_service=embedding_service
+            embedding_service=embedding_service,
+            search_cache=self.search_cache
         )
         # Phase 6: Meeting Efficiency Features
         self.repetition_detector = RepetitionDetectorService(
@@ -641,6 +648,9 @@ class RealtimeMeetingInsightsService:
         self.repetition_detector.clear_session(session_id)
         self.time_tracker.clear_session(session_id)
 
+        # Clean up shared search cache for this session
+        self.search_cache.clear_session(session_id)
+
         logger.info(f"Finalized session {sanitize_for_log(session_id)}: {len(insights)} total insights")
 
         return {
@@ -799,13 +809,14 @@ class RealtimeMeetingInsightsService:
                     )
 
                     if detected_question:
-                        # Attempt to auto-answer
+                        # Attempt to auto-answer (with shared cache support)
                         answer = await self.qa_service.answer_question(
                             question=detected_question.text,
                             question_type=detected_question.type,
                             project_id=project_id,
                             organization_id=organization_id,
-                            context=context
+                            context=context,
+                            session_id=session_id
                         )
 
                         if answer:
@@ -870,7 +881,8 @@ class RealtimeMeetingInsightsService:
                         statement_type='decision',
                         project_id=project_id,
                         organization_id=organization_id,
-                        context=context
+                        context=context,
+                        session_id=session_id
                     )
 
                     if conflict:
@@ -941,7 +953,8 @@ class RealtimeMeetingInsightsService:
                         insight_type=insight.type.value,
                         project_id=project_id,
                         organization_id=organization_id,
-                        context=context
+                        context=context,
+                        session_id=session_id
                     )
 
                     for suggestion in follow_up_suggestions:

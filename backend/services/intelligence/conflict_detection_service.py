@@ -45,11 +45,13 @@ class ConflictDetectionService:
         self,
         vector_store,
         llm_client,
-        embedding_service
+        embedding_service,
+        search_cache=None
     ):
         self.vector_store = vector_store
         self.llm_client = llm_client
         self.embedding_service = embedding_service
+        self.search_cache = search_cache  # Shared search cache for optimization
 
     async def detect_conflicts(
         self,
@@ -57,7 +59,8 @@ class ConflictDetectionService:
         statement_type: str,
         project_id: str,
         organization_id: str,
-        context: str = ""
+        context: str = "",
+        session_id: Optional[str] = None
     ) -> Optional[ConflictAlert]:
         """
         Detect if a statement conflicts with past decisions.
@@ -69,6 +72,7 @@ class ConflictDetectionService:
             project_id: Project UUID
             organization_id: Organization UUID
             context: Recent meeting context
+            session_id: Optional session ID for cache optimization
 
         Returns:
             ConflictAlert if conflict detected, None otherwise
@@ -78,7 +82,8 @@ class ConflictDetectionService:
         similar_decisions = await self._search_similar_decisions(
             statement=statement,
             project_id=project_id,
-            organization_id=organization_id
+            organization_id=organization_id,
+            session_id=session_id
         )
 
         if not similar_decisions:
@@ -137,42 +142,68 @@ class ConflictDetectionService:
         statement: str,
         project_id: str,
         organization_id: str,
+        session_id: Optional[str] = None,
         top_k: int = 5
     ) -> List[dict]:
         """
         Search vector database for semantically similar past decisions.
 
+        Uses shared search cache if available and session_id is provided.
+
         Returns:
             List of similar decision documents with scores
         """
 
-        # Generate embedding for current statement
-        statement_embedding = await self.embedding_service.generate_embedding(statement)
+        try:
+            # Use shared cache if available
+            if self.search_cache and session_id:
+                logger.debug(f"[Phase 3] Attempting to use shared search cache for session {session_id[:8]}...")
+                search_results = await self.search_cache.get_or_search(
+                    session_id=session_id,
+                    query=statement,
+                    project_id=project_id,
+                    organization_id=organization_id,
+                    embedding_service=self.embedding_service,
+                    vector_store=self.vector_store,
+                    search_params={
+                        'limit': top_k,
+                        'filter_dict': {
+                            "project_id": project_id
+                        },
+                        'score_threshold': self.SIMILARITY_THRESHOLD
+                    }
+                )
+            else:
+                # Fallback to direct search if no cache
+                logger.debug("[Phase 3] No cache available, performing direct search")
+                statement_embedding = await self.embedding_service.generate_embedding(statement)
+                search_results = await self.vector_store.search_vectors(
+                    organization_id=organization_id,
+                    query_vector=statement_embedding,
+                    collection_type="content",
+                    limit=top_k,
+                    filter_dict={
+                        "project_id": project_id
+                    },
+                    score_threshold=self.SIMILARITY_THRESHOLD
+                )
 
-        # Search Qdrant using the correct API
-        search_results = await self.vector_store.search_vectors(
-            organization_id=organization_id,
-            query_vector=statement_embedding,
-            collection_type="content",
-            limit=top_k,
-            filter_dict={
-                "project_id": project_id
-            },
-            score_threshold=self.SIMILARITY_THRESHOLD
-        )
+            # Filter by similarity threshold
+            relevant_results = [
+                r for r in search_results
+                if r['score'] >= self.SIMILARITY_THRESHOLD
+            ]
 
-        # Filter by similarity threshold
-        relevant_results = [
-            r for r in search_results
-            if r['score'] >= self.SIMILARITY_THRESHOLD
-        ]
+            logger.info(
+                f"Found {len(relevant_results)} similar decisions "
+                f"(threshold: {self.SIMILARITY_THRESHOLD})"
+            )
 
-        logger.info(
-            f"Found {len(relevant_results)} similar decisions "
-            f"(threshold: {self.SIMILARITY_THRESHOLD})"
-        )
+            return relevant_results
 
-        return relevant_results
+        except Exception as e:
+            logger.error(f"Error searching similar decisions: {e}")
+            return []
 
     async def _analyze_conflict(
         self,

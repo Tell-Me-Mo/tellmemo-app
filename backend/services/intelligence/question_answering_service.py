@@ -46,11 +46,13 @@ class QuestionAnsweringService:
         vector_store,
         llm_client,
         embedding_service,
+        search_cache=None,
         min_confidence_threshold: float = 0.7
     ):
         self.vector_store = vector_store
         self.llm_client = llm_client
         self.embedding_service = embedding_service
+        self.search_cache = search_cache  # Shared search cache for optimization
         self.min_confidence_threshold = min_confidence_threshold
 
     async def answer_question(
@@ -59,7 +61,8 @@ class QuestionAnsweringService:
         question_type: str,
         project_id: str,
         organization_id: str,
-        context: str = ""
+        context: str = "",
+        session_id: Optional[str] = None
     ) -> Optional[Answer]:
         """
         Attempt to answer a question using RAG.
@@ -73,6 +76,7 @@ class QuestionAnsweringService:
             question=question,
             project_id=project_id,
             organization_id=organization_id,
+            session_id=session_id,
             top_k=10
         )
 
@@ -113,26 +117,50 @@ class QuestionAnsweringService:
         question: str,
         project_id: str,
         organization_id: str,
+        session_id: Optional[str] = None,
         top_k: int = 10
     ) -> List[dict]:
-        """Search vector database for relevant content"""
+        """
+        Search vector database for relevant content.
+
+        Uses shared search cache if available and session_id is provided.
+        """
 
         try:
-            # Generate embedding for question
-            question_embedding = await self.embedding_service.generate_embedding(question)
-
-            # Search Qdrant using the correct API
-            search_results = await self.vector_store.search_vectors(
-                organization_id=organization_id,
-                query_vector=question_embedding,
-                collection_type="content",
-                limit=top_k,
-                filter_dict={
-                    "project_id": project_id,
-                    "content_type": "transcript"  # Single value, not array
-                },
-                score_threshold=0.5  # Minimum relevance threshold
-            )
+            # Use shared cache if available
+            if self.search_cache and session_id:
+                logger.debug(f"[Phase 1] Attempting to use shared search cache for session {session_id[:8]}...")
+                search_results = await self.search_cache.get_or_search(
+                    session_id=session_id,
+                    query=question,
+                    project_id=project_id,
+                    organization_id=organization_id,
+                    embedding_service=self.embedding_service,
+                    vector_store=self.vector_store,
+                    search_params={
+                        'limit': top_k,
+                        'filter_dict': {
+                            "project_id": project_id,
+                            "content_type": "transcript"
+                        },
+                        'score_threshold': 0.5
+                    }
+                )
+            else:
+                # Fallback to direct search if no cache
+                logger.debug("[Phase 1] No cache available, performing direct search")
+                question_embedding = await self.embedding_service.generate_embedding(question)
+                search_results = await self.vector_store.search_vectors(
+                    organization_id=organization_id,
+                    query_vector=question_embedding,
+                    collection_type="content",
+                    limit=top_k,
+                    filter_dict={
+                        "project_id": project_id,
+                        "content_type": "transcript"
+                    },
+                    score_threshold=0.5
+                )
 
             return search_results
         except Exception as e:
