@@ -268,6 +268,8 @@ class AudioRecordingService {
 
     // CRITICAL FOR WEB: Close the recorder session to fully release microphone
     // On web, stopRecorder() alone doesn't release the MediaRecorder stream
+    print('[AudioRecordingService] Checking recorder session state: _isRecorderOpen=$_isRecorderOpen');
+
     if (_isRecorderOpen) {
       try {
         print('[AudioRecordingService] Closing recorder session to release microphone...');
@@ -277,6 +279,8 @@ class AudioRecordingService {
       } catch (e) {
         print('[AudioRecordingService] Error closing recorder session: $e');
       }
+    } else {
+      print('[AudioRecordingService] Recorder session already closed or was never opened');
     }
 
     print('[AudioRecordingService] Recording cancelled and file discarded');
