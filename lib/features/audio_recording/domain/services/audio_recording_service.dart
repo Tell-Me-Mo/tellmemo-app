@@ -27,7 +27,7 @@ class AudioRecordingService {
   RecordingState _currentState = RecordingState.idle;
   bool _isRecorderOpen = false;
   Timer? _durationTimer;
-  Timer? _amplitudeTimer;
+  StreamSubscription<RecordingDisposition>? _recorderSubscription;
   DateTime? _recordingStartTime;
   Duration _pausedDuration = Duration.zero;
   DateTime? _pauseStartTime;
@@ -49,6 +49,11 @@ class AudioRecordingService {
     try {
       print('[AudioRecordingService] Opening recorder session...');
       await _recorder.openRecorder();
+
+      // Set subscription duration for real-time updates (decibels and duration)
+      // Update every 100ms for smooth amplitude visualization
+      await _recorder.setSubscriptionDuration(const Duration(milliseconds: 100));
+
       _isRecorderOpen = true;
       print('[AudioRecordingService] Recorder session opened');
       return true;
@@ -139,7 +144,7 @@ class AudioRecordingService {
 
       print('[AudioRecordingService] Started recording to: $_currentRecordingPath');
 
-      // Start duration and amplitude tracking
+      // Start duration tracking and amplitude monitoring
       _recordingStartTime = DateTime.now();
       _pausedDuration = Duration.zero;
       _hasShownWarning = false; // Reset warning flag for new recording
@@ -165,7 +170,7 @@ class AudioRecordingService {
     await _recorder.pauseRecorder();
     _pauseStartTime = DateTime.now();
     _durationTimer?.cancel();
-    _amplitudeTimer?.cancel();
+    _recorderSubscription?.cancel();
     _updateState(RecordingState.paused);
   }
 
@@ -190,7 +195,7 @@ class AudioRecordingService {
   Future<String?> stopRecording() async {
     try {
       _durationTimer?.cancel();
-      _amplitudeTimer?.cancel();
+      _recorderSubscription?.cancel();
 
       if (!_recorder.isRecording && !_recorder.isPaused) {
         return null;
@@ -241,7 +246,7 @@ class AudioRecordingService {
     print('[AudioRecordingService] Cancelling recording...');
 
     _durationTimer?.cancel();
-    _amplitudeTimer?.cancel();
+    _recorderSubscription?.cancel();
 
     // Check if recorder is actually recording or paused
     final isRecording = _recorder.isRecording;
@@ -269,21 +274,36 @@ class AudioRecordingService {
     _currentRecordingPath = null;
   }
   
-  // Start amplitude monitoring for visualization
+  // Start amplitude monitoring for visualization using onProgress stream
   void _startAmplitudeMonitoring() {
-    _amplitudeTimer?.cancel();
-    _amplitudeTimer = Timer.periodic(const Duration(milliseconds: 100), (_) async {
-      if (_currentState == RecordingState.recording && _recorder.isRecording) {
-        try {
-          // flutter_sound doesn't have a direct getAmplitude method like record package
-          // We'll emit a default value for now, or you can implement a custom solution
-          // using audio level monitoring with a different approach
-          _amplitudeController.add(0.5); // Placeholder value
-        } catch (e) {
-          // Silently handle errors to avoid spam
-        }
+    _recorderSubscription?.cancel();
+
+    // Subscribe to recorder's onProgress stream for real-time decibel updates
+    _recorderSubscription = _recorder.onProgress?.listen((event) {
+      if (_currentState == RecordingState.recording && event.decibels != null) {
+        // Convert decibels to normalized amplitude (0.0 to 1.0)
+        // Decibels typically range from -160 (silence) to 0 (max)
+        // We'll map this to 0.0-1.0 for visualization
+        final double normalizedAmplitude = _normalizeDecibels(event.decibels!);
+        _amplitudeController.add(normalizedAmplitude);
       }
+    }, onError: (error) {
+      print('[AudioRecordingService] onProgress error: $error');
     });
+  }
+
+  // Convert decibel value to normalized amplitude (0.0 to 1.0)
+  double _normalizeDecibels(double decibels) {
+    // Decibels range: -160 (silence) to 0 (maximum)
+    // Map to 0.0 (silence) to 1.0 (maximum)
+    const double minDb = -60.0; // Practical minimum for speech
+    const double maxDb = 0.0;   // Maximum (clipping)
+
+    // Clamp and normalize
+    final clampedDb = decibels.clamp(minDb, maxDb);
+    final normalized = (clampedDb - minDb) / (maxDb - minDb);
+
+    return normalized.clamp(0.0, 1.0);
   }
   
   // Get recording duration
@@ -336,7 +356,7 @@ class AudioRecordingService {
   // Dispose resources
   Future<void> dispose() async {
     _durationTimer?.cancel();
-    _amplitudeTimer?.cancel();
+    _recorderSubscription?.cancel();
 
     // Close recorder if open
     if (_isRecorderOpen) {
