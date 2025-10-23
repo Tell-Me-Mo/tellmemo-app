@@ -72,7 +72,6 @@ dependencies:
   firebase_analytics: ^12.0.2
   
   # Audio Recording & Streaming
-  record: ^6.1.2
   flutter_sound: ^9.16.3
   web_socket_channel: ^3.0.3
   
@@ -90,8 +89,6 @@ dependencies:
   csv: ^6.0.0
   desktop_drop: ^0.6.1
 
-dependency_overrides:
-  record_ios: 1.1.4
 
 dev_dependencies:
   sentry_dart_plugin: ^3.1.1
