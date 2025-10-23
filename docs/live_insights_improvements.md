@@ -50,7 +50,7 @@ def calculate_semantic_score(text: str, signals: SemanticSignals) -> float:
         ])
     
     return score / words  # Normalize by length
-3. Gibberish Detection Too Simplistic
+3. DONE: Gibberish Detection Too Simplistic
 Problem: Only checks "uniqueness ratio < 50%". Misses common transcription errors.
 
 Improvement:
@@ -85,7 +85,7 @@ def is_gibberish(text: str) -> bool:
         return True
     
     return False
-4. Accumulated Context Quality Not Checked
+4. DONE: Accumulated Context Quality Not Checked
 Problem: Forces processing at 30+ words, even if most are gibberish.
 
 Improvement:
@@ -110,7 +110,7 @@ def should_force_process(accumulated_chunks: List[str]) -> Tuple[bool, str]:
     
     return False, "continue accumulating"
 ⚡ PERFORMANCE & COST OPTIMIZATIONS
-5. All 6 Active Intelligence Phases Run on Every Chunk
+5. DONE - All 6 Active Intelligence Phases Run on Every Chunk
 Problem: No selective execution. Wastes LLM calls on chunks that don't need certain phases.
 
 Improvement:
