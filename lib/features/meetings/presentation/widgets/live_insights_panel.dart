@@ -151,7 +151,11 @@ class _LiveInsightsPanelState extends ConsumerState<LiveInsightsPanel>
         (assistance) {
           if (mounted) {
             setState(() {
-              _proactiveAssistance.addAll(assistance);
+              // Filter out hidden items based on display mode
+              final visibleAssistance = assistance
+                  .where((item) => item.displayMode != DisplayMode.hidden)
+                  .toList();
+              _proactiveAssistance.addAll(visibleAssistance);
             });
           }
         },

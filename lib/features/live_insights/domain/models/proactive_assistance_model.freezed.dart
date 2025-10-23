@@ -2994,7 +2994,7 @@ class __$$ProactiveAssistanceModelImplCopyWithImpl<$Res>
 
 /// @nodoc
 
-class _$ProactiveAssistanceModelImpl implements _ProactiveAssistanceModel {
+class _$ProactiveAssistanceModelImpl extends _ProactiveAssistanceModel {
   const _$ProactiveAssistanceModelImpl({
     required this.type,
     this.autoAnswer,
@@ -3003,7 +3003,7 @@ class _$ProactiveAssistanceModelImpl implements _ProactiveAssistanceModel {
     this.actionItemQuality,
     this.followUpSuggestion,
     this.repetitionDetection,
-  });
+  }) : super._();
 
   @override
   final ProactiveAssistanceType type;
@@ -3069,7 +3069,7 @@ class _$ProactiveAssistanceModelImpl implements _ProactiveAssistanceModel {
       >(this, _$identity);
 }
 
-abstract class _ProactiveAssistanceModel implements ProactiveAssistanceModel {
+abstract class _ProactiveAssistanceModel extends ProactiveAssistanceModel {
   const factory _ProactiveAssistanceModel({
     required final ProactiveAssistanceType type,
     final AutoAnswerAssistance? autoAnswer,
@@ -3079,6 +3079,7 @@ abstract class _ProactiveAssistanceModel implements ProactiveAssistanceModel {
     final FollowUpSuggestionAssistance? followUpSuggestion,
     final RepetitionDetectionAssistance? repetitionDetection,
   }) = _$ProactiveAssistanceModelImpl;
+  const _ProactiveAssistanceModel._() : super._();
 
   @override
   ProactiveAssistanceType get type;
