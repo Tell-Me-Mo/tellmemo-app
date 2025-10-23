@@ -1456,6 +1456,98 @@ If acceptance rate < 70% (target) and sample size >= 30:
 
 **Status:** ✅ Production Ready (October 23, 2025)
 
+#### 18. Processing Decision Visibility ✅ NEW Oct 2025
+
+**Purpose:** Provide transparency into why and how insights are processed for debugging and user understanding.
+
+**Problem Solved:**
+- **Before:** Users and developers had no visibility into processing decisions (why a chunk triggered processing, which phases ran, timing data)
+- **After:** Complete metadata attached to every insight extraction result for debugging and transparency
+
+**Features:**
+
+**Backend (ProcessingMetadata):**
+- **Insight Processing Decision:**
+  - `trigger`: What caused processing ("semantic_score_threshold", "max_batch_reached", "word_threshold_reached", "duplicate_detection", etc.)
+  - `priority`: AdaptiveInsightProcessor priority classification ("IMMEDIATE", "HIGH", "MEDIUM", "LOW")
+  - `semantic_score`: Semantic density score (0.0-1.0+)
+  - `signals_detected`: Which semantic signals triggered processing (["action_verbs", "time_references", "questions", etc.])
+  - `chunks_accumulated`: How many chunks were accumulated before processing
+  - `decision_reason`: Human-readable explanation of why processing occurred
+
+- **Proactive Assistance Processing:**
+  - `active_phases`: Which Active Intelligence phases executed (["question_answering", "conflict_detection", etc.])
+  - `skipped_phases`: Which phases were skipped as not relevant
+  - `phase_execution_times_ms`: Timing data for each phase (e.g., {"question_answering": 245.3, "clarification": 123.1})
+
+**Frontend (ProcessingMetadataOverlay):**
+- **Debug Mode Visibility:** Only shown in `kDebugMode` or for admin users
+- **Expandable Card:** Black overlay with amber debug icon and expandable details
+- **Two Sections:**
+  1. Insight Processing Decision - Shows trigger, priority, semantic score, signals, reason
+  2. Proactive Assistance Processing - Shows active/skipped phases and timing breakdown
+
+**Example WebSocket Response:**
+```json
+{
+  "type": "insights_extracted",
+  "chunk_index": 5,
+  "insights": [...],
+  "proactive_assistance": [...],
+  "processing_metadata": {
+    "trigger": "semantic_score_threshold",
+    "priority": "IMMEDIATE",
+    "semantic_score": 0.42,
+    "signals_detected": ["action_verbs", "time_references"],
+    "chunks_accumulated": 1,
+    "decision_reason": "Action item with deadline detected",
+    "active_phases": ["question_answering", "action_item_quality", "meeting_efficiency"],
+    "skipped_phases": ["clarification", "conflict_detection", "follow_up_suggestions"],
+    "phase_execution_times_ms": {
+      "question_answering": 245.3,
+      "action_item_quality": 123.1,
+      "meeting_efficiency": 45.8
+    }
+  }
+}
+```
+
+**Integration:**
+- **Backend:** Added `ProcessingMetadata` dataclass in `realtime_meeting_insights.py`
+- **Backend:** Updated `process_transcript_chunk` to accept `adaptive_stats` and `adaptive_reason` parameters
+- **Backend:** Updated `_process_proactive_assistance` to return `phase_timings` dict
+- **Backend:** All three ProcessingResult return paths include metadata (success, duplicate, error)
+- **Frontend:** Added `ProcessingMetadata` freezed model in `live_insight_model.dart`
+- **Frontend:** Added `ProcessingMetadataOverlay` widget for debug display
+- **WebSocket:** Processing metadata automatically included in all `insights_extracted` messages
+
+**Use Cases:**
+
+1. **Debugging Adaptive Processing:**
+   - Developer can see exactly why a chunk triggered processing
+   - Identify if semantic score thresholds are tuned correctly
+   - Verify signals are being detected properly
+
+2. **Performance Monitoring:**
+   - Track phase execution times to identify bottlenecks
+   - See which phases are running vs skipped (optimization validation)
+   - Monitor chunks accumulated for context
+
+3. **User Transparency (Optional):**
+   - Admin users can enable debug overlay to understand AI behavior
+   - Teams can see "how the sausage is made" for trust building
+
+4. **A/B Testing:**
+   - Compare processing decision patterns between different configurations
+   - Validate optimization changes (e.g., selective phase execution)
+
+**Performance Impact:**
+- **Backend:** Negligible (~1-2ms) - metadata construction is lightweight
+- **Frontend:** Zero impact when not shown (wrapped in `kDebugMode` check)
+- **Network:** ~200-500 bytes additional JSON per message (minimal overhead)
+
+**Status:** ✅ Production Ready (October 23, 2025)
+
 ### Frontend Components
 
 #### 1. AudioStreamingService
