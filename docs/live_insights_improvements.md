@@ -366,7 +366,7 @@ Backend collects this feedback to:
 Adjust confidence thresholds over time
 Improve prompts
 Identify problematic patterns
-17. Add Quiet Mode / Phase Toggle
+17. DONE Add Quiet Mode / Phase Toggle
 Problem: 6 phases might be overwhelming for some users.
 
 Improvement:
