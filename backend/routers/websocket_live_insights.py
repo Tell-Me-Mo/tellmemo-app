@@ -114,6 +114,14 @@ class LiveMeetingSession:
         self.processing_times = []
         self.transcription_times = []
 
+        # Cancellation support
+        self.is_cancelled = False
+
+    def cancel(self) -> None:
+        """Mark session as cancelled to stop ongoing processing."""
+        self.is_cancelled = True
+        logger.info(f"Session {self.session_id} marked as cancelled")
+
     def update_activity(self) -> None:
         """Update last activity timestamp."""
         self.last_activity = datetime.utcnow()
@@ -299,6 +307,7 @@ class LiveInsightsConnectionManager:
         except WebSocketDisconnect:
             # Client disconnected gracefully (e.g., user stopped recording)
             logger.info(f"Session {session.session_id} WebSocket closed before insights sent")
+            session.cancel()  # Mark session as cancelled to stop ongoing processing
             return False
 
         except RuntimeError as e:
@@ -491,18 +500,23 @@ async def websocket_live_insights(
             except WebSocketDisconnect:
                 # Handle graceful disconnection
                 logger.info(f"WebSocket disconnected during receive for session {session.session_id}")
+                if session:
+                    session.cancel()  # Stop any ongoing processing
                 break
 
             except RuntimeError as e:
                 # Handle "WebSocket is not connected" errors
                 if "not connected" in str(e).lower() or "close message" in str(e).lower():
                     logger.info(f"WebSocket connection lost for session {session.session_id}")
+                    if session:
+                        session.cancel()  # Stop any ongoing processing
                     break
                 raise  # Re-raise other RuntimeErrors
 
     except WebSocketDisconnect:
         logger.info(f"Client disconnected from live insights session")
         if session:
+            session.cancel()  # Stop any ongoing processing
             live_insights_manager._remove_session(session.session_id)
 
     except Exception as e:
@@ -732,6 +746,11 @@ async def handle_audio_chunk(
 
         is_meaningful = validation_result.is_valid
 
+        # Check if session has been cancelled
+        if session.is_cancelled:
+            logger.info(f"Session {session.session_id} cancelled, aborting chunk {session.chunk_index} processing")
+            return
+
         # Send transcription update
         # Check WebSocket connection before sending
         sent = await live_insights_manager.send_message(session, {
@@ -746,7 +765,8 @@ async def handle_audio_chunk(
 
         # If WebSocket is closed, abort processing
         if not sent:
-            logger.info(f"Session {session.session_id} WebSocket already closed")
+            logger.info(f"Session {session.session_id} WebSocket already closed, aborting processing")
+            session.cancel()  # Mark as cancelled to prevent further processing
             return
 
         # Create transcript chunk
@@ -868,6 +888,11 @@ async def handle_audio_chunk(
         )
 
         if should_process_insights:
+            # Final cancellation check before expensive insight extraction
+            if session.is_cancelled:
+                logger.info(f"Session {session.session_id} cancelled before insight extraction")
+                return
+
             insights_start = time.time()
 
             result = await realtime_insights_service.process_transcript_chunk(

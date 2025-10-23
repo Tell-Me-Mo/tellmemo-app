@@ -13,6 +13,7 @@ import '../../../../core/services/auth_service.dart';
 import '../../../../core/utils/screen_info.dart';
 import '../../../live_insights/domain/models/live_insight_model.dart';
 import '../../../live_insights/domain/models/proactive_assistance_model.dart';
+import '../../../live_insights/presentation/widgets/live_insights_settings_dialog.dart';
 
 enum ProjectSelectionMode { automatic, manual, specific }
 
@@ -169,6 +170,14 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel>
         },
       );
     }
+  }
+
+  /// Show Live Insights settings dialog
+  void _showLiveInsightsSettings(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => const LiveInsightsSettingsDialog(),
+    );
   }
 
   Future<void> _handleRecordingComplete(String? filePath) async {
@@ -478,6 +487,15 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel>
                   ),
                 ),
                 const SizedBox(width: 8),
+                // Live Insights settings button
+                IconButton(
+                  icon: const Icon(Icons.settings_outlined, size: 18),
+                  onPressed: () => _showLiveInsightsSettings(context),
+                  tooltip: 'Live Insights Settings',
+                  style: IconButton.styleFrom(
+                    padding: const EdgeInsets.all(8),
+                  ),
+                ),
               ],
 
               IconButton(
