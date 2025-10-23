@@ -814,7 +814,7 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel>
           ),
           const SizedBox(height: 12),
           Text(
-            insight.content,
+            insight.content ?? '',
             style: theme.textTheme.bodyMedium?.copyWith(
               height: 1.4,
             ),

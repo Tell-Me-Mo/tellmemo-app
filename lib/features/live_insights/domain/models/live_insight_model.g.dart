@@ -13,7 +13,7 @@ _$LiveInsightModelImpl _$$LiveInsightModelImplFromJson(
   insightId: json['insight_id'] as String?,
   type: $enumDecode(_$LiveInsightTypeEnumMap, json['type']),
   priority: $enumDecode(_$LiveInsightPriorityEnumMap, json['priority']),
-  content: json['content'] as String,
+  content: json['content'] as String?,
   context: json['context'] as String? ?? '',
   createdAt: json['created_at'] == null
       ? null

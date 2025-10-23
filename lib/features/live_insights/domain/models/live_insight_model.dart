@@ -45,7 +45,7 @@ class LiveInsightModel with _$LiveInsightModel {
     // Accept both 'type' (WebSocket) and 'insight_type' (REST API)
     @JsonKey(name: 'type') required LiveInsightType type,
     required LiveInsightPriority priority,
-    required String content,
+    String? content,
     @Default('') String context,
     @JsonKey(name: 'created_at') DateTime? createdAt,
     DateTime? timestamp,
