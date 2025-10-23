@@ -127,15 +127,32 @@ class TranscriptChunk:
 
 @dataclass
 class SlidingWindowContext:
-    """Manages sliding window context for conversation continuity."""
+    """
+    Manages sliding window context for conversation continuity with semantic duplicate detection.
+
+    Features:
+    - Maintains recent conversation chunks for context
+    - Tracks embeddings for semantic similarity comparison
+    - Early duplicate detection to avoid redundant LLM calls
+    """
     max_chunks: int = 10  # Keep last 10 chunks (~100 seconds of conversation)
+    duplicate_window_size: int = 5  # Check last N chunks for duplicates
+    duplicate_threshold: float = 0.90  # Semantic similarity threshold (higher than insight dedup)
+
     chunks: deque = field(default_factory=deque)
+    chunk_embeddings: deque = field(default_factory=deque)  # Corresponding embeddings
 
     def add_chunk(self, chunk: TranscriptChunk) -> None:
         """Add a new chunk to the sliding window."""
         self.chunks.append(chunk)
         if len(self.chunks) > self.max_chunks:
             self.chunks.popleft()
+
+    def add_chunk_embedding(self, embedding: List[float]) -> None:
+        """Add embedding for the most recent chunk."""
+        self.chunk_embeddings.append(embedding)
+        if len(self.chunk_embeddings) > self.max_chunks:
+            self.chunk_embeddings.popleft()
 
     def get_context_text(self, include_speakers: bool = True) -> str:
         """Get the full context text from all chunks in the window."""
@@ -150,6 +167,22 @@ class SlidingWindowContext:
         """Get the most recent N chunks as context."""
         recent_chunks = list(self.chunks)[-num_chunks:] if len(self.chunks) >= num_chunks else list(self.chunks)
         return "\n".join([chunk.text for chunk in recent_chunks])
+
+    def get_recent_embeddings(self, num_chunks: int = None) -> List[List[float]]:
+        """
+        Get embeddings for recent chunks for duplicate detection.
+
+        Args:
+            num_chunks: Number of recent embeddings to return (default: duplicate_window_size)
+
+        Returns:
+            List of embeddings for recent chunks
+        """
+        if num_chunks is None:
+            num_chunks = self.duplicate_window_size
+
+        recent = list(self.chunk_embeddings)[-num_chunks:]
+        return recent if recent else []
 
 
 class RealtimeMeetingInsightsService:
@@ -170,8 +203,12 @@ class RealtimeMeetingInsightsService:
 
         # Insight extraction configuration
         self.min_confidence_threshold = 0.6
-        self.semantic_similarity_threshold = 0.85  # For deduplication
+        self.semantic_similarity_threshold = 0.85  # For insight-level deduplication
         self.past_meeting_search_limit = 5
+
+        # Early duplicate detection (chunk-level)
+        self.chunk_duplicate_threshold = 0.90  # Higher threshold for chunk duplicates
+        self.enable_early_duplicate_detection = True  # Feature flag
 
         # Context management
         self.active_contexts: Dict[str, SlidingWindowContext] = {}
@@ -233,6 +270,12 @@ class RealtimeMeetingInsightsService:
         """
         Process a single transcript chunk and extract insights.
 
+        Flow:
+        1. Early duplicate detection (chunk-level) - Avoids redundant LLM calls
+        2. Extract insights from LLM (only if not duplicate)
+        3. Deduplicate insights (insight-level)
+        4. Run Active Intelligence phases (only on unique insights)
+
         Args:
             session_id: Unique identifier for the meeting session
             project_id: Project UUID
@@ -248,20 +291,49 @@ class RealtimeMeetingInsightsService:
         try:
             # Initialize context if first chunk
             if session_id not in self.active_contexts:
-                self.active_contexts[session_id] = SlidingWindowContext()
+                self.active_contexts[session_id] = SlidingWindowContext(
+                    duplicate_threshold=self.chunk_duplicate_threshold
+                )
                 self.extracted_insights[session_id] = []
                 self.insight_embeddings[session_id] = []
                 logger.info(f"Initialized context for session {sanitize_for_log(session_id)}")
 
-            # Add chunk to sliding window
+            # Add chunk to sliding window (before duplicate check)
             context = self.active_contexts[session_id]
             context.add_chunk(chunk)
+
+            # PHASE 0: Early Duplicate Detection (BEFORE expensive LLM calls)
+            is_duplicate, similarity_score = await self._is_duplicate_chunk(
+                session_id=session_id,
+                chunk_text=chunk.text
+            )
+
+            # If duplicate detected, skip expensive processing
+            if is_duplicate:
+                processing_time = time.time() - start_time
+
+                logger.info(
+                    f"Skipping chunk {chunk.index} (duplicate, similarity: {similarity_score:.3f}): "
+                    f"Saved ~$0.002 in LLM costs"
+                )
+
+                return {
+                    'session_id': session_id,
+                    'chunk_index': chunk.index,
+                    'insights': [],
+                    'proactive_assistance': [],
+                    'total_insights_count': len(self.extracted_insights[session_id]),
+                    'processing_time_ms': int(processing_time * 1000),
+                    'skipped_reason': 'duplicate_chunk',
+                    'similarity_score': similarity_score,
+                    'context_window_size': len(context.chunks)
+                }
 
             # Get conversation context
             full_context = context.get_context_text(include_speakers=True)
             recent_context = context.get_recent_context(num_chunks=3)
 
-            # Extract insights from current chunk
+            # PHASE 1: Extract insights from current chunk (LLM call)
             insights = await self._extract_insights(
                 session_id=session_id,
                 project_id=project_id,
@@ -272,7 +344,7 @@ class RealtimeMeetingInsightsService:
                 db=db
             )
 
-            # Deduplicate insights
+            # PHASE 2: Deduplicate insights (insight-level semantic similarity)
             new_insights = await self._deduplicate_insights(session_id, insights)
 
             # Store new insights
@@ -543,6 +615,73 @@ class RealtimeMeetingInsightsService:
 
         logger.debug(f"Deduplication: {len(new_insights)} -> {len(unique_insights)} unique insights")
         return unique_insights
+
+    async def _is_duplicate_chunk(
+        self,
+        session_id: str,
+        chunk_text: str
+    ) -> Tuple[bool, Optional[float]]:
+        """
+        Early duplicate detection: Check if chunk is semantically similar to recent chunks.
+
+        This prevents redundant LLM calls when participants repeat themselves
+        (e.g., "Let's use GraphQL" said multiple times).
+
+        Args:
+            session_id: Meeting session identifier
+            chunk_text: Current transcript chunk text
+
+        Returns:
+            Tuple of (is_duplicate, max_similarity_score)
+        """
+        if not self.enable_early_duplicate_detection:
+            return False, None
+
+        if session_id not in self.active_contexts:
+            return False, None
+
+        context = self.active_contexts[session_id]
+
+        # Need at least one previous chunk to compare
+        if len(context.chunks) == 0:
+            return False, None
+
+        try:
+            # Generate embedding for current chunk
+            current_embedding = await embedding_service.generate_embedding(chunk_text)
+
+            # Get recent embeddings for comparison
+            recent_embeddings = context.get_recent_embeddings()
+
+            if not recent_embeddings:
+                return False, None
+
+            # Check semantic similarity with recent chunks
+            max_similarity = 0.0
+            for past_embedding in recent_embeddings:
+                similarity = self._cosine_similarity(current_embedding, past_embedding)
+                max_similarity = max(max_similarity, similarity)
+
+                if similarity >= self.chunk_duplicate_threshold:
+                    logger.info(
+                        f"Chunk duplicate detected (similarity: {similarity:.3f}, threshold: {self.chunk_duplicate_threshold}): "
+                        f"'{chunk_text[:60]}...'"
+                    )
+                    return True, similarity
+
+            logger.debug(
+                f"Chunk is unique (max_similarity: {max_similarity:.3f}, threshold: {self.chunk_duplicate_threshold})"
+            )
+
+            # Store embedding for future comparisons
+            context.add_chunk_embedding(current_embedding)
+
+            return False, max_similarity
+
+        except Exception as e:
+            logger.error(f"Error during chunk duplicate detection: {e}", exc_info=True)
+            # On error, assume not duplicate and continue processing
+            return False, None
 
     @staticmethod
     def _cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
