@@ -21,6 +21,7 @@ from .notification import Notification, NotificationType, NotificationPriority, 
 from .support_ticket import SupportTicket, TicketComment, TicketAttachment
 from .item_update import ItemUpdate, ItemUpdateType
 from .live_meeting_insight import LiveMeetingInsight
+from .proactive_assistance_feedback import ProactiveAssistanceFeedback
 
 __all__ = [
     "Project",
@@ -52,5 +53,6 @@ __all__ = [
     "TicketAttachment",
     "ItemUpdate",
     "ItemUpdateType",
-    "LiveMeetingInsight"
+    "LiveMeetingInsight",
+    "ProactiveAssistanceFeedback"
 ]

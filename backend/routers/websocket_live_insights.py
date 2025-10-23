@@ -49,6 +49,7 @@ from services.intelligence.realtime_meeting_insights import (
 )
 from services.intelligence.adaptive_insight_processor import get_adaptive_processor
 from services.intelligence.transcript_validator import get_transcript_validator, TranscriptQuality
+from services.intelligence.proactive_assistance_feedback_service import get_feedback_service
 from services.transcription.replicate_transcription_service import get_replicate_service
 from dependencies.auth import get_current_user_ws
 from utils.logger import get_logger, sanitize_for_log
@@ -472,6 +473,10 @@ async def websocket_live_insights(
                         'timestamp': datetime.utcnow().isoformat()
                     })
 
+                elif action == 'feedback':
+                    # User feedback on proactive assistance
+                    await handle_feedback(session, data, db)
+
                 else:
                     await live_insights_manager.send_message(session, {
                         'type': 'error',
@@ -503,6 +508,90 @@ async def websocket_live_insights(
                 'message': str(e)
             })
             live_insights_manager._remove_session(session.session_id)
+
+
+async def handle_feedback(
+    session: LiveMeetingSession,
+    data: Dict,
+    db: AsyncSession
+) -> None:
+    """
+    Handle user feedback on proactive assistance suggestions.
+
+    Expected data format:
+    {
+        "action": "feedback",
+        "insight_id": "session_0_2",
+        "helpful": true,  # or false
+        "assistance_type": "auto_answer",
+        "confidence_score": 0.89,  # optional
+        "feedback_text": "Answer was accurate",  # optional
+        "feedback_category": "helpful"  # optional
+    }
+
+    Args:
+        session: Active meeting session
+        data: Feedback data from client
+        db: Database session
+    """
+    try:
+        # Extract feedback data
+        insight_id = data.get('insight_id')
+        is_helpful = data.get('helpful')
+        assistance_type = data.get('assistance_type')
+        confidence_score = data.get('confidence_score')
+        feedback_text = data.get('feedback_text')
+        feedback_category = data.get('feedback_category')
+
+        # Validate required fields
+        if not insight_id or is_helpful is None or not assistance_type:
+            await live_insights_manager.send_message(session, {
+                'type': 'feedback_error',
+                'message': 'Missing required feedback fields (insight_id, helpful, assistance_type)'
+            })
+            return
+
+        # Get feedback service
+        feedback_service = get_feedback_service()
+
+        # Record feedback
+        feedback = await feedback_service.record_feedback(
+            db=db,
+            session_id=session.session_id,
+            insight_id=insight_id,
+            project_id=session.project_id,
+            organization_id=session.organization_id,
+            user_id=session.user_id,
+            assistance_type=assistance_type,
+            is_helpful=is_helpful,
+            confidence_score=confidence_score,
+            feedback_text=feedback_text,
+            feedback_category=feedback_category,
+            metadata={
+                'chunk_index': session.chunk_index,
+                'session_phase': session.phase.value
+            }
+        )
+
+        # Send confirmation
+        await live_insights_manager.send_message(session, {
+            'type': 'feedback_recorded',
+            'feedback_id': str(feedback.id),
+            'insight_id': insight_id,
+            'timestamp': datetime.utcnow().isoformat()
+        })
+
+        logger.info(
+            f"Recorded {'positive' if is_helpful else 'negative'} feedback for "
+            f"{assistance_type} (insight_id={insight_id}, session={session.session_id})"
+        )
+
+    except Exception as e:
+        logger.error(f"Error handling feedback: {e}")
+        await live_insights_manager.send_message(session, {
+            'type': 'feedback_error',
+            'message': f'Failed to record feedback: {str(e)}'
+        })
 
 
 async def handle_audio_chunk(

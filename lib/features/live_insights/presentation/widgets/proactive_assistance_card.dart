@@ -2,14 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../domain/models/proactive_assistance_model.dart';
 
+/// Callback for user feedback on proactive assistance
+typedef FeedbackCallback = void Function(bool isHelpful);
+
 /// Card widget for displaying proactive AI assistance
 /// Phase 1: Auto-answered questions
 /// Phase 2: Clarification suggestions
+/// Features: User feedback collection (thumbs up/down)
 class ProactiveAssistanceCard extends StatefulWidget {
   final ProactiveAssistanceModel assistance;
   final VoidCallback? onAccept;
   final VoidCallback? onDismiss;
   final VoidCallback? onViewSource;
+  final FeedbackCallback? onFeedback;
 
   const ProactiveAssistanceCard({
     Key? key,
@@ -17,6 +22,7 @@ class ProactiveAssistanceCard extends StatefulWidget {
     this.onAccept,
     this.onDismiss,
     this.onViewSource,
+    this.onFeedback,
   }) : super(key: key);
 
   @override
@@ -30,6 +36,7 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
   late Animation<double> _fadeAnimation;
   late bool _isExpanded;
   bool _dismissed = false;
+  bool? _feedbackGiven;  // null = no feedback, true = helpful, false = not helpful
 
   @override
   void initState() {
@@ -323,31 +330,9 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
             ),
           ],
 
-          // Action buttons
+          // Feedback section
           const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              TextButton.icon(
-                onPressed: _handleDismiss,
-                icon: const Icon(Icons.close, size: 18),
-                label: const Text('Dismiss'),
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.grey[600],
-                ),
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton.icon(
-                onPressed: _handleAccept,
-                icon: const Icon(Icons.check, size: 18),
-                label: const Text('Helpful'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ],
-          ),
+          _buildFeedbackSection(),
         ],
       ),
     );
@@ -427,6 +412,151 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
         setState(() => _dismissed = true);
       }
     });
+  }
+
+  /// Handle user feedback (thumbs up/down)
+  void _handleFeedback(bool isHelpful) {
+    setState(() {
+      _feedbackGiven = isHelpful;
+    });
+
+    // Call the feedback callback if provided
+    widget.onFeedback?.call(isHelpful);
+
+    // Show confirmation snackbar
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(
+                isHelpful ? Icons.thumb_up : Icons.thumb_down,
+                color: Colors.white,
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Text(isHelpful
+                ? 'Thank you! This helps improve our AI.'
+                : 'Feedback noted. We\'ll work to improve this.'),
+            ],
+          ),
+          backgroundColor: isHelpful ? Colors.green[700] : Colors.orange[700],
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  /// Build feedback section with thumbs up/down buttons
+  Widget _buildFeedbackSection() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Was this helpful?',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[800],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              // Thumbs up button
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _feedbackGiven != null
+                    ? null
+                    : () => _handleFeedback(true),
+                  icon: Icon(
+                    _feedbackGiven == true ? Icons.thumb_up : Icons.thumb_up_outlined,
+                    size: 20,
+                  ),
+                  label: const Text('Helpful'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _feedbackGiven == true
+                      ? Colors.green[700]
+                      : Colors.grey[700],
+                    backgroundColor: _feedbackGiven == true
+                      ? Colors.green[50]
+                      : null,
+                    side: BorderSide(
+                      color: _feedbackGiven == true
+                        ? Colors.green[700]!
+                        : Colors.grey[400]!,
+                      width: _feedbackGiven == true ? 2 : 1,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Thumbs down button
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _feedbackGiven != null
+                    ? null
+                    : () => _handleFeedback(false),
+                  icon: Icon(
+                    _feedbackGiven == false ? Icons.thumb_down : Icons.thumb_down_outlined,
+                    size: 20,
+                  ),
+                  label: const Text('Not Helpful'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _feedbackGiven == false
+                      ? Colors.orange[700]
+                      : Colors.grey[700],
+                    backgroundColor: _feedbackGiven == false
+                      ? Colors.orange[50]
+                      : null,
+                    side: BorderSide(
+                      color: _feedbackGiven == false
+                        ? Colors.orange[700]!
+                        : Colors.grey[400]!,
+                      width: _feedbackGiven == false ? 2 : 1,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          // Show thank you message after feedback
+          if (_feedbackGiven != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(
+                  Icons.check_circle,
+                  size: 16,
+                  color: _feedbackGiven == true ? Colors.green[700] : Colors.orange[700],
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    _feedbackGiven == true
+                      ? 'Feedback recorded - this helps improve accuracy!'
+                      : 'Feedback recorded - we\'ll work on improving this.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   Widget _buildClarificationContent() {

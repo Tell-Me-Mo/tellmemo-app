@@ -206,6 +206,36 @@ class LiveInsightsWebSocketService {
     }
   }
 
+  /// Send user feedback for proactive assistance
+  Future<void> sendFeedback({
+    required String insightId,
+    required bool isHelpful,
+    required String assistanceType,
+    double? confidenceScore,
+    String? feedbackText,
+    String? feedbackCategory,
+  }) async {
+    if (!_isConnected) {
+      debugPrint('[LiveInsightsWS] Cannot send feedback - not connected');
+      return;
+    }
+
+    await _sendMessage({
+      'action': 'feedback',
+      'insight_id': insightId,
+      'helpful': isHelpful,
+      'assistance_type': assistanceType,
+      if (confidenceScore != null) 'confidence_score': confidenceScore,
+      if (feedbackText != null) 'feedback_text': feedbackText,
+      if (feedbackCategory != null) 'feedback_category': feedbackCategory,
+    });
+
+    debugPrint(
+      '[LiveInsightsWS] Sent ${isHelpful ? "positive" : "negative"} feedback '
+      'for $assistanceType (insight_id=$insightId)'
+    );
+  }
+
   /// Send JSON message to server
   Future<void> _sendMessage(Map<String, dynamic> message) async {
     if (_channel == null) return;

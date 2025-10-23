@@ -167,7 +167,6 @@ class _LiveInsightsPanelState extends ConsumerState<LiveInsightsPanel>
   }
 
   void _handleAcceptAssistance(int index) {
-    // TODO: Track feedback for ML improvement
     setState(() {
       _proactiveAssistance.removeAt(index);
     });
@@ -175,11 +174,72 @@ class _LiveInsightsPanelState extends ConsumerState<LiveInsightsPanel>
   }
 
   void _handleDismissAssistance(int index) {
-    // TODO: Track feedback for ML improvement
     setState(() {
       _proactiveAssistance.removeAt(index);
     });
     debugPrint('[LiveInsightsPanel] User dismissed assistance at index $index');
+  }
+
+  /// Handle user feedback on proactive assistance
+  void _handleFeedback(ProactiveAssistanceModel assistance, bool isHelpful) {
+    // Get the WebSocket service
+    final recordingNotifier = ref.read(recordingNotifierProvider.notifier);
+    final wsService = recordingNotifier.liveInsightsService;
+
+    if (wsService == null) {
+      debugPrint('[LiveInsightsPanel] Cannot send feedback - WebSocket service not available');
+      return;
+    }
+
+    // Extract insight ID and assistance type
+    String? insightId;
+    String assistanceType = assistance.type.name;
+    double? confidenceScore;
+
+    switch (assistance.type) {
+      case ProactiveAssistanceType.autoAnswer:
+        insightId = assistance.autoAnswer?.insightId;
+        confidenceScore = assistance.autoAnswer?.confidence;
+        break;
+      case ProactiveAssistanceType.clarificationNeeded:
+        insightId = assistance.clarification?.insightId;
+        confidenceScore = assistance.clarification?.confidence;
+        break;
+      case ProactiveAssistanceType.conflictDetected:
+        insightId = assistance.conflict?.insightId;
+        confidenceScore = assistance.conflict?.confidence;
+        break;
+      case ProactiveAssistanceType.incompleteActionItem:
+        insightId = assistance.actionItemQuality?.insightId;
+        confidenceScore = null; // Uses completeness score instead
+        break;
+      case ProactiveAssistanceType.followUpSuggestion:
+        insightId = assistance.followUpSuggestion?.insightId;
+        confidenceScore = assistance.followUpSuggestion?.confidence;
+        break;
+      case ProactiveAssistanceType.repetitionDetected:
+        insightId = assistance.repetitionDetection?.topic; // Use topic as ID
+        confidenceScore = assistance.repetitionDetection?.confidence;
+        break;
+    }
+
+    if (insightId == null) {
+      debugPrint('[LiveInsightsPanel] Cannot send feedback - insight ID not found');
+      return;
+    }
+
+    // Send feedback via WebSocket
+    wsService.sendFeedback(
+      insightId: insightId,
+      isHelpful: isHelpful,
+      assistanceType: assistanceType,
+      confidenceScore: confidenceScore,
+    );
+
+    debugPrint(
+      '[LiveInsightsPanel] Sent ${isHelpful ? "positive" : "negative"} feedback '
+      'for $assistanceType (insight_id=$insightId)'
+    );
   }
 
   List<MeetingInsight> get _filteredInsights {
@@ -301,12 +361,14 @@ class _LiveInsightsPanelState extends ConsumerState<LiveInsightsPanel>
                       scrollDirection: Axis.horizontal,
                       itemCount: _proactiveAssistance.length,
                       itemBuilder: (context, index) {
+                        final assistance = _proactiveAssistance[index];
                         return SizedBox(
                           width: 350,
                           child: ProactiveAssistanceCard(
-                            assistance: _proactiveAssistance[index],
+                            assistance: assistance,
                             onAccept: () => _handleAcceptAssistance(index),
                             onDismiss: () => _handleDismissAssistance(index),
+                            onFeedback: (isHelpful) => _handleFeedback(assistance, isHelpful),
                           ),
                         );
                       },
