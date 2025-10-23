@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../live_insights/domain/models/proactive_assistance_model.dart';
 import '../../../live_insights/presentation/widgets/proactive_assistance_card.dart';
+import '../../../live_insights/presentation/widgets/live_insights_settings_dialog.dart';
+import '../../../live_insights/presentation/providers/live_insights_settings_provider.dart';
 import '../../../audio_recording/presentation/providers/recording_provider.dart';
 
 /// Types of insights that can be displayed
@@ -151,10 +153,14 @@ class _LiveInsightsPanelState extends ConsumerState<LiveInsightsPanel>
         (assistance) {
           if (mounted) {
             setState(() {
-              // Filter out hidden items based on display mode
+              // Get current settings
+              final settings = ref.read(liveInsightsSettingsProvider);
+
+              // Filter items based on settings (phase enabled, quiet mode, confidence)
               final visibleAssistance = assistance
-                  .where((item) => item.displayMode != DisplayMode.hidden)
+                  .where((item) => settings.shouldShowAssistance(item))
                   .toList();
+
               _proactiveAssistance.addAll(visibleAssistance);
             });
           }
@@ -440,6 +446,7 @@ class _LiveInsightsPanelState extends ConsumerState<LiveInsightsPanel>
               ],
             ),
           ),
+          const LiveInsightsSettingsButton(),
           if (widget.onClose != null)
             IconButton(
               icon: const Icon(Icons.close),
