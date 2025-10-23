@@ -258,12 +258,25 @@ class AudioRecordingService {
       // Stop the recorder to release microphone
       try {
         await _recorder.stopRecorder();
-        print('[AudioRecordingService] Recorder stopped, microphone should be released');
+        print('[AudioRecordingService] Recorder stopped');
       } catch (e) {
         print('[AudioRecordingService] Error stopping recorder: $e');
       }
     } else {
       print('[AudioRecordingService] Recorder not active, no need to stop');
+    }
+
+    // CRITICAL FOR WEB: Close the recorder session to fully release microphone
+    // On web, stopRecorder() alone doesn't release the MediaRecorder stream
+    if (_isRecorderOpen) {
+      try {
+        print('[AudioRecordingService] Closing recorder session to release microphone...');
+        await _recorder.closeRecorder();
+        _isRecorderOpen = false;
+        print('[AudioRecordingService] Recorder session closed, microphone fully released');
+      } catch (e) {
+        print('[AudioRecordingService] Error closing recorder session: $e');
+      }
     }
 
     print('[AudioRecordingService] Recording cancelled and file discarded');
