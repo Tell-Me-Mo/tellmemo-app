@@ -602,8 +602,10 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel>
               stream: ref.read(audioRecordingServiceProvider).amplitudeStream,
               builder: (context, snapshot) {
                 final amplitude = snapshot.data ?? 0.0;
+                print('[RecordingPanel] Amplitude: $amplitude, hasData: ${snapshot.hasData}, connectionState: ${snapshot.connectionState}');
                 // Normalize amplitude from decibels (typically -60 to 0) to 0-1 range
                 final normalizedLevel = ((amplitude + 60) / 60).clamp(0.0, 1.0);
+                print('[RecordingPanel] Normalized: $normalizedLevel');
 
                 return Row(
                   mainAxisSize: MainAxisSize.min,
