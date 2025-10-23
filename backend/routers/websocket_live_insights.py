@@ -50,6 +50,7 @@ from services.intelligence.realtime_meeting_insights import (
 from services.intelligence.adaptive_insight_processor import get_adaptive_processor
 from services.intelligence.transcript_validator import get_transcript_validator, TranscriptQuality
 from services.intelligence.proactive_assistance_feedback_service import get_feedback_service
+from services.intelligence.topic_coherence_detector import get_topic_coherence_detector
 from services.transcription.replicate_transcription_service import get_replicate_service
 from dependencies.auth import get_current_user_ws
 from utils.logger import get_logger, sanitize_for_log
@@ -236,7 +237,11 @@ class LiveInsightsConnectionManager:
 
             session.phase = MeetingPhase.COMPLETED
 
-            # Cleanup
+            # Cleanup topic coherence state
+            topic_detector = get_topic_coherence_detector()
+            topic_detector.cleanup_session(session_id)
+
+            # Cleanup session
             self._remove_session(session_id)
 
             logger.info(f"Finalized session {sanitize_for_log(session_id)}")
@@ -760,34 +765,64 @@ async def handle_audio_chunk(
 
         if USE_ADAPTIVE_PROCESSING:
             adaptive_processor = get_adaptive_processor()
+            topic_detector = get_topic_coherence_detector()
 
-            # Get semantic analysis
+            # Check topic coherence (only if we have accumulated content)
+            topic_change_detected = False
+            topic_similarity = None
+
+            if is_meaningful and session.accumulated_context:
+                should_batch, batch_reason, similarity = await topic_detector.should_batch(
+                    session_id=session.session_id,
+                    current_chunk=transcript_text,
+                    current_chunk_index=session.chunk_index,
+                    accumulated_chunks=session.accumulated_context
+                )
+
+                topic_change_detected = not should_batch
+                topic_similarity = similarity
+
+                logger.debug(
+                    f"Chunk {session.chunk_index} topic coherence: "
+                    f"{'CONTINUE BATCH' if should_batch else 'TOPIC CHANGE'} | "
+                    f"reason={batch_reason}"
+                )
+
+            # Get semantic analysis with topic coherence input
             should_process_insights, reason = adaptive_processor.should_process_now(
                 current_text=transcript_text,
                 chunk_index=session.chunk_index,
                 chunks_since_last_process=session.chunks_since_last_process,
-                accumulated_context=session.accumulated_context
+                accumulated_context=session.accumulated_context,
+                topic_change_detected=topic_change_detected,
+                topic_similarity=topic_similarity
             )
 
             adaptive_reason = reason
 
-            # Add to accumulated context (up to context window size)
+            # Add to accumulated context (up to max batch size)
             if is_meaningful:
                 session.accumulated_context.append(transcript_text)
-                if len(session.accumulated_context) > adaptive_processor.context_window_size:
+                # Prevent unbounded growth
+                if len(session.accumulated_context) > adaptive_processor.max_batch_size:
                     session.accumulated_context.pop(0)
                 session.chunks_since_last_process += 1
 
             # Get stats for processing metadata
             processing_stats = adaptive_processor.get_stats(transcript_text)
 
-            # Log processing decision
+            # Log processing decision with topic coherence info
+            topic_info = ""
+            if topic_similarity is not None:
+                topic_info = f" | topic_similarity={topic_similarity:.3f}"
+
             logger.info(
                 f"Chunk {session.chunk_index} analysis: "
                 f"{reason} | "
                 f"priority={processing_stats['priority']} | "
                 f"score={processing_stats['semantic_score']:.2f} | "
                 f"words={processing_stats['word_count']}"
+                f"{topic_info}"
             )
 
             # Reset counters if processing
