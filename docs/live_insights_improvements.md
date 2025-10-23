@@ -242,43 +242,8 @@ async def run_active_intelligence_with_fallback(insights):
     results["overall_status"] = "ok" if success_count >= len(phases) / 2 else "degraded"
     
     return results
-10. No Circuit Breaker for Qdrant
-Problem: If Qdrant is slow/down, all phases timeout.
 
-Improvement:
-
-class QdrantCircuitBreaker:
-    def __init__(self, failure_threshold=3, timeout_seconds=60):
-        self.failure_count = 0
-        self.failure_threshold = failure_threshold
-        self.timeout_seconds = timeout_seconds
-        self.circuit_open_until: Optional[datetime] = None
-    
-    async def call(self, func):
-        # Check if circuit is open
-        if self.circuit_open_until and datetime.now() < self.circuit_open_until:
-            logger.warning("Circuit breaker open - skipping Qdrant call")
-            return []  # Return empty results
-        
-        try:
-            result = await func()
-            self.failure_count = 0  # Reset on success
-            return result
-        except Exception as e:
-            self.failure_count += 1
-            logger.error(f"Qdrant failure #{self.failure_count}: {e}")
-            
-            if self.failure_count >= self.failure_threshold:
-                # Open circuit for cooldown period
-                self.circuit_open_until = datetime.now() + timedelta(seconds=self.timeout_seconds)
-                logger.warning(f"Circuit breaker opened until {self.circuit_open_until}")
-            
-            return []  # Fail gracefully
-
-# Usage
-qdrant_breaker = QdrantCircuitBreaker()
-search_results = await qdrant_breaker.call(lambda: qdrant.search(query))
-11. No Empty Transcript Handling
+11. DONE: No Empty Transcript Handling
 Problem: Transcription might return empty or noise-only results.
 
 Improvement:
@@ -307,7 +272,7 @@ def is_empty_or_noise(transcript: str) -> bool:
         return True
     
     return False
-12. No Handling of Partial Phase Failures
+12. DONE: No Handling of Partial Phase Failures
 Problem: If Phase 1 succeeds but Phase 2-6 fail, what gets broadcast?
 
 Improvement:
@@ -329,72 +294,8 @@ async def broadcast_with_partial_results(session_id: str, results: dict):
     
     await websocket.send_json(message)
 📊 DATA MODEL & API IMPROVEMENTS
-13. ProactiveAssistanceModel Should Be Sealed Union
-Problem: Has 7 optional fields, only 1 should be non-null.
 
-Improvement:
-
-@freezed
-sealed class ProactiveAssistance with _$ProactiveAssistance {
-  const factory ProactiveAssistance.autoAnswer({
-    required String insightId,
-    required String question,
-    required String answer,
-    required double confidence,
-    required List<AnswerSource> sources,
-  }) = AutoAnswerAssistance;
-  
-  const factory ProactiveAssistance.clarification({
-    required String insightId,
-    required String statement,
-    required VaguenessType type,
-    required List<String> suggestedQuestions,
-  }) = ClarificationAssistance;
-  
-  // ... other variants
-  
-  factory ProactiveAssistance.fromJson(Map<String, dynamic> json) =>
-      _$ProactiveAssistanceFromJson(json);
-}
-Benefits:
-
-Type-safe pattern matching
-Impossible to have multiple types set
-Smaller JSON payload
-14. Add Message Versioning
-Problem: No way to handle API evolution.
-
-Improvement:
-
-{
-  "version": "4.1",
-  "type": "insights_extracted",
-  "insights": [...],
-  "proactive_assistance": [...]
-}
-class LiveInsightsWebSocketService {
-  void handleMessage(String data) {
-    final json = jsonDecode(data);
-    final version = json['version'] ?? '1.0';
-    
-    if (!isSupportedVersion(version)) {
-      logger.warning("Unsupported API version $version");
-      showUpdateRequiredDialog();
-      return;
-    }
-    
-    // Parse based on version
-    switch (version) {
-      case '4.1':
-        _handleV41Message(json);
-      case '4.0':
-        _handleV40Message(json);
-      default:
-        _handleLegacyMessage(json);
-    }
-  }
-}
-15. Add Confidence-Based Display Thresholds
+15. DONE: Add Confidence-Based Display Thresholds
 Problem: All proactive assistance shows immediately, even low-confidence ones.
 
 Improvement:
@@ -418,7 +319,7 @@ DisplayMode getDisplayMode(ProactiveAssistance assistance) {
   };
 }
 🎨 UX & PRODUCT IMPROVEMENTS
-16. Add User Feedback Loop
+16. DONE: Add User Feedback Loop
 Problem: No way for users to correct wrong insights.
 
 Improvement:
