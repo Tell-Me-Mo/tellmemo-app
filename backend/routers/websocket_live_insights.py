@@ -741,21 +741,47 @@ async def handle_audio_chunk(
         session.accumulated_transcript.append(transcript_text)
 
         # Track insights
-        for insight in result.get('insights', []):
-            insight_type = insight.get('type', 'unknown')
+        for insight in result.insights:
+            insight_type = insight.type.value
             session.increment_insight_count(insight_type)
+
+        # Build WebSocket message with partial results support
+        message = {
+            'type': 'insights_extracted',
+            'chunk_index': chunk.index,
+            'insights': [insight.to_dict() for insight in result.insights],
+            'total_insights': result.total_insights_count,
+            'processing_time_ms': result.processing_time_ms,
+            'timestamp': datetime.utcnow().isoformat(),
+            'proactive_assistance': result.proactive_assistance,
+            'status': result.overall_status.value,  # ok | degraded | failed
+            'phase_status': {k: v.value for k, v in result.phase_status.items()},
+        }
+
+        # Add warning message for degraded status
+        warning_msg = result.get_warning_message()
+        if warning_msg:
+            message['warning'] = warning_msg
+            logger.warning(f"Session {session.session_id} degraded: {warning_msg}")
+
+        # Include error details if any phases failed (for debugging/monitoring)
+        if result.failed_phases:
+            message['failed_phases'] = result.failed_phases
+            # Don't expose internal error messages to client for security
+            # but log them for debugging
+            logger.error(
+                f"Session {session.session_id} phase failures: {result.error_messages}"
+            )
+
+        # Add skip reason if chunk was skipped
+        if result.skipped_reason:
+            message['skipped_reason'] = result.skipped_reason
+            if result.similarity_score is not None:
+                message['similarity_score'] = result.similarity_score
 
         # Send insights update
         # Check WebSocket connection before sending
-        sent = await live_insights_manager.send_message(session, {
-            'type': 'insights_extracted',
-            'chunk_index': chunk.index,
-            'insights': result.get('insights', []),
-            'total_insights': result.get('total_insights_count', 0),
-            'processing_time_ms': result.get('processing_time_ms', 0),
-            'timestamp': datetime.utcnow().isoformat(),
-            'proactive_assistance': result.get('proactive_assistance', [])
-        })
+        sent = await live_insights_manager.send_message(session, message)
 
         # If WebSocket is closed, abort processing
         if not sent:

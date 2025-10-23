@@ -70,6 +70,20 @@ class InsightPriority(Enum):
     LOW = "low"
 
 
+class ProcessingStatus(Enum):
+    """Overall processing status for insight extraction."""
+    OK = "ok"  # All phases succeeded
+    DEGRADED = "degraded"  # Some phases failed but core extraction succeeded
+    FAILED = "failed"  # Core extraction failed
+
+
+class PhaseStatus(Enum):
+    """Status of individual processing phases."""
+    SUCCESS = "success"
+    FAILED = "failed"
+    SKIPPED = "skipped"  # Phase not relevant for this chunk
+
+
 @dataclass
 class MeetingInsight:
     """Structured representation of a meeting insight."""
@@ -123,6 +137,66 @@ class TranscriptChunk:
     index: int
     speaker: Optional[str] = None
     duration_seconds: float = 0.0
+
+
+@dataclass
+class ProcessingResult:
+    """
+    Result of insight extraction with phase-level status tracking.
+
+    This enables graceful degradation when some Active Intelligence phases fail
+    while still delivering core insights to the user.
+    """
+    # Core data
+    session_id: str
+    chunk_index: int
+    insights: List[MeetingInsight] = field(default_factory=list)
+    proactive_assistance: List[Dict[str, Any]] = field(default_factory=list)
+
+    # Status tracking
+    overall_status: ProcessingStatus = ProcessingStatus.OK
+    phase_status: Dict[str, PhaseStatus] = field(default_factory=dict)
+
+    # Metadata
+    total_insights_count: int = 0
+    processing_time_ms: int = 0
+    context_window_size: int = 0
+
+    # Error details (if any)
+    failed_phases: List[str] = field(default_factory=list)
+    error_messages: Dict[str, str] = field(default_factory=dict)
+
+    # Skip tracking (duplicate/validation)
+    skipped_reason: Optional[str] = None
+    similarity_score: Optional[float] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for WebSocket serialization."""
+        return {
+            'session_id': self.session_id,
+            'chunk_index': self.chunk_index,
+            'insights': [insight.to_dict() for insight in self.insights],
+            'proactive_assistance': self.proactive_assistance,
+            'status': self.overall_status.value,
+            'phase_status': {k: v.value for k, v in self.phase_status.items()},
+            'total_insights': self.total_insights_count,
+            'processing_time_ms': self.processing_time_ms,
+            'context_window_size': self.context_window_size,
+            'failed_phases': self.failed_phases,
+            'error_messages': self.error_messages,
+            'skipped_reason': self.skipped_reason,
+            'similarity_score': self.similarity_score,
+        }
+
+    def get_warning_message(self) -> Optional[str]:
+        """Generate user-friendly warning message for degraded status."""
+        if self.overall_status == ProcessingStatus.DEGRADED:
+            failed_count = len(self.failed_phases)
+            if failed_count == 1:
+                return f"Some AI features temporarily unavailable ({self.failed_phases[0]})"
+            else:
+                return f"Some AI features temporarily unavailable ({failed_count} features affected)"
+        return None
 
 
 @dataclass
@@ -266,7 +340,7 @@ class RealtimeMeetingInsightsService:
         organization_id: str,
         chunk: TranscriptChunk,
         db: AsyncSession
-    ) -> Dict[str, Any]:
+    ) -> ProcessingResult:
         """
         Process a single transcript chunk and extract insights.
 
@@ -276,6 +350,10 @@ class RealtimeMeetingInsightsService:
         3. Deduplicate insights (insight-level)
         4. Run Active Intelligence phases (only on unique insights)
 
+        RESILIENCE: Each Active Intelligence phase is wrapped in error handling
+        to ensure partial failures don't block the entire pipeline. Returns
+        ProcessingResult with status tracking for graceful degradation.
+
         Args:
             session_id: Unique identifier for the meeting session
             project_id: Project UUID
@@ -284,7 +362,7 @@ class RealtimeMeetingInsightsService:
             db: Database session
 
         Returns:
-            Dictionary containing extracted insights and metadata
+            ProcessingResult with insights, status, and phase-level error tracking
         """
         start_time = time.time()
 
@@ -317,17 +395,19 @@ class RealtimeMeetingInsightsService:
                     f"Saved ~$0.002 in LLM costs"
                 )
 
-                return {
-                    'session_id': session_id,
-                    'chunk_index': chunk.index,
-                    'insights': [],
-                    'proactive_assistance': [],
-                    'total_insights_count': len(self.extracted_insights[session_id]),
-                    'processing_time_ms': int(processing_time * 1000),
-                    'skipped_reason': 'duplicate_chunk',
-                    'similarity_score': similarity_score,
-                    'context_window_size': len(context.chunks)
-                }
+                return ProcessingResult(
+                    session_id=session_id,
+                    chunk_index=chunk.index,
+                    insights=[],
+                    proactive_assistance=[],
+                    overall_status=ProcessingStatus.OK,
+                    phase_status={},
+                    total_insights_count=len(self.extracted_insights[session_id]),
+                    processing_time_ms=int(processing_time * 1000),
+                    context_window_size=len(context.chunks),
+                    skipped_reason='duplicate_chunk',
+                    similarity_score=similarity_score
+                )
 
             # Get conversation context
             full_context = context.get_context_text(include_speakers=True)
@@ -351,7 +431,8 @@ class RealtimeMeetingInsightsService:
             self.extracted_insights[session_id].extend(new_insights)
 
             # PHASE 1-6: Active Intelligence - Process all proactive assistance
-            proactive_assistance = await self._process_proactive_assistance(
+            # Returns: (proactive_responses, phase_status, error_messages)
+            proactive_assistance, phase_status, error_messages = await self._process_proactive_assistance(
                 session_id=session_id,
                 project_id=project_id,
                 organization_id=organization_id,
@@ -362,31 +443,55 @@ class RealtimeMeetingInsightsService:
 
             processing_time = time.time() - start_time
 
-            result = {
-                'session_id': session_id,
-                'chunk_index': chunk.index,
-                'insights': [insight.to_dict() for insight in new_insights],
-                'proactive_assistance': proactive_assistance,  # NEW: AI assistant responses
-                'total_insights_count': len(self.extracted_insights[session_id]),
-                'processing_time_ms': int(processing_time * 1000),
-                'context_window_size': len(context.chunks)
-            }
+            # Determine overall processing status
+            failed_phases = [phase for phase, status in phase_status.items() if status == PhaseStatus.FAILED]
+            if failed_phases:
+                overall_status = ProcessingStatus.DEGRADED
+                logger.warning(
+                    f"Degraded mode for chunk {chunk.index}: {len(failed_phases)} phases failed: {', '.join(failed_phases)}"
+                )
+            else:
+                overall_status = ProcessingStatus.OK
+
+            # Build processing result
+            result = ProcessingResult(
+                session_id=session_id,
+                chunk_index=chunk.index,
+                insights=new_insights,
+                proactive_assistance=proactive_assistance,
+                overall_status=overall_status,
+                phase_status=phase_status,
+                total_insights_count=len(self.extracted_insights[session_id]),
+                processing_time_ms=int(processing_time * 1000),
+                context_window_size=len(context.chunks),
+                failed_phases=failed_phases,
+                error_messages=error_messages
+            )
 
             logger.info(
                 f"Processed chunk {chunk.index} for session {sanitize_for_log(session_id)}: "
-                f"{len(new_insights)} new insights extracted in {processing_time:.2f}s"
+                f"{len(new_insights)} new insights extracted in {processing_time:.2f}s "
+                f"(status: {overall_status.value})"
             )
 
             return result
 
         except Exception as e:
+            # Core extraction failed - return FAILED status
             logger.error(f"Error processing transcript chunk: {e}", exc_info=True)
-            return {
-                'session_id': session_id,
-                'chunk_index': chunk.index,
-                'insights': [],
-                'error': str(e)
-            }
+            return ProcessingResult(
+                session_id=session_id,
+                chunk_index=chunk.index,
+                insights=[],
+                proactive_assistance=[],
+                overall_status=ProcessingStatus.FAILED,
+                phase_status={},
+                total_insights_count=0,
+                processing_time_ms=0,
+                context_window_size=0,
+                failed_phases=['core_extraction'],
+                error_messages={'core_extraction': str(e)}
+            )
 
     async def _extract_insights(
         self,
@@ -893,12 +998,16 @@ class RealtimeMeetingInsightsService:
         insights: List[MeetingInsight],
         context: str,
         current_chunk: TranscriptChunk
-    ) -> List[Dict[str, Any]]:
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, PhaseStatus], Dict[str, str]]:
         """
         Process insights to provide proactive assistance with selective phase execution.
 
         OPTIMIZATION: Only runs phases that are relevant to the current chunk content
         to reduce unnecessary LLM calls by 40-60%.
+
+        RESILIENCE: Each phase is wrapped in try-except to ensure that failures in
+        individual phases don't block the entire pipeline. Phase status is tracked
+        and reported to enable graceful degradation.
 
         Phase 1: Question Auto-Answering - Checks if any insights are questions and
                  attempts to answer them automatically using RAG.
@@ -922,25 +1031,37 @@ class RealtimeMeetingInsightsService:
             current_chunk: Current transcript chunk being processed
 
         Returns:
-            List of proactive assistance items (auto-answers, clarifications, conflicts, quality reports, follow-ups, etc.)
+            Tuple of:
+            - List of proactive assistance items (auto-answers, clarifications, etc.)
+            - Dict mapping phase names to their status (success/failed/skipped)
+            - Dict mapping phase names to error messages (only for failed phases)
         """
         proactive_responses = []
+        phase_status: Dict[str, PhaseStatus] = {}
+        error_messages: Dict[str, str] = {}
 
-        try:
-            # OPTIMIZATION: Pre-determine which phases are relevant to avoid unnecessary processing
-            active_phases = self._determine_active_phases(
-                chunk_text=current_chunk.text,
-                insights=insights
-            )
+        # OPTIMIZATION: Pre-determine which phases are relevant to avoid unnecessary processing
+        active_phases = self._determine_active_phases(
+            chunk_text=current_chunk.text,
+            insights=insights
+        )
 
-            logger.debug(
-                f"Selective execution for chunk {current_chunk.index}: "
-                f"Running {len(active_phases)} phases: {', '.join(active_phases)}"
-            )
+        # Initialize phase status for all possible phases
+        all_phases = ['question_answering', 'clarification', 'conflict_detection',
+                      'action_item_quality', 'follow_up_suggestions', 'meeting_efficiency']
+        for phase in all_phases:
+            if phase not in active_phases:
+                phase_status[phase] = PhaseStatus.SKIPPED
 
-            for insight in insights:
-                # Phase 1: Auto-answer questions (only if phase 1 is active)
-                if 'question_answering' in active_phases and insight.type == InsightType.QUESTION:
+        logger.debug(
+            f"Selective execution for chunk {current_chunk.index}: "
+            f"Running {len(active_phases)} phases: {', '.join(active_phases)}"
+        )
+
+        for insight in insights:
+            # Phase 1: Auto-answer questions (only if phase 1 is active)
+            if 'question_answering' in active_phases and insight.type == InsightType.QUESTION:
+                try:
                     # Detect and classify the question
                     detected_question = await self.question_detector.detect_and_classify_question(
                         text=insight.content,
@@ -988,8 +1109,21 @@ class RealtimeMeetingInsightsService:
                                 f"'{detected_question.text[:50]}...' (confidence: {answer.confidence:.2f})"
                             )
 
-                # Phase 2: Clarification suggestions for vague statements (only if phase 2 is active)
-                if 'clarification' in active_phases and insight.type in [InsightType.ACTION_ITEM, InsightType.DECISION]:
+                    # Mark Phase 1 as successful
+                    phase_status['question_answering'] = PhaseStatus.SUCCESS
+
+                except Exception as e:
+                    # Phase 1 failed - log error but continue processing
+                    phase_status['question_answering'] = PhaseStatus.FAILED
+                    error_messages['question_answering'] = str(e)
+                    logger.error(
+                        f"Phase 1 (question_answering) failed for session {sanitize_for_log(session_id)}: {e}",
+                        exc_info=True
+                    )
+
+            # Phase 2: Clarification suggestions for vague statements (only if phase 2 is active)
+            if 'clarification' in active_phases and insight.type in [InsightType.ACTION_ITEM, InsightType.DECISION]:
+                try:
                     clarification = await self.clarification_service.detect_vagueness(
                         statement=insight.content,
                         context=context
@@ -1013,8 +1147,21 @@ class RealtimeMeetingInsightsService:
                             f"(confidence: {clarification.confidence:.2f})"
                         )
 
-                # Phase 3: Conflict detection for decisions (only if phase 3 is active)
-                if 'conflict_detection' in active_phases and insight.type == InsightType.DECISION:
+                    # Mark Phase 2 as successful
+                    phase_status['clarification'] = PhaseStatus.SUCCESS
+
+                except Exception as e:
+                    # Phase 2 failed - log error but continue processing
+                    phase_status['clarification'] = PhaseStatus.FAILED
+                    error_messages['clarification'] = str(e)
+                    logger.error(
+                        f"Phase 2 (clarification) failed for session {sanitize_for_log(session_id)}: {e}",
+                        exc_info=True
+                    )
+
+            # Phase 3: Conflict detection for decisions (only if phase 3 is active)
+            if 'conflict_detection' in active_phases and insight.type == InsightType.DECISION:
+                try:
                     conflict = await self.conflict_detection_service.detect_conflicts(
                         statement=insight.content,
                         statement_type='decision',
@@ -1047,8 +1194,21 @@ class RealtimeMeetingInsightsService:
                             f"(confidence: {conflict.confidence:.2f})"
                         )
 
-                # Phase 4: Action Item Quality Enhancement (only if phase 4 is active)
-                if 'action_item_quality' in active_phases and insight.type == InsightType.ACTION_ITEM:
+                    # Mark Phase 3 as successful
+                    phase_status['conflict_detection'] = PhaseStatus.SUCCESS
+
+                except Exception as e:
+                    # Phase 3 failed - log error but continue processing
+                    phase_status['conflict_detection'] = PhaseStatus.FAILED
+                    error_messages['conflict_detection'] = str(e)
+                    logger.error(
+                        f"Phase 3 (conflict_detection) failed for session {sanitize_for_log(session_id)}: {e}",
+                        exc_info=True
+                    )
+
+            # Phase 4: Action Item Quality Enhancement (only if phase 4 is active)
+            if 'action_item_quality' in active_phases and insight.type == InsightType.ACTION_ITEM:
+                try:
                     quality_report = await self.quality_service.check_quality(
                         action_item=insight.content,
                         context=context
@@ -1084,9 +1244,22 @@ class RealtimeMeetingInsightsService:
                             f"issues: {len(quality_report.issues)})"
                         )
 
-                # Phase 5: Follow-up Suggestions (only if phase 5 is active)
-                # Suggest follow-ups for decisions and key discussion points
-                if 'follow_up_suggestions' in active_phases and insight.type in [InsightType.DECISION, InsightType.KEY_POINT]:
+                    # Mark Phase 4 as successful
+                    phase_status['action_item_quality'] = PhaseStatus.SUCCESS
+
+                except Exception as e:
+                    # Phase 4 failed - log error but continue processing
+                    phase_status['action_item_quality'] = PhaseStatus.FAILED
+                    error_messages['action_item_quality'] = str(e)
+                    logger.error(
+                        f"Phase 4 (action_item_quality) failed for session {sanitize_for_log(session_id)}: {e}",
+                        exc_info=True
+                    )
+
+            # Phase 5: Follow-up Suggestions (only if phase 5 is active)
+            # Suggest follow-ups for decisions and key discussion points
+            if 'follow_up_suggestions' in active_phases and insight.type in [InsightType.DECISION, InsightType.KEY_POINT]:
+                try:
                     follow_up_suggestions = await self.follow_up_service.suggest_follow_ups(
                         current_topic=insight.content,
                         insight_type=insight.type.value,
@@ -1117,7 +1290,21 @@ class RealtimeMeetingInsightsService:
                             f"(confidence: {suggestion.confidence:.2f})"
                         )
 
-            # Phase 6: Meeting Efficiency Features - Always run (lightweight operations)
+                    # Mark Phase 5 as successful
+                    phase_status['follow_up_suggestions'] = PhaseStatus.SUCCESS
+
+                except Exception as e:
+                    # Phase 5 failed - log error but continue processing
+                    phase_status['follow_up_suggestions'] = PhaseStatus.FAILED
+                    error_messages['follow_up_suggestions'] = str(e)
+                    logger.error(
+                        f"Phase 5 (follow_up_suggestions) failed for session {sanitize_for_log(session_id)}: {e}",
+                        exc_info=True
+                    )
+
+        # Phase 6: Meeting Efficiency Features - Always run (lightweight operations)
+        # Wrap Phase 6 in try-except for resilience
+        try:
             # Repetition Detection - Check once per chunk if discussion is becoming repetitive
             repetition_alert = await self.repetition_detector.detect_repetition(
                 session_id=session_id,
@@ -1174,11 +1361,19 @@ class RealtimeMeetingInsightsService:
                     f"({time_usage_alert.time_spent_minutes:.1f} minutes, severity: {time_usage_alert.severity})"
                 )
 
-        except Exception as e:
-            logger.error(f"Error processing proactive assistance: {e}", exc_info=True)
-            # Don't fail the entire pipeline if proactive assistance fails
+            # Mark Phase 6 as successful
+            phase_status['meeting_efficiency'] = PhaseStatus.SUCCESS
 
-        return proactive_responses
+        except Exception as e:
+            # Phase 6 failed - log error but continue processing
+            phase_status['meeting_efficiency'] = PhaseStatus.FAILED
+            error_messages['meeting_efficiency'] = str(e)
+            logger.error(
+                f"Phase 6 (meeting_efficiency) failed for session {sanitize_for_log(session_id)}: {e}",
+                exc_info=True
+            )
+
+        return proactive_responses, phase_status, error_messages
 
     def cleanup_stale_sessions(self, max_age_hours: int = 4) -> int:
         """
