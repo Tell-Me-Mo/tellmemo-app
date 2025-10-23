@@ -1654,6 +1654,109 @@ User clicks "Stop Recording"
     Flutter: Close WebSocket
 ```
 
+### Partial Phase Failure Handling ✅ NEW Oct 2025
+
+**Problem:** Active Intelligence has 6 processing phases. If Phase 1 succeeds but Phase 2-6 fail, the system should still deliver Phase 1 results instead of failing completely.
+
+**Solution: Graceful Degradation with Phase-Level Status Tracking**
+
+**Architecture:**
+
+```
+ProcessingResult:
+    insights: List[MeetingInsight]              # Core extraction (always attempted)
+    proactive_assistance: List[Dict]            # Active Intelligence results
+    overall_status: "ok" | "degraded" | "failed"  # System health indicator
+    phase_status: Dict[str, PhaseStatus]        # Per-phase tracking
+    failed_phases: List[str]                    # Failed phase names
+    error_messages: Dict[str, str]              # Error details (logged, not sent to client)
+```
+
+**Phase-Level Error Handling:**
+
+Each Active Intelligence phase (1-6) is wrapped in individual try-except blocks:
+
+```python
+# Phase 1: Question Answering
+try:
+    question = await detect_question(insight)
+    answer = await answer_question(question)
+    phase_status['question_answering'] = PhaseStatus.SUCCESS
+except Exception as e:
+    phase_status['question_answering'] = PhaseStatus.FAILED
+    error_messages['question_answering'] = str(e)
+    logger.error(f"Phase 1 failed: {e}")
+    # Continue to Phase 2...
+
+# Phase 2: Clarification
+try:
+    clarification = await detect_vagueness(insight)
+    phase_status['clarification'] = PhaseStatus.SUCCESS
+except Exception as e:
+    phase_status['clarification'] = PhaseStatus.FAILED
+    error_messages['clarification'] = str(e)
+    logger.error(f"Phase 2 failed: {e}")
+    # Continue to Phase 3...
+
+# ... Phases 3-6 similarly wrapped
+```
+
+**Status Classification:**
+
+```python
+if all core extraction succeeded:
+    if all phases succeeded:
+        overall_status = ProcessingStatus.OK
+    elif some phases failed:
+        overall_status = ProcessingStatus.DEGRADED  # Partial functionality
+else:
+    overall_status = ProcessingStatus.FAILED  # Core extraction failed
+```
+
+**WebSocket Response (Degraded Mode):**
+
+```json
+{
+  "type": "insights_extracted",
+  "chunk_index": 5,
+  "insights": [...],  // Core insights still delivered
+  "proactive_assistance": [
+    // Only successful phases included
+    {"type": "auto_answer", ...},  // Phase 1 succeeded
+    {"type": "clarification_needed", ...}  // Phase 2 succeeded
+    // Phase 3-6 missing due to failures
+  ],
+  "status": "degraded",  // User notified of partial failure
+  "phase_status": {
+    "question_answering": "success",
+    "clarification": "success",
+    "conflict_detection": "failed",
+    "action_item_quality": "failed",
+    "follow_up_suggestions": "skipped",
+    "meeting_efficiency": "success"
+  },
+  "warning": "Some AI features temporarily unavailable (2 features affected)",
+  "failed_phases": ["conflict_detection", "action_item_quality"]
+}
+```
+
+**Benefits:**
+
+1. **Resilience:** Core insights always delivered even if Active Intelligence fails
+2. **Partial Functionality:** Phases 1-2 still work if Phases 3-6 fail
+3. **User Visibility:** Clear warning message about degraded functionality
+4. **Debugging:** Phase-level status enables rapid issue identification
+5. **Monitoring:** Operators can track which phases are failing in production
+
+**Monitoring Metrics:**
+
+- **Degraded Response Rate:** % of responses with `status=degraded`
+- **Phase Failure Rate:** % failures per phase (identifies problematic phases)
+- **Time to Recovery:** How quickly degraded mode resolves
+- **User Impact:** Which features users are missing during degradation
+
+**Status:** ✅ Production Ready (October 23, 2025)
+
 ---
 
 ## API Specification
@@ -1737,7 +1840,7 @@ User clicks "Stop Recording"
 }
 ```
 
-#### 3. Insights Extracted (with Proactive Assistance)
+#### 3. Insights Extracted (with Proactive Assistance & Partial Failure Handling)
 ```json
 {
   "type": "insights_extracted",
@@ -1755,6 +1858,15 @@ User clicks "Stop Recording"
       "confidence_score": 0.92
     }
   ],
+  "status": "ok",  // NEW: "ok" | "degraded" | "failed"
+  "phase_status": {  // NEW: Per-phase tracking
+    "question_answering": "success",
+    "clarification": "success",
+    "conflict_detection": "success",
+    "action_item_quality": "success",
+    "follow_up_suggestions": "skipped",
+    "meeting_efficiency": "success"
+  },
   "proactive_assistance": [
     {
       "type": "auto_answer",
@@ -1810,7 +1922,9 @@ User clicks "Stop Recording"
   ],
   "total_insights": 1,
   "processing_time_ms": 1850,
-  "timestamp": "2025-10-19T12:00:12Z"
+  "timestamp": "2025-10-19T12:00:12Z",
+  "warning": "Some AI features temporarily unavailable (conflict detection)",  // NEW: Optional, only if status=degraded
+  "failed_phases": ["conflict_detection"]  // NEW: Optional, lists failed phases
 }
 ```
 
