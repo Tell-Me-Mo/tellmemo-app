@@ -48,6 +48,7 @@ from services.intelligence.realtime_meeting_insights import (
     InsightType
 )
 from services.intelligence.adaptive_insight_processor import get_adaptive_processor
+from services.intelligence.transcript_validator import get_transcript_validator, TranscriptQuality
 from services.transcription.replicate_transcription_service import get_replicate_service
 from dependencies.auth import get_current_user_ws
 from utils.logger import get_logger, sanitize_for_log
@@ -615,11 +616,27 @@ async def handle_audio_chunk(
         transcription_time = time.time() - start_time
         session.add_transcription_time(transcription_time * 1000)
 
-        # Check if transcript has meaningful content
-        is_meaningful = (
-            len(transcript_text.strip()) >= MIN_TRANSCRIPT_LENGTH and
-            transcript_text not in ["[No speech detected]", "[Transcription failed]", "None"]
-        )
+        # Validate transcript quality using TranscriptValidator
+        validator = get_transcript_validator()
+        validation_result = validator.validate(transcript_text)
+
+        # Log validation results for monitoring
+        if not validation_result.is_valid:
+            logger.info(
+                f"Chunk {session.chunk_index} transcript filtered: "
+                f"quality={validation_result.quality.value}, "
+                f"reason={validation_result.reason}, "
+                f"words={validation_result.word_count}, "
+                f"chars={validation_result.char_count}"
+            )
+        else:
+            logger.debug(
+                f"Chunk {session.chunk_index} transcript valid: "
+                f"words={validation_result.word_count}, "
+                f"chars={validation_result.char_count}"
+            )
+
+        is_meaningful = validation_result.is_valid
 
         # Send transcription update
         # Check WebSocket connection before sending
@@ -628,7 +645,9 @@ async def handle_audio_chunk(
             'chunk_index': session.chunk_index,
             'text': transcript_text,
             'speaker': speaker,
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.utcnow().isoformat(),
+            'is_valid': validation_result.is_valid,
+            'quality': validation_result.quality.value
         })
 
         # If WebSocket is closed, abort processing
@@ -691,7 +710,7 @@ async def handle_audio_chunk(
             if not is_meaningful:
                 logger.info(
                     f"Skipping insight extraction for chunk {session.chunk_index}: "
-                    f"transcript too short ({len(transcript_text)} chars)"
+                    f"validation failed - {validation_result.reason}"
                 )
             elif not should_process_insights:
                 logger.debug(
