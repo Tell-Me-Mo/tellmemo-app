@@ -1,7 +1,7 @@
 After analyzing the updated HLD (v4.1) with the new Adaptive Insight Processing, here are 30 key areas where the logic can be significantly improved:
 
 🎯 CRITICAL ISSUES - Adaptive Processing Logic
-1. Context Window Configuration Inconsistency
+1. DONE: Context Window Configuration Inconsistency
 Problem: Multiple conflicting context requirements:
 
 Configuration: context_window_size = 3
@@ -17,7 +17,7 @@ PRIORITY_CONTEXT_MAP = {
     ChunkPriority.LOW: 4,        # Batch 4 chunks
 }
 MAX_BATCH_SIZE = 5  # Hard limit - force process regardless
-2. Semantic Score Calculation Undefined
+2. DONE: Semantic Score Calculation Undefined
 Problem: Document says "semantic score ≥ 0.3" but never explains how it's calculated.
 
 Improvement:
