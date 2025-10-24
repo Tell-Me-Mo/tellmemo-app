@@ -9,8 +9,22 @@ class LiveInsightsSettingsDialog extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final settings = ref.watch(liveInsightsSettingsProvider);
-    final notifier = ref.read(liveInsightsSettingsProvider.notifier);
+    final settings = ref.watch(liveInsightsSettingsSyncProvider);
+    final notifierAsync = ref.watch(liveInsightsSettingsNotifierAsyncProvider);
+
+    // If notifier is not yet loaded, show loading state
+    if (!notifierAsync.hasValue) {
+      return const Dialog(
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.all(48.0),
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      );
+    }
+
+    final notifier = notifierAsync.value!;
 
     return Dialog(
       child: Container(
