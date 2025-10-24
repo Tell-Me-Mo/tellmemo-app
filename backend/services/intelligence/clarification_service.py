@@ -252,7 +252,27 @@ class ClarificationService:
         except json.JSONDecodeError as e:
             logger.debug(f"Initial JSON parse failed: {e}")
 
-            # Step 5: Try regex extraction as last resort
+            # Step 5: Handle multiple JSON objects (LLM returned comma-separated objects)
+            if expected_type == "object" and response_text.count('{') > 1:
+                # Try to parse as array by wrapping in brackets
+                try:
+                    array_text = f"[{response_text}]"
+                    parsed_array = json.loads(array_text)
+                    if isinstance(parsed_array, list) and len(parsed_array) > 0:
+                        logger.info(f"Recovered {len(parsed_array)} objects from comma-separated JSON")
+
+                        # For vagueness detection, select object with highest confidence
+                        if all(isinstance(obj, dict) and 'confidence' in obj for obj in parsed_array):
+                            best_obj = max(parsed_array, key=lambda x: x.get('confidence', 0))
+                            logger.info(f"Selected highest confidence object: {best_obj.get('confidence', 0):.2f}")
+                            return best_obj
+
+                        # Otherwise return first valid object
+                        return parsed_array[0] if isinstance(parsed_array[0], dict) else None
+                except json.JSONDecodeError:
+                    logger.debug("Failed to parse as array of objects")
+
+            # Step 6: Try regex extraction as last resort
             if expected_type == "array":
                 # Extract quoted strings that look like questions
                 matches = re.findall(r'"([^"]+\?)"', original_text)
@@ -555,13 +575,14 @@ Output only the JSON array:"""
 Statement: {statement_escaped}
 Context: {context_escaped}
 
-Determine if the statement is vague or missing critical details.
+Determine if the statement is vague or missing critical details. Focus on identifying the MOST CRITICAL vagueness issue (if any).
 
 CRITICAL REQUIREMENTS:
-1. Respond with ONLY valid JSON - nothing else
-2. No markdown, no code blocks, no explanations
-3. Use simple descriptions (no apostrophes or quotes inside strings)
-4. Use proper JSON formatting
+1. Respond with EXACTLY ONE JSON object - nothing else
+2. If multiple vagueness types exist, report only the MOST IMPORTANT one
+3. No markdown, no code blocks, no explanations, no multiple objects
+4. Use simple descriptions (no apostrophes or quotes inside strings)
+5. Use proper JSON formatting
 
 Valid types: time, assignment, detail, scope
 Confidence: 0.0 to 1.0 (use 0.75+ only for genuinely vague statements that require clarification)
@@ -575,8 +596,9 @@ BAD examples:
 ```json {{"is_vague": false}}```  <- No markdown blocks
 Analysis: {{"is_vague": true...}}  <- No extra text
 {{"missing_info": "it's unclear"}}  <- Use "it is unclear" instead
+{{"is_vague": true, "type": "time", ...}}, {{"is_vague": true, "type": "detail", ...}}  <- NEVER output multiple objects
 
-Output only the JSON object:"""
+Output EXACTLY ONE JSON object:"""
 
         # Call LLM with retry logic
         response_text = await self._llm_call_with_retry(

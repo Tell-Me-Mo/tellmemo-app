@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/historical_insights_provider.dart';
-import '../widgets/insight_card.dart';
+import '../widgets/timeline_insight_badge.dart';
 import '../widgets/insights_filter_dialog.dart';
 
 /// Screen for displaying historical insights from past sessions
@@ -270,7 +270,7 @@ class _HistoricalInsightsScreenState
               final insight = state.insights[index];
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: InsightCard(insight: insight),
+                child: TimelineInsightBadge(insight: insight),
               );
             },
           ),

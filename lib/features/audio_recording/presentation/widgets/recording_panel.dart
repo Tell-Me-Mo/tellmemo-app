@@ -14,7 +14,7 @@ import '../../../../core/utils/screen_info.dart';
 import '../../../live_insights/domain/models/live_insight_model.dart';
 import '../../../live_insights/domain/models/proactive_assistance_model.dart';
 import '../../../live_insights/presentation/widgets/live_insights_settings_dialog.dart';
-import '../../../live_insights/presentation/widgets/proactive_assistance_card.dart';
+import '../../../meetings/presentation/widgets/live_insights_timeline_panel.dart';
 
 enum ProjectSelectionMode { automatic, manual, specific }
 
@@ -292,9 +292,10 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel>
         recordingState.state == RecordingState.paused;
     final showInsights = _enableLiveInsights && isRecording;
 
+    // Use full screen width when showing insights, otherwise fixed width
     final panelWidth = screenInfo.isMobile
         ? MediaQuery.of(context).size.width
-        : (showInsights ? 1400.0 : 550.0);
+        : (showInsights ? MediaQuery.of(context).size.width : 550.0);
 
     return Material(
       type: MaterialType.transparency,
@@ -318,6 +319,7 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel>
 
           // Unified Panel
           Positioned(
+            left: showInsights ? 0 : null,
             right: widget.rightOffset,
             top: 0,
             bottom: screenInfo.isMobile ? keyboardHeight : 0,
@@ -345,7 +347,7 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel>
                       // Main Content Area
                       Expanded(
                         child: showInsights
-                            ? _buildInsightsContent(theme, colorScheme, recordingState)
+                            ? _buildInsightsLayout(theme, colorScheme, recordingState)
                             : _buildRecordingSetup(theme, colorScheme, recordingState),
                       ),
                     ],
@@ -700,154 +702,167 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel>
   }
 
   // Insights content view (during recording with insights enabled)
-  Widget _buildInsightsContent(ThemeData theme, ColorScheme colorScheme,
+  /// Two-column layout: Main content (80%) + Insights sidebar (20%)
+  Widget _buildInsightsLayout(ThemeData theme, ColorScheme colorScheme,
       RecordingStateModel recordingState) {
-    final hasInsights = _liveInsights.isNotEmpty;
-    final hasAssistance = _proactiveAssistance.isNotEmpty;
-
-    return Column(
+    return Row(
       children: [
-        // Content - Side by side for desktop when insights are enabled
+        // Main content area (80%) - Proactive assistance timeline
         Expanded(
-          child: hasInsights || hasAssistance
-              ? Row(
-                  children: [
-                    // Insights column
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Insights header
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            decoration: BoxDecoration(
-                              border: Border(
-                                bottom: BorderSide(
-                                  color: colorScheme.outlineVariant
-                                      .withValues(alpha: 0.2),
-                                ),
-                              ),
-                            ),
-                            child: Text(
-                              'Insights',
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: colorScheme.onSurface,
-                              ),
-                            ),
-                          ),
-                          // Insights list
-                          Expanded(
-                            child: _buildInsightsList(theme, colorScheme),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Divider
-                    VerticalDivider(
-                      width: 1,
-                      thickness: 1,
-                      color: colorScheme.outlineVariant.withValues(alpha: 0.2),
-                    ),
-                    // Assistance column
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Assistance header
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            decoration: BoxDecoration(
-                              border: Border(
-                                bottom: BorderSide(
-                                  color: colorScheme.outlineVariant
-                                      .withValues(alpha: 0.2),
-                                ),
-                              ),
-                            ),
-                            child: Text(
-                              'Assistance',
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: colorScheme.onSurface,
-                              ),
-                            ),
-                          ),
-                          // Assistance list
-                          Expanded(
-                            child: _buildAssistanceList(theme, colorScheme),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                )
-              : _buildEmptyInsightsState(theme, colorScheme),
+          flex: 80,
+          child: _buildProactiveAssistanceTimeline(theme, colorScheme, recordingState),
+        ),
+
+        // Vertical divider
+        Container(
+          width: 1,
+          color: colorScheme.outline.withValues(alpha: 0.2),
+        ),
+
+        // Insights sidebar (20%) - Decisions and Risks only
+        Expanded(
+          flex: 20,
+          child: Container(
+            color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            child: _buildInsightsSidebar(theme, colorScheme, recordingState),
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildInsightsList(ThemeData theme, ColorScheme colorScheme) {
-    if (_liveInsights.isEmpty) {
-      return Center(
+  /// Proactive assistance timeline for main content area
+  Widget _buildProactiveAssistanceTimeline(ThemeData theme, ColorScheme colorScheme,
+      RecordingStateModel recordingState) {
+    return LiveInsightsTimelinePanel(
+      insights: [], // No insights in main area
+      isRecording: recordingState.state == RecordingState.recording,
+    );
+  }
+
+  /// Insights sidebar showing only Decisions and Risks
+  Widget _buildInsightsSidebar(ThemeData theme, ColorScheme colorScheme,
+      RecordingStateModel recordingState) {
+    return Column(
+      children: [
+        // Header
+        Container(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(
+                Icons.insights,
+                size: 20,
+                color: colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Insights',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: colorScheme.primaryContainer.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '${_liveInsights.length}',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        Divider(
+          height: 1,
+          color: colorScheme.outline.withValues(alpha: 0.2),
+        ),
+
+        // Insights list
+        Expanded(
+          child: _liveInsights.isEmpty
+              ? _buildEmptyInsightsSidebar(theme, colorScheme)
+              : ListView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: _liveInsights.length,
+                  itemBuilder: (context, index) {
+                    final insight = _liveInsights[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _buildInsightCard(theme, colorScheme, insight),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyInsightsSidebar(ThemeData theme, ColorScheme colorScheme) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.lightbulb_outline,
+              Icons.insights_outlined,
               size: 48,
-              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+              color: colorScheme.onSurface.withValues(alpha: 0.3),
             ),
             const SizedBox(height: 16),
             Text(
               'No insights yet',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: colorScheme.onSurface.withValues(alpha: 0.5),
               ),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              'Insights will appear here as the meeting progresses',
+              'Decisions and risks will appear here',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                color: colorScheme.onSurface.withValues(alpha: 0.4),
               ),
               textAlign: TextAlign.center,
             ),
           ],
         ),
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _liveInsights.length,
-      itemBuilder: (context, index) {
-        final insight = _liveInsights[index];
-        return _buildInsightCard(insight, theme, colorScheme);
-      },
+      ),
     );
   }
 
-  Widget _buildInsightCard(LiveInsightModel insight, ThemeData theme,
-      ColorScheme colorScheme) {
-    final typeColor = _getInsightTypeColor(insight.type);
-    final priorityColor = _getInsightPriorityColor(insight.priority);
+  Widget _buildInsightCard(ThemeData theme, ColorScheme colorScheme, dynamic insight) {
+    final type = insight.type;
+    final priority = insight.priority;
+
+    final typeColor = type == LiveInsightType.decision ? Colors.green : Colors.red;
+    final typeIcon = type == LiveInsightType.decision ? Icons.gavel : Icons.warning_amber;
+
+    final priorityColor = priority == LiveInsightPriority.critical
+        ? Colors.red
+        : priority == LiveInsightPriority.high
+            ? Colors.orange
+            : priority == LiveInsightPriority.medium
+                ? Colors.blue
+                : Colors.grey;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(12),
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: typeColor.withValues(alpha: 0.2),
+          color: typeColor.withValues(alpha: 0.3),
+          width: 1,
         ),
       ),
       child: Column(
@@ -855,190 +870,36 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel>
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: typeColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
+              Icon(typeIcon, size: 16, color: typeColor),
+              const SizedBox(width: 6),
+              Expanded(
                 child: Text(
-                  _getInsightTypeLabel(insight.type),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: typeColor,
+                  type == LiveInsightType.decision ? 'Decision' : 'Risk',
+                  style: theme.textTheme.labelSmall?.copyWith(
                     fontWeight: FontWeight.w600,
+                    color: typeColor,
                     fontSize: 11,
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                width: 8,
+                height: 8,
                 decoration: BoxDecoration(
-                  color: priorityColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  insight.priority.toString().split('.').last.toUpperCase(),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: priorityColor,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 10,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              Text(
-                _formatTime(insight.timestamp ?? DateTime.now()),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                  fontSize: 11,
+                  color: priorityColor,
+                  shape: BoxShape.circle,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
             insight.content ?? '',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              height: 1.4,
-            ),
-          ),
-          if (insight.context.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              insight.context,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAssistanceList(ThemeData theme, ColorScheme colorScheme) {
-    if (_proactiveAssistance.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.auto_awesome,
-              size: 48,
-              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No assistance suggestions yet',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _proactiveAssistance.length,
-      itemBuilder: (context, index) {
-        final assistance = _proactiveAssistance[index];
-        return ProactiveAssistanceCard(
-          assistance: assistance,
-          onDismiss: () {
-            setState(() {
-              _proactiveAssistance.removeAt(index);
-            });
-          },
-        );
-      },
-    );
-  }
-
-
-  Widget _buildEmptyInsightsState(ThemeData theme, ColorScheme colorScheme) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: colorScheme.primaryContainer.withValues(alpha: 0.3),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.lightbulb_outline,
-                size: 48,
-                color: colorScheme.primary,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Live Insights Active',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'AI is listening and will extract insights as the meeting progresses',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildInsightTypeChip('Action Items', Icons.assignment, Colors.blue, theme),
-                const SizedBox(width: 8),
-                _buildInsightTypeChip('Decisions', Icons.check_circle, Colors.green, theme),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildInsightTypeChip('Risks', Icons.warning, Colors.red, theme),
-                const SizedBox(width: 8),
-                _buildInsightTypeChip('Questions', Icons.help_outline, Colors.orange, theme),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInsightTypeChip(String label, IconData icon, Color color, ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: color.withValues(alpha: 0.2),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 6),
-          Text(
-            label,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w600,
-              fontSize: 11,
+              fontSize: 12,
             ),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -1046,40 +907,6 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel>
   }
 
   // Helper methods
-  Color _getInsightTypeColor(LiveInsightType type) {
-    switch (type) {
-      case LiveInsightType.decision:
-        return Colors.green;
-      case LiveInsightType.risk:
-        return Colors.red;
-    }
-  }
-
-  Color _getInsightPriorityColor(LiveInsightPriority priority) {
-    switch (priority) {
-      case LiveInsightPriority.critical:
-        return Colors.red;
-      case LiveInsightPriority.high:
-        return Colors.orange;
-      case LiveInsightPriority.medium:
-        return Colors.blue;
-      case LiveInsightPriority.low:
-        return Colors.grey;
-    }
-  }
-
-  String _getInsightTypeLabel(LiveInsightType type) {
-    switch (type) {
-      case LiveInsightType.decision:
-        return 'DECISION';
-      case LiveInsightType.risk:
-        return 'RISK';
-    }
-  }
-
-  String _formatTime(DateTime time) {
-    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
-  }
 
   String _formatDuration(Duration duration) {
     final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
