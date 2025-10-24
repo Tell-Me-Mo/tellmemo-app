@@ -1399,8 +1399,17 @@ class RealtimeMeetingInsightsService:
                         context=context
                     )
 
-                    # Only suggest improvements if completeness score is below threshold
-                    if quality_report.completeness_score < 0.8 and len(quality_report.issues) > 0:
+                    # Only suggest improvements if completeness score is critically low
+                    # Threshold lowered from 0.8 to 0.5 to reduce false positives (Oct 2025)
+                    # Alert only on action items that are less than 50% complete OR have 2+ critical issues
+                    critical_issues = [issue for issue in quality_report.issues if issue.severity == 'critical']
+
+                    should_alert = (
+                        quality_report.completeness_score < 0.5  # Less than 50% complete
+                        or len(critical_issues) >= 2  # Missing both owner AND deadline
+                    )
+
+                    if should_alert and len(quality_report.issues) > 0:
                         # Convert QualityIssue objects to dicts
                         issues_dict = [
                             {
