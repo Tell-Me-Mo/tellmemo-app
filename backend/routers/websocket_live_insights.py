@@ -114,6 +114,9 @@ class LiveMeetingSession:
         self.chunks_since_last_process = 0
         self.accumulated_context: List[str] = []
 
+        # NEW: Topic-based batch processing (Oct 2025)
+        self.accumulated_chunks: List[TranscriptChunk] = []  # Buffer for topic batching
+
         # Insight tracking
         self.total_insights_extracted = 0
         self.insights_by_type: Dict[str, int] = {}
@@ -887,10 +890,79 @@ async def handle_audio_chunk(
                     f"will process at chunk {(session.chunk_index // BATCH_SIZE + 1) * BATCH_SIZE}"
                 )
 
-        # Extract insights (only when adaptive processor or batching decides to)
-        # Create empty ProcessingResult for when we skip processing
+        # ====================================================================================
+        # TWO-PATH PROCESSING ARCHITECTURE (Oct 2025)
+        # ====================================================================================
+        # Path 1: IMMEDIATE - Real-time question answering (every chunk)
+        # Path 2: BATCH - Topic-based insights + proactive (when topic completes)
+        # ====================================================================================
+
         from services.intelligence.realtime_meeting_insights import ProcessingResult, ProcessingStatus
 
+        # PATH 1: IMMEDIATE QUESTION ANSWERING (always run on valid chunks)
+        # Build full conversation context for QA
+        full_transcript = "\n".join(session.accumulated_transcript)
+
+        if is_meaningful:
+            immediate_qa_start = time.time()
+
+            try:
+                immediate_qa = await realtime_insights_service.process_chunk_immediate(
+                    session_id=session.session_id,
+                    project_id=session.project_id,
+                    organization_id=session.organization_id,
+                    chunk=chunk,
+                    context=full_transcript
+                )
+
+                immediate_qa_time = time.time() - immediate_qa_start
+
+                # Send QA answers immediately to frontend
+                if immediate_qa:
+                    logger.info(
+                        f"[Immediate] Sending {len(immediate_qa)} QA answers for chunk {session.chunk_index} "
+                        f"(took {immediate_qa_time:.2f}s)"
+                    )
+
+                    sent = await live_insights_manager.send_message(session, {
+                        'type': 'proactive_assistance',
+                        'chunk_index': chunk.index,
+                        'items': immediate_qa,
+                        'source': 'immediate_qa',
+                        'timestamp': datetime.utcnow().isoformat()
+                    })
+
+                    if not sent:
+                        logger.info(f"Session {session.session_id} WebSocket closed during QA send")
+                        session.cancel()
+                        return
+
+            except Exception as e:
+                logger.error(f"[Immediate] QA processing failed for chunk {session.chunk_index}: {e}", exc_info=True)
+
+        # PATH 2: BATCH TOPIC PROCESSING (accumulate and process when topic completes)
+        # Add chunk to buffer for topic-based processing
+        if is_meaningful:
+            session.accumulated_chunks.append(chunk)
+            logger.debug(
+                f"[Batch] Buffered chunk {session.chunk_index} "
+                f"(total buffered: {len(session.accumulated_chunks)})"
+            )
+
+        # Check if topic completed using existing topic detector logic
+        should_process_topic = False
+        batch_reason = "accumulating"
+
+        if is_meaningful and session.accumulated_chunks and topic_change_detected:
+            # Topic change was already detected above by topic detector
+            should_process_topic = True
+            batch_reason = adaptive_reason or "topic_change_detected"
+            logger.info(
+                f"[Batch] Topic completed for session {session.session_id}: "
+                f"{batch_reason} | buffered_chunks={len(session.accumulated_chunks)}"
+            )
+
+        # Initialize result (will be populated if topic processing happens)
         result = ProcessingResult(
             session_id=session.session_id,
             chunk_index=chunk.index,
@@ -903,29 +975,54 @@ async def handle_audio_chunk(
             processing_time_ms=0
         )
 
-        if should_process_insights:
-            # Final cancellation check before expensive insight extraction
+        # Process accumulated topic if completed
+        if should_process_topic and session.accumulated_chunks:
+            # Final cancellation check before expensive batch processing
             if session.is_cancelled:
-                logger.info(f"Session {session.session_id} cancelled before insight extraction")
+                logger.info(f"Session {session.session_id} cancelled before batch processing")
                 return
 
-            insights_start = time.time()
+            batch_start = time.time()
 
-            result = await realtime_insights_service.process_transcript_chunk(
-                session_id=session.session_id,
-                project_id=session.project_id,
-                organization_id=session.organization_id,
-                chunk=chunk,
-                db=db,
-                # Pass user preferences for cost optimization
-                enabled_insight_types=session.enabled_insight_types,
-                # Pass processing stats for metadata
-                adaptive_stats=processing_stats,
-                adaptive_reason=adaptive_reason
-            )
+            try:
+                result = await realtime_insights_service.process_topic_batch(
+                    session_id=session.session_id,
+                    project_id=session.project_id,
+                    organization_id=session.organization_id,
+                    accumulated_chunks=session.accumulated_chunks,
+                    db=db,
+                    enabled_insight_types=session.enabled_insight_types,
+                    adaptive_stats=processing_stats,
+                    adaptive_reason=batch_reason
+                )
 
-            insights_time = time.time() - insights_start
-            session.add_processing_time(insights_time * 1000)
+                batch_time = time.time() - batch_start
+                session.add_processing_time(batch_time * 1000)
+
+                logger.info(
+                    f"[Batch] Processed topic with {len(session.accumulated_chunks)} chunks: "
+                    f"{len(result.insights)} insights, {len(result.proactive_assistance)} proactive items "
+                    f"(took {batch_time:.2f}s)"
+                )
+
+                # Clear buffer after successful processing
+                session.accumulated_chunks.clear()
+
+            except Exception as e:
+                logger.error(f"[Batch] Topic processing failed: {e}", exc_info=True)
+                # Don't clear buffer on error - might recover on next attempt
+                result = ProcessingResult(
+                    session_id=session.session_id,
+                    chunk_index=chunk.index,
+                    insights=[],
+                    proactive_assistance=[],
+                    overall_status=ProcessingStatus.FAILED,
+                    phase_status={},
+                    total_insights_count=0,
+                    processing_time_ms=0,
+                    failed_phases=['batch_processing'],
+                    error_messages={'batch_processing': str(e)}
+                )
 
         # Update session state
         session.chunk_index += 1
@@ -937,48 +1034,59 @@ async def handle_audio_chunk(
             insight_type = insight.type.value
             session.increment_insight_count(insight_type)
 
-        # Build WebSocket message with partial results support
-        message = {
-            'type': 'insights_extracted',
-            'chunk_index': chunk.index,
-            'insights': [insight.to_dict() for insight in result.insights],  # New insights
-            'evolved_insights': result.evolved_insights,  # Insights that evolved from previous ones
-            'total_insights': result.total_insights_count,
-            'processing_time_ms': result.processing_time_ms,
-            'timestamp': datetime.utcnow().isoformat(),
-            'proactive_assistance': result.proactive_assistance,
-            'status': result.overall_status.value,  # ok | degraded | failed
-            'phase_status': {k: v.value for k, v in result.phase_status.items()},
-        }
+        # Send batch insights ONLY if there are actual insights or proactive items
+        # (Don't send empty messages when just accumulating chunks)
+        if should_process_topic and (result.insights or result.proactive_assistance):
+            # Build WebSocket message for batch insights
+            message = {
+                'type': 'insights_extracted',
+                'chunk_index': chunk.index,
+                'insights': [insight.to_dict() for insight in result.insights],  # New insights
+                'evolved_insights': result.evolved_insights,  # Insights that evolved from previous ones
+                'total_insights': result.total_insights_count,
+                'processing_time_ms': result.processing_time_ms,
+                'timestamp': datetime.utcnow().isoformat(),
+                'proactive_assistance': result.proactive_assistance,
+                'status': result.overall_status.value,  # ok | degraded | failed
+                'phase_status': {k: v.value for k, v in result.phase_status.items()},
+                'source': 'topic_batch',  # NEW: Indicate this is from batch processing
+                'topic_reason': batch_reason,  # NEW: Why topic completed
+                'chunks_in_topic': len(session.accumulated_chunks) if session.accumulated_chunks else 0
+            }
 
-        # Add warning message for degraded status
-        warning_msg = result.get_warning_message()
-        if warning_msg:
-            message['warning'] = warning_msg
-            logger.warning(f"Session {session.session_id} degraded: {warning_msg}")
+            # Add warning message for degraded status
+            warning_msg = result.get_warning_message()
+            if warning_msg:
+                message['warning'] = warning_msg
+                logger.warning(f"Session {session.session_id} degraded: {warning_msg}")
 
-        # Include error details if any phases failed (for debugging/monitoring)
-        if result.failed_phases:
-            message['failed_phases'] = result.failed_phases
-            # Don't expose internal error messages to client for security
-            # but log them for debugging
-            logger.error(
-                f"Session {session.session_id} phase failures: {result.error_messages}"
+            # Include error details if any phases failed (for debugging/monitoring)
+            if result.failed_phases:
+                message['failed_phases'] = result.failed_phases
+                # Don't expose internal error messages to client for security
+                # but log them for debugging
+                logger.error(
+                    f"Session {session.session_id} phase failures: {result.error_messages}"
+                )
+
+            # Add skip reason if chunk was skipped
+            if result.skipped_reason:
+                message['skipped_reason'] = result.skipped_reason
+                if result.similarity_score is not None:
+                    message['similarity_score'] = result.similarity_score
+
+            # Send batch insights update
+            logger.info(
+                f"[Batch] Sending insights for session {session.session_id}: "
+                f"{len(result.insights)} insights, {len(result.proactive_assistance)} proactive"
             )
 
-        # Add skip reason if chunk was skipped
-        if result.skipped_reason:
-            message['skipped_reason'] = result.skipped_reason
-            if result.similarity_score is not None:
-                message['similarity_score'] = result.similarity_score
+            sent = await live_insights_manager.send_message(session, message)
 
-        # Send insights update
-        # Check WebSocket connection before sending
-        sent = await live_insights_manager.send_message(session, message)
-
-        # If WebSocket is closed, abort processing
-        if not sent:
-            return
+            # If WebSocket is closed, abort processing
+            if not sent:
+                logger.info(f"Session {session.session_id} WebSocket closed during batch send")
+                return
 
         # Send metrics update every 10 chunks
         if session.chunk_index % 10 == 0:

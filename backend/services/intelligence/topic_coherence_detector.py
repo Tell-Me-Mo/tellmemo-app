@@ -69,33 +69,44 @@ class TopicCoherenceDetector:
     COHERENCE_THRESHOLD = 0.70  # Minimum similarity to consider same topic (lowered from 0.75 for better detection)
     MAX_WINDOW_SIZE = 10        # Maximum chunks to track per session
     MIN_TOPIC_CHUNKS = 2        # Minimum chunks before considering topic established
+    MAX_TOPIC_DURATION_SECONDS = 120  # Force topic completion after 2 minutes
+    MAX_TOPIC_CHUNKS = 6        # Force completion after 6 chunks (~120s at 20s/chunk)
 
     def __init__(
         self,
         coherence_threshold: float = None,
         max_window_size: int = None,
-        min_topic_chunks: int = None
+        min_topic_chunks: int = None,
+        max_topic_duration_seconds: int = None,
+        max_topic_chunks: int = None
     ):
         """
         Initialize topic coherence detector.
 
         Args:
-            coherence_threshold: Minimum similarity to consider chunks related (0.75 default)
+            coherence_threshold: Minimum similarity to consider chunks related (0.70 default)
             max_window_size: Maximum chunks to track in rolling window (10 default)
             min_topic_chunks: Minimum chunks before topic is established (2 default)
+            max_topic_duration_seconds: Force topic completion after N seconds (120 default)
+            max_topic_chunks: Force completion after N chunks (6 default)
         """
         self.coherence_threshold = coherence_threshold or self.COHERENCE_THRESHOLD
         self.max_window_size = max_window_size or self.MAX_WINDOW_SIZE
         self.min_topic_chunks = min_topic_chunks or self.MIN_TOPIC_CHUNKS
+        self.max_topic_duration_seconds = max_topic_duration_seconds or self.MAX_TOPIC_DURATION_SECONDS
+        self.max_topic_chunks = max_topic_chunks or self.MAX_TOPIC_CHUNKS
 
         # Session-scoped state: session_id -> topic tracking data
         self._session_topics: Dict[str, deque] = {}
         self._session_embeddings: Dict[str, deque] = {}
         self._session_current_topic: Dict[str, Optional[TopicSegment]] = {}
+        self._session_topic_start_time: Dict[str, datetime] = {}  # Track when topic started
+        self._session_topic_chunk_count: Dict[str, int] = {}  # Track chunks in current topic
 
         logger.info(
             f"TopicCoherenceDetector initialized "
-            f"(threshold: {self.coherence_threshold}, window: {self.max_window_size})"
+            f"(threshold: {self.coherence_threshold}, window: {self.max_window_size}, "
+            f"max_duration: {self.max_topic_duration_seconds}s, max_chunks: {self.max_topic_chunks})"
         )
 
     async def are_related(
@@ -152,6 +163,7 @@ class TopicCoherenceDetector:
         Decide if current chunk should be added to batch or trigger processing.
 
         This is the main decision point that integrates with AdaptiveInsightProcessor.
+        Uses hybrid approach: semantic similarity + timeout + max chunks.
 
         Args:
             session_id: Meeting session identifier
@@ -170,6 +182,8 @@ class TopicCoherenceDetector:
                 self._session_embeddings[session_id] = deque(maxlen=self.max_window_size)
                 self._session_topics[session_id] = deque(maxlen=self.max_window_size)
                 self._session_current_topic[session_id] = None
+                self._session_topic_start_time[session_id] = datetime.now()
+                self._session_topic_chunk_count[session_id] = 0
 
             # First chunk in session - always batch
             if not accumulated_chunks:
@@ -177,6 +191,10 @@ class TopicCoherenceDetector:
                 current_embedding = await embedding_service.generate_embedding(current_chunk)
                 self._session_embeddings[session_id].append(current_embedding)
                 self._session_topics[session_id].append(current_chunk)
+
+                # Initialize topic tracking
+                self._session_topic_start_time[session_id] = datetime.now()
+                self._session_topic_chunk_count[session_id] = 1
 
                 return True, "first_chunk_in_session", None
 
@@ -190,9 +208,44 @@ class TopicCoherenceDetector:
                 # Safety fallback - no previous embedding available
                 self._session_embeddings[session_id].append(current_embedding)
                 self._session_topics[session_id].append(current_chunk)
+                self._session_topic_chunk_count[session_id] += 1
                 return True, "no_previous_embedding", None
 
-            # Check coherence with last chunk
+            # Increment chunk count for current topic
+            self._session_topic_chunk_count[session_id] += 1
+
+            # HYBRID CHECK 1: Max chunks reached (safety net)
+            if self._session_topic_chunk_count[session_id] >= self.max_topic_chunks:
+                self._session_embeddings[session_id].append(current_embedding)
+                self._session_topics[session_id].append(current_chunk)
+
+                # Reset topic tracking
+                self._session_topic_start_time[session_id] = datetime.now()
+                self._session_topic_chunk_count[session_id] = 0
+
+                logger.info(
+                    f"Session {session_id[:8]}... chunk {current_chunk_index}: "
+                    f"MAX CHUNKS reached ({self.max_topic_chunks}) - forcing topic completion"
+                )
+                return False, f"max_chunks_reached ({self.max_topic_chunks})", None
+
+            # HYBRID CHECK 2: Max duration exceeded (timeout safety net)
+            elapsed_seconds = (datetime.now() - self._session_topic_start_time[session_id]).total_seconds()
+            if elapsed_seconds >= self.max_topic_duration_seconds:
+                self._session_embeddings[session_id].append(current_embedding)
+                self._session_topics[session_id].append(current_chunk)
+
+                # Reset topic tracking
+                self._session_topic_start_time[session_id] = datetime.now()
+                self._session_topic_chunk_count[session_id] = 0
+
+                logger.info(
+                    f"Session {session_id[:8]}... chunk {current_chunk_index}: "
+                    f"MAX DURATION reached ({elapsed_seconds:.0f}s / {self.max_topic_duration_seconds}s) - forcing topic completion"
+                )
+                return False, f"max_duration_reached ({elapsed_seconds:.0f}s)", None
+
+            # HYBRID CHECK 3: Semantic similarity (primary signal)
             are_related, similarity = await self.are_related(
                 chunk1=accumulated_chunks[-1],
                 chunk2=current_chunk,
@@ -207,14 +260,18 @@ class TopicCoherenceDetector:
             if are_related:
                 # Same topic - continue batching
                 logger.debug(
-                    f"Session {session_id} chunk {current_chunk_index}: "
+                    f"Session {session_id[:8]}... chunk {current_chunk_index}: "
                     f"Same topic detected (similarity: {similarity:.3f})"
                 )
                 return True, f"same_topic (similarity: {similarity:.3f})", similarity
             else:
                 # Topic change detected - process accumulated batch
+                # Reset topic tracking
+                self._session_topic_start_time[session_id] = datetime.now()
+                self._session_topic_chunk_count[session_id] = 0
+
                 logger.info(
-                    f"Session {session_id} chunk {current_chunk_index}: "
+                    f"Session {session_id[:8]}... chunk {current_chunk_index}: "
                     f"TOPIC CHANGE detected (similarity: {similarity:.3f}) - triggering batch processing"
                 )
                 return False, f"topic_change (similarity: {similarity:.3f})", similarity
@@ -264,6 +321,12 @@ class TopicCoherenceDetector:
 
         if session_id in self._session_current_topic:
             del self._session_current_topic[session_id]
+
+        if session_id in self._session_topic_start_time:
+            del self._session_topic_start_time[session_id]
+
+        if session_id in self._session_topic_chunk_count:
+            del self._session_topic_chunk_count[session_id]
 
         logger.debug(f"Cleaned up topic coherence state for session {session_id}")
 
