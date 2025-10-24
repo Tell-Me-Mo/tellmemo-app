@@ -21,8 +21,12 @@ LiveInsightsSettings _$LiveInsightsSettingsFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$LiveInsightsSettings {
-  /// Set of enabled proactive assistance types
+  /// Set of enabled proactive assistance types (AI suggestions)
   Set<ProactiveAssistanceType> get enabledPhases =>
+      throw _privateConstructorUsedError;
+
+  /// Set of enabled insight types (extracted data)
+  Set<LiveInsightType> get enabledInsightTypes =>
       throw _privateConstructorUsedError;
 
   /// Quiet mode - only show critical alerts
@@ -56,6 +60,7 @@ abstract class $LiveInsightsSettingsCopyWith<$Res> {
   @useResult
   $Res call({
     Set<ProactiveAssistanceType> enabledPhases,
+    Set<LiveInsightType> enabledInsightTypes,
     bool quietMode,
     bool showCollapsedItems,
     bool enableFeedback,
@@ -82,6 +87,7 @@ class _$LiveInsightsSettingsCopyWithImpl<
   @override
   $Res call({
     Object? enabledPhases = null,
+    Object? enabledInsightTypes = null,
     Object? quietMode = null,
     Object? showCollapsedItems = null,
     Object? enableFeedback = null,
@@ -93,6 +99,10 @@ class _$LiveInsightsSettingsCopyWithImpl<
                 ? _value.enabledPhases
                 : enabledPhases // ignore: cast_nullable_to_non_nullable
                       as Set<ProactiveAssistanceType>,
+            enabledInsightTypes: null == enabledInsightTypes
+                ? _value.enabledInsightTypes
+                : enabledInsightTypes // ignore: cast_nullable_to_non_nullable
+                      as Set<LiveInsightType>,
             quietMode: null == quietMode
                 ? _value.quietMode
                 : quietMode // ignore: cast_nullable_to_non_nullable
@@ -126,6 +136,7 @@ abstract class _$$LiveInsightsSettingsImplCopyWith<$Res>
   @useResult
   $Res call({
     Set<ProactiveAssistanceType> enabledPhases,
+    Set<LiveInsightType> enabledInsightTypes,
     bool quietMode,
     bool showCollapsedItems,
     bool enableFeedback,
@@ -148,6 +159,7 @@ class __$$LiveInsightsSettingsImplCopyWithImpl<$Res>
   @override
   $Res call({
     Object? enabledPhases = null,
+    Object? enabledInsightTypes = null,
     Object? quietMode = null,
     Object? showCollapsedItems = null,
     Object? enableFeedback = null,
@@ -159,6 +171,10 @@ class __$$LiveInsightsSettingsImplCopyWithImpl<$Res>
             ? _value._enabledPhases
             : enabledPhases // ignore: cast_nullable_to_non_nullable
                   as Set<ProactiveAssistanceType>,
+        enabledInsightTypes: null == enabledInsightTypes
+            ? _value._enabledInsightTypes
+            : enabledInsightTypes // ignore: cast_nullable_to_non_nullable
+                  as Set<LiveInsightType>,
         quietMode: null == quietMode
             ? _value.quietMode
             : quietMode // ignore: cast_nullable_to_non_nullable
@@ -189,26 +205,50 @@ class _$LiveInsightsSettingsImpl extends _LiveInsightsSettings {
       ProactiveAssistanceType.conflictDetected,
       ProactiveAssistanceType.incompleteActionItem,
     },
+    final Set<LiveInsightType> enabledInsightTypes = const {
+      LiveInsightType.actionItem,
+      LiveInsightType.decision,
+      LiveInsightType.question,
+      LiveInsightType.risk,
+      LiveInsightType.keyPoint,
+      LiveInsightType.relatedDiscussion,
+      LiveInsightType.contradiction,
+      LiveInsightType.missingInfo,
+    },
     this.quietMode = false,
     this.showCollapsedItems = true,
     this.enableFeedback = true,
     this.autoExpandHighConfidence = true,
   }) : _enabledPhases = enabledPhases,
+       _enabledInsightTypes = enabledInsightTypes,
        super._();
 
   factory _$LiveInsightsSettingsImpl.fromJson(Map<String, dynamic> json) =>
       _$$LiveInsightsSettingsImplFromJson(json);
 
-  /// Set of enabled proactive assistance types
+  /// Set of enabled proactive assistance types (AI suggestions)
   final Set<ProactiveAssistanceType> _enabledPhases;
 
-  /// Set of enabled proactive assistance types
+  /// Set of enabled proactive assistance types (AI suggestions)
   @override
   @JsonKey()
   Set<ProactiveAssistanceType> get enabledPhases {
     if (_enabledPhases is EqualUnmodifiableSetView) return _enabledPhases;
     // ignore: implicit_dynamic_type
     return EqualUnmodifiableSetView(_enabledPhases);
+  }
+
+  /// Set of enabled insight types (extracted data)
+  final Set<LiveInsightType> _enabledInsightTypes;
+
+  /// Set of enabled insight types (extracted data)
+  @override
+  @JsonKey()
+  Set<LiveInsightType> get enabledInsightTypes {
+    if (_enabledInsightTypes is EqualUnmodifiableSetView)
+      return _enabledInsightTypes;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableSetView(_enabledInsightTypes);
   }
 
   /// Quiet mode - only show critical alerts
@@ -233,7 +273,7 @@ class _$LiveInsightsSettingsImpl extends _LiveInsightsSettings {
 
   @override
   String toString() {
-    return 'LiveInsightsSettings(enabledPhases: $enabledPhases, quietMode: $quietMode, showCollapsedItems: $showCollapsedItems, enableFeedback: $enableFeedback, autoExpandHighConfidence: $autoExpandHighConfidence)';
+    return 'LiveInsightsSettings(enabledPhases: $enabledPhases, enabledInsightTypes: $enabledInsightTypes, quietMode: $quietMode, showCollapsedItems: $showCollapsedItems, enableFeedback: $enableFeedback, autoExpandHighConfidence: $autoExpandHighConfidence)';
   }
 
   @override
@@ -244,6 +284,10 @@ class _$LiveInsightsSettingsImpl extends _LiveInsightsSettings {
             const DeepCollectionEquality().equals(
               other._enabledPhases,
               _enabledPhases,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other._enabledInsightTypes,
+              _enabledInsightTypes,
             ) &&
             (identical(other.quietMode, quietMode) ||
                 other.quietMode == quietMode) &&
@@ -263,6 +307,7 @@ class _$LiveInsightsSettingsImpl extends _LiveInsightsSettings {
   int get hashCode => Object.hash(
     runtimeType,
     const DeepCollectionEquality().hash(_enabledPhases),
+    const DeepCollectionEquality().hash(_enabledInsightTypes),
     quietMode,
     showCollapsedItems,
     enableFeedback,
@@ -290,6 +335,7 @@ class _$LiveInsightsSettingsImpl extends _LiveInsightsSettings {
 abstract class _LiveInsightsSettings extends LiveInsightsSettings {
   const factory _LiveInsightsSettings({
     final Set<ProactiveAssistanceType> enabledPhases,
+    final Set<LiveInsightType> enabledInsightTypes,
     final bool quietMode,
     final bool showCollapsedItems,
     final bool enableFeedback,
@@ -300,9 +346,13 @@ abstract class _LiveInsightsSettings extends LiveInsightsSettings {
   factory _LiveInsightsSettings.fromJson(Map<String, dynamic> json) =
       _$LiveInsightsSettingsImpl.fromJson;
 
-  /// Set of enabled proactive assistance types
+  /// Set of enabled proactive assistance types (AI suggestions)
   @override
   Set<ProactiveAssistanceType> get enabledPhases;
+
+  /// Set of enabled insight types (extracted data)
+  @override
+  Set<LiveInsightType> get enabledInsightTypes;
 
   /// Quiet mode - only show critical alerts
   @override

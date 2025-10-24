@@ -18,6 +18,20 @@ _$LiveInsightsSettingsImpl _$$LiveInsightsSettingsImplFromJson(
         ProactiveAssistanceType.conflictDetected,
         ProactiveAssistanceType.incompleteActionItem,
       },
+  enabledInsightTypes:
+      (json['enabledInsightTypes'] as List<dynamic>?)
+          ?.map((e) => $enumDecode(_$LiveInsightTypeEnumMap, e))
+          .toSet() ??
+      const {
+        LiveInsightType.actionItem,
+        LiveInsightType.decision,
+        LiveInsightType.question,
+        LiveInsightType.risk,
+        LiveInsightType.keyPoint,
+        LiveInsightType.relatedDiscussion,
+        LiveInsightType.contradiction,
+        LiveInsightType.missingInfo,
+      },
   quietMode: json['quietMode'] as bool? ?? false,
   showCollapsedItems: json['showCollapsedItems'] as bool? ?? true,
   enableFeedback: json['enableFeedback'] as bool? ?? true,
@@ -29,6 +43,9 @@ Map<String, dynamic> _$$LiveInsightsSettingsImplToJson(
 ) => <String, dynamic>{
   'enabledPhases': instance.enabledPhases
       .map((e) => _$ProactiveAssistanceTypeEnumMap[e]!)
+      .toList(),
+  'enabledInsightTypes': instance.enabledInsightTypes
+      .map((e) => _$LiveInsightTypeEnumMap[e]!)
       .toList(),
   'quietMode': instance.quietMode,
   'showCollapsedItems': instance.showCollapsedItems,
@@ -43,4 +60,15 @@ const _$ProactiveAssistanceTypeEnumMap = {
   ProactiveAssistanceType.incompleteActionItem: 'incomplete_action_item',
   ProactiveAssistanceType.followUpSuggestion: 'follow_up_suggestion',
   ProactiveAssistanceType.repetitionDetected: 'repetition_detected',
+};
+
+const _$LiveInsightTypeEnumMap = {
+  LiveInsightType.actionItem: 'action_item',
+  LiveInsightType.decision: 'decision',
+  LiveInsightType.question: 'question',
+  LiveInsightType.risk: 'risk',
+  LiveInsightType.keyPoint: 'key_point',
+  LiveInsightType.relatedDiscussion: 'related_discussion',
+  LiveInsightType.contradiction: 'contradiction',
+  LiveInsightType.missingInfo: 'missing_info',
 };

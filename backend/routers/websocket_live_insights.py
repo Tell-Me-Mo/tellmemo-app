@@ -84,13 +84,22 @@ class LiveMeetingSession:
         project_id: str,
         organization_id: str,
         user_id: str,
-        websocket: WebSocket
+        websocket: WebSocket,
+        enabled_insight_types: Optional[List[str]] = None
     ):
         self.session_id = session_id
         self.project_id = project_id
         self.organization_id = organization_id
         self.user_id = user_id
         self.websocket = websocket
+
+        # User preferences for cost optimization
+        # Only extract insight types the user wants to see
+        self.enabled_insight_types = enabled_insight_types or [
+            "action_item", "decision", "question", "risk",
+            "key_point", "related_discussion", "contradiction", "missing_info"
+        ]
+        logger.info(f"Session {session_id} will extract insight types: {self.enabled_insight_types}")
 
         # Session state
         self.phase = MeetingPhase.INITIALIZING
@@ -171,20 +180,22 @@ class LiveInsightsConnectionManager:
         organization_id: str,
         user_id: str,
         websocket: WebSocket,
-        db: AsyncSession
+        db: AsyncSession,
+        enabled_insight_types: Optional[List[str]] = None
     ) -> LiveMeetingSession:
         """Create a new live meeting session."""
 
         # Generate session ID
         session_id = f"live_{project_id}_{user_id}_{int(time.time())}"
 
-        # Create session
+        # Create session with user preferences
         session = LiveMeetingSession(
             session_id=session_id,
             project_id=project_id,
             organization_id=organization_id,
             user_id=user_id,
-            websocket=websocket
+            websocket=websocket,
+            enabled_insight_types=enabled_insight_types
         )
 
         # Store session
@@ -441,13 +452,19 @@ async def websocket_live_insights(
             await websocket.close(code=1008, reason="First message must be 'init'")
             return
 
-        # Create session (this will send session_initialized message)
+        # Extract user's insight type preferences for cost optimization
+        enabled_insight_types = init_data.get('enabled_insight_types')
+        if enabled_insight_types:
+            logger.info(f"User requested insight types: {enabled_insight_types}")
+
+        # Create session with user preferences (this will send session_initialized message)
         session = await live_insights_manager.create_session(
             project_id=project_id,
             organization_id=organization_id,
             user_id=user_id,
             websocket=websocket,
-            db=db
+            db=db,
+            enabled_insight_types=enabled_insight_types
         )
 
         session.phase = MeetingPhase.ACTIVE
@@ -901,6 +918,8 @@ async def handle_audio_chunk(
                 organization_id=session.organization_id,
                 chunk=chunk,
                 db=db,
+                # Pass user preferences for cost optimization
+                enabled_insight_types=session.enabled_insight_types,
                 # Pass processing stats for metadata
                 adaptive_stats=processing_stats,
                 adaptive_reason=adaptive_reason

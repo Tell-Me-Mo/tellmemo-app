@@ -1,5 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'proactive_assistance_model.dart';
+import 'live_insight_model.dart';
 
 part 'live_insights_settings.freezed.dart';
 part 'live_insights_settings.g.dart';
@@ -22,13 +23,26 @@ class LiveInsightsSettings with _$LiveInsightsSettings {
   const LiveInsightsSettings._();
 
   const factory LiveInsightsSettings({
-    /// Set of enabled proactive assistance types
+    /// Set of enabled proactive assistance types (AI suggestions)
     @Default({
       ProactiveAssistanceType.autoAnswer,
       ProactiveAssistanceType.conflictDetected,
       ProactiveAssistanceType.incompleteActionItem,
     })
     Set<ProactiveAssistanceType> enabledPhases,
+
+    /// Set of enabled insight types (extracted data)
+    @Default({
+      LiveInsightType.actionItem,
+      LiveInsightType.decision,
+      LiveInsightType.question,
+      LiveInsightType.risk,
+      LiveInsightType.keyPoint,
+      LiveInsightType.relatedDiscussion,
+      LiveInsightType.contradiction,
+      LiveInsightType.missingInfo,
+    })
+    Set<LiveInsightType> enabledInsightTypes,
 
     /// Quiet mode - only show critical alerts
     @Default(false) bool quietMode,
@@ -58,6 +72,30 @@ class LiveInsightsSettings with _$LiveInsightsSettings {
     ProactiveAssistanceType.incompleteActionItem,
     ProactiveAssistanceType.followUpSuggestion,
     ProactiveAssistanceType.repetitionDetected,
+  };
+
+  /// All available insight types
+  static const Set<LiveInsightType> allInsightTypes = {
+    LiveInsightType.actionItem,
+    LiveInsightType.decision,
+    LiveInsightType.question,
+    LiveInsightType.risk,
+    LiveInsightType.keyPoint,
+    LiveInsightType.relatedDiscussion,
+    LiveInsightType.contradiction,
+    LiveInsightType.missingInfo,
+  };
+
+  /// Default enabled insight types (all types enabled by default)
+  static const Set<LiveInsightType> defaultEnabledInsightTypes = {
+    LiveInsightType.actionItem,
+    LiveInsightType.decision,
+    LiveInsightType.question,
+    LiveInsightType.risk,
+    LiveInsightType.keyPoint,
+    LiveInsightType.relatedDiscussion,
+    LiveInsightType.contradiction,
+    LiveInsightType.missingInfo,
   };
 
   /// Determine priority level for assistance type
@@ -106,6 +144,12 @@ class LiveInsightsSettings with _$LiveInsightsSettings {
     }
 
     return true;
+  }
+
+  /// Check if a specific insight type should be shown based on settings
+  bool shouldShowInsight(LiveInsightModel insight) {
+    // Check if insight type is enabled
+    return enabledInsightTypes.contains(insight.type);
   }
 
   /// Get user-friendly label for assistance type
@@ -159,6 +203,72 @@ class LiveInsightsSettings with _$LiveInsightsSettings {
         return '💜';
       case ProactiveAssistanceType.repetitionDetected:
         return '🔶';
+    }
+  }
+
+  /// Get user-friendly label for insight type
+  static String getLabelForInsightType(LiveInsightType type) {
+    switch (type) {
+      case LiveInsightType.actionItem:
+        return 'Action Items';
+      case LiveInsightType.decision:
+        return 'Decisions';
+      case LiveInsightType.question:
+        return 'Questions';
+      case LiveInsightType.risk:
+        return 'Risks';
+      case LiveInsightType.keyPoint:
+        return 'Key Points';
+      case LiveInsightType.relatedDiscussion:
+        return 'Related Discussions';
+      case LiveInsightType.contradiction:
+        return 'Contradictions';
+      case LiveInsightType.missingInfo:
+        return 'Missing Info';
+    }
+  }
+
+  /// Get description for insight type
+  static String getDescriptionForInsightType(LiveInsightType type) {
+    switch (type) {
+      case LiveInsightType.actionItem:
+        return 'Tasks and action items with owners and deadlines';
+      case LiveInsightType.decision:
+        return 'Decisions made during the meeting';
+      case LiveInsightType.question:
+        return 'Questions raised by participants';
+      case LiveInsightType.risk:
+        return 'Risks, concerns, and potential blockers';
+      case LiveInsightType.keyPoint:
+        return 'Important points and highlights';
+      case LiveInsightType.relatedDiscussion:
+        return 'References to past meeting discussions';
+      case LiveInsightType.contradiction:
+        return 'Conflicts with previous decisions';
+      case LiveInsightType.missingInfo:
+        return 'Missing information or context';
+    }
+  }
+
+  /// Get icon for insight type
+  static String getIconForInsightType(LiveInsightType type) {
+    switch (type) {
+      case LiveInsightType.actionItem:
+        return '📋';
+      case LiveInsightType.decision:
+        return '✅';
+      case LiveInsightType.question:
+        return '❓';
+      case LiveInsightType.risk:
+        return '⚠️';
+      case LiveInsightType.keyPoint:
+        return '💡';
+      case LiveInsightType.relatedDiscussion:
+        return '📚';
+      case LiveInsightType.contradiction:
+        return '🔄';
+      case LiveInsightType.missingInfo:
+        return 'ℹ️';
     }
   }
 
