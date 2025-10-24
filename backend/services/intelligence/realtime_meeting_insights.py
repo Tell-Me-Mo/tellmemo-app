@@ -662,22 +662,9 @@ class RealtimeMeetingInsightsService:
                 if insight.confidence_score >= self.min_confidence_threshold:
                     insights.append(insight)
 
-            # Add related discussion insights
-            if related_discussions:
-                for discussion in related_discussions[:3]:  # Top 3 most relevant
-                    insight = MeetingInsight(
-                        insight_id=f"{session_id}_{current_chunk.index}_related_{discussion['content_id']}",
-                        type=InsightType.RELATED_DISCUSSION,
-                        priority=InsightPriority.LOW,
-                        content=f"Related to past discussion: {discussion.get('title', 'Untitled')}",
-                        context=discussion.get('snippet', ''),
-                        timestamp=current_chunk.timestamp,
-                        source_chunk_index=current_chunk.index,
-                        confidence_score=discussion.get('similarity_score', 0.0),
-                        related_content_ids=[discussion['content_id']],
-                        similarity_scores=[discussion.get('similarity_score', 0.0)]
-                    )
-                    insights.append(insight)
+            # Note: Related discussions are passed to LLM in the prompt for context,
+            # but we don't create separate insights for them anymore (cost optimization)
+            # The LLM will incorporate relevant past discussions into decision/risk insights
 
             logger.debug(f"Extracted {len(insights)} insights from chunk {current_chunk.index}")
 
