@@ -107,6 +107,7 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel>
   Future<void> _showCancelConfirmation() async {
     final confirm = await showDialog<bool>(
       context: context,
+      barrierDismissible: false, // Prevent dismissing while cancelling
       builder: (context) => AlertDialog(
         title: const Text('Cancel Recording?'),
         content: const Text(
@@ -125,12 +126,32 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel>
       ),
     );
 
-    if (confirm == true && mounted) {
-      await ref.read(recordingNotifierProvider.notifier).cancelRecording();
-      if (mounted) {
-        _animationController.reverse().then((_) {
+    if (confirm == true) {
+      if (!mounted) return;
+
+      try {
+        // Cancel the recording
+        await ref.read(recordingNotifierProvider.notifier).cancelRecording();
+
+        // Wait a frame to ensure state has updated
+        if (!mounted) return;
+        await Future.delayed(const Duration(milliseconds: 50));
+
+        if (!mounted) return;
+
+        // Animate out and close
+        await _animationController.reverse();
+
+        if (mounted) {
           widget.onClose();
-        });
+        }
+      } catch (e) {
+        debugPrint('[RecordingPanel] Error during cancellation: $e');
+        // Still try to close even if cancellation fails
+        if (mounted) {
+          await _animationController.reverse();
+          widget.onClose();
+        }
       }
     }
   }
