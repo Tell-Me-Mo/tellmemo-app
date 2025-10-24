@@ -141,10 +141,11 @@ Vagueness Type: {vagueness_type}
 Base question templates:
 {chr(10).join(f"- {q}" for q in base_questions)}
 
-IMPORTANT: Respond with ONLY a valid JSON array. No additional text before or after.
-Each question should be a complete sentence ending with a question mark.
+CRITICAL: You MUST respond with ONLY a JSON array. Absolutely NO additional text, explanations, or formatting.
+Each question must be a complete sentence ending with a question mark.
+Each question must use ONLY single quotes inside the JSON strings (never double quotes).
 
-Example response:
+Example correct response (note: use \\\\ to escape backslashes):
 ["What is the specific launch date?", "Who will coordinate the launch?", "What are the success criteria?"]
 
 JSON array:"""
@@ -153,7 +154,7 @@ JSON array:"""
             response = await self.llm_client.create_message(
                 prompt=prompt,
                 max_tokens=200,
-                temperature=0.5
+                temperature=0.3  # Lower temperature for more consistent formatting
             )
 
             response_text = response.content[0].text.strip()
@@ -163,24 +164,50 @@ JSON array:"""
                 logger.warning("Empty response from LLM clarification generation")
                 questions = base_questions[:3]
             else:
-                # Try to extract JSON if wrapped in markdown code blocks
-                if response_text.startswith('```'):
-                    lines = response_text.split('\n')
-                    json_lines = [line for line in lines if line and not line.startswith('```')]
-                    response_text = '\n'.join(json_lines).strip()
+                # Remove markdown code blocks if present
+                if '```' in response_text:
+                    # Extract content between code blocks
+                    match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', response_text, re.DOTALL)
+                    if match:
+                        response_text = match.group(1).strip()
+                    else:
+                        # Fallback: remove all ``` markers
+                        response_text = re.sub(r'```(?:json)?', '', response_text).strip()
+
+                # Remove any leading/trailing text that's not part of the JSON array
+                # Find the first '[' and last ']'
+                start_idx = response_text.find('[')
+                end_idx = response_text.rfind(']')
+                if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                    response_text = response_text[start_idx:end_idx+1]
+
+                # Try to fix common JSON issues
+                # Replace problematic contractions with escaped versions
+                response_text = response_text.replace("we're", "we are").replace("it's", "it is")
+                response_text = response_text.replace("you're", "you are").replace("they're", "they are")
 
                 # Try to parse JSON
                 try:
                     questions = json.loads(response_text)
                     if isinstance(questions, list) and len(questions) > 0:
                         # Validate all items are strings
-                        questions = [str(q) for q in questions if q]
+                        questions = [str(q).strip() for q in questions if q and isinstance(q, str)]
+                        if not questions:
+                            logger.warning("LLM returned empty question list after filtering")
+                            questions = base_questions[:3]
                     else:
+                        logger.warning(f"LLM returned non-list or empty: {type(questions)}")
                         questions = base_questions[:3]
                 except json.JSONDecodeError as e:
-                    logger.warning(f"Failed to parse LLM response as JSON: {e}")
-                    logger.debug(f"Response text was: {response_text[:200]}")
-                    questions = base_questions[:3]
+                    logger.warning(f"Failed to parse LLM clarification response: {e}")
+                    logger.debug(f"Raw response: {response_text[:300]}")
+                    # Last resort: try to extract questions manually using regex
+                    matches = re.findall(r'"([^"]+\?)"', response_text)
+                    if matches and len(matches) >= 2:
+                        questions = matches[:3]
+                        logger.info(f"Recovered {len(questions)} questions via regex extraction")
+                    else:
+                        questions = base_questions[:3]
 
         except Exception as e:
             logger.error(f"Error generating clarification questions: {e}")
@@ -213,10 +240,10 @@ Context: {context_escaped}
 
 Determine if the statement is vague or missing critical details.
 
-IMPORTANT: Respond with ONLY valid JSON. No additional text before or after.
-Use simple descriptions without quotes or special characters in the missing_info field.
+CRITICAL: Respond with ONLY valid JSON. Absolutely NO additional text, explanations, or formatting.
+Use simple alphanumeric descriptions in the missing_info field (no quotes or special characters).
 
-Response format:
+Response format (if vague):
 {{
     "is_vague": true,
     "type": "time",
@@ -235,7 +262,7 @@ JSON response:"""
             response = await self.llm_client.create_message(
                 prompt=prompt,
                 max_tokens=150,
-                temperature=0.3
+                temperature=0.2  # Very low temperature for consistent JSON
             )
 
             response_text = response.content[0].text.strip()
@@ -245,30 +272,49 @@ JSON response:"""
                 logger.warning("Empty response from LLM vagueness detection")
                 return None
 
-            # Try to extract JSON if wrapped in markdown code blocks
-            if response_text.startswith('```'):
-                # Extract JSON from markdown code block
-                lines = response_text.split('\n')
-                json_lines = [line for line in lines if line and not line.startswith('```')]
-                response_text = '\n'.join(json_lines).strip()
+            # Remove markdown code blocks if present
+            if '```' in response_text:
+                match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', response_text, re.DOTALL)
+                if match:
+                    response_text = match.group(1).strip()
+                else:
+                    response_text = re.sub(r'```(?:json)?', '', response_text).strip()
+
+            # Extract JSON object (find first { and last })
+            start_idx = response_text.find('{')
+            end_idx = response_text.rfind('}')
+            if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                response_text = response_text[start_idx:end_idx+1]
+
+            # Try to fix common JSON issues
+            response_text = response_text.replace("we're", "we are").replace("it's", "it is")
+            response_text = response_text.replace("'", "\\'")  # Escape single quotes
 
             result = json.loads(response_text)
 
-            if result.get('is_vague') and result.get('confidence', 0) >= 0.6:
+            if result.get('is_vague') and result.get('confidence', 0) >= 0.7:  # Raised threshold from 0.6 to 0.7
                 vague_type = result.get('type', 'detail')
                 # Validate type
                 if vague_type not in ['time', 'assignment', 'detail', 'scope']:
                     vague_type = 'detail'
 
+                confidence = float(result.get('confidence', 0.7))
+
+                # Only return if confidence is reasonably high
+                if confidence < 0.7:
+                    logger.debug(f"Vagueness confidence too low ({confidence:.2f}), skipping")
+                    return None
+
                 return await self._generate_clarification(
                     statement=statement,
                     vagueness_type=vague_type,
                     context=context,
-                    confidence=result['confidence']
+                    confidence=confidence
                 )
         except json.JSONDecodeError as e:
             logger.warning(f"Failed to parse LLM vagueness detection response: {e}")
-            logger.debug(f"Response text was: {response_text[:200] if response_text else 'None'}")
+            if 'response_text' in locals():
+                logger.debug(f"Raw response: {response_text[:300]}")
         except Exception as e:
             logger.error(f"Error in LLM vagueness detection: {e}")
 
