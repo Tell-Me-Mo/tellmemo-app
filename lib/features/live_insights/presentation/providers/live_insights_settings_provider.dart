@@ -136,14 +136,20 @@ final liveInsightsSettingsProvider = FutureProvider<LiveInsightsSettings>((ref) 
 });
 
 /// Synchronous settings provider that provides a default while loading
+/// This watches the notifier state to ensure it reflects the latest changes
 final liveInsightsSettingsSyncProvider = Provider<LiveInsightsSettings>((ref) {
-  final asyncSettings = ref.watch(liveInsightsSettingsProvider);
-
-  return asyncSettings.when(
-    data: (settings) => settings,
-    loading: () => const LiveInsightsSettings(), // Return default settings while loading
-    error: (error, stack) => const LiveInsightsSettings(), // Return default settings on error
-  );
+  // Try to get settings from the notifier (which has the latest state)
+  try {
+    return ref.watch(liveInsightsSettingsNotifierProvider);
+  } catch (e) {
+    // If notifier is not ready yet (during initialization), fall back to async provider
+    final asyncSettings = ref.watch(liveInsightsSettingsProvider);
+    return asyncSettings.when(
+      data: (settings) => settings,
+      loading: () => const LiveInsightsSettings(), // Return default settings while loading
+      error: (error, stack) => const LiveInsightsSettings(), // Return default settings on error
+    );
+  }
 });
 
 /// Settings notifier provider - properly initialized

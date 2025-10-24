@@ -43,7 +43,14 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
     super.initState();
     // Determine initial expanded state based on display mode
     final displayMode = widget.assistance.displayMode;
-    _isExpanded = displayMode == DisplayMode.immediate;
+
+    // Always expand Incomplete Action Item and Clarification Needed cards
+    // because their core value is in the detailed issues/questions
+    _isExpanded = displayMode == DisplayMode.immediate ||
+        widget.assistance.type == ProactiveAssistanceType.incompleteActionItem ||
+        widget.assistance.type == ProactiveAssistanceType.clarificationNeeded;
+
+    debugPrint('[ProactiveAssistanceCard] Initialized card: type=${widget.assistance.type}, isExpanded=$_isExpanded, displayMode=$displayMode');
 
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 300),
@@ -845,7 +852,12 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
 
   Widget _buildActionItemQualityContent() {
     final quality = widget.assistance.actionItemQuality;
-    if (quality == null) return const SizedBox.shrink();
+    if (quality == null) {
+      debugPrint('[ProactiveAssistanceCard] WARNING: actionItemQuality is null for incompleteActionItem type!');
+      return const SizedBox.shrink();
+    }
+
+    debugPrint('[ProactiveAssistanceCard] Building action item quality content: ${quality.actionItem}, score: ${quality.completenessScore}, issues: ${quality.issues.length}');
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -1681,6 +1693,8 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
         return widget.assistance.clarification?.statement;
       case ProactiveAssistanceType.conflictDetected:
         return widget.assistance.conflict?.currentStatement;
+      case ProactiveAssistanceType.incompleteActionItem:
+        return widget.assistance.actionItemQuality?.actionItem;
       case ProactiveAssistanceType.followUpSuggestion:
         return widget.assistance.followUpSuggestion?.topic;
       case ProactiveAssistanceType.repetitionDetected:

@@ -14,6 +14,7 @@ import '../../../../core/utils/screen_info.dart';
 import '../../../live_insights/domain/models/live_insight_model.dart';
 import '../../../live_insights/domain/models/proactive_assistance_model.dart';
 import '../../../live_insights/presentation/widgets/live_insights_settings_dialog.dart';
+import '../../../live_insights/presentation/widgets/proactive_assistance_card.dart';
 
 enum ProjectSelectionMode { automatic, manual, specific }
 
@@ -944,12 +945,20 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel>
       itemCount: _proactiveAssistance.length,
       itemBuilder: (context, index) {
         final assistance = _proactiveAssistance[index];
-        return _buildAssistanceCard(assistance, theme, colorScheme);
+        return ProactiveAssistanceCard(
+          assistance: assistance,
+          onDismiss: () {
+            setState(() {
+              _proactiveAssistance.removeAt(index);
+            });
+          },
+        );
       },
     );
   }
 
-  Widget _buildAssistanceCard(ProactiveAssistanceModel assistance,
+  // Old custom card builder removed - now using ProactiveAssistanceCard widget
+  Widget _buildAssistanceCard_DEPRECATED(ProactiveAssistanceModel assistance,
       ThemeData theme, ColorScheme colorScheme) {
     String title;
     String content;
