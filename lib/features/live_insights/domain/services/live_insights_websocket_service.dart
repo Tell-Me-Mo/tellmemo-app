@@ -90,7 +90,12 @@ class LiveInsightsWebSocketService {
   ///
   /// [projectId] - The project ID to connect to
   /// [token] - Optional JWT authentication token. If not provided, will try to get from auth service.
-  Future<void> connect(String projectId, {String? token}) async {
+  /// [enabledInsightTypes] - List of insight types to extract (cost optimization)
+  Future<void> connect(
+    String projectId, {
+    String? token,
+    List<String>? enabledInsightTypes,
+  }) async {
     if (_isConnecting) {
       debugPrint('[LiveInsightsWS] Connection already in progress');
       return;
@@ -131,8 +136,8 @@ class LiveInsightsWebSocketService {
       _reconnectAttempts = 0;
       _connectionStateController.add(true);
 
-      // Send initialization message
-      await _sendInit(projectId);
+      // Send initialization message with insight type preferences
+      await _sendInit(projectId, enabledInsightTypes: enabledInsightTypes);
 
       // Start ping timer for keepalive
       _startPingTimer();
@@ -150,11 +155,19 @@ class LiveInsightsWebSocketService {
   }
 
   /// Send initialization message
-  Future<void> _sendInit(String projectId) async {
-    await _sendMessage({
+  Future<void> _sendInit(String projectId, {List<String>? enabledInsightTypes}) async {
+    final Map<String, dynamic> message = {
       'action': 'init',
       'project_id': projectId,
-    });
+    };
+
+    // Add enabled insight types if provided (cost optimization)
+    if (enabledInsightTypes != null && enabledInsightTypes.isNotEmpty) {
+      message['enabled_insight_types'] = enabledInsightTypes;
+      debugPrint('[LiveInsightsWS] Sending enabled insight types: $enabledInsightTypes');
+    }
+
+    await _sendMessage(message);
   }
 
   /// Send audio chunk for transcription and insight extraction

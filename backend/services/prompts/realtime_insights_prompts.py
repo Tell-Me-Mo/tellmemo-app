@@ -12,7 +12,8 @@ def get_realtime_insight_extraction_prompt(
     current_chunk: str,
     recent_context: str,
     related_discussions: Optional[List[Dict[str, Any]]] = None,
-    speaker_info: Optional[str] = None
+    speaker_info: Optional[str] = None,
+    enabled_insight_types: Optional[List[str]] = None
 ) -> str:
     """
     Generate optimized prompt for real-time insight extraction.
@@ -22,6 +23,7 @@ def get_realtime_insight_extraction_prompt(
         recent_context: Recent conversation context (last 3 chunks)
         related_discussions: Related past meeting discussions from Qdrant
         speaker_info: Optional speaker identification information
+        enabled_insight_types: User-selected insight types (cost optimization)
 
     Returns:
         Formatted prompt for Claude Haiku optimized for speed and accuracy
@@ -44,6 +46,41 @@ def get_realtime_insight_extraction_prompt(
     if speaker_info:
         speaker_text = f"\n\n### Speaker Information:\n{speaker_info}\n"
 
+    # Build insight categories section (filtered by user preferences)
+    all_categories = {
+        "action_item": "**ACTION_ITEM**: Specific tasks assigned to people with deadlines\n   - Must have clear ownership\n   - Should be actionable\n   - Extract due dates if mentioned",
+        "decision": "**DECISION**: Conclusions reached or choices made\n   - Distinguish between final and provisional decisions\n   - Note who made the decision if clear",
+        "question": "**QUESTION**: Important unanswered questions\n   - Questions that require follow-up\n   - Exclude rhetorical questions",
+        "risk": "**RISK**: Potential issues, blockers, or concerns\n   - Technical risks\n   - Resource constraints\n   - Timeline concerns",
+        "key_point": "**KEY_POINT**: Important information or observations\n   - Strategic insights\n   - Technical details\n   - Context that may be needed later",
+        "related_discussion": "**RELATED_DISCUSSION**: References to past meetings or related topics\n   - Only include if directly relevant\n   - Link to past context",
+        "contradiction": "**CONTRADICTION**: Conflicts with past discussions\n   - Only if related past discussions show clear conflict\n   - Note what the contradiction is",
+        "missing_info": "**MISSING_INFO**: Critical information gaps\n   - Information needed to proceed\n   - Questions that should be answered"
+    }
+
+    # Filter categories based on enabled types (COST OPTIMIZATION)
+    if enabled_insight_types:
+        # Convert camelCase to snake_case if needed (e.g., actionItem -> action_item)
+        enabled_types_normalized = []
+        for t in enabled_insight_types:
+            # Convert camelCase to snake_case
+            import re
+            normalized = re.sub(r'([a-z])([A-Z])', r'\1_\2', t).lower()
+            enabled_types_normalized.append(normalized)
+
+        filtered_categories = {k: v for k, v in all_categories.items()
+                             if k in enabled_types_normalized}
+        if not filtered_categories:
+            # Fallback to all if empty
+            filtered_categories = all_categories
+    else:
+        filtered_categories = all_categories
+
+    # Build categories text
+    categories_text = "Extract insights ONLY in these categories:\n\n"
+    for idx, (key, desc) in enumerate(filtered_categories.items(), 1):
+        categories_text += f"{idx}. {desc}\n\n"
+
     prompt = f"""Analyze this live meeting segment and extract actionable insights in real-time.
 
 ## Recent Conversation Context
@@ -55,38 +92,7 @@ def get_realtime_insight_extraction_prompt(
 
 ## Extraction Guidelines
 
-Extract insights in these categories:
-
-1. **ACTION_ITEM**: Specific tasks assigned to people with deadlines
-   - Must have clear ownership
-   - Should be actionable
-   - Extract due dates if mentioned
-
-2. **DECISION**: Conclusions reached or choices made
-   - Distinguish between final and provisional decisions
-   - Note who made the decision if clear
-
-3. **QUESTION**: Important unanswered questions
-   - Questions that require follow-up
-   - Exclude rhetorical questions
-
-4. **RISK**: Potential issues, blockers, or concerns
-   - Technical risks
-   - Resource constraints
-   - Timeline concerns
-
-5. **KEY_POINT**: Important information or observations
-   - Strategic insights
-   - Technical details
-   - Context that may be needed later
-
-6. **CONTRADICTION**: Conflicts with past discussions
-   - Only if related past discussions show clear conflict
-   - Note what the contradiction is
-
-7. **MISSING_INFO**: Critical information gaps
-   - Information needed to proceed
-   - Questions that should be answered
+{categories_text}
 
 ## Output Format
 

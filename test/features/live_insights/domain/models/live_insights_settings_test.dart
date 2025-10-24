@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pm_master_v2/features/live_insights/domain/models/live_insights_settings.dart';
+import 'package:pm_master_v2/features/live_insights/domain/models/live_insight_model.dart';
 import 'package:pm_master_v2/features/live_insights/domain/models/proactive_assistance_model.dart';
 
 void main() {
@@ -493,7 +494,171 @@ void main() {
         expect(settings.autoExpandHighConfidence, true);
       });
     });
+
+    group('Enabled Insight Types', () {
+      test('should have all insight types enabled by default', () {
+        const settings = LiveInsightsSettings();
+
+        expect(settings.enabledInsightTypes.length, 8);
+        expect(settings.enabledInsightTypes, LiveInsightsSettings.allInsightTypes);
+        expect(
+          settings.enabledInsightTypes,
+          containsAll([
+            LiveInsightType.actionItem,
+            LiveInsightType.decision,
+            LiveInsightType.question,
+            LiveInsightType.risk,
+            LiveInsightType.keyPoint,
+            LiveInsightType.relatedDiscussion,
+            LiveInsightType.contradiction,
+            LiveInsightType.missingInfo,
+          ]),
+        );
+      });
+
+      test('should filter insights based on enabled types', () {
+        const settings = LiveInsightsSettings(
+          enabledInsightTypes: {
+            LiveInsightType.actionItem,
+            LiveInsightType.risk,
+          },
+        );
+
+        // Enabled types - should show
+        final actionItem = _createMockInsight(LiveInsightType.actionItem);
+        expect(settings.shouldShowInsight(actionItem), true);
+
+        final risk = _createMockInsight(LiveInsightType.risk);
+        expect(settings.shouldShowInsight(risk), true);
+
+        // Disabled types - should NOT show
+        final decision = _createMockInsight(LiveInsightType.decision);
+        expect(settings.shouldShowInsight(decision), false);
+
+        final question = _createMockInsight(LiveInsightType.question);
+        expect(settings.shouldShowInsight(question), false);
+
+        final keyPoint = _createMockInsight(LiveInsightType.keyPoint);
+        expect(settings.shouldShowInsight(keyPoint), false);
+      });
+
+      test('should hide all insights when no types enabled', () {
+        const settings = LiveInsightsSettings(
+          enabledInsightTypes: {},
+        );
+
+        for (final type in LiveInsightsSettings.allInsightTypes) {
+          final insight = _createMockInsight(type);
+          expect(
+            settings.shouldShowInsight(insight),
+            false,
+            reason: 'Should hide $type when no insight types enabled',
+          );
+        }
+      });
+
+      test('should show all insights when all types enabled', () {
+        const settings = LiveInsightsSettings(
+          enabledInsightTypes: LiveInsightsSettings.allInsightTypes,
+        );
+
+        for (final type in LiveInsightsSettings.allInsightTypes) {
+          final insight = _createMockInsight(type);
+          expect(
+            settings.shouldShowInsight(insight),
+            true,
+            reason: 'Should show $type when all insight types enabled',
+          );
+        }
+      });
+
+      test('getLabelForInsightType returns correct labels', () {
+        expect(
+          LiveInsightsSettings.getLabelForInsightType(LiveInsightType.actionItem),
+          'Action Items',
+        );
+        expect(
+          LiveInsightsSettings.getLabelForInsightType(LiveInsightType.decision),
+          'Decisions',
+        );
+        expect(
+          LiveInsightsSettings.getLabelForInsightType(LiveInsightType.question),
+          'Questions',
+        );
+        expect(
+          LiveInsightsSettings.getLabelForInsightType(LiveInsightType.risk),
+          'Risks',
+        );
+        expect(
+          LiveInsightsSettings.getLabelForInsightType(LiveInsightType.keyPoint),
+          'Key Points',
+        );
+        expect(
+          LiveInsightsSettings.getLabelForInsightType(LiveInsightType.relatedDiscussion),
+          'Related Discussions',
+        );
+        expect(
+          LiveInsightsSettings.getLabelForInsightType(LiveInsightType.contradiction),
+          'Contradictions',
+        );
+        expect(
+          LiveInsightsSettings.getLabelForInsightType(LiveInsightType.missingInfo),
+          'Missing Info',
+        );
+      });
+
+      test('getDescriptionForInsightType returns non-empty descriptions', () {
+        for (final type in LiveInsightsSettings.allInsightTypes) {
+          final description = LiveInsightsSettings.getDescriptionForInsightType(type);
+          expect(description.isNotEmpty, true);
+          expect(description.length, greaterThan(10));
+        }
+      });
+
+      test('getIconForInsightType returns emoji icons', () {
+        for (final type in LiveInsightsSettings.allInsightTypes) {
+          final icon = LiveInsightsSettings.getIconForInsightType(type);
+          expect(icon.isNotEmpty, true);
+        }
+      });
+
+      test('JSON serialization includes enabledInsightTypes', () {
+        const original = LiveInsightsSettings(
+          enabledInsightTypes: {
+            LiveInsightType.actionItem,
+            LiveInsightType.risk,
+            LiveInsightType.decision,
+          },
+        );
+
+        final json = original.toJson();
+        final deserialized = LiveInsightsSettings.fromJson(json);
+
+        expect(deserialized.enabledInsightTypes.length, 3);
+        expect(
+          deserialized.enabledInsightTypes,
+          containsAll([
+            LiveInsightType.actionItem,
+            LiveInsightType.risk,
+            LiveInsightType.decision,
+          ]),
+        );
+      });
+    });
   });
+}
+
+/// Helper function to create mock LiveInsightModel for testing
+LiveInsightModel _createMockInsight(LiveInsightType type) {
+  return LiveInsightModel(
+    id: 'test-id-${type.name}',
+    type: type,
+    content: 'Test content for $type',
+    priority: LiveInsightPriority.medium,
+    confidenceScore: 0.85,
+    timestamp: DateTime.now(),
+    sourceChunkIndex: 0,
+  );
 }
 
 /// Helper function to create mock ProactiveAssistanceModel for testing

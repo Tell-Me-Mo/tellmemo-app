@@ -12,6 +12,7 @@ import '../../../../features/meetings/presentation/providers/upload_provider.dar
 import '../../../../features/content/presentation/providers/processing_jobs_provider.dart';
 import '../../../../features/live_insights/domain/services/live_insights_websocket_service.dart';
 import '../../../../features/live_insights/domain/models/live_insight_model.dart';
+import '../../../../features/live_insights/presentation/providers/live_insights_settings_provider.dart';
 import '../../../../core/services/firebase_analytics_service.dart';
 import '../../../../core/utils/error_utils.dart';
 
@@ -498,8 +499,20 @@ class RecordingNotifier extends _$RecordingNotifier {
     // Create live insights service
     _liveInsightsService = LiveInsightsWebSocketService();
 
-    // Connect to WebSocket with auth token
-    await _liveInsightsService!.connect(projectId, token: authToken);
+    // Get user's enabled insight types from settings
+    final settings = ref.read(liveInsightsSettingsSyncProvider);
+    final enabledTypes = settings.enabledInsightTypes
+        .map((type) => type.name) // Convert enum to string (e.g., "actionItem")
+        .toList();
+
+    print('🔍 [RecordingProvider] Connecting with enabled insight types: $enabledTypes');
+
+    // Connect to WebSocket with auth token and insight type preferences
+    await _liveInsightsService!.connect(
+      projectId,
+      token: authToken,
+      enabledInsightTypes: enabledTypes,
+    );
 
     // Listen to insights stream
     _liveInsightsSubscription = _liveInsightsService!.insightsStream.listen(
@@ -514,9 +527,17 @@ class RecordingNotifier extends _$RecordingNotifier {
           print('🔍 [RecordingProvider]   - ${insight.type}: $preview...');
         }
 
-        // Add new insights to the list
+        // Filter insights based on user settings
+        final settings = ref.read(liveInsightsSettingsSyncProvider);
+        final filteredInsights = result.insights.where((insight) {
+          return settings.shouldShowInsight(insight);
+        }).toList();
+
+        print('🔍 [RecordingProvider] Filtered ${result.insights.length} insights to ${filteredInsights.length} based on settings');
+
+        // Add filtered insights to the list
         final updatedInsights = List<LiveInsightModel>.from(state.liveInsights);
-        updatedInsights.addAll(result.insights);
+        updatedInsights.addAll(filteredInsights);
 
         print('🔍 [RecordingProvider] Total insights now: ${updatedInsights.length} (was: ${state.liveInsights.length})');
         print('🔍 [RecordingProvider] Updating state...');

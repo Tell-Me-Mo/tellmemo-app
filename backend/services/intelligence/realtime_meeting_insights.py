@@ -391,6 +391,7 @@ class RealtimeMeetingInsightsService:
         organization_id: str,
         chunk: TranscriptChunk,
         db: AsyncSession,
+        enabled_insight_types: Optional[List[str]] = None,
         adaptive_stats: Optional[Dict[str, Any]] = None,
         adaptive_reason: Optional[str] = None
     ) -> ProcessingResult:
@@ -499,7 +500,7 @@ class RealtimeMeetingInsightsService:
             full_context = context.get_context_text(include_speakers=True)
             recent_context = context.get_recent_context(num_chunks=3)
 
-            # PHASE 1: Extract insights from current chunk (LLM call)
+            # PHASE 1: Extract insights from current chunk (LLM call with user preferences)
             insights = await self._extract_insights(
                 session_id=session_id,
                 project_id=project_id,
@@ -507,7 +508,8 @@ class RealtimeMeetingInsightsService:
                 current_chunk=chunk,
                 recent_context=recent_context,
                 full_context=full_context,
-                db=db
+                db=db,
+                enabled_insight_types=enabled_insight_types
             )
 
             # PHASE 2: Deduplicate insights (insight-level semantic similarity)
@@ -610,12 +612,14 @@ class RealtimeMeetingInsightsService:
         current_chunk: TranscriptChunk,
         recent_context: str,
         full_context: str,
-        db: AsyncSession
+        db: AsyncSession,
+        enabled_insight_types: Optional[List[str]] = None
     ) -> List[MeetingInsight]:
         """
         Extract insights from the current chunk with context.
 
         Uses LLM to analyze the conversation and extract structured insights.
+        Only extracts insight types specified by the user for cost optimization.
         """
         insights = []
 
@@ -628,12 +632,13 @@ class RealtimeMeetingInsightsService:
                 current_text=current_chunk.text
             )
 
-            # Build prompt for insight extraction using optimized prompts module
+            # Build prompt for insight extraction with user preferences
             prompt = get_realtime_insight_extraction_prompt(
                 current_chunk=current_chunk.text,
                 recent_context=recent_context,
                 related_discussions=related_discussions,
-                speaker_info=f"Speaker: {current_chunk.speaker}" if current_chunk.speaker else None
+                speaker_info=f"Speaker: {current_chunk.speaker}" if current_chunk.speaker else None,
+                enabled_insight_types=enabled_insight_types  # COST OPTIMIZATION
             )
 
             # Call LLM for insight extraction

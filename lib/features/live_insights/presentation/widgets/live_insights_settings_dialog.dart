@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/live_insights_settings.dart';
+import '../../domain/models/live_insight_model.dart';
 import '../providers/live_insights_settings_provider.dart';
 
 /// Dialog for configuring Live Insights and Proactive Assistance settings
@@ -9,23 +10,42 @@ class LiveInsightsSettingsDialog extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final settings = ref.watch(liveInsightsSettingsSyncProvider);
-    final notifierAsync = ref.watch(liveInsightsSettingsNotifierAsyncProvider);
+    // Check if the settings service is ready
+    final serviceAsync = ref.watch(liveInsightsSettingsServiceFactoryProvider);
 
-    // If notifier is not yet loaded, show loading state
-    if (!notifierAsync.hasValue) {
-      return const Dialog(
+    return serviceAsync.when(
+      loading: () => const Dialog(
         child: Center(
           child: Padding(
             padding: EdgeInsets.all(48.0),
             child: CircularProgressIndicator(),
           ),
         ),
-      );
-    }
+      ),
+      error: (error, stack) => Dialog(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(48.0),
+            child: Text('Error loading settings: $error'),
+          ),
+        ),
+      ),
+      data: (_) {
+        // Watch the settings state - this will rebuild when settings change
+        final settings = ref.watch(liveInsightsSettingsNotifierProvider);
+        // Get the notifier for calling methods
+        final notifier = ref.read(liveInsightsSettingsNotifierProvider.notifier);
 
-    final notifier = notifierAsync.value!;
+        return _buildDialog(context, settings, notifier);
+      },
+    );
+  }
 
+  Widget _buildDialog(
+    BuildContext context,
+    LiveInsightsSettings settings,
+    LiveInsightsSettingsNotifier notifier,
+  ) {
     return Dialog(
       child: Container(
         width: 600,
@@ -52,6 +72,11 @@ class LiveInsightsSettingsDialog extends ConsumerWidget {
 
                     // Phase toggles
                     _buildPhaseToggles(settings, notifier),
+
+                    const SizedBox(height: 32),
+
+                    // Insight type toggles
+                    _buildInsightTypeToggles(settings, notifier),
 
                     const SizedBox(height: 24),
 
@@ -209,6 +234,28 @@ class LiveInsightsSettingsDialog extends ConsumerWidget {
           'Choose which AI features to enable during meetings',
           style: TextStyle(fontSize: 14, color: Colors.grey),
         ),
+        const SizedBox(height: 8),
+        // Info banner about when settings apply
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.blue.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.info_outline, size: 20, color: Colors.blue.shade700),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Settings will apply to your next recording session',
+                  style: TextStyle(fontSize: 13, color: Colors.blue),
+                ),
+              ),
+            ],
+          ),
+        ),
         const SizedBox(height: 16),
 
         ...LiveInsightsSettings.allPhases.map((phase) {
@@ -265,9 +312,9 @@ class LiveInsightsSettingsDialog extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         label,
@@ -277,6 +324,79 @@ class LiveInsightsSettingsDialog extends ConsumerWidget {
           color: color,
         ),
       ),
+    );
+  }
+
+  Widget _buildInsightTypeToggles(LiveInsightsSettings settings, LiveInsightsSettingsNotifier notifier) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Insight Types',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Choose which types of insights to extract and display',
+          style: TextStyle(fontSize: 14, color: Colors.grey),
+        ),
+        const SizedBox(height: 8),
+        // Info banner about when settings apply
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.blue.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.info_outline, size: 20, color: Colors.blue.shade700),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Settings will apply to your next recording session',
+                  style: TextStyle(fontSize: 13, color: Colors.blue),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        ...LiveInsightsSettings.allInsightTypes.map((insightType) {
+          final isEnabled = settings.enabledInsightTypes.contains(insightType);
+          final label = LiveInsightsSettings.getLabelForInsightType(insightType);
+          final description = LiveInsightsSettings.getDescriptionForInsightType(insightType);
+          final icon = LiveInsightsSettings.getIconForInsightType(insightType);
+
+          return Column(
+            children: [
+              CheckboxListTile(
+                value: isEnabled,
+                onChanged: (_) => notifier.toggleInsightType(insightType),
+                title: Row(
+                  children: [
+                    Text(icon, style: const TextStyle(fontSize: 20)),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(label)),
+                  ],
+                ),
+                subtitle: Padding(
+                  padding: const EdgeInsets.only(left: 28, top: 4),
+                  child: Text(
+                    description,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+              ),
+              const Divider(height: 1),
+            ],
+          );
+        }),
+      ],
     );
   }
 
