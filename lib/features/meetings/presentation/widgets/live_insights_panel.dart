@@ -153,8 +153,8 @@ class _LiveInsightsPanelState extends ConsumerState<LiveInsightsPanel>
         (assistance) {
           if (mounted) {
             setState(() {
-              // Get current settings
-              final settings = ref.read(liveInsightsSettingsProvider);
+              // Get current settings (using sync provider)
+              final settings = ref.read(liveInsightsSettingsSyncProvider);
 
               // Filter items based on settings (phase enabled, quiet mode, confidence)
               final visibleAssistance = assistance

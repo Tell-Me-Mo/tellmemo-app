@@ -102,20 +102,31 @@ class LiveInsightsSettingsNotifier extends StateNotifier<LiveInsightsSettings> {
   }
 }
 
-/// Live insights settings state provider
-final liveInsightsSettingsProvider = StateNotifierProvider<LiveInsightsSettingsNotifier, LiveInsightsSettings>((ref) {
-  final serviceAsync = ref.watch(liveInsightsSettingsServiceProvider);
+/// Live insights settings state provider using FutureProvider for proper async handling
+final liveInsightsSettingsProvider = FutureProvider<LiveInsightsSettings>((ref) async {
+  final service = await LiveInsightsSettingsService.create();
+  return service.loadSettings();
+});
 
-  return serviceAsync.maybeWhen(
-    data: (service) => LiveInsightsSettingsNotifier(service),
-    orElse: () => LiveInsightsSettingsNotifier(
-      LiveInsightsSettingsService(
-        // Fallback - use empty stub (will be replaced when service loads)
-        ref.watch(liveInsightsSharedPreferencesProvider).maybeWhen(
-          data: (prefs) => prefs,
-          orElse: () => throw StateError('SharedPreferences not yet loaded'),
-        ),
-      ),
-    ),
+/// Synchronous settings provider that provides a default while loading
+final liveInsightsSettingsSyncProvider = Provider<LiveInsightsSettings>((ref) {
+  final asyncSettings = ref.watch(liveInsightsSettingsProvider);
+
+  return asyncSettings.when(
+    data: (settings) => settings,
+    loading: () => const LiveInsightsSettings(), // Return default settings while loading
+    error: (error, stack) => const LiveInsightsSettings(), // Return default settings on error
   );
+});
+
+/// Settings notifier for managing settings changes
+final liveInsightsSettingsNotifierProvider = StateNotifierProvider<LiveInsightsSettingsNotifier, LiveInsightsSettings>((ref) {
+  // This will be initialized asynchronously
+  throw UnimplementedError('Use liveInsightsSettingsNotifierAsyncProvider instead');
+});
+
+/// Async notifier provider that properly waits for SharedPreferences
+final liveInsightsSettingsNotifierAsyncProvider = FutureProvider<LiveInsightsSettingsNotifier>((ref) async {
+  final service = await LiveInsightsSettingsService.create();
+  return LiveInsightsSettingsNotifier(service);
 });

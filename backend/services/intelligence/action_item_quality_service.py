@@ -255,7 +255,7 @@ Requirements:
 Return ONLY the improved action item text, nothing else. No explanations or preambles."""
 
         response = await self.llm_client.create_message(
-            messages=[{"role": "user", "content": prompt}],
+            prompt=prompt,
             max_tokens=150,
             temperature=0.5
         )

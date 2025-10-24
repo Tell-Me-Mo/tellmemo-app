@@ -147,7 +147,7 @@ Example format:
 
         try:
             response = await self.llm_client.create_message(
-                messages=[{"role": "user", "content": prompt}],
+                prompt=prompt,
                 max_tokens=200,
                 temperature=0.5
             )
@@ -209,7 +209,7 @@ If not vague, respond: {{"is_vague": false}}
 
         try:
             response = await self.llm_client.create_message(
-                messages=[{"role": "user", "content": prompt}],
+                prompt=prompt,
                 max_tokens=150,
                 temperature=0.3
             )
