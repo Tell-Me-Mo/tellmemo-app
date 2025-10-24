@@ -53,9 +53,6 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel>
   StreamSubscription<InsightsExtractionResult>? _insightsSubscription;
   StreamSubscription<List<ProactiveAssistanceModel>>? _assistanceSubscription;
 
-  // Tab controller for insights
-  late TabController _tabController;
-
   @override
   void initState() {
     super.initState();
@@ -78,7 +75,6 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel>
       curve: Curves.easeOutCubic,
     ));
 
-    _tabController = TabController(length: 2, vsync: this);
     _animationController.forward();
   }
 
@@ -88,7 +84,6 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel>
     _titleController.dispose();
     _insightsSubscription?.cancel();
     _assistanceSubscription?.cancel();
-    _tabController.dispose();
     super.dispose();
   }
 
@@ -298,7 +293,7 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel>
 
     final panelWidth = screenInfo.isMobile
         ? MediaQuery.of(context).size.width
-        : (showInsights ? 700.0 : 550.0);
+        : (showInsights ? 1400.0 : 550.0);
 
     return Material(
       type: MaterialType.transparency,
@@ -710,39 +705,85 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel>
 
     return Column(
       children: [
-        // Tabs
-        if (hasInsights || hasAssistance)
-          Container(
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: colorScheme.outlineVariant.withValues(alpha: 0.2),
-                ),
-              ),
-            ),
-            child: TabBar(
-              controller: _tabController,
-              indicatorColor: colorScheme.primary,
-              labelColor: colorScheme.onSurface,
-              unselectedLabelColor: colorScheme.onSurfaceVariant,
-              labelStyle: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-              tabs: const [
-                Tab(text: 'Insights'),
-                Tab(text: 'Assistance'),
-              ],
-            ),
-          ),
-
-        // Content
+        // Content - Side by side for desktop when insights are enabled
         Expanded(
           child: hasInsights || hasAssistance
-              ? TabBarView(
-                  controller: _tabController,
+              ? Row(
                   children: [
-                    _buildInsightsList(theme, colorScheme),
-                    _buildAssistanceList(theme, colorScheme),
+                    // Insights column
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Insights header
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: colorScheme.outlineVariant
+                                      .withValues(alpha: 0.2),
+                                ),
+                              ),
+                            ),
+                            child: Text(
+                              'Insights',
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: colorScheme.onSurface,
+                              ),
+                            ),
+                          ),
+                          // Insights list
+                          Expanded(
+                            child: _buildInsightsList(theme, colorScheme),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Divider
+                    VerticalDivider(
+                      width: 1,
+                      thickness: 1,
+                      color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+                    ),
+                    // Assistance column
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Assistance header
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: colorScheme.outlineVariant
+                                      .withValues(alpha: 0.2),
+                                ),
+                              ),
+                            ),
+                            child: Text(
+                              'Assistance',
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: colorScheme.onSurface,
+                              ),
+                            ),
+                          ),
+                          // Assistance list
+                          Expanded(
+                            child: _buildAssistanceList(theme, colorScheme),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 )
               : _buildEmptyInsightsState(theme, colorScheme),

@@ -154,17 +154,29 @@ Example format:
 
             response_text = response.content[0].text.strip()
 
-            # Try to parse JSON
-            try:
-                questions = json.loads(response_text)
-                if isinstance(questions, list) and len(questions) > 0:
-                    # Validate all items are strings
-                    questions = [str(q) for q in questions if q]
-                else:
-                    questions = base_questions[:3]
-            except json.JSONDecodeError:
-                logger.warning(f"Failed to parse LLM response as JSON: {response_text}")
+            # Handle empty response
+            if not response_text:
+                logger.warning("Empty response from LLM clarification generation")
                 questions = base_questions[:3]
+            else:
+                # Try to extract JSON if wrapped in markdown code blocks
+                if response_text.startswith('```'):
+                    lines = response_text.split('\n')
+                    json_lines = [line for line in lines if line and not line.startswith('```')]
+                    response_text = '\n'.join(json_lines).strip()
+
+                # Try to parse JSON
+                try:
+                    questions = json.loads(response_text)
+                    if isinstance(questions, list) and len(questions) > 0:
+                        # Validate all items are strings
+                        questions = [str(q) for q in questions if q]
+                    else:
+                        questions = base_questions[:3]
+                except json.JSONDecodeError as e:
+                    logger.warning(f"Failed to parse LLM response as JSON: {e}")
+                    logger.debug(f"Response text was: {response_text[:200]}")
+                    questions = base_questions[:3]
 
         except Exception as e:
             logger.error(f"Error generating clarification questions: {e}")
@@ -215,6 +227,19 @@ If not vague, respond: {{"is_vague": false}}
             )
 
             response_text = response.content[0].text.strip()
+
+            # Handle empty or invalid response
+            if not response_text:
+                logger.warning("Empty response from LLM vagueness detection")
+                return None
+
+            # Try to extract JSON if wrapped in markdown code blocks
+            if response_text.startswith('```'):
+                # Extract JSON from markdown code block
+                lines = response_text.split('\n')
+                json_lines = [line for line in lines if line and not line.startswith('```')]
+                response_text = '\n'.join(json_lines).strip()
+
             result = json.loads(response_text)
 
             if result.get('is_vague') and result.get('confidence', 0) >= 0.6:
@@ -231,6 +256,7 @@ If not vague, respond: {{"is_vague": false}}
                 )
         except json.JSONDecodeError as e:
             logger.warning(f"Failed to parse LLM vagueness detection response: {e}")
+            logger.debug(f"Response text was: {response_text[:200] if response_text else 'None'}")
         except Exception as e:
             logger.error(f"Error in LLM vagueness detection: {e}")
 
