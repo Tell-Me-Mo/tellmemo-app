@@ -119,7 +119,7 @@ Response (one line):"""
 
         try:
             response = await self.llm_client.create_message(
-                messages=[{"role": "user", "content": prompt}],
+                prompt=prompt,
                 max_tokens=100,
                 temperature=0.3
             )
