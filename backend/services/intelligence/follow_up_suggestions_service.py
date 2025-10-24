@@ -46,8 +46,8 @@ class FollowUpSuggestionsService:
     # Similarity threshold for related content
     SIMILARITY_THRESHOLD = 0.70
 
-    # Minimum confidence to suggest a follow-up
-    MIN_CONFIDENCE_THRESHOLD = 0.65
+    # Minimum confidence to suggest a follow-up (Lowered from 0.65 to 0.55 - Oct 2025)
+    MIN_CONFIDENCE_THRESHOLD = 0.55
 
     # Maximum days back to search for related content
     MAX_DAYS_LOOKBACK = 30
@@ -124,6 +124,13 @@ class FollowUpSuggestionsService:
             )
 
             # 4. Filter by confidence and sort by urgency
+            low_confidence_count = len([s for s in suggestions if s.confidence < self.MIN_CONFIDENCE_THRESHOLD])
+            if low_confidence_count > 0:
+                logger.warning(
+                    f"🚫 Follow-up suggestions FILTERED (low confidence): "
+                    f"{low_confidence_count} suggestions below threshold {self.MIN_CONFIDENCE_THRESHOLD}"
+                )
+
             high_confidence_suggestions = [
                 s for s in suggestions
                 if s.confidence >= self.MIN_CONFIDENCE_THRESHOLD

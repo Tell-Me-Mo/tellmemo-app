@@ -139,6 +139,13 @@ _$ActionItemQualityAssistanceImpl _$$ActionItemQualityAssistanceImplFromJson(
       .toList(),
   improvedVersion: json['improved_version'] as String?,
   timestamp: DateTime.parse(json['timestamp'] as String),
+  clarificationSuggestions:
+      (json['clarification_suggestions'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+  vaguenessType: json['vagueness_type'] as String?,
+  vaguenessConfidence: (json['vagueness_confidence'] as num?)?.toDouble(),
+  combinedReasoning: json['combined_reasoning'] as String?,
 );
 
 Map<String, dynamic> _$$ActionItemQualityAssistanceImplToJson(
@@ -150,6 +157,10 @@ Map<String, dynamic> _$$ActionItemQualityAssistanceImplToJson(
   'issues': instance.issues,
   'improved_version': instance.improvedVersion,
   'timestamp': instance.timestamp.toIso8601String(),
+  'clarification_suggestions': instance.clarificationSuggestions,
+  'vagueness_type': instance.vaguenessType,
+  'vagueness_confidence': instance.vaguenessConfidence,
+  'combined_reasoning': instance.combinedReasoning,
 };
 
 _$FollowUpSuggestionAssistanceImpl _$$FollowUpSuggestionAssistanceImplFromJson(

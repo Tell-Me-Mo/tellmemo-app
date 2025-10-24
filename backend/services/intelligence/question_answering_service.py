@@ -47,7 +47,7 @@ class QuestionAnsweringService:
         llm_client,
         embedding_service,
         search_cache=None,
-        min_confidence_threshold: float = 0.7
+        min_confidence_threshold: float = 0.6  # Lowered from 0.7 to 0.6 (Oct 2025) to surface more auto-answers
     ):
         self.vector_store = vector_store
         self.llm_client = llm_client
@@ -104,9 +104,11 @@ class QuestionAnsweringService:
 
         # 4. Check confidence threshold
         if answer and answer.confidence < self.min_confidence_threshold:
-            logger.info(
-                f"Answer confidence {answer.confidence} below threshold "
-                f"{self.min_confidence_threshold}"
+            logger.warning(
+                f"🚫 Auto-answer FILTERED (low confidence): "
+                f"Question: '{question[:60]}...', "
+                f"Confidence: {answer.confidence:.2f} < threshold {self.min_confidence_threshold}, "
+                f"Answer: '{answer.answer_text[:80]}...'"
             )
             return None
 

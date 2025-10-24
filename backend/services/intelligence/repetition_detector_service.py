@@ -40,7 +40,7 @@ class RepetitionDetectorService:
     MIN_OCCURRENCES = 3  # Topic must appear at least 3 times
     MIN_SIMILARITY = 0.75  # Semantic similarity threshold
     TIME_WINDOW_MINUTES = 15  # Look back window
-    MIN_CONFIDENCE = 0.7  # Minimum confidence to alert
+    MIN_CONFIDENCE = 0.65  # Minimum confidence to alert (Lowered from 0.7 - Oct 2025)
 
     def __init__(self, llm_client, embedding_service):
         self.llm_client = llm_client
@@ -104,6 +104,12 @@ class RepetitionDetectorService:
         )
 
         if not repetition_analysis or repetition_analysis['confidence'] < self.MIN_CONFIDENCE:
+            if repetition_analysis:
+                logger.info(
+                    f"🚫 Repetition FILTERED (low confidence): "
+                    f"Topic: '{repetition_analysis.get('topic', 'unknown')[:60]}...', "
+                    f"Confidence: {repetition_analysis.get('confidence', 0):.2f} < threshold {self.MIN_CONFIDENCE}"
+                )
             return None
 
         # Calculate time span

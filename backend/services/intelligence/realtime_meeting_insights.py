@@ -1144,26 +1144,44 @@ class RealtimeMeetingInsightsService:
         # Activate if: question mark OR question words OR question insight extracted
         if has_question_mark or has_question_word or has_question_insight:
             active_phases.add('question_answering')
+            logger.debug(
+                f"Phase 1 (question_answering) activated: "
+                f"question_mark={has_question_mark}, question_word={has_question_word}, "
+                f"question_insight={has_question_insight}"
+            )
 
         # Phase 2: Proactive Clarification
         # Activate if: action item or decision insight extracted
         if has_action_item_insight or has_decision_insight:
             active_phases.add('clarification')
+            logger.debug(
+                f"Phase 2 (clarification) activated: "
+                f"action_item={has_action_item_insight}, decision={has_decision_insight}"
+            )
 
         # Phase 3: Conflict Detection
         # Activate if: decision keywords OR decision insight extracted
         if has_decision_keyword or has_decision_insight:
             active_phases.add('conflict_detection')
+            logger.debug(
+                f"Phase 3 (conflict_detection) activated: "
+                f"decision_keyword={has_decision_keyword}, decision_insight={has_decision_insight}"
+            )
 
         # Phase 4: Action Item Quality
         # Activate if: action item insight extracted
         if has_action_item_insight:
             active_phases.add('action_item_quality')
+            logger.debug(f"Phase 4 (action_item_quality) activated: action_item={has_action_item_insight}")
 
         # Phase 5: Follow-up Suggestions
         # Activate if: decision or key point insight extracted
         if has_decision_insight or has_key_point_insight:
             active_phases.add('follow_up_suggestions')
+            logger.debug(
+                f"Phase 5 (follow_up_suggestions) activated: "
+                f"decision={has_decision_insight}, key_point={has_key_point_insight}"
+            )
 
         # Phase 6: Meeting Efficiency - Always active (lightweight operations)
         # Note: This phase runs outside the insight loop, so no explicit activation needed
@@ -1235,9 +1253,13 @@ class RealtimeMeetingInsightsService:
             if phase not in active_phases:
                 phase_status[phase] = PhaseStatus.SKIPPED
 
-        logger.debug(
-            f"Selective execution for chunk {current_chunk.index}: "
-            f"Running {len(active_phases)} phases: {', '.join(active_phases)}"
+        # Enhanced logging (Oct 2025) - Track phase skipping for debugging missing features
+        skipped_phases = set(all_phases) - active_phases
+        logger.info(
+            f"🔍 Phase Execution Stats for chunk {current_chunk.index} (session {sanitize_for_log(session_id[:8])}): "
+            f"✅ Active: {len(active_phases)} ({', '.join(sorted(active_phases))}), "
+            f"⏭️  Skipped: {len(skipped_phases)} ({', '.join(sorted(skipped_phases))}), "
+            f"📊 Insights: {len(insights)}"
         )
 
         for insight in insights:
@@ -1314,7 +1336,8 @@ class RealtimeMeetingInsightsService:
                         context=context
                     )
 
-                    if clarification and clarification.confidence >= 0.7:
+                    # Updated threshold from 0.7 to 0.75 (Oct 2025) to reduce false positives
+                    if clarification and clarification.confidence >= 0.75:
                         proactive_responses.append({
                             'type': 'clarification_needed',
                             'insight_id': insight.insight_id,
@@ -1567,7 +1590,101 @@ class RealtimeMeetingInsightsService:
                 exc_info=True
             )
 
+        # DEDUPLICATION: Merge redundant assistance cards (Oct 2025)
+        # Issue #3: Action items often generate both "clarification_needed" and "incomplete_action_item"
+        # Solution: Merge them into a single "action_item_quality" card with combined information
+        proactive_responses = self._deduplicate_assistance_cards(proactive_responses)
+
         return proactive_responses, phase_status, error_messages, phase_timings
+
+    def _deduplicate_assistance_cards(self, proactive_responses: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Deduplicate and merge redundant proactive assistance cards.
+
+        Issue: Action items often generate both:
+        1. "clarification_needed" (from Phase 2: vagueness detection)
+        2. "incomplete_action_item" (from Phase 4: quality check)
+
+        These are effectively the same issue presented twice, creating UI clutter.
+
+        Solution: When both exist for the same action item, merge into single enhanced card:
+        - Keep "incomplete_action_item" type (more actionable with specific improvements)
+        - Add clarification suggestions as additional context
+        - Combine all relevant information into one comprehensive card
+
+        Args:
+            proactive_responses: List of raw proactive assistance items
+
+        Returns:
+            Deduplicated list with merged cards
+        """
+        # Group responses by insight_id to find duplicates
+        responses_by_insight: Dict[str, List[Dict[str, Any]]] = {}
+        for response in proactive_responses:
+            insight_id = response.get('insight_id', 'global')
+            if insight_id not in responses_by_insight:
+                responses_by_insight[insight_id] = []
+            responses_by_insight[insight_id].append(response)
+
+        deduplicated = []
+
+        for insight_id, responses in responses_by_insight.items():
+            # Check if this insight has both clarification and quality issues
+            clarification_card = None
+            quality_card = None
+            other_cards = []
+
+            for response in responses:
+                response_type = response.get('type')
+                if response_type == 'clarification_needed':
+                    clarification_card = response
+                elif response_type == 'incomplete_action_item':
+                    quality_card = response
+                else:
+                    other_cards.append(response)
+
+            # MERGE LOGIC: If both clarification and quality cards exist, merge them
+            if clarification_card and quality_card:
+                # Merge into enhanced quality card
+                merged_card = quality_card.copy()
+
+                # Add clarification information as additional context
+                merged_card['clarification_suggestions'] = clarification_card.get('suggested_questions', [])
+                merged_card['vagueness_type'] = clarification_card.get('vagueness_type')
+                merged_card['vagueness_confidence'] = clarification_card.get('confidence', 0.0)
+
+                # Update reasoning to include both aspects
+                clarification_reasoning = clarification_card.get('reasoning', '')
+                if clarification_reasoning:
+                    merged_card['combined_reasoning'] = f"{clarification_reasoning}. Additionally, the action item needs quality improvements."
+
+                deduplicated.append(merged_card)
+
+                logger.debug(
+                    f"Merged clarification and quality cards for insight {insight_id}: "
+                    f"vagueness_type={clarification_card.get('vagueness_type')}, "
+                    f"completeness_score={quality_card.get('completeness_score', 0):.2f}"
+                )
+
+            # If only one type exists, keep it as-is
+            elif clarification_card:
+                deduplicated.append(clarification_card)
+            elif quality_card:
+                deduplicated.append(quality_card)
+
+            # Add all other card types
+            deduplicated.extend(other_cards)
+
+        # Log deduplication stats
+        original_count = len(proactive_responses)
+        final_count = len(deduplicated)
+        if original_count > final_count:
+            logger.info(
+                f"Deduplicated proactive assistance: {original_count} → {final_count} cards "
+                f"({original_count - final_count} redundant cards merged)"
+            )
+
+        return deduplicated
 
     def cleanup_stale_sessions(self, max_age_hours: int = 4) -> int:
         """
