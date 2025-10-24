@@ -1613,7 +1613,17 @@ mixin _$ActionItemQualityAssistance {
   List<QualityIssue> get issues => throw _privateConstructorUsedError;
   @JsonKey(name: 'improved_version')
   String? get improvedVersion => throw _privateConstructorUsedError;
-  DateTime get timestamp => throw _privateConstructorUsedError;
+  DateTime get timestamp =>
+      throw _privateConstructorUsedError; // Merged clarification data (optional, added Oct 2025 for deduplication)
+  @JsonKey(name: 'clarification_suggestions')
+  List<String>? get clarificationSuggestions =>
+      throw _privateConstructorUsedError;
+  @JsonKey(name: 'vagueness_type')
+  String? get vaguenessType => throw _privateConstructorUsedError;
+  @JsonKey(name: 'vagueness_confidence')
+  double? get vaguenessConfidence => throw _privateConstructorUsedError;
+  @JsonKey(name: 'combined_reasoning')
+  String? get combinedReasoning => throw _privateConstructorUsedError;
 
   /// Serializes this ActionItemQualityAssistance to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -1643,6 +1653,11 @@ abstract class $ActionItemQualityAssistanceCopyWith<$Res> {
     List<QualityIssue> issues,
     @JsonKey(name: 'improved_version') String? improvedVersion,
     DateTime timestamp,
+    @JsonKey(name: 'clarification_suggestions')
+    List<String>? clarificationSuggestions,
+    @JsonKey(name: 'vagueness_type') String? vaguenessType,
+    @JsonKey(name: 'vagueness_confidence') double? vaguenessConfidence,
+    @JsonKey(name: 'combined_reasoning') String? combinedReasoning,
   });
 }
 
@@ -1670,6 +1685,10 @@ class _$ActionItemQualityAssistanceCopyWithImpl<
     Object? issues = null,
     Object? improvedVersion = freezed,
     Object? timestamp = null,
+    Object? clarificationSuggestions = freezed,
+    Object? vaguenessType = freezed,
+    Object? vaguenessConfidence = freezed,
+    Object? combinedReasoning = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -1697,6 +1716,22 @@ class _$ActionItemQualityAssistanceCopyWithImpl<
                 ? _value.timestamp
                 : timestamp // ignore: cast_nullable_to_non_nullable
                       as DateTime,
+            clarificationSuggestions: freezed == clarificationSuggestions
+                ? _value.clarificationSuggestions
+                : clarificationSuggestions // ignore: cast_nullable_to_non_nullable
+                      as List<String>?,
+            vaguenessType: freezed == vaguenessType
+                ? _value.vaguenessType
+                : vaguenessType // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            vaguenessConfidence: freezed == vaguenessConfidence
+                ? _value.vaguenessConfidence
+                : vaguenessConfidence // ignore: cast_nullable_to_non_nullable
+                      as double?,
+            combinedReasoning: freezed == combinedReasoning
+                ? _value.combinedReasoning
+                : combinedReasoning // ignore: cast_nullable_to_non_nullable
+                      as String?,
           )
           as $Val,
     );
@@ -1719,6 +1754,11 @@ abstract class _$$ActionItemQualityAssistanceImplCopyWith<$Res>
     List<QualityIssue> issues,
     @JsonKey(name: 'improved_version') String? improvedVersion,
     DateTime timestamp,
+    @JsonKey(name: 'clarification_suggestions')
+    List<String>? clarificationSuggestions,
+    @JsonKey(name: 'vagueness_type') String? vaguenessType,
+    @JsonKey(name: 'vagueness_confidence') double? vaguenessConfidence,
+    @JsonKey(name: 'combined_reasoning') String? combinedReasoning,
   });
 }
 
@@ -1746,6 +1786,10 @@ class __$$ActionItemQualityAssistanceImplCopyWithImpl<$Res>
     Object? issues = null,
     Object? improvedVersion = freezed,
     Object? timestamp = null,
+    Object? clarificationSuggestions = freezed,
+    Object? vaguenessType = freezed,
+    Object? vaguenessConfidence = freezed,
+    Object? combinedReasoning = freezed,
   }) {
     return _then(
       _$ActionItemQualityAssistanceImpl(
@@ -1773,6 +1817,22 @@ class __$$ActionItemQualityAssistanceImplCopyWithImpl<$Res>
             ? _value.timestamp
             : timestamp // ignore: cast_nullable_to_non_nullable
                   as DateTime,
+        clarificationSuggestions: freezed == clarificationSuggestions
+            ? _value._clarificationSuggestions
+            : clarificationSuggestions // ignore: cast_nullable_to_non_nullable
+                  as List<String>?,
+        vaguenessType: freezed == vaguenessType
+            ? _value.vaguenessType
+            : vaguenessType // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        vaguenessConfidence: freezed == vaguenessConfidence
+            ? _value.vaguenessConfidence
+            : vaguenessConfidence // ignore: cast_nullable_to_non_nullable
+                  as double?,
+        combinedReasoning: freezed == combinedReasoning
+            ? _value.combinedReasoning
+            : combinedReasoning // ignore: cast_nullable_to_non_nullable
+                  as String?,
       ),
     );
   }
@@ -1789,7 +1849,13 @@ class _$ActionItemQualityAssistanceImpl
     required final List<QualityIssue> issues,
     @JsonKey(name: 'improved_version') this.improvedVersion,
     required this.timestamp,
-  }) : _issues = issues;
+    @JsonKey(name: 'clarification_suggestions')
+    final List<String>? clarificationSuggestions,
+    @JsonKey(name: 'vagueness_type') this.vaguenessType,
+    @JsonKey(name: 'vagueness_confidence') this.vaguenessConfidence,
+    @JsonKey(name: 'combined_reasoning') this.combinedReasoning,
+  }) : _issues = issues,
+       _clarificationSuggestions = clarificationSuggestions;
 
   factory _$ActionItemQualityAssistanceImpl.fromJson(
     Map<String, dynamic> json,
@@ -1817,10 +1883,33 @@ class _$ActionItemQualityAssistanceImpl
   final String? improvedVersion;
   @override
   final DateTime timestamp;
+  // Merged clarification data (optional, added Oct 2025 for deduplication)
+  final List<String>? _clarificationSuggestions;
+  // Merged clarification data (optional, added Oct 2025 for deduplication)
+  @override
+  @JsonKey(name: 'clarification_suggestions')
+  List<String>? get clarificationSuggestions {
+    final value = _clarificationSuggestions;
+    if (value == null) return null;
+    if (_clarificationSuggestions is EqualUnmodifiableListView)
+      return _clarificationSuggestions;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(value);
+  }
+
+  @override
+  @JsonKey(name: 'vagueness_type')
+  final String? vaguenessType;
+  @override
+  @JsonKey(name: 'vagueness_confidence')
+  final double? vaguenessConfidence;
+  @override
+  @JsonKey(name: 'combined_reasoning')
+  final String? combinedReasoning;
 
   @override
   String toString() {
-    return 'ActionItemQualityAssistance(insightId: $insightId, actionItem: $actionItem, completenessScore: $completenessScore, issues: $issues, improvedVersion: $improvedVersion, timestamp: $timestamp)';
+    return 'ActionItemQualityAssistance(insightId: $insightId, actionItem: $actionItem, completenessScore: $completenessScore, issues: $issues, improvedVersion: $improvedVersion, timestamp: $timestamp, clarificationSuggestions: $clarificationSuggestions, vaguenessType: $vaguenessType, vaguenessConfidence: $vaguenessConfidence, combinedReasoning: $combinedReasoning)';
   }
 
   @override
@@ -1838,7 +1927,17 @@ class _$ActionItemQualityAssistanceImpl
             (identical(other.improvedVersion, improvedVersion) ||
                 other.improvedVersion == improvedVersion) &&
             (identical(other.timestamp, timestamp) ||
-                other.timestamp == timestamp));
+                other.timestamp == timestamp) &&
+            const DeepCollectionEquality().equals(
+              other._clarificationSuggestions,
+              _clarificationSuggestions,
+            ) &&
+            (identical(other.vaguenessType, vaguenessType) ||
+                other.vaguenessType == vaguenessType) &&
+            (identical(other.vaguenessConfidence, vaguenessConfidence) ||
+                other.vaguenessConfidence == vaguenessConfidence) &&
+            (identical(other.combinedReasoning, combinedReasoning) ||
+                other.combinedReasoning == combinedReasoning));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1851,6 +1950,10 @@ class _$ActionItemQualityAssistanceImpl
     const DeepCollectionEquality().hash(_issues),
     improvedVersion,
     timestamp,
+    const DeepCollectionEquality().hash(_clarificationSuggestions),
+    vaguenessType,
+    vaguenessConfidence,
+    combinedReasoning,
   );
 
   /// Create a copy of ActionItemQualityAssistance
@@ -1880,6 +1983,11 @@ abstract class _ActionItemQualityAssistance
     required final List<QualityIssue> issues,
     @JsonKey(name: 'improved_version') final String? improvedVersion,
     required final DateTime timestamp,
+    @JsonKey(name: 'clarification_suggestions')
+    final List<String>? clarificationSuggestions,
+    @JsonKey(name: 'vagueness_type') final String? vaguenessType,
+    @JsonKey(name: 'vagueness_confidence') final double? vaguenessConfidence,
+    @JsonKey(name: 'combined_reasoning') final String? combinedReasoning,
   }) = _$ActionItemQualityAssistanceImpl;
 
   factory _ActionItemQualityAssistance.fromJson(Map<String, dynamic> json) =
@@ -1900,7 +2008,19 @@ abstract class _ActionItemQualityAssistance
   @JsonKey(name: 'improved_version')
   String? get improvedVersion;
   @override
-  DateTime get timestamp;
+  DateTime get timestamp; // Merged clarification data (optional, added Oct 2025 for deduplication)
+  @override
+  @JsonKey(name: 'clarification_suggestions')
+  List<String>? get clarificationSuggestions;
+  @override
+  @JsonKey(name: 'vagueness_type')
+  String? get vaguenessType;
+  @override
+  @JsonKey(name: 'vagueness_confidence')
+  double? get vaguenessConfidence;
+  @override
+  @JsonKey(name: 'combined_reasoning')
+  String? get combinedReasoning;
 
   /// Create a copy of ActionItemQualityAssistance
   /// with the given fields replaced by the non-null parameter values.

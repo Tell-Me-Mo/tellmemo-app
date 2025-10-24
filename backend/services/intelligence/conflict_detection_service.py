@@ -39,7 +39,7 @@ class ConflictDetectionService:
     """
 
     SIMILARITY_THRESHOLD = 0.75  # High similarity indicates potential conflict
-    MIN_CONFIDENCE_THRESHOLD = 0.7
+    MIN_CONFIDENCE_THRESHOLD = 0.65  # Lowered from 0.7 to 0.65 (Oct 2025) to surface more conflicts
 
     def __init__(
         self,
@@ -104,9 +104,11 @@ class ConflictDetectionService:
 
         # Step 3: Check confidence threshold
         if conflict_analysis['confidence'] < self.MIN_CONFIDENCE_THRESHOLD:
-            logger.info(
-                f"Conflict confidence {conflict_analysis['confidence']} "
-                f"below threshold {self.MIN_CONFIDENCE_THRESHOLD}"
+            logger.warning(
+                f"🚫 Conflict FILTERED (low confidence): "
+                f"Statement: '{statement[:60]}...', "
+                f"Confidence: {conflict_analysis['confidence']:.2f} < threshold {self.MIN_CONFIDENCE_THRESHOLD}, "
+                f"Severity: {conflict_analysis.get('severity', 'unknown')}"
             )
             return None
 

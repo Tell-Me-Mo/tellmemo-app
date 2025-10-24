@@ -117,6 +117,7 @@ class QualityIssue with _$QualityIssue {
 }
 
 /// Action item quality enhancement suggestion
+/// Updated Oct 2025: Now can include merged clarification data to reduce duplicate cards
 @freezed
 class ActionItemQualityAssistance with _$ActionItemQualityAssistance {
   const factory ActionItemQualityAssistance({
@@ -126,6 +127,11 @@ class ActionItemQualityAssistance with _$ActionItemQualityAssistance {
     required List<QualityIssue> issues,
     @JsonKey(name: 'improved_version') String? improvedVersion,
     required DateTime timestamp,
+    // Merged clarification data (optional, added Oct 2025 for deduplication)
+    @JsonKey(name: 'clarification_suggestions') List<String>? clarificationSuggestions,
+    @JsonKey(name: 'vagueness_type') String? vaguenessType,
+    @JsonKey(name: 'vagueness_confidence') double? vaguenessConfidence,
+    @JsonKey(name: 'combined_reasoning') String? combinedReasoning,
   }) = _ActionItemQualityAssistance;
 
   factory ActionItemQualityAssistance.fromJson(Map<String, dynamic> json) =>
@@ -205,23 +211,24 @@ class ProactiveAssistanceModel with _$ProactiveAssistanceModel {
   }
 
   /// Determine display mode based on confidence thresholds and assistance type
+  /// Updated Oct 2025: Lowered thresholds to surface more proactive assistance
   DisplayMode get displayMode {
     final conf = confidence;
 
     return switch (type) {
-      // Auto-answers: High threshold (85%) for immediate display
-      ProactiveAssistanceType.autoAnswer when conf > 0.85 => DisplayMode.immediate,
-      ProactiveAssistanceType.autoAnswer when conf > 0.75 => DisplayMode.collapsed,
+      // Auto-answers: Lowered thresholds (was 85%/75%, now 80%/65%)
+      ProactiveAssistanceType.autoAnswer when conf > 0.80 => DisplayMode.immediate,
+      ProactiveAssistanceType.autoAnswer when conf > 0.65 => DisplayMode.collapsed,
       ProactiveAssistanceType.autoAnswer => DisplayMode.hidden,
 
-      // Conflicts: Critical, so slightly lower threshold (80%)
-      ProactiveAssistanceType.conflictDetected when conf > 0.80 => DisplayMode.immediate,
-      ProactiveAssistanceType.conflictDetected when conf > 0.70 => DisplayMode.collapsed,
+      // Conflicts: Lowered thresholds (was 80%/70%, now 75%/65%)
+      ProactiveAssistanceType.conflictDetected when conf > 0.75 => DisplayMode.immediate,
+      ProactiveAssistanceType.conflictDetected when conf > 0.65 => DisplayMode.collapsed,
       ProactiveAssistanceType.conflictDetected => DisplayMode.hidden,
 
-      // Clarifications: Moderately important (80%)
-      ProactiveAssistanceType.clarificationNeeded when conf > 0.80 => DisplayMode.immediate,
-      ProactiveAssistanceType.clarificationNeeded when conf > 0.70 => DisplayMode.collapsed,
+      // Clarifications: Lowered thresholds (was 80%/70%, now 75%/65%)
+      ProactiveAssistanceType.clarificationNeeded when conf > 0.75 => DisplayMode.immediate,
+      ProactiveAssistanceType.clarificationNeeded when conf > 0.65 => DisplayMode.collapsed,
       ProactiveAssistanceType.clarificationNeeded => DisplayMode.hidden,
 
       // Action item quality: Always show if there are issues (completeness < 0.7)
@@ -230,14 +237,14 @@ class ProactiveAssistanceModel with _$ProactiveAssistanceModel {
           ? DisplayMode.immediate
           : DisplayMode.collapsed,
 
-      // Follow-up suggestions: Lower priority (75%)
-      ProactiveAssistanceType.followUpSuggestion when conf > 0.75 => DisplayMode.immediate,
-      ProactiveAssistanceType.followUpSuggestion when conf > 0.65 => DisplayMode.collapsed,
+      // Follow-up suggestions: Lowered thresholds (was 75%/65%, now 70%/55%)
+      ProactiveAssistanceType.followUpSuggestion when conf > 0.70 => DisplayMode.immediate,
+      ProactiveAssistanceType.followUpSuggestion when conf > 0.55 => DisplayMode.collapsed,
       ProactiveAssistanceType.followUpSuggestion => DisplayMode.hidden,
 
-      // Repetition detection: High threshold, important for efficiency (80%)
-      ProactiveAssistanceType.repetitionDetected when conf > 0.80 => DisplayMode.immediate,
-      ProactiveAssistanceType.repetitionDetected when conf > 0.70 => DisplayMode.collapsed,
+      // Repetition detection: Lowered thresholds (was 80%/70%, now 75%/65%)
+      ProactiveAssistanceType.repetitionDetected when conf > 0.75 => DisplayMode.immediate,
+      ProactiveAssistanceType.repetitionDetected when conf > 0.65 => DisplayMode.collapsed,
       ProactiveAssistanceType.repetitionDetected => DisplayMode.hidden,
     };
   }

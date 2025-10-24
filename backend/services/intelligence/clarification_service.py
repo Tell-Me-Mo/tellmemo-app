@@ -6,10 +6,12 @@ and generates context-specific clarifying questions to help teams avoid ambiguit
 """
 
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import re
 import logging
 import json
+import asyncio
+from pydantic import BaseModel, Field, validator
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +24,44 @@ class ClarificationSuggestion:
     confidence: float
     suggested_questions: List[str]
     reasoning: str
+
+
+# Pydantic validation models for LLM responses
+class VaguenessDetectionResponse(BaseModel):
+    """Validated response for vagueness detection"""
+    is_vague: bool
+    type: Optional[str] = Field(None, description="Type of vagueness: time, assignment, detail, scope")
+    confidence: Optional[float] = Field(None, ge=0.0, le=1.0)
+    missing_info: Optional[str] = None
+
+    @validator('type')
+    def validate_type(cls, v):
+        if v is not None and v not in ['time', 'assignment', 'detail', 'scope']:
+            logger.warning(f"Invalid vagueness type '{v}', defaulting to 'detail'")
+            return 'detail'
+        return v
+
+    @validator('confidence')
+    def validate_confidence(cls, v, values):
+        if values.get('is_vague') and v is not None and v < 0.75:
+            logger.debug(f"Confidence {v:.2f} below threshold 0.75")
+        return v
+
+
+class ClarificationQuestionsResponse(BaseModel):
+    """Validated response for clarification questions"""
+    questions: List[str] = Field(..., min_items=1, max_items=5)
+
+    @validator('questions')
+    def validate_questions(cls, v):
+        # Filter out empty or invalid questions
+        valid_questions = [
+            q.strip() for q in v
+            if q and isinstance(q, str) and len(q.strip()) > 5 and q.strip().endswith('?')
+        ]
+        if not valid_questions:
+            raise ValueError("No valid questions found")
+        return valid_questions[:3]  # Limit to 3 questions
 
 
 class ClarificationService:
@@ -58,23 +98,30 @@ class ClarificationService:
     # Whitelist - phrases that look vague but are actually acceptable
     VAGUENESS_WHITELIST = {
         'time': [
-            r'\bnext (week|month|quarter)\b',  # Common planning language
+            r'\bnext (week|month|quarter|sprint)\b',  # Common planning language
             r'\bsoon\b(?=\s+(as possible|after))',  # "soon as possible" is acceptable
-            r'\blater (today|this week)\b'  # Relative but clear timeframe
+            r'\blater (today|this week|next week)\b',  # Relative but clear timeframe
+            r'\b(by|before|after) (next|this) (week|month|sprint)\b',  # Relative deadlines are acceptable
+            r'\bin \d+ (days?|weeks?|months?)\b'  # "in 2 weeks" is specific enough
         ],
         'assignment': [
             r'\bwe need to\b',  # Team action, not vague assignment
-            r'\bteam (will|should|needs to)\b',  # Team ownership clear
-            r'\beveryone (should|needs to)\b'  # Broadcast action
+            r'\bteam (will|should|needs to|to)\b',  # Team ownership clear
+            r'\beveryone (should|needs to|to)\b',  # Broadcast action
+            r'\b[A-Z][a-z]+ (will|should|needs to|to)\b',  # Named person actions (e.g., "John will...")
+            r'\bI (will|should|need to|to)\b'  # First-person commitment is clear
         ],
         'detail': [
-            r'\b(complete|finish|review|update|fix|implement) \w+\b',  # Action + object = clear
+            r'\b(complete|finish|review|update|fix|implement|clarify|address|schedule) \w+\b',  # Action + object = clear
             r'\bschedule (a |the )?\w+\b',  # "schedule demo" is clear enough
-            r'\bthe \w+ (integration|module|feature|service|component)\b'  # Technical terms clear
+            r'\bthe \w+ (integration|module|feature|service|component|implementation|audit|monitoring)\b',  # Technical terms clear
+            r'\b(OAuth|JWT|API|database|security|performance|testing)\b',  # Technical specifics
+            r'\b(action item|task|issue|bug|feature)\s+\d+\b'  # Numbered items are specific
         ],
         'scope': [
             r'\bI think (we should|that|the)\b',  # Opinion followed by specifics
-            r'\bmaybe (we can|next|after)\b'  # Tentative but clear direction
+            r'\bmaybe (we can|next|after)\b',  # Tentative but clear direction
+            r'\b(complete|implement|fix|update|address|clarify)\b'  # Action verbs indicate clear intent
         ]
     }
 
@@ -103,6 +150,118 @@ class ClarificationService:
 
     def __init__(self, llm_client):
         self.llm_client = llm_client
+
+    async def _llm_call_with_retry(
+        self,
+        prompt: str,
+        max_tokens: int = 200,
+        temperature: float = 0.1,
+        max_retries: int = 2
+    ) -> Optional[str]:
+        """
+        Call LLM with retry logic and exponential backoff.
+
+        Args:
+            prompt: The prompt to send to the LLM
+            max_tokens: Maximum tokens in response
+            temperature: Temperature for generation
+            max_retries: Maximum number of retry attempts
+
+        Returns:
+            LLM response text or None if all retries fail
+        """
+        for attempt in range(max_retries + 1):
+            try:
+                response = await self.llm_client.create_message(
+                    prompt=prompt,
+                    max_tokens=max_tokens,
+                    temperature=temperature
+                )
+                return response.content[0].text.strip()
+
+            except Exception as e:
+                if attempt < max_retries:
+                    # Exponential backoff: 0.5s, 1s, 2s...
+                    wait_time = 0.5 * (2 ** attempt)
+                    logger.warning(
+                        f"LLM call failed (attempt {attempt + 1}/{max_retries + 1}): {e}. "
+                        f"Retrying in {wait_time}s..."
+                    )
+                    await asyncio.sleep(wait_time)
+                else:
+                    logger.error(f"LLM call failed after {max_retries + 1} attempts: {e}")
+                    return None
+
+        return None
+
+    def _robust_json_parse(self, response_text: str, expected_type: str = "object") -> Optional[any]:
+        """
+        Robust JSON parser with multiple fallback strategies.
+
+        Args:
+            response_text: Raw LLM response text
+            expected_type: "object" for {} or "array" for []
+
+        Returns:
+            Parsed JSON object/array or None if parsing fails
+        """
+        if not response_text:
+            return None
+
+        original_text = response_text
+
+        # Step 1: Remove markdown code blocks
+        if '```' in response_text:
+            match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', response_text, re.DOTALL)
+            if match:
+                response_text = match.group(1).strip()
+            else:
+                response_text = re.sub(r'```(?:json)?', '', response_text).strip()
+
+        # Step 2: Extract JSON structure (find first and last bracket)
+        if expected_type == "array":
+            start_idx = response_text.find('[')
+            end_idx = response_text.rfind(']')
+        else:  # object
+            start_idx = response_text.find('{')
+            end_idx = response_text.rfind('}')
+
+        if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+            response_text = response_text[start_idx:end_idx+1]
+
+        # Step 3: Fix common JSON issues - contractions
+        contractions = {
+            "we're": "we are", "it's": "it is", "you're": "you are",
+            "they're": "they are", "isn't": "is not", "aren't": "are not",
+            "wasn't": "was not", "weren't": "were not", "haven't": "have not",
+            "hasn't": "has not", "hadn't": "had not", "won't": "will not",
+            "wouldn't": "would not", "don't": "do not", "doesn't": "does not",
+            "didn't": "did not", "can't": "cannot", "couldn't": "could not",
+            "shouldn't": "should not", "I'm": "I am", "he's": "he is",
+            "she's": "she is", "that's": "that is", "there's": "there is",
+            "who's": "who is", "what's": "what is", "where's": "where is",
+            "when's": "when is", "why's": "why is", "how's": "how is"
+        }
+        for contraction, expansion in contractions.items():
+            response_text = response_text.replace(contraction, expansion)
+            response_text = response_text.replace(contraction.capitalize(), expansion.capitalize())
+
+        # Step 4: Try to parse JSON
+        try:
+            return json.loads(response_text)
+        except json.JSONDecodeError as e:
+            logger.debug(f"Initial JSON parse failed: {e}")
+
+            # Step 5: Try regex extraction as last resort
+            if expected_type == "array":
+                # Extract quoted strings that look like questions
+                matches = re.findall(r'"([^"]+\?)"', original_text)
+                if matches and len(matches) >= 2:
+                    logger.info(f"Recovered {len(matches)} items via regex extraction")
+                    return matches
+
+            logger.warning(f"All JSON parsing strategies failed. Original: {original_text[:200]}")
+            return None
 
     def _is_whitelisted(self, statement: str, vague_type: str) -> bool:
         """
@@ -286,7 +445,7 @@ class ClarificationService:
                         statement=statement,
                         vagueness_type=vague_type,
                         context=context,
-                        confidence=0.90  # Raised from 0.85 to 0.90 (Oct 2025)
+                        confidence=0.75  # Lowered from 0.90 to 0.75 (Oct 2025) to reduce false positives
                     )
 
         # Use LLM for more subtle vagueness (slower, broader coverage)
@@ -316,87 +475,61 @@ class ClarificationService:
         context_escaped = (context.replace('"', '\\"').replace('\n', ' ') if context else "No additional context")
 
         # Use LLM to customize questions based on context
-        prompt = f"""Given this vague statement from a meeting, generate 2-3 specific clarifying questions.
+        # Improved prompt with stricter JSON requirements and examples
+        prompt = f"""Generate 2-3 specific clarifying questions for this vague meeting statement.
 
 Statement: {statement_escaped}
 Context: {context_escaped}
 Vagueness Type: {vagueness_type}
 
-Base question templates:
+Base templates:
 {chr(10).join(f"- {q}" for q in base_questions)}
 
-CRITICAL: You MUST respond with ONLY a JSON array. Absolutely NO additional text, explanations, or formatting.
-Each question must be a complete sentence ending with a question mark.
-Each question must use ONLY single quotes inside the JSON strings (never double quotes).
+CRITICAL REQUIREMENTS:
+1. Respond with ONLY a valid JSON array - nothing else
+2. No markdown, no code blocks, no explanations
+3. Each question must end with a question mark
+4. Use proper JSON string escaping
+5. No unescaped quotes or apostrophes inside strings
 
-Example correct response (note: use \\\\ to escape backslashes):
-["What is the specific launch date?", "Who will coordinate the launch?", "What are the success criteria?"]
+GOOD examples:
+["What is the specific deadline?", "Who will handle this task?"]
+["When should this be completed by?", "What are the success criteria?"]
 
-JSON array:"""
+BAD examples:
+```json ["question"]```  <- No markdown blocks
+Here are the questions: ["question"]  <- No extra text
+["What's the deadline?"]  <- Use "What is" instead
 
-        try:
-            response = await self.llm_client.create_message(
-                prompt=prompt,
-                max_tokens=200,
-                temperature=0.3  # Lower temperature for more consistent formatting
-            )
+Output only the JSON array:"""
 
-            response_text = response.content[0].text.strip()
+        # Call LLM with retry logic
+        response_text = await self._llm_call_with_retry(
+            prompt=prompt,
+            max_tokens=200,
+            temperature=0.1,
+            max_retries=2
+        )
 
-            # Handle empty response
-            if not response_text:
-                logger.warning("Empty response from LLM clarification generation")
-                questions = base_questions[:3]
-            else:
-                # Remove markdown code blocks if present
-                if '```' in response_text:
-                    # Extract content between code blocks
-                    match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', response_text, re.DOTALL)
-                    if match:
-                        response_text = match.group(1).strip()
-                    else:
-                        # Fallback: remove all ``` markers
-                        response_text = re.sub(r'```(?:json)?', '', response_text).strip()
+        # Parse response with robust JSON parsing
+        questions = base_questions[:3]  # Default fallback
 
-                # Remove any leading/trailing text that's not part of the JSON array
-                # Find the first '[' and last ']'
-                start_idx = response_text.find('[')
-                end_idx = response_text.rfind(']')
-                if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
-                    response_text = response_text[start_idx:end_idx+1]
+        if response_text:
+            parsed_questions = self._robust_json_parse(response_text, expected_type="array")
 
-                # Try to fix common JSON issues
-                # Replace problematic contractions with escaped versions
-                response_text = response_text.replace("we're", "we are").replace("it's", "it is")
-                response_text = response_text.replace("you're", "you are").replace("they're", "they are")
-
-                # Try to parse JSON
+            if isinstance(parsed_questions, list) and len(parsed_questions) > 0:
                 try:
-                    questions = json.loads(response_text)
-                    if isinstance(questions, list) and len(questions) > 0:
-                        # Validate all items are strings
-                        questions = [str(q).strip() for q in questions if q and isinstance(q, str)]
-                        if not questions:
-                            logger.warning("LLM returned empty question list after filtering")
-                            questions = base_questions[:3]
-                    else:
-                        logger.warning(f"LLM returned non-list or empty: {type(questions)}")
-                        questions = base_questions[:3]
-                except json.JSONDecodeError as e:
-                    logger.warning(f"Failed to parse LLM clarification response: {e}")
-                    logger.debug(f"Raw response: {response_text[:300]}")
-                    # Last resort: try to extract questions manually using regex
-                    matches = re.findall(r'"([^"]+\?)"', response_text)
-                    if matches and len(matches) >= 2:
-                        questions = matches[:3]
-                        logger.info(f"Recovered {len(questions)} questions via regex extraction")
-                    else:
-                        questions = base_questions[:3]
-
-        except Exception as e:
-            logger.error(f"Error generating clarification questions: {e}")
-            # Fallback to template questions
-            questions = base_questions[:3]
+                    # Validate using Pydantic model
+                    validated = ClarificationQuestionsResponse(questions=parsed_questions)
+                    questions = validated.questions
+                    logger.debug(f"Successfully validated {len(questions)} clarification questions")
+                except Exception as e:
+                    logger.warning(f"Question validation failed: {e}. Using base questions.")
+                    questions = base_questions[:3]
+            else:
+                logger.warning("Failed to parse questions from LLM response, using base questions")
+        else:
+            logger.warning("Empty or failed LLM response, using base questions")
 
         return ClarificationSuggestion(
             statement=statement,
@@ -417,77 +550,66 @@ JSON array:"""
         statement_escaped = statement.replace('"', '\\"').replace('\n', ' ')
         context_escaped = (context.replace('"', '\\"').replace('\n', ' ') if context else "No additional context")
 
-        prompt = f"""Analyze this statement from a meeting for vagueness or missing information.
+        prompt = f"""Analyze this meeting statement for vagueness or missing critical information.
 
 Statement: {statement_escaped}
 Context: {context_escaped}
 
 Determine if the statement is vague or missing critical details.
 
-CRITICAL: Respond with ONLY valid JSON. Absolutely NO additional text, explanations, or formatting.
-Use simple alphanumeric descriptions in the missing_info field (no quotes or special characters).
-
-Response format (if vague):
-{{
-    "is_vague": true,
-    "type": "time",
-    "confidence": 0.8,
-    "missing_info": "needs specific deadline or timeframe"
-}}
+CRITICAL REQUIREMENTS:
+1. Respond with ONLY valid JSON - nothing else
+2. No markdown, no code blocks, no explanations
+3. Use simple descriptions (no apostrophes or quotes inside strings)
+4. Use proper JSON formatting
 
 Valid types: time, assignment, detail, scope
-Confidence: number between 0.0 and 1.0
+Confidence: 0.0 to 1.0 (use 0.75+ only for genuinely vague statements that require clarification)
 
-If NOT vague, respond with: {{"is_vague": false}}
+GOOD examples:
+{{"is_vague": false}}
+{{"is_vague": true, "type": "time", "confidence": 0.85, "missing_info": "needs specific deadline"}}
+{{"is_vague": true, "type": "assignment", "confidence": 0.9, "missing_info": "no owner specified"}}
 
-JSON response:"""
+BAD examples:
+```json {{"is_vague": false}}```  <- No markdown blocks
+Analysis: {{"is_vague": true...}}  <- No extra text
+{{"missing_info": "it's unclear"}}  <- Use "it is unclear" instead
+
+Output only the JSON object:"""
+
+        # Call LLM with retry logic
+        response_text = await self._llm_call_with_retry(
+            prompt=prompt,
+            max_tokens=150,
+            temperature=0.1,
+            max_retries=2
+        )
+
+        # Parse response with robust JSON parsing
+        if not response_text:
+            logger.warning("Empty response from LLM vagueness detection")
+            return None
+
+        parsed_result = self._robust_json_parse(response_text, expected_type="object")
+
+        if not parsed_result or not isinstance(parsed_result, dict):
+            logger.warning("Failed to parse vagueness detection response as JSON object")
+            return None
 
         try:
-            response = await self.llm_client.create_message(
-                prompt=prompt,
-                max_tokens=150,
-                temperature=0.2  # Very low temperature for consistent JSON
-            )
+            # Validate using Pydantic model
+            result = VaguenessDetectionResponse(**parsed_result)
 
-            response_text = response.content[0].text.strip()
+            # Process validated result - increased threshold to reduce false positives
+            if result.is_vague and result.confidence and result.confidence >= 0.75:
+                vague_type = result.type or 'detail'
+                confidence = result.confidence
 
-            # Handle empty or invalid response
-            if not response_text:
-                logger.warning("Empty response from LLM vagueness detection")
-                return None
-
-            # Remove markdown code blocks if present
-            if '```' in response_text:
-                match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', response_text, re.DOTALL)
-                if match:
-                    response_text = match.group(1).strip()
-                else:
-                    response_text = re.sub(r'```(?:json)?', '', response_text).strip()
-
-            # Extract JSON object (find first { and last })
-            start_idx = response_text.find('{')
-            end_idx = response_text.rfind('}')
-            if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
-                response_text = response_text[start_idx:end_idx+1]
-
-            # Try to fix common JSON issues
-            response_text = response_text.replace("we're", "we are").replace("it's", "it is")
-            response_text = response_text.replace("'", "\\'")  # Escape single quotes
-
-            result = json.loads(response_text)
-
-            if result.get('is_vague') and result.get('confidence', 0) >= 0.7:  # Raised threshold from 0.6 to 0.7
-                vague_type = result.get('type', 'detail')
-                # Validate type
-                if vague_type not in ['time', 'assignment', 'detail', 'scope']:
-                    vague_type = 'detail'
-
-                confidence = float(result.get('confidence', 0.7))
-
-                # Only return if confidence is reasonably high
-                if confidence < 0.7:
-                    logger.debug(f"Vagueness confidence too low ({confidence:.2f}), skipping")
-                    return None
+                logger.debug(
+                    f"Vagueness detected: type={vague_type}, confidence={confidence:.2f}, "
+                    f"missing_info={result.missing_info}"
+                )
 
                 return await self._generate_clarification(
                     statement=statement,
@@ -495,11 +617,14 @@ JSON response:"""
                     context=context,
                     confidence=confidence
                 )
-        except json.JSONDecodeError as e:
-            logger.warning(f"Failed to parse LLM vagueness detection response: {e}")
-            if 'response_text' in locals():
-                logger.debug(f"Raw response: {response_text[:300]}")
+            else:
+                if result.is_vague and result.confidence:
+                    logger.debug(
+                        f"Vagueness confidence {result.confidence:.2f} below threshold 0.75, skipping"
+                    )
+
         except Exception as e:
-            logger.error(f"Error in LLM vagueness detection: {e}")
+            logger.warning(f"Vagueness detection validation failed: {e}")
+            return None
 
         return None
