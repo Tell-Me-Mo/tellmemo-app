@@ -370,25 +370,136 @@ class RealtimeMeetingInsightsService:
         # Insight Evolution Tracker - tracks how insights change over time
         self.evolution_tracker = get_evolution_tracker()
 
-    async def process_transcript_chunk(
+        # Question buffering for merging split questions across chunks
+        self.pending_questions: Dict[str, List[Dict[str, Any]]] = {}  # session_id -> list of questions
+
+    async def process_chunk_immediate(
         self,
         session_id: str,
         project_id: str,
         organization_id: str,
         chunk: TranscriptChunk,
+        context: str
+    ) -> List[Dict[str, Any]]:
+        """
+        Process chunk immediately for real-time question answering only.
+
+        This method runs on every chunk without waiting for topic completion,
+        providing instant answers to questions asked during the meeting.
+
+        Args:
+            session_id: Unique identifier for the meeting session
+            project_id: Project UUID
+            organization_id: Organization UUID
+            chunk: Transcript chunk to process
+            context: Full conversation context so far
+
+        Returns:
+            List of question-answer pairs (proactive assistance items)
+        """
+        try:
+            # Initialize session state if needed
+            if session_id not in self.active_contexts:
+                self.active_contexts[session_id] = SlidingWindowContext(
+                    duplicate_threshold=self.chunk_duplicate_threshold
+                )
+                self.extracted_insights[session_id] = []
+                self.insight_embeddings[session_id] = []
+                self.pending_questions[session_id] = []
+                logger.info(f"Initialized immediate processing context for session {sanitize_for_log(session_id)}")
+
+            # Add chunk to context
+            self.active_contexts[session_id].add_chunk(chunk)
+
+            proactive_responses = []
+
+            # ONLY Phase 1: Question Auto-Answering (immediate)
+            try:
+                # Detect and classify the question from the chunk text
+                detected_question = await self.question_detector.detect_and_classify_question(
+                    text=chunk.text,
+                    context=context
+                )
+
+                if detected_question:
+                    logger.info(
+                        f"🔍 [Immediate] Detected question in chunk {chunk.index}: "
+                        f"'{detected_question.text[:80]}...'"
+                    )
+
+                    # Attempt to auto-answer (with shared cache support)
+                    answer = await self.qa_service.answer_question(
+                        question=detected_question.text,
+                        question_type=detected_question.type,
+                        project_id=project_id,
+                        organization_id=organization_id,
+                        context=context,
+                        session_id=session_id
+                    )
+
+                    if answer:
+                        # Convert AnswerSource objects to dicts
+                        sources_dict = [
+                            {
+                                'content_id': source.content_id,
+                                'title': source.title,
+                                'content_type': source.content_type,
+                                'similarity': source.similarity
+                            }
+                            for source in answer.sources
+                        ]
+
+                        proactive_responses.append({
+                            'type': 'auto_answer',
+                            'question': detected_question.text,
+                            'answer': answer.answer_text,
+                            'confidence': answer.confidence,
+                            'sources': sources_dict,
+                            'reasoning': answer.reasoning or "Found relevant information from past meetings",
+                            'chunk_index': chunk.index,
+                            'timestamp': datetime.now().isoformat()
+                        })
+
+                        logger.info(
+                            f"✅ [Immediate] Auto-answered question (confidence: {answer.confidence:.2f}): "
+                            f"'{answer.answer_text[:100]}...'"
+                        )
+                    else:
+                        logger.debug(
+                            f"⏭️  [Immediate] Could not auto-answer question: '{detected_question.text[:80]}...'"
+                        )
+
+            except Exception as e:
+                logger.error(f"[Immediate] Question answering failed for chunk {chunk.index}: {e}", exc_info=True)
+
+            return proactive_responses
+
+        except Exception as e:
+            logger.error(f"[Immediate] Error in immediate chunk processing: {e}", exc_info=True)
+            return []
+
+    async def process_topic_batch(
+        self,
+        session_id: str,
+        project_id: str,
+        organization_id: str,
+        accumulated_chunks: List[TranscriptChunk],
         db: AsyncSession,
         enabled_insight_types: Optional[List[str]] = None,
         adaptive_stats: Optional[Dict[str, Any]] = None,
         adaptive_reason: Optional[str] = None
     ) -> ProcessingResult:
         """
-        Process a single transcript chunk and extract insights.
+        Process accumulated chunks as a complete topic batch.
+
+        This method is called when a topic completes (detected by TopicCoherenceDetector).
+        It processes ALL accumulated chunks together for better context and fewer redundant insights.
 
         Flow:
-        1. Early duplicate detection (chunk-level) - Avoids redundant LLM calls
-        2. Extract insights from LLM (only if not duplicate)
+        1. Merge all chunks into single context
+        2. Extract insights from complete topic (LLM call)
         3. Deduplicate insights (insight-level)
-        4. Run Active Intelligence phases (only on unique insights)
+        4. Run Active Intelligence phases EXCEPT question answering (already handled immediately)
 
         RESILIENCE: Each Active Intelligence phase is wrapped in error handling
         to ensure partial failures don't block the entire pipeline. Returns
@@ -398,10 +509,11 @@ class RealtimeMeetingInsightsService:
             session_id: Unique identifier for the meeting session
             project_id: Project UUID
             organization_id: Organization UUID
-            chunk: Transcript chunk to process
+            accumulated_chunks: List of transcript chunks that form a complete topic
             db: Database session
+            enabled_insight_types: User preferences for which insight types to extract
             adaptive_stats: Optional stats from AdaptiveInsightProcessor for metadata
-            adaptive_reason: Optional reason for processing decision
+            adaptive_reason: Optional reason for processing decision (e.g., "topic_change")
 
         Returns:
             ProcessingResult with insights, status, and phase-level error tracking
@@ -435,63 +547,65 @@ class RealtimeMeetingInsightsService:
                 metadata.trigger = adaptive_reason
 
         try:
-            # Initialize context if first chunk
+            # Ensure we have chunks to process
+            if not accumulated_chunks:
+                logger.warning(f"[Batch] No chunks to process for session {sanitize_for_log(session_id)}")
+                return ProcessingResult(
+                    session_id=session_id,
+                    chunk_index=0,
+                    insights=[],
+                    proactive_assistance=[],
+                    overall_status=ProcessingStatus.OK,
+                    phase_status={},
+                    total_insights_count=len(self.extracted_insights.get(session_id, [])),
+                    processing_time_ms=0,
+                    context_window_size=0,
+                    processing_metadata=metadata
+                )
+
+            # Initialize context if first batch
             if session_id not in self.active_contexts:
                 self.active_contexts[session_id] = SlidingWindowContext(
                     duplicate_threshold=self.chunk_duplicate_threshold
                 )
                 self.extracted_insights[session_id] = []
                 self.insight_embeddings[session_id] = []
-                logger.info(f"Initialized context for session {sanitize_for_log(session_id)}")
+                logger.info(f"[Batch] Initialized context for session {sanitize_for_log(session_id)}")
 
-            # Add chunk to sliding window (before duplicate check)
+            # Add all accumulated chunks to sliding window
             context = self.active_contexts[session_id]
-            context.add_chunk(chunk)
+            for chunk in accumulated_chunks:
+                context.add_chunk(chunk)
 
-            # PHASE 0: Early Duplicate Detection (BEFORE expensive LLM calls)
-            is_duplicate, similarity_score = await self._is_duplicate_chunk(
-                session_id=session_id,
-                chunk_text=chunk.text
+            # Merge all chunks into single topic text for processing
+            topic_text = " ".join([chunk.text for chunk in accumulated_chunks])
+            last_chunk = accumulated_chunks[-1]
+
+            logger.info(
+                f"[Batch] Processing topic with {len(accumulated_chunks)} chunks "
+                f"(~{len(topic_text)} chars) for session {sanitize_for_log(session_id)}"
             )
-
-            # If duplicate detected, skip expensive processing
-            if is_duplicate:
-                processing_time = time.time() - start_time
-
-                logger.info(
-                    f"Skipping chunk {chunk.index} (duplicate, similarity: {similarity_score:.3f}): "
-                    f"Saved ~$0.002 in LLM costs"
-                )
-
-                # Populate metadata for skipped (duplicate) processing
-                metadata.decision_reason = "Chunk is semantically duplicate of recent chunk"
-                metadata.trigger = "duplicate_detection"
-
-                return ProcessingResult(
-                    session_id=session_id,
-                    chunk_index=chunk.index,
-                    insights=[],
-                    proactive_assistance=[],
-                    overall_status=ProcessingStatus.OK,
-                    phase_status={},
-                    total_insights_count=len(self.extracted_insights[session_id]),
-                    processing_time_ms=int(processing_time * 1000),
-                    context_window_size=len(context.chunks),
-                    skipped_reason='duplicate_chunk',
-                    similarity_score=similarity_score,
-                    processing_metadata=metadata
-                )
 
             # Get conversation context
             full_context = context.get_context_text(include_speakers=True)
-            recent_context = context.get_recent_context(num_chunks=3)
+            recent_context = topic_text  # Use merged topic as recent context
 
-            # PHASE 1: Extract insights from current chunk (LLM call with user preferences)
+            # Create synthetic chunk representing the entire topic
+            topic_chunk = TranscriptChunk(
+                chunk_id=f"{session_id}_topic_{last_chunk.index}",
+                text=topic_text,
+                timestamp=last_chunk.timestamp,
+                index=last_chunk.index,
+                speaker=last_chunk.speaker,
+                duration_seconds=sum(c.duration_seconds for c in accumulated_chunks)
+            )
+
+            # PHASE 1: Extract insights from complete topic (LLM call with user preferences)
             insights = await self._extract_insights(
                 session_id=session_id,
                 project_id=project_id,
                 organization_id=organization_id,
-                current_chunk=chunk,
+                current_chunk=topic_chunk,
                 recent_context=recent_context,
                 full_context=full_context,
                 db=db,
@@ -506,13 +620,14 @@ class RealtimeMeetingInsightsService:
             truly_new_insights, evolved_insights = await self._check_insight_evolution(
                 session_id=session_id,
                 insights=new_insights,
-                chunk_index=chunk.index
+                chunk_index=topic_chunk.index
             )
 
             # Store truly new insights (not evolutions)
             self.extracted_insights[session_id].extend(truly_new_insights)
 
-            # PHASE 1-6: Active Intelligence - Process all proactive assistance
+            # PHASE 2-5: Active Intelligence - Process proactive assistance (EXCLUDING question answering)
+            # Question answering runs immediately per chunk, so we skip it here
             # Note: Process proactive assistance on truly_new_insights (not evolved ones)
             # Returns: (proactive_responses, phase_status, error_messages, phase_timings)
             proactive_assistance, phase_status, error_messages, phase_timings = await self._process_proactive_assistance(
@@ -521,7 +636,8 @@ class RealtimeMeetingInsightsService:
                 organization_id=organization_id,
                 insights=truly_new_insights,
                 context=full_context,
-                current_chunk=chunk
+                current_chunk=topic_chunk,
+                skip_question_answering=True  # NEW: Skip QA in batch processing
             )
 
             processing_time = time.time() - start_time
@@ -531,7 +647,8 @@ class RealtimeMeetingInsightsService:
             if failed_phases:
                 overall_status = ProcessingStatus.DEGRADED
                 logger.warning(
-                    f"Degraded mode for chunk {chunk.index}: {len(failed_phases)} phases failed: {', '.join(failed_phases)}"
+                    f"[Batch] Degraded mode for topic (chunk {topic_chunk.index}): "
+                    f"{len(failed_phases)} phases failed: {', '.join(failed_phases)}"
                 )
             else:
                 overall_status = ProcessingStatus.OK
@@ -540,12 +657,12 @@ class RealtimeMeetingInsightsService:
             metadata.active_phases = [phase for phase, status in phase_status.items() if status == PhaseStatus.SUCCESS]
             metadata.skipped_phases = [phase for phase, status in phase_status.items() if status == PhaseStatus.SKIPPED]
             metadata.phase_execution_times_ms = phase_timings
-            metadata.chunks_accumulated = len(context.chunks)
+            metadata.chunks_accumulated = len(accumulated_chunks)  # Track how many chunks in this topic
 
             # Build processing result
             result = ProcessingResult(
                 session_id=session_id,
-                chunk_index=chunk.index,
+                chunk_index=topic_chunk.index,
                 insights=truly_new_insights,
                 proactive_assistance=proactive_assistance,
                 evolved_insights=evolved_insights,
@@ -560,7 +677,8 @@ class RealtimeMeetingInsightsService:
             )
 
             logger.info(
-                f"Processed chunk {chunk.index} for session {sanitize_for_log(session_id)}: "
+                f"[Batch] Processed topic with {len(accumulated_chunks)} chunks "
+                f"for session {sanitize_for_log(session_id)}: "
                 f"{len(truly_new_insights)} new insights, {len(evolved_insights)} evolved in {processing_time:.2f}s "
                 f"(status: {overall_status.value})"
             )
@@ -569,7 +687,7 @@ class RealtimeMeetingInsightsService:
 
         except Exception as e:
             # Core extraction failed - return FAILED status
-            logger.error(f"Error processing transcript chunk: {e}", exc_info=True)
+            logger.error(f"[Batch] Error processing topic batch: {e}", exc_info=True)
 
             # Populate metadata for failed processing
             metadata.decision_reason = f"Core extraction failed: {str(e)}"
@@ -577,7 +695,7 @@ class RealtimeMeetingInsightsService:
 
             return ProcessingResult(
                 session_id=session_id,
-                chunk_index=chunk.index,
+                chunk_index=accumulated_chunks[-1].index if accumulated_chunks else 0,
                 insights=[],
                 proactive_assistance=[],
                 overall_status=ProcessingStatus.FAILED,
@@ -1139,7 +1257,8 @@ class RealtimeMeetingInsightsService:
         organization_id: str,
         insights: List[MeetingInsight],
         context: str,
-        current_chunk: TranscriptChunk
+        current_chunk: TranscriptChunk,
+        skip_question_answering: bool = False
     ) -> Tuple[List[Dict[str, Any]], Dict[str, PhaseStatus], Dict[str, str], Dict[str, float]]:
         """
         Process insights to provide proactive assistance with selective phase execution.
@@ -1191,22 +1310,29 @@ class RealtimeMeetingInsightsService:
         # Initialize phase status for all possible phases
         all_phases = ['question_answering', 'clarification', 'conflict_detection',
                       'action_item_quality', 'follow_up_suggestions']
+
+        # NEW: Force skip question answering if flag is set (for batch processing)
+        if skip_question_answering:
+            active_phases.discard('question_answering')  # Remove from active phases
+            phase_status['question_answering'] = PhaseStatus.SKIPPED
+
         for phase in all_phases:
             if phase not in active_phases:
                 phase_status[phase] = PhaseStatus.SKIPPED
 
         # Enhanced logging (Oct 2025) - Track phase skipping for debugging missing features
         skipped_phases = set(all_phases) - active_phases
+        logger_prefix = "[Batch]" if skip_question_answering else "[Immediate]"
         logger.info(
-            f"🔍 Phase Execution Stats for chunk {current_chunk.index} (session {sanitize_for_log(session_id[:8])}): "
+            f"🔍 {logger_prefix} Phase Execution Stats for chunk {current_chunk.index} (session {sanitize_for_log(session_id[:8])}): "
             f"✅ Active: {len(active_phases)} ({', '.join(sorted(active_phases))}), "
             f"⏭️  Skipped: {len(skipped_phases)} ({', '.join(sorted(skipped_phases))}), "
             f"📊 Insights: {len(insights)}"
         )
 
-        # Phase 1: Auto-answer questions (only if phase 1 is active)
+        # Phase 1: Auto-answer questions (only if phase 1 is active AND not skipped by batch processing)
         # Note: This phase is now triggered by text analysis (? or question words), not by insights
-        if 'question_answering' in active_phases:
+        if 'question_answering' in active_phases and not skip_question_answering:
             phase_start = time.time()
             try:
                 # Detect and classify the question from the chunk text

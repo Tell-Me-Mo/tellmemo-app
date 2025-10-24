@@ -22,11 +22,11 @@ class AudioStreamingService {
 
   // Configuration
   static const int sampleRate = 16000; // 16kHz for speech recognition
-  static const int chunkDurationSeconds = 10; // Buffer 10 seconds of audio per chunk
+  static const int chunkDurationSeconds = 20; // Buffer 20 seconds of audio per chunk
   static const int bytesPerSample = 2; // 16-bit PCM = 2 bytes per sample
-  static const int targetChunkSize = sampleRate * chunkDurationSeconds * bytesPerSample; // ~320KB for 10s
+  static const int targetChunkSize = sampleRate * chunkDurationSeconds * bytesPerSample; // ~640KB for 20s
 
-  /// Stream of audio chunks (each chunk is ~10 seconds of audio)
+  /// Stream of audio chunks (each chunk is ~20 seconds of audio)
   Stream<Uint8List> get audioChunkStream => _audioChunkController.stream;
 
   /// Check if the service is initialized
