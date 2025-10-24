@@ -151,6 +151,11 @@ class _LiveInsightsPanelState extends ConsumerState<LiveInsightsPanel>
     if (wsService != null) {
       _assistanceSubscription = wsService.proactiveAssistanceStream.listen(
         (assistance) {
+          debugPrint('[LiveInsightsPanel] Received ${assistance.length} proactive assistance items');
+          for (var item in assistance) {
+            debugPrint('[LiveInsightsPanel]   - Type: ${item.type}, DisplayMode: ${item.displayMode}');
+          }
+
           if (mounted) {
             setState(() {
               // Get current settings (using sync provider)
@@ -158,10 +163,16 @@ class _LiveInsightsPanelState extends ConsumerState<LiveInsightsPanel>
 
               // Filter items based on settings (phase enabled, quiet mode, confidence)
               final visibleAssistance = assistance
-                  .where((item) => settings.shouldShowAssistance(item))
+                  .where((item) {
+                    final shouldShow = settings.shouldShowAssistance(item);
+                    debugPrint('[LiveInsightsPanel]   - ${item.type}: shouldShow=$shouldShow (enabled=${settings.enabledPhases.contains(item.type)}, displayMode=${item.displayMode})');
+                    return shouldShow;
+                  })
                   .toList();
 
+              debugPrint('[LiveInsightsPanel] Filtered to ${visibleAssistance.length} visible items');
               _proactiveAssistance.addAll(visibleAssistance);
+              debugPrint('[LiveInsightsPanel] Total proactive assistance now: ${_proactiveAssistance.length}');
             });
           }
         },

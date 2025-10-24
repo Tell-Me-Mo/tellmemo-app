@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/live_insights_settings.dart';
-import '../../domain/models/live_insight_model.dart';
 import '../providers/live_insights_settings_provider.dart';
 
 /// Dialog for configuring Live Insights and Proactive Assistance settings
