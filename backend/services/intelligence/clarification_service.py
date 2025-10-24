@@ -127,23 +127,27 @@ class ClarificationService:
             "What specific information is needed?"
         ])
 
+        # Escape quotes in statement and context for safety
+        statement_escaped = statement.replace('"', '\\"').replace('\n', ' ')
+        context_escaped = (context.replace('"', '\\"').replace('\n', ' ') if context else "No additional context")
+
         # Use LLM to customize questions based on context
         prompt = f"""Given this vague statement from a meeting, generate 2-3 specific clarifying questions.
 
-Statement: "{statement}"
-Context: {context if context else "No additional context"}
+Statement: {statement_escaped}
+Context: {context_escaped}
 Vagueness Type: {vagueness_type}
 
 Base question templates:
 {chr(10).join(f"- {q}" for q in base_questions)}
 
-Generate 2-3 specific, actionable clarifying questions for this statement.
-Make them relevant to the statement and context.
-Return ONLY a JSON array of strings.
+IMPORTANT: Respond with ONLY a valid JSON array. No additional text before or after.
+Each question should be a complete sentence ending with a question mark.
 
-Example format:
-["What is the specific launch date?", "Who will coordinate the launch?"]
-"""
+Example response:
+["What is the specific launch date?", "Who will coordinate the launch?", "What are the success criteria?"]
+
+JSON array:"""
 
         try:
             response = await self.llm_client.create_message(
@@ -198,26 +202,34 @@ Example format:
     ) -> Optional[ClarificationSuggestion]:
         """Use LLM to detect subtle vagueness"""
 
+        # Escape quotes in statement and context for JSON safety
+        statement_escaped = statement.replace('"', '\\"').replace('\n', ' ')
+        context_escaped = (context.replace('"', '\\"').replace('\n', ' ') if context else "No additional context")
+
         prompt = f"""Analyze this statement from a meeting for vagueness or missing information.
 
-Statement: "{statement}"
-Context: {context if context else "No additional context"}
+Statement: {statement_escaped}
+Context: {context_escaped}
 
-Is this statement vague or missing critical details?
-If yes, what type of information is missing?
+Determine if the statement is vague or missing critical details.
 
-Types: time, assignment, detail, scope
+IMPORTANT: Respond with ONLY valid JSON. No additional text before or after.
+Use simple descriptions without quotes or special characters in the missing_info field.
 
-Response format (JSON):
+Response format:
 {{
-    "is_vague": true/false,
-    "type": "time/assignment/detail/scope",
-    "confidence": 0.0-1.0,
-    "missing_info": "description of what's missing"
+    "is_vague": true,
+    "type": "time",
+    "confidence": 0.8,
+    "missing_info": "needs specific deadline or timeframe"
 }}
 
-If not vague, respond: {{"is_vague": false}}
-"""
+Valid types: time, assignment, detail, scope
+Confidence: number between 0.0 and 1.0
+
+If NOT vague, respond with: {{"is_vague": false}}
+
+JSON response:"""
 
         try:
             response = await self.llm_client.create_message(
