@@ -65,14 +65,8 @@ Map<String, dynamic> _$$LiveInsightModelImplToJson(
 };
 
 const _$LiveInsightTypeEnumMap = {
-  LiveInsightType.actionItem: 'action_item',
   LiveInsightType.decision: 'decision',
-  LiveInsightType.question: 'question',
   LiveInsightType.risk: 'risk',
-  LiveInsightType.keyPoint: 'key_point',
-  LiveInsightType.relatedDiscussion: 'related_discussion',
-  LiveInsightType.contradiction: 'contradiction',
-  LiveInsightType.missingInfo: 'missing_info',
 };
 
 const _$LiveInsightPriorityEnumMap = {

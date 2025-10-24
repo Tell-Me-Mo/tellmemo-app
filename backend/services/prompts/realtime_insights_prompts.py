@@ -48,14 +48,8 @@ def get_realtime_insight_extraction_prompt(
 
     # Build insight categories section (filtered by user preferences)
     all_categories = {
-        "action_item": "**ACTION_ITEM**: Specific tasks assigned to people with deadlines\n   - Must have clear ownership\n   - Should be actionable\n   - Extract due dates if mentioned",
         "decision": "**DECISION**: Conclusions reached or choices made\n   - Distinguish between final and provisional decisions\n   - Note who made the decision if clear",
-        "question": "**QUESTION**: Important unanswered questions\n   - Questions that require follow-up\n   - Exclude rhetorical questions",
-        "risk": "**RISK**: Potential issues, blockers, or concerns\n   - Technical risks\n   - Resource constraints\n   - Timeline concerns",
-        "key_point": "**KEY_POINT**: Important information or observations\n   - Strategic insights\n   - Technical details\n   - Context that may be needed later",
-        "related_discussion": "**RELATED_DISCUSSION**: References to past meetings or related topics\n   - Only include if directly relevant\n   - Link to past context",
-        "contradiction": "**CONTRADICTION**: Conflicts with past discussions\n   - Only if related past discussions show clear conflict\n   - Note what the contradiction is",
-        "missing_info": "**MISSING_INFO**: Critical information gaps\n   - Information needed to proceed\n   - Questions that should be answered"
+        "risk": "**RISK**: Potential issues, blockers, or concerns\n   - Technical risks\n   - Resource constraints\n   - Timeline concerns"
     }
 
     # Filter categories based on enabled types (COST OPTIMIZATION)
@@ -102,11 +96,9 @@ Respond with ONLY valid JSON (no markdown, no explanation):
 {{
   "insights": [
     {{
-      "type": "action_item",
+      "type": "decision",
       "priority": "high",
       "content": "Brief, actionable description",
-      "assigned_to": "Person Name",
-      "due_date": "YYYY-MM-DD",
       "confidence": 0.9
     }}
   ]
@@ -188,11 +180,9 @@ Return refined insights as JSON array with the same structure:
 {{
   "refined_insights": [
     {{
-      "type": "action_item",
+      "type": "decision",
       "priority": "high",
       "content": "Refined, clear description",
-      "assigned_to": "Person Name",
-      "due_date": "YYYY-MM-DD",
       "confidence": 0.95,
       "merged_from": ["insight_id_1", "insight_id_2"]
     }}
@@ -306,10 +296,8 @@ Create a structured summary with:
 
 1. **Key Outcomes** (2-3 sentences)
 2. **Decisions Made** (bulleted list)
-3. **Action Items** (with owners and deadlines)
-4. **Open Questions** (items needing follow-up)
-5. **Risks Identified** (if any)
-6. **Next Steps** (what happens after this meeting)
+3. **Risks Identified** (if any)
+4. **Next Steps** (what happens after this meeting)
 
 Keep it concise and actionable. Focus on what matters most.
 
@@ -320,10 +308,6 @@ Output as structured JSON:
   "summary": {{
     "key_outcomes": "2-3 sentence overview",
     "decisions": ["decision 1", "decision 2"],
-    "action_items": [
-      {{"task": "...", "owner": "...", "due": "..."}}
-    ],
-    "open_questions": ["question 1"],
     "risks": ["risk 1"],
     "next_steps": ["step 1"]
   }}

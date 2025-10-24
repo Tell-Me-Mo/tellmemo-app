@@ -84,9 +84,9 @@ void main() {
         'insights': [
           {
             'insight_id': 'insight_123',
-            'type': 'question',
+            'type': 'decision',
             'priority': 'medium',
-            'content': 'What was our Q4 budget?',
+            'content': 'Agreed to allocate budget',
             'context': 'Budget discussion',
             'timestamp': DateTime.now().toIso8601String(),
             'confidence_score': 0.9,

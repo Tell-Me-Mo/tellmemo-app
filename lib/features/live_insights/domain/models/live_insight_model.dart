@@ -5,22 +5,10 @@ part 'live_insight_model.g.dart';
 
 /// Types of insights that can be extracted
 enum LiveInsightType {
-  @JsonValue('action_item')
-  actionItem,
   @JsonValue('decision')
   decision,
-  @JsonValue('question')
-  question,
   @JsonValue('risk')
   risk,
-  @JsonValue('key_point')
-  keyPoint,
-  @JsonValue('related_discussion')
-  relatedDiscussion,
-  @JsonValue('contradiction')
-  contradiction,
-  @JsonValue('missing_info')
-  missingInfo,
 }
 
 /// Priority levels for insights

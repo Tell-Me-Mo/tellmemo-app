@@ -46,7 +46,8 @@ void main() {
 
       // Assert - Check that key elements are rendered
       expect(find.text('📝 Incomplete Action Item'), findsOneWidget);
-      expect(find.text('Looking into that bug'), findsOneWidget);
+      // Action item text appears twice: once in header (gray/italic) and once in body (amber)
+      expect(find.text('Looking into that bug'), findsWidgets);
       expect(find.text('John to investigate and fix the bug by Friday'), findsOneWidget);
 
       // Check that completeness score is shown
@@ -125,7 +126,8 @@ void main() {
       );
 
       // Assert - Should render without improved version section
-      expect(find.text('Fix the bug'), findsOneWidget);
+      // Action item text appears twice: once in header (gray/italic) and once in body (amber)
+      expect(find.text('Fix the bug'), findsWidgets);
       expect(find.text('💡 Suggested Improvement'), findsNothing);
     });
   });

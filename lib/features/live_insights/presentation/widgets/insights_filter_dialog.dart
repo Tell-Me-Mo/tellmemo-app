@@ -147,22 +147,10 @@ class InsightsFilterDialog extends ConsumerWidget {
 
   String _getTypeLabel(LiveInsightType type) {
     switch (type) {
-      case LiveInsightType.actionItem:
-        return 'Action Items';
       case LiveInsightType.decision:
         return 'Decisions';
-      case LiveInsightType.question:
-        return 'Questions';
       case LiveInsightType.risk:
         return 'Risks';
-      case LiveInsightType.keyPoint:
-        return 'Key Points';
-      case LiveInsightType.relatedDiscussion:
-        return 'Related';
-      case LiveInsightType.contradiction:
-        return 'Contradictions';
-      case LiveInsightType.missingInfo:
-        return 'Missing Info';
     }
   }
 

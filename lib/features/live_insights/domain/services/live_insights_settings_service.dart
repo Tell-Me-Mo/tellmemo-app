@@ -147,44 +147,20 @@ class LiveInsightsSettingsService {
   /// Convert LiveInsightType to string for storage
   String _insightTypeToString(LiveInsightType type) {
     switch (type) {
-      case LiveInsightType.actionItem:
-        return 'action_item';
       case LiveInsightType.decision:
         return 'decision';
-      case LiveInsightType.question:
-        return 'question';
       case LiveInsightType.risk:
         return 'risk';
-      case LiveInsightType.keyPoint:
-        return 'key_point';
-      case LiveInsightType.relatedDiscussion:
-        return 'related_discussion';
-      case LiveInsightType.contradiction:
-        return 'contradiction';
-      case LiveInsightType.missingInfo:
-        return 'missing_info';
     }
   }
 
   /// Convert string to LiveInsightType
   LiveInsightType? _stringToInsightType(String str) {
     switch (str) {
-      case 'action_item':
-        return LiveInsightType.actionItem;
       case 'decision':
         return LiveInsightType.decision;
-      case 'question':
-        return LiveInsightType.question;
       case 'risk':
         return LiveInsightType.risk;
-      case 'key_point':
-        return LiveInsightType.keyPoint;
-      case 'related_discussion':
-        return LiveInsightType.relatedDiscussion;
-      case 'contradiction':
-        return LiveInsightType.contradiction;
-      case 'missing_info':
-        return LiveInsightType.missingInfo;
       default:
         return null;
     }

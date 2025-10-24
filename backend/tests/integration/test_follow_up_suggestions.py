@@ -124,13 +124,6 @@ class TestFollowUpSuggestionsIntegration:
         decision_type = InsightType.DECISION
         assert decision_type.value == "decision"
 
-    def test_follow_up_triggers_on_key_points(self):
-        """Test that follow-ups are triggered for KEY_POINT insights"""
-        from services.intelligence.realtime_meeting_insights import InsightType
-
-        # Verify KEY_POINT is a valid insight type that triggers follow-ups
-        key_point_type = InsightType.KEY_POINT
-        assert key_point_type.value == "key_point"
 
 
 class TestWebSocketIntegration:

@@ -133,7 +133,7 @@ void main() {
         'insights': [
           {
             'insight_id': 'insight_1',
-            'type': 'action_item',  // Backend sends snake_case
+            'type': 'decision',  // Backend sends snake_case
             'priority': 'high',
             'content': 'Complete API documentation',
             'context': 'Team discussion',
@@ -156,7 +156,7 @@ void main() {
       expect(result.chunkIndex, equals(0));
       expect(result.insights.length, equals(1));
       expect(result.insights[0].insightId, equals('insight_1'));
-      expect(result.insights[0].type, equals(LiveInsightType.actionItem));
+      expect(result.insights[0].type, equals(LiveInsightType.decision));
       expect(result.insights[0].priority, equals(LiveInsightPriority.high));
       expect(result.insights[0].content, equals('Complete API documentation'));
       expect(result.insights[0].assignedTo, equals('John'));
@@ -268,7 +268,7 @@ void main() {
         'insights': [
           {
             'insight_id': 'insight_1',
-            'type': 'action_item',  // Backend sends snake_case
+            'type': 'decision',  // Backend sends snake_case
             'priority': 'high',
             'content': 'Complete feature by Monday',
             'context': 'Sprint planning',
@@ -311,7 +311,7 @@ void main() {
       expect(result.insights.length, equals(3));
 
       // Verify action item
-      expect(result.insights[0].type, equals(LiveInsightType.actionItem));
+      expect(result.insights[0].type, equals(LiveInsightType.decision));
       expect(result.insights[0].priority, equals(LiveInsightPriority.high));
 
       // Verify decision
@@ -355,35 +355,6 @@ void main() {
           'session_id': 'test_session_123',
           'total_insights': 5,
           'insights_by_type': {  // Contains lists of insights, not counts
-            'action_item': [
-              {
-                'insight_id': 'ai_1',
-                'type': 'action_item',
-                'priority': 'high',
-                'content': 'Action 1',
-                'context': 'Context 1',
-                'timestamp': timestamp,
-                'confidence_score': 0.9,
-              },
-              {
-                'insight_id': 'ai_2',
-                'type': 'action_item',
-                'priority': 'medium',
-                'content': 'Action 2',
-                'context': 'Context 2',
-                'timestamp': timestamp,
-                'confidence_score': 0.85,
-              },
-              {
-                'insight_id': 'ai_3',
-                'type': 'action_item',
-                'priority': 'low',
-                'content': 'Action 3',
-                'context': 'Context 3',
-                'timestamp': timestamp,
-                'confidence_score': 0.8,
-              }
-            ],
             'decision': [
               {
                 'insight_id': 'dec_1',
@@ -393,48 +364,48 @@ void main() {
                 'context': 'Context',
                 'timestamp': timestamp,
                 'confidence_score': 0.95,
+              },
+              {
+                'insight_id': 'dec_2',
+                'type': 'decision',
+                'priority': 'high',
+                'content': 'Decision 2',
+                'context': 'Context 2',
+                'timestamp': timestamp,
+                'confidence_score': 0.9,
+              },
+              {
+                'insight_id': 'dec_3',
+                'type': 'decision',
+                'priority': 'medium',
+                'content': 'Decision 3',
+                'context': 'Context 3',
+                'timestamp': timestamp,
+                'confidence_score': 0.85,
               }
             ],
-            'question': [
+            'risk': [
               {
-                'insight_id': 'q_1',
-                'type': 'question',
+                'insight_id': 'risk_1',
+                'type': 'risk',
+                'priority': 'high',
+                'content': 'Risk 1',
+                'context': 'Risk Context',
+                'timestamp': timestamp,
+                'confidence_score': 0.88,
+              },
+              {
+                'insight_id': 'risk_2',
+                'type': 'risk',
                 'priority': 'medium',
-                'content': 'Question 1',
-                'context': 'Context',
+                'content': 'Risk 2',
+                'context': 'Risk Context 2',
                 'timestamp': timestamp,
                 'confidence_score': 0.75,
               }
             ],
           },
           'insights': [  // Flat list of all insights inside nested 'insights' object
-            {
-              'insight_id': 'ai_1',
-              'type': 'action_item',
-              'priority': 'high',
-              'content': 'Action 1',
-              'context': 'Context 1',
-              'timestamp': timestamp,
-              'confidence_score': 0.9,
-            },
-            {
-              'insight_id': 'ai_2',
-              'type': 'action_item',
-              'priority': 'medium',
-              'content': 'Action 2',
-              'context': 'Context 2',
-              'timestamp': timestamp,
-              'confidence_score': 0.85,
-            },
-            {
-              'insight_id': 'ai_3',
-              'type': 'action_item',
-              'priority': 'low',
-              'content': 'Action 3',
-              'context': 'Context 3',
-              'timestamp': timestamp,
-              'confidence_score': 0.8,
-            },
             {
               'insight_id': 'dec_1',
               'type': 'decision',
@@ -445,11 +416,38 @@ void main() {
               'confidence_score': 0.95,
             },
             {
-              'insight_id': 'q_1',
-              'type': 'question',
+              'insight_id': 'dec_2',
+              'type': 'decision',
+              'priority': 'high',
+              'content': 'Decision 2',
+              'context': 'Context 2',
+              'timestamp': timestamp,
+              'confidence_score': 0.9,
+            },
+            {
+              'insight_id': 'dec_3',
+              'type': 'decision',
               'priority': 'medium',
-              'content': 'Question 1',
-              'context': 'Context',
+              'content': 'Decision 3',
+              'context': 'Context 3',
+              'timestamp': timestamp,
+              'confidence_score': 0.85,
+            },
+            {
+              'insight_id': 'risk_1',
+              'type': 'risk',
+              'priority': 'high',
+              'content': 'Risk 1',
+              'context': 'Risk Context',
+              'timestamp': timestamp,
+              'confidence_score': 0.88,
+            },
+            {
+              'insight_id': 'risk_2',
+              'type': 'risk',
+              'priority': 'medium',
+              'content': 'Risk 2',
+              'context': 'Risk Context 2',
               'timestamp': timestamp,
               'confidence_score': 0.75,
             }
@@ -460,9 +458,8 @@ void main() {
           'chunks_processed': 60,
           'total_insights': 5,
           'insights_by_type': {
-            'action_item': 3,
-            'decision': 1,
-            'question': 1,
+            'decision': 3,
+            'risk': 2,
           },
           'avg_processing_time_ms': 1850.0,
           'avg_transcription_time_ms': 850.0,
@@ -562,10 +559,8 @@ void main() {
           'chunks_processed': 12,
           'total_insights': 8,
           'insights_by_type': {
-            'action_item': 3,
-            'decision': 2,
-            'question': 2,
-            'risk': 1,
+            'decision': 5,
+            'risk': 3,
           },
           'avg_processing_time_ms': 1920.0,
           'avg_transcription_time_ms': 850.0,
@@ -579,7 +574,8 @@ void main() {
       expect(metrics.sessionDurationSeconds, equals(120.5));
       expect(metrics.chunksProcessed, equals(12));
       expect(metrics.totalInsights, equals(8));
-      expect(metrics.insightsByType['action_item'], equals(3));
+      expect(metrics.insightsByType['decision'], equals(5));
+      expect(metrics.insightsByType['risk'], equals(3));
       expect(metrics.avgProcessingTimeMs, equals(1920.0));
     });
   });
