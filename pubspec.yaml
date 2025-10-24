@@ -72,7 +72,6 @@ dependencies:
   firebase_analytics: ^12.0.2
   
   # Audio Recording & Streaming
-  flutter_sound: ^9.16.3
   web_socket_channel: ^3.0.3
   
   # JSON & Serialization
@@ -88,6 +87,7 @@ dependencies:
   # Data Export
   csv: ^6.0.0
   desktop_drop: ^0.6.1
+  record: ^6.1.2
 
 
 dev_dependencies:

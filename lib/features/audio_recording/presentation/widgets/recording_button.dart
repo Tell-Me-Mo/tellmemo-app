@@ -116,7 +116,7 @@ class RecordingButton extends ConsumerWidget {
           StreamBuilder<double>(
             stream: ref.read(audioRecordingServiceProvider).amplitudeStream,
             builder: (context, snapshot) {
-              final amplitude = snapshot.data ?? 0.0;
+              final amplitude = snapshot.data ?? -160.0;
               return _AudioLevelIndicator(amplitude: amplitude);
             },
           ),
@@ -529,9 +529,10 @@ class _AudioLevelIndicatorState extends State<_AudioLevelIndicator>
   }
   
   void _updateBars() {
-    // Normalize amplitude (usually comes as negative dB values)
-    // Convert from dB to linear scale for better visualization
-    double normalizedLevel = (widget.amplitude + 60) / 60; // Assuming -60dB to 0dB range
+    // Normalize amplitude from record package (dB values: -160 to 0)
+    // Web microphone typically gives -60 dB (silence) to -30 dB (loud speech)
+    // Map -60 dB (silence) to 0.0, and -30 dB (very loud) to 1.0
+    double normalizedLevel = (widget.amplitude + 60) / 30;
     normalizedLevel = normalizedLevel.clamp(0.0, 1.0);
     
     // Update bar heights with some randomness for visual effect

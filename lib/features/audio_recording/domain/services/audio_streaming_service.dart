@@ -1,25 +1,24 @@
 import 'dart:async';
 import 'dart:typed_data';
-import 'package:flutter_sound/flutter_sound.dart';
+import 'package:record/record.dart';
 
-/// Service for real-time audio streaming using flutter_sound
+/// Service for real-time audio streaming using record package
 ///
 /// This service captures audio in real-time and buffers it into proper chunks
 /// for live transcription and insights generation.
 ///
-/// FlutterSoundRecorder emits small fragments continuously, so we buffer them
+/// AudioRecorder emits small fragments continuously, so we buffer them
 /// into ~10 second chunks before emitting to avoid overwhelming the transcription API.
 class AudioStreamingService {
-  final FlutterSoundRecorder _recorder = FlutterSoundRecorder();
+  final AudioRecorder _recorder = AudioRecorder();
   final StreamController<Uint8List> _audioChunkController = StreamController<Uint8List>.broadcast();
-  final StreamController<Uint8List> _internalStreamController = StreamController<Uint8List>();
 
   bool _isInitialized = false;
   bool _isRecording = false;
+  StreamSubscription<Uint8List>? _recordingStreamSubscription;
 
   // Audio buffering
   final List<int> _audioBuffer = [];
-  StreamSubscription<Uint8List>? _bufferSubscription;
 
   // Configuration
   static const int sampleRate = 16000; // 16kHz for speech recognition
@@ -44,16 +43,12 @@ class AudioStreamingService {
         return true;
       }
 
-      // Open the audio session (flutter_sound handles permissions internally)
-      await _recorder.openRecorder();
-
-      // Set up buffering: listen to raw stream and accumulate into chunks
-      _bufferSubscription = _internalStreamController.stream.listen(
-        _handleAudioFragment,
-        onError: (error) {
-          print('[AudioStreamingService] Buffer stream error: $error');
-        },
-      );
+      // Check for permission
+      final hasPermission = await _recorder.hasPermission();
+      if (!hasPermission) {
+        print('[AudioStreamingService] No microphone permission');
+        return false;
+      }
 
       _isInitialized = true;
       print('[AudioStreamingService] Initialized successfully (chunk size: ${targetChunkSize ~/ 1024}KB for ${chunkDurationSeconds}s)');
@@ -74,7 +69,6 @@ class AudioStreamingService {
     // Add fragment to buffer
     _audioBuffer.addAll(fragment);
 
-    // Only log when chunk is ready (remove noisy per-fragment logs)
     // Check if we've accumulated enough audio for a full chunk
     if (_audioBuffer.length >= targetChunkSize) {
       // Double-check recording status before emitting
@@ -115,12 +109,28 @@ class AudioStreamingService {
       // Clear any existing buffer
       _audioBuffer.clear();
 
-      // Start recording to internal stream (which feeds the buffer)
-      await _recorder.startRecorder(
-        toStream: _internalStreamController.sink,
-        codec: Codec.pcm16,
+      // Configure for PCM16 streaming
+      final config = RecordConfig(
+        encoder: AudioEncoder.pcm16bits,
         sampleRate: sampleRate,
-        numChannels: 1,
+        numChannels: 1, // Mono for speech
+      );
+
+      // Start recording to stream
+      final stream = await _recorder.startStream(config);
+
+      // Subscribe to the stream and handle fragments
+      _recordingStreamSubscription = stream.listen(
+        _handleAudioFragment,
+        onError: (error) {
+          print('[AudioStreamingService] Stream error: $error');
+          _isRecording = false;
+        },
+        onDone: () {
+          print('[AudioStreamingService] Stream done');
+          _isRecording = false;
+        },
+        cancelOnError: false,
       );
 
       _isRecording = true;
@@ -145,9 +155,13 @@ class AudioStreamingService {
       // Set flag FIRST to prevent _handleAudioFragment from processing new fragments
       _isRecording = false;
 
+      // Cancel stream subscription
+      await _recordingStreamSubscription?.cancel();
+      _recordingStreamSubscription = null;
+
       // Stop the recorder to release microphone
       try {
-        await _recorder.stopRecorder();
+        await _recorder.stop();
         print('[AudioStreamingService] Recorder stopped, microphone released');
       } catch (e) {
         print('[AudioStreamingService] Error stopping recorder: $e');
@@ -167,7 +181,7 @@ class AudioStreamingService {
     }
   }
 
-  /// Pause streaming (keeps session open)
+  /// Pause streaming
   Future<void> pauseStreaming() async {
     try {
       if (!_isRecording) {
@@ -175,7 +189,7 @@ class AudioStreamingService {
         return;
       }
 
-      await _recorder.pauseRecorder();
+      await _recorder.pause();
       print('[AudioStreamingService] Paused streaming');
     } catch (e) {
       print('[AudioStreamingService] Error pausing stream: $e');
@@ -185,7 +199,7 @@ class AudioStreamingService {
   /// Resume streaming
   Future<void> resumeStreaming() async {
     try {
-      await _recorder.resumeRecorder();
+      await _recorder.resume();
       print('[AudioStreamingService] Resumed streaming');
     } catch (e) {
       print('[AudioStreamingService] Error resuming stream: $e');
@@ -203,29 +217,26 @@ class AudioStreamingService {
         await stopStreaming();
       }
 
-      // Cancel buffer subscription
-      print('[AudioStreamingService] Cancelling buffer subscription...');
-      await _bufferSubscription?.cancel();
-      _bufferSubscription = null;
+      // Cancel stream subscription
+      print('[AudioStreamingService] Cancelling stream subscription...');
+      await _recordingStreamSubscription?.cancel();
+      _recordingStreamSubscription = null;
 
-      // Close recorder session
+      // Dispose recorder
       if (_isInitialized) {
-        print('[AudioStreamingService] Closing recorder session...');
+        print('[AudioStreamingService] Disposing recorder...');
         try {
-          await _recorder.closeRecorder();
+          await _recorder.dispose();
           _isInitialized = false;
-          print('[AudioStreamingService] Recorder session closed');
+          print('[AudioStreamingService] Recorder disposed');
         } catch (e) {
-          print('[AudioStreamingService] Error closing recorder: $e');
+          print('[AudioStreamingService] Error disposing recorder: $e');
           // Continue cleanup even if this fails
         }
       }
 
-      // Close stream controllers (don't await, just close them)
-      print('[AudioStreamingService] Closing stream controllers...');
-      if (!_internalStreamController.isClosed) {
-        await _internalStreamController.close();
-      }
+      // Close stream controller
+      print('[AudioStreamingService] Closing stream controller...');
       if (!_audioChunkController.isClosed) {
         await _audioChunkController.close();
       }

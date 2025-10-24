@@ -622,10 +622,11 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel>
             StreamBuilder<double>(
               stream: ref.read(audioRecordingServiceProvider).amplitudeStream,
               builder: (context, snapshot) {
-                final amplitude = snapshot.data ?? 0.0;
-                // flutter_sound returns positive values (0-120+), normalize to 0-1 range
-                // Typical speech is 0-60, loud sounds can go higher
-                final normalizedLevel = (amplitude / 60).clamp(0.0, 1.0);
+                final amplitude = snapshot.data ?? -160.0;
+                // record package returns dB values: -160 (silence) to 0 (max)
+                // Web microphone typically gives -60 dB (silence) to -30 dB (loud speech)
+                // Map -60 dB (silence) to 0.0, and -30 dB (very loud) to 1.0
+                final normalizedLevel = ((amplitude + 60) / 30).clamp(0.0, 1.0);
 
                 return Row(
                   mainAxisSize: MainAxisSize.min,
