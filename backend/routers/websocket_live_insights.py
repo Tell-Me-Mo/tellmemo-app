@@ -96,8 +96,7 @@ class LiveMeetingSession:
         # User preferences for cost optimization
         # Only extract insight types the user wants to see
         self.enabled_insight_types = enabled_insight_types or [
-            "action_item", "decision", "question", "risk",
-            "key_point", "related_discussion", "contradiction", "missing_info"
+            "decision", "risk"
         ]
         logger.info(f"Session {session_id} will extract insight types: {self.enabled_insight_types}")
 

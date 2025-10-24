@@ -6,9 +6,9 @@ void main() {
     test('LiveInsightModel fromJson parses correctly', () {
       final json = {
         'insight_id': 'test_123',
-        'type': 'action_item',  // snake_case as per JsonValue annotation
+        'type': 'decision',  // snake_case as per JsonValue annotation
         'priority': 'high',
-        'content': 'Complete API documentation',
+        'content': 'Agreed to use GraphQL for the API',
         'context': 'Team discussion',
         'timestamp': '2025-10-19T12:00:00Z',
         'assigned_to': 'John',
@@ -21,9 +21,9 @@ void main() {
       final insight = LiveInsightModel.fromJson(json);
 
       expect(insight.insightId, equals('test_123'));
-      expect(insight.type, equals(LiveInsightType.actionItem));
+      expect(insight.type, equals(LiveInsightType.decision));
       expect(insight.priority, equals(LiveInsightPriority.high));
-      expect(insight.content, equals('Complete API documentation'));
+      expect(insight.content, equals('Agreed to use GraphQL for the API'));
       expect(insight.assignedTo, equals('John'));
       expect(insight.confidenceScore, equals(0.92));
     });
@@ -79,8 +79,8 @@ void main() {
         'chunks_processed': 12,
         'total_insights': 8,
         'insights_by_type': {
-          'action_item': 3,
-          'decision': 2,
+          'decision': 5,
+          'risk': 3,
         },
         'avg_processing_time_ms': 1920.0,
         'avg_transcription_time_ms': 850.0,
@@ -91,20 +91,15 @@ void main() {
       expect(metrics.sessionDurationSeconds, equals(120.5));
       expect(metrics.chunksProcessed, equals(12));
       expect(metrics.totalInsights, equals(8));
-      expect(metrics.insightsByType['action_item'], equals(3));
+      expect(metrics.insightsByType['decision'], equals(5));
+      expect(metrics.insightsByType['risk'], equals(3));
       expect(metrics.avgProcessingTimeMs, equals(1920.0));
     });
 
     test('LiveInsightType enum has all expected values', () {
-      expect(LiveInsightType.values.length, equals(8));
-      expect(LiveInsightType.values.contains(LiveInsightType.actionItem), isTrue);
+      expect(LiveInsightType.values.length, equals(2));
       expect(LiveInsightType.values.contains(LiveInsightType.decision), isTrue);
-      expect(LiveInsightType.values.contains(LiveInsightType.question), isTrue);
       expect(LiveInsightType.values.contains(LiveInsightType.risk), isTrue);
-      expect(LiveInsightType.values.contains(LiveInsightType.keyPoint), isTrue);
-      expect(LiveInsightType.values.contains(LiveInsightType.relatedDiscussion), isTrue);
-      expect(LiveInsightType.values.contains(LiveInsightType.contradiction), isTrue);
-      expect(LiveInsightType.values.contains(LiveInsightType.missingInfo), isTrue);
     });
 
     test('LiveInsightPriority enum has all expected values', () {
@@ -119,32 +114,21 @@ void main() {
       final insights = [
         {
           'insight_id': '1',
-          'type': 'action_item',  // snake_case
-          'priority': 'high',
-          'content': 'Action 1',
-          'context': 'Context 1',
-          'timestamp': '2025-10-19T12:00:00Z',
-          'confidence_score': 0.9,
-          'source_chunk_index': 0,
-          'related_content_ids': [],
-        },
-        {
-          'insight_id': '2',
           'type': 'decision',
           'priority': 'critical',
           'content': 'Decision 1',
-          'context': 'Context 2',
+          'context': 'Context 1',
           'timestamp': '2025-10-19T12:00:00Z',
           'confidence_score': 0.95,
           'source_chunk_index': 0,
           'related_content_ids': [],
         },
         {
-          'insight_id': '3',
+          'insight_id': '2',
           'type': 'risk',
           'priority': 'high',
           'content': 'Risk 1',
-          'context': 'Context 3',
+          'context': 'Context 2',
           'timestamp': '2025-10-19T12:00:00Z',
           'confidence_score': 0.85,
           'source_chunk_index': 0,
@@ -156,10 +140,9 @@ void main() {
           .map((json) => LiveInsightModel.fromJson(json))
           .toList();
 
-      expect(parsedInsights.length, equals(3));
-      expect(parsedInsights[0].type, equals(LiveInsightType.actionItem));
-      expect(parsedInsights[1].type, equals(LiveInsightType.decision));
-      expect(parsedInsights[2].type, equals(LiveInsightType.risk));
+      expect(parsedInsights.length, equals(2));
+      expect(parsedInsights[0].type, equals(LiveInsightType.decision));
+      expect(parsedInsights[1].type, equals(LiveInsightType.risk));
     });
 
     test('LiveInsightMessage fromJson handles different message types', () {

@@ -95,9 +95,9 @@ async def test_live_insights_rest_api_filter_by_type(
             session_id="test_session",
             project_id=test_project.id,
             organization_id=test_organization.id,
-            insight_type="action_item",
+            insight_type="decision",
             priority="high",
-            content="Action item 1",
+            content="Decision 1",
             confidence_score=0.9,
             chunk_index=0
         ),
@@ -105,9 +105,9 @@ async def test_live_insights_rest_api_filter_by_type(
             session_id="test_session",
             project_id=test_project.id,
             organization_id=test_organization.id,
-            insight_type="decision",
+            insight_type="risk",
             priority="medium",
-            content="Decision 1",
+            content="Risk 1",
             confidence_score=0.85,
             chunk_index=1
         ),
@@ -115,9 +115,9 @@ async def test_live_insights_rest_api_filter_by_type(
             session_id="test_session",
             project_id=test_project.id,
             organization_id=test_organization.id,
-            insight_type="action_item",
+            insight_type="decision",
             priority="low",
-            content="Action item 2",
+            content="Decision 2",
             confidence_score=0.8,
             chunk_index=2
         )
@@ -126,16 +126,16 @@ async def test_live_insights_rest_api_filter_by_type(
     db_session.add_all(insights)
     await db_session.commit()
 
-    # Filter by action_item type
+    # Filter by decision type
     response = await authenticated_org_client.get(
-        f"/api/v1/projects/{test_project.id}/live-insights?insight_type=action_item"
+        f"/api/v1/projects/{test_project.id}/live-insights?insight_type=decision"
     )
 
     assert response.status_code == 200
     data = response.json()
 
     assert len(data["insights"]) == 2
-    assert all(i["insight_type"] == "action_item" for i in data["insights"])
+    assert all(i["insight_type"] == "decision" for i in data["insights"])
 
 
 @pytest.mark.asyncio
@@ -448,12 +448,10 @@ async def test_realtime_insights_service_process_chunk(
         mock_response.content = [Mock(text=json.dumps({
             "insights": [
                 {
-                    "type": "action_item",
+                    "type": "decision",
                     "priority": "high",
-                    "content": "John to send API documentation",
+                    "content": "Agreed to send API documentation",
                     "context": "Critical for launch",
-                    "assigned_to": "John",
-                    "due_date": "Friday",
                     "confidence": 0.92
                 }
             ]
@@ -470,16 +468,16 @@ async def test_realtime_insights_service_process_chunk(
             db=db_session
         )
 
-    # Verify result structure
-    assert result["session_id"] == session_id
-    assert result["chunk_index"] == 0
-    assert "insights" in result
-    assert len(result["insights"]) > 0
+    # Verify result structure - result is a ProcessingResult object, not a dict
+    assert result.session_id == session_id
+    assert result.chunk_index == 0
+    assert result.insights is not None
+    assert len(result.insights) > 0
 
     # Verify insight content
-    insight = result["insights"][0]
-    assert insight["type"] == "action_item"
-    assert "John" in insight["content"]
+    insight = result.insights[0]
+    assert insight.type.value == "decision"
+    assert "API documentation" in insight.content
 
 
 @pytest.mark.asyncio
@@ -506,18 +504,16 @@ async def test_realtime_insights_service_deduplication(
     )
 
     # Use EXACT same content for both insights to ensure deduplication
-    insight_content = "Complete API documentation by Friday"
+    insight_content = "Agreed to complete API documentation by Friday"
 
     with patch('services.intelligence.realtime_meeting_insights.realtime_insights_service.llm_client') as mock_llm:
         mock_response1 = Mock()
         mock_response1.content = [Mock(text=json.dumps({
             "insights": [
                 {
-                    "type": "action_item",
+                    "type": "decision",
                     "priority": "high",
                     "content": insight_content,
-                    "assigned_to": "John",
-                    "due_date": "Friday",
                     "confidence": 0.9
                 }
             ]
@@ -533,8 +529,8 @@ async def test_realtime_insights_service_deduplication(
             db=db_session
         )
 
-    assert len(result1["insights"]) == 1
-    first_insight_id = result1["insights"][0]["insight_id"]
+    assert len(result1.insights) == 1
+    first_insight_id = result1.insights[0].insight_id
 
     # Second chunk with IDENTICAL content (should be deduplicated)
     chunk2 = TranscriptChunk(
@@ -550,11 +546,9 @@ async def test_realtime_insights_service_deduplication(
         mock_response2.content = [Mock(text=json.dumps({
             "insights": [
                 {
-                    "type": "action_item",
+                    "type": "decision",
                     "priority": "high",
                     "content": insight_content,  # EXACT same content
-                    "assigned_to": "John",
-                    "due_date": "Friday",
                     "confidence": 0.9
                 }
             ]
@@ -571,7 +565,7 @@ async def test_realtime_insights_service_deduplication(
         )
 
     # Should have 0 new insights due to deduplication (identical content has similarity > 0.85)
-    assert len(result2["insights"]) == 0, f"Identical insight should be deduplicated. Got: {result2['insights']}"
+    assert len(result2.insights) == 0, f"Identical insight should be deduplicated. Got: {result2.insights}"
 
 
 @pytest.mark.asyncio

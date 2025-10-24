@@ -2,7 +2,7 @@
 Real-time Meeting Insights Service.
 
 This service processes live meeting transcript chunks and extracts actionable insights
-in real-time, including action items, decisions, questions, risks, and contextual
+in real-time, including decisions and risks, with contextual
 information from past meetings.
 
 Architecture:
@@ -51,14 +51,8 @@ logger = get_logger(__name__)
 
 class InsightType(Enum):
     """Types of insights that can be extracted from meetings."""
-    ACTION_ITEM = "action_item"
     DECISION = "decision"
-    QUESTION = "question"
     RISK = "risk"
-    KEY_POINT = "key_point"
-    RELATED_DISCUSSION = "related_discussion"
-    CONTRADICTION = "contradiction"
-    MISSING_INFO = "missing_info"
 
 
 class InsightPriority(Enum):
@@ -1083,11 +1077,11 @@ class RealtimeMeetingInsightsService:
         This optimization avoids running unnecessary phases, reducing LLM calls by 40-60%.
 
         Phase activation logic:
-        - Phase 1 (question_answering): Only if question detected OR question insight extracted
-        - Phase 2 (clarification): Only if action item or decision insight extracted
-        - Phase 3 (conflict_detection): Only if decision keywords detected OR decision insight extracted
-        - Phase 4 (action_item_quality): Only if action item insight extracted
-        - Phase 5 (follow_up_suggestions): Only if decision or key_point insight extracted
+        - Phase 1 (question_answering): Only if question detected via text analysis (? or question words)
+        - Phase 2 (clarification): Always active (detects vague statements from text)
+        - Phase 3 (conflict_detection): Only if decision keywords detected (analyzes text for conflicts)
+        - Phase 4 (action_item_quality): Always active (detects action items from text)
+        - Phase 5 (follow_up_suggestions): Always active (analyzes text for relevant topics)
         - Phase 6 (meeting_efficiency): Always active (lightweight time tracking)
 
         Args:
@@ -1113,63 +1107,41 @@ class RealtimeMeetingInsightsService:
         has_decision_keyword = any(keyword in chunk_lower for keyword in decision_keywords)
 
         # Check insights to determine which phases are needed
-        has_question_insight = False
-        has_action_item_insight = False
         has_decision_insight = False
-        has_key_point_insight = False
 
         for insight in insights:
-            if insight.type == InsightType.QUESTION:
-                has_question_insight = True
-            elif insight.type == InsightType.ACTION_ITEM:
-                has_action_item_insight = True
-            elif insight.type == InsightType.DECISION:
+            if insight.type == InsightType.DECISION:
                 has_decision_insight = True
-            elif insight.type == InsightType.KEY_POINT:
-                has_key_point_insight = True
 
         # Phase 1: Question Auto-Answering
-        # Activate if: question mark OR question words OR question insight extracted
-        if has_question_mark or has_question_word or has_question_insight:
+        # Activate if: question mark OR question words (text-based detection only, no question insights)
+        if has_question_mark or has_question_word:
             active_phases.add('question_answering')
             logger.debug(
                 f"Phase 1 (question_answering) activated: "
-                f"question_mark={has_question_mark}, question_word={has_question_word}, "
-                f"question_insight={has_question_insight}"
+                f"question_mark={has_question_mark}, question_word={has_question_word}"
             )
 
         # Phase 2: Proactive Clarification
-        # Activate if: action item or decision insight extracted
-        if has_action_item_insight or has_decision_insight:
-            active_phases.add('clarification')
-            logger.debug(
-                f"Phase 2 (clarification) activated: "
-                f"action_item={has_action_item_insight}, decision={has_decision_insight}"
-            )
+        # Always active - detects vague statements from text directly
+        active_phases.add('clarification')
+        logger.debug("Phase 2 (clarification) activated: always active")
 
         # Phase 3: Conflict Detection
-        # Activate if: decision keywords OR decision insight extracted
-        if has_decision_keyword or has_decision_insight:
+        # Activate if: decision keywords detected (no longer requires insight extraction)
+        if has_decision_keyword:
             active_phases.add('conflict_detection')
-            logger.debug(
-                f"Phase 3 (conflict_detection) activated: "
-                f"decision_keyword={has_decision_keyword}, decision_insight={has_decision_insight}"
-            )
+            logger.debug(f"Phase 3 (conflict_detection) activated: decision_keyword={has_decision_keyword}")
 
         # Phase 4: Action Item Quality
-        # Activate if: action item insight extracted
-        if has_action_item_insight:
-            active_phases.add('action_item_quality')
-            logger.debug(f"Phase 4 (action_item_quality) activated: action_item={has_action_item_insight}")
+        # Always active - detects action items from text directly
+        active_phases.add('action_item_quality')
+        logger.debug("Phase 4 (action_item_quality) activated: always active")
 
         # Phase 5: Follow-up Suggestions
-        # Activate if: decision or key point insight extracted
-        if has_decision_insight or has_key_point_insight:
-            active_phases.add('follow_up_suggestions')
-            logger.debug(
-                f"Phase 5 (follow_up_suggestions) activated: "
-                f"decision={has_decision_insight}, key_point={has_key_point_insight}"
-            )
+        # Always active - analyzes text for relevant topics
+        active_phases.add('follow_up_suggestions')
+        logger.debug("Phase 5 (follow_up_suggestions) activated: always active")
 
         return active_phases
 
@@ -1245,263 +1217,277 @@ class RealtimeMeetingInsightsService:
             f"📊 Insights: {len(insights)}"
         )
 
-        for insight in insights:
-            # Phase 1: Auto-answer questions (only if phase 1 is active)
-            if 'question_answering' in active_phases and insight.type == InsightType.QUESTION:
-                phase_start = time.time()
-                try:
-                    # Detect and classify the question
-                    detected_question = await self.question_detector.detect_and_classify_question(
-                        text=insight.content,
-                        context=context
-                    )
+        # Phase 1: Auto-answer questions (only if phase 1 is active)
+        # Note: This phase is now triggered by text analysis (? or question words), not by insights
+        if 'question_answering' in active_phases:
+            phase_start = time.time()
+            try:
+                # Detect and classify the question from the chunk text
+                detected_question = await self.question_detector.detect_and_classify_question(
+                    text=current_chunk.text,
+                    context=context
+                )
 
-                    if detected_question:
-                        # Attempt to auto-answer (with shared cache support)
-                        answer = await self.qa_service.answer_question(
-                            question=detected_question.text,
-                            question_type=detected_question.type,
-                            project_id=project_id,
-                            organization_id=organization_id,
-                            context=context,
-                            session_id=session_id
-                        )
-
-                        if answer:
-                            # Convert AnswerSource objects to dicts
-                            sources_dict = [
-                                {
-                                    'content_id': source.content_id,
-                                    'title': source.title,
-                                    'snippet': source.snippet,
-                                    'date': source.date.isoformat(),
-                                    'relevance_score': source.relevance_score,
-                                    'meeting_type': source.meeting_type
-                                }
-                                for source in answer.sources
-                            ]
-
-                            proactive_responses.append({
-                                'type': 'auto_answer',
-                                'insight_id': insight.insight_id,
-                                'question': detected_question.text,
-                                'answer': answer.answer_text,
-                                'confidence': answer.confidence,
-                                'sources': sources_dict,
-                                'reasoning': answer.reasoning,
-                                'timestamp': datetime.now().isoformat()
-                            })
-
-                            logger.info(
-                                f"Auto-answered question for session {sanitize_for_log(session_id)}: "
-                                f"'{detected_question.text[:50]}...' (confidence: {answer.confidence:.2f})"
-                            )
-
-                    # Mark Phase 1 as successful
-                    phase_status['question_answering'] = PhaseStatus.SUCCESS
-                    phase_timings['question_answering'] = (time.time() - phase_start) * 1000
-
-                except Exception as e:
-                    # Phase 1 failed - log error but continue processing
-                    phase_status['question_answering'] = PhaseStatus.FAILED
-                    error_messages['question_answering'] = str(e)
-                    phase_timings['question_answering'] = (time.time() - phase_start) * 1000
-                    logger.error(
-                        f"Phase 1 (question_answering) failed for session {sanitize_for_log(session_id)}: {e}",
-                        exc_info=True
-                    )
-
-            # Phase 2: Clarification suggestions for vague statements (only if phase 2 is active)
-            if 'clarification' in active_phases and insight.type in [InsightType.ACTION_ITEM, InsightType.DECISION]:
-                try:
-                    clarification = await self.clarification_service.detect_vagueness(
-                        statement=insight.content,
-                        context=context
-                    )
-
-                    # Updated threshold from 0.7 to 0.75 (Oct 2025) to reduce false positives
-                    if clarification and clarification.confidence >= 0.75:
-                        proactive_responses.append({
-                            'type': 'clarification_needed',
-                            'insight_id': insight.insight_id,
-                            'statement': clarification.statement,
-                            'vagueness_type': clarification.vagueness_type,
-                            'suggested_questions': clarification.suggested_questions,
-                            'confidence': clarification.confidence,
-                            'reasoning': clarification.reasoning,
-                            'timestamp': datetime.now().isoformat()
-                        })
-
-                        logger.info(
-                            f"Detected vague statement ({clarification.vagueness_type}) for session "
-                            f"{sanitize_for_log(session_id)}: '{clarification.statement[:50]}...' "
-                            f"(confidence: {clarification.confidence:.2f})"
-                        )
-
-                    # Mark Phase 2 as successful
-                    phase_status['clarification'] = PhaseStatus.SUCCESS
-
-                except Exception as e:
-                    # Phase 2 failed - log error but continue processing
-                    phase_status['clarification'] = PhaseStatus.FAILED
-                    error_messages['clarification'] = str(e)
-                    logger.error(
-                        f"Phase 2 (clarification) failed for session {sanitize_for_log(session_id)}: {e}",
-                        exc_info=True
-                    )
-
-            # Phase 3: Conflict detection for decisions (only if phase 3 is active)
-            if 'conflict_detection' in active_phases and insight.type == InsightType.DECISION:
-                try:
-                    conflict = await self.conflict_detection_service.detect_conflicts(
-                        statement=insight.content,
-                        statement_type='decision',
+                if detected_question:
+                    # Attempt to auto-answer (with shared cache support)
+                    answer = await self.qa_service.answer_question(
+                        question=detected_question.text,
+                        question_type=detected_question.type,
                         project_id=project_id,
                         organization_id=organization_id,
                         context=context,
                         session_id=session_id
                     )
 
-                    if conflict:
-                        proactive_responses.append({
-                            'type': 'conflict_detected',
-                            'insight_id': insight.insight_id,
-                            'current_statement': conflict.current_statement,
-                            'conflicting_content_id': conflict.conflicting_content_id,
-                            'conflicting_title': conflict.conflicting_title,
-                            'conflicting_snippet': conflict.conflicting_snippet,
-                            'conflicting_date': conflict.conflicting_date.isoformat(),
-                            'conflict_severity': conflict.conflict_severity,
-                            'confidence': conflict.confidence,
-                            'reasoning': conflict.reasoning,
-                            'resolution_suggestions': conflict.resolution_suggestions,
-                            'timestamp': datetime.now().isoformat()
-                        })
-
-                        logger.warning(
-                            f"Detected conflict ({conflict.conflict_severity}) for session "
-                            f"{sanitize_for_log(session_id)}: '{conflict.current_statement[:50]}...' "
-                            f"conflicts with '{conflict.conflicting_title}' "
-                            f"(confidence: {conflict.confidence:.2f})"
-                        )
-
-                    # Mark Phase 3 as successful
-                    phase_status['conflict_detection'] = PhaseStatus.SUCCESS
-
-                except Exception as e:
-                    # Phase 3 failed - log error but continue processing
-                    phase_status['conflict_detection'] = PhaseStatus.FAILED
-                    error_messages['conflict_detection'] = str(e)
-                    logger.error(
-                        f"Phase 3 (conflict_detection) failed for session {sanitize_for_log(session_id)}: {e}",
-                        exc_info=True
-                    )
-
-            # Phase 4: Action Item Quality Enhancement (only if phase 4 is active)
-            if 'action_item_quality' in active_phases and insight.type == InsightType.ACTION_ITEM:
-                try:
-                    quality_report = await self.quality_service.check_quality(
-                        action_item=insight.content,
-                        context=context
-                    )
-
-                    # Only suggest improvements if completeness score is critically low
-                    # Threshold lowered from 0.8 to 0.5 to reduce false positives (Oct 2025)
-                    # Alert only on action items that are less than 50% complete OR have 2+ critical issues
-                    critical_issues = [issue for issue in quality_report.issues if issue.severity == 'critical']
-
-                    should_alert = (
-                        quality_report.completeness_score < 0.5  # Less than 50% complete
-                        or len(critical_issues) >= 2  # Missing both owner AND deadline
-                    )
-
-                    if should_alert and len(quality_report.issues) > 0:
-                        # Convert QualityIssue objects to dicts
-                        issues_dict = [
+                    if answer:
+                        # Convert AnswerSource objects to dicts
+                        sources_dict = [
                             {
-                                'field': issue.field,
-                                'severity': issue.severity,
-                                'message': issue.message,
-                                'suggested_fix': issue.suggested_fix
+                                'content_id': source.content_id,
+                                'title': source.title,
+                                'snippet': source.snippet,
+                                'date': source.date.isoformat(),
+                                'relevance_score': source.relevance_score,
+                                'meeting_type': source.meeting_type
                             }
-                            for issue in quality_report.issues
+                            for source in answer.sources
                         ]
 
                         proactive_responses.append({
-                            'type': 'incomplete_action_item',
-                            'insight_id': insight.insight_id,
-                            'action_item': quality_report.action_item,
-                            'completeness_score': quality_report.completeness_score,
-                            'issues': issues_dict,
-                            'improved_version': quality_report.improved_version,
+                            'type': 'auto_answer',
+                            'insight_id': f"qa_{session_id}_{current_chunk.index}",
+                            'question': detected_question.text,
+                            'answer': answer.answer_text,
+                            'confidence': answer.confidence,
+                            'sources': sources_dict,
+                            'reasoning': answer.reasoning,
                             'timestamp': datetime.now().isoformat()
                         })
 
                         logger.info(
-                            f"Detected incomplete action item for session "
-                            f"{sanitize_for_log(session_id)}: '{quality_report.action_item[:50]}...' "
-                            f"(completeness: {quality_report.completeness_score:.2f}, "
-                            f"issues: {len(quality_report.issues)})"
+                            f"Auto-answered question for session {sanitize_for_log(session_id)}: "
+                            f"'{detected_question.text[:50]}...' (confidence: {answer.confidence:.2f})"
                         )
 
-                    # Mark Phase 4 as successful
-                    phase_status['action_item_quality'] = PhaseStatus.SUCCESS
+                # Mark Phase 1 as successful
+                phase_status['question_answering'] = PhaseStatus.SUCCESS
+                phase_timings['question_answering'] = (time.time() - phase_start) * 1000
 
-                except Exception as e:
-                    # Phase 4 failed - log error but continue processing
-                    phase_status['action_item_quality'] = PhaseStatus.FAILED
-                    error_messages['action_item_quality'] = str(e)
-                    logger.error(
-                        f"Phase 4 (action_item_quality) failed for session {sanitize_for_log(session_id)}: {e}",
-                        exc_info=True
+            except Exception as e:
+                # Phase 1 failed - log error but continue processing
+                phase_status['question_answering'] = PhaseStatus.FAILED
+                error_messages['question_answering'] = str(e)
+                phase_timings['question_answering'] = (time.time() - phase_start) * 1000
+                logger.error(
+                    f"Phase 1 (question_answering) failed for session {sanitize_for_log(session_id)}: {e}",
+                    exc_info=True
+                )
+
+        # Phase 2: Clarification suggestions for vague statements
+        # Now runs independently on chunk text, not tied to insights
+        if 'clarification' in active_phases:
+            phase_start = time.time()
+            try:
+                clarification = await self.clarification_service.detect_vagueness(
+                    statement=current_chunk.text,
+                    context=context
+                )
+
+                # Updated threshold from 0.7 to 0.75 (Oct 2025) to reduce false positives
+                if clarification and clarification.confidence >= 0.75:
+                    proactive_responses.append({
+                        'type': 'clarification_needed',
+                        'insight_id': f"clarification_{session_id}_{current_chunk.index}",
+                        'statement': clarification.statement,
+                        'vagueness_type': clarification.vagueness_type,
+                        'suggested_questions': clarification.suggested_questions,
+                        'confidence': clarification.confidence,
+                        'reasoning': clarification.reasoning,
+                        'timestamp': datetime.now().isoformat()
+                    })
+
+                    logger.info(
+                        f"Detected vague statement ({clarification.vagueness_type}) for session "
+                        f"{sanitize_for_log(session_id)}: '{clarification.statement[:50]}...' "
+                        f"(confidence: {clarification.confidence:.2f})"
                     )
 
-            # Phase 5: Follow-up Suggestions (only if phase 5 is active)
-            # Suggest follow-ups for decisions and key discussion points
-            if 'follow_up_suggestions' in active_phases and insight.type in [InsightType.DECISION, InsightType.KEY_POINT]:
-                try:
-                    follow_up_suggestions = await self.follow_up_service.suggest_follow_ups(
-                        current_topic=insight.content,
-                        insight_type=insight.type.value,
-                        project_id=project_id,
-                        organization_id=organization_id,
-                        context=context,
-                        session_id=session_id
+                # Mark Phase 2 as successful
+                phase_status['clarification'] = PhaseStatus.SUCCESS
+                phase_timings['clarification'] = (time.time() - phase_start) * 1000
+
+            except Exception as e:
+                # Phase 2 failed - log error but continue processing
+                phase_status['clarification'] = PhaseStatus.FAILED
+                error_messages['clarification'] = str(e)
+                phase_timings['clarification'] = (time.time() - phase_start) * 1000
+                logger.error(
+                    f"Phase 2 (clarification) failed for session {sanitize_for_log(session_id)}: {e}",
+                    exc_info=True
+                )
+
+        # Phase 3: Conflict Detection
+        # Now runs independently on chunk text when decision keywords detected
+        if 'conflict_detection' in active_phases:
+            phase_start = time.time()
+            try:
+                conflict = await self.conflict_detection_service.detect_conflicts(
+                    statement=current_chunk.text,
+                    statement_type='general',  # Analyzes text for any potential conflicts
+                    project_id=project_id,
+                    organization_id=organization_id,
+                    context=context,
+                    session_id=session_id
+                )
+
+                if conflict:
+                    proactive_responses.append({
+                        'type': 'conflict_detected',
+                        'insight_id': f"conflict_{session_id}_{current_chunk.index}",
+                        'current_statement': conflict.current_statement,
+                        'conflicting_content_id': conflict.conflicting_content_id,
+                        'conflicting_title': conflict.conflicting_title,
+                        'conflicting_snippet': conflict.conflicting_snippet,
+                        'conflicting_date': conflict.conflicting_date.isoformat(),
+                        'conflict_severity': conflict.conflict_severity,
+                        'confidence': conflict.confidence,
+                        'reasoning': conflict.reasoning,
+                        'resolution_suggestions': conflict.resolution_suggestions,
+                        'timestamp': datetime.now().isoformat()
+                    })
+
+                    logger.warning(
+                        f"Detected conflict ({conflict.conflict_severity}) for session "
+                        f"{sanitize_for_log(session_id)}: '{conflict.current_statement[:50]}...' "
+                        f"conflicts with '{conflict.conflicting_title}' "
+                        f"(confidence: {conflict.confidence:.2f})"
                     )
 
-                    for suggestion in follow_up_suggestions:
-                        proactive_responses.append({
-                            'type': 'follow_up_suggestion',
-                            'insight_id': insight.insight_id,
-                            'topic': suggestion.topic,
-                            'reason': suggestion.reason,
-                            'related_content_id': suggestion.related_content_id,
-                            'related_title': suggestion.related_title,
-                            'related_date': suggestion.related_date.isoformat(),
-                            'urgency': suggestion.urgency,
-                            'context_snippet': suggestion.context_snippet,
-                            'confidence': suggestion.confidence,
-                            'timestamp': datetime.now().isoformat()
-                        })
+                # Mark Phase 3 as successful
+                phase_status['conflict_detection'] = PhaseStatus.SUCCESS
+                phase_timings['conflict_detection'] = (time.time() - phase_start) * 1000
 
-                        logger.info(
-                            f"Suggested follow-up ({suggestion.urgency}) for session "
-                            f"{sanitize_for_log(session_id)}: '{suggestion.topic}' "
-                            f"(confidence: {suggestion.confidence:.2f})"
-                        )
+            except Exception as e:
+                # Phase 3 failed - log error but continue processing
+                phase_status['conflict_detection'] = PhaseStatus.FAILED
+                error_messages['conflict_detection'] = str(e)
+                phase_timings['conflict_detection'] = (time.time() - phase_start) * 1000
+                logger.error(
+                    f"Phase 3 (conflict_detection) failed for session {sanitize_for_log(session_id)}: {e}",
+                    exc_info=True
+                )
 
-                    # Mark Phase 5 as successful
-                    phase_status['follow_up_suggestions'] = PhaseStatus.SUCCESS
+        # Phase 4: Action Item Quality Enhancement
+        # Always active - detects and checks action items from chunk text
+        if 'action_item_quality' in active_phases:
+            phase_start = time.time()
+            try:
+                quality_report = await self.quality_service.check_quality(
+                    action_item=current_chunk.text,  # Service will detect action items from text
+                    context=context
+                )
 
-                except Exception as e:
-                    # Phase 5 failed - log error but continue processing
-                    phase_status['follow_up_suggestions'] = PhaseStatus.FAILED
-                    error_messages['follow_up_suggestions'] = str(e)
-                    logger.error(
-                        f"Phase 5 (follow_up_suggestions) failed for session {sanitize_for_log(session_id)}: {e}",
-                        exc_info=True
+                # Only suggest improvements if completeness score is critically low
+                # Threshold lowered from 0.8 to 0.5 to reduce false positives (Oct 2025)
+                # Alert only on action items that are less than 50% complete OR have 2+ critical issues
+                critical_issues = [issue for issue in quality_report.issues if issue.severity == 'critical']
+
+                should_alert = (
+                    quality_report.completeness_score < 0.5  # Less than 50% complete
+                    or len(critical_issues) >= 2  # Missing both owner AND deadline
+                )
+
+                if should_alert and len(quality_report.issues) > 0:
+                    # Convert QualityIssue objects to dicts
+                    issues_dict = [
+                        {
+                            'field': issue.field,
+                            'severity': issue.severity,
+                            'message': issue.message,
+                            'suggested_fix': issue.suggested_fix
+                        }
+                        for issue in quality_report.issues
+                    ]
+
+                    proactive_responses.append({
+                        'type': 'incomplete_action_item',
+                        'insight_id': f"quality_{session_id}_{current_chunk.index}",
+                        'action_item': quality_report.action_item,
+                        'completeness_score': quality_report.completeness_score,
+                        'issues': issues_dict,
+                        'improved_version': quality_report.improved_version,
+                        'timestamp': datetime.now().isoformat()
+                    })
+
+                    logger.info(
+                        f"Detected incomplete action item for session "
+                        f"{sanitize_for_log(session_id)}: '{quality_report.action_item[:50]}...' "
+                        f"(completeness: {quality_report.completeness_score:.2f}, "
+                        f"issues: {len(quality_report.issues)})"
                     )
 
+                # Mark Phase 4 as successful
+                phase_status['action_item_quality'] = PhaseStatus.SUCCESS
+                phase_timings['action_item_quality'] = (time.time() - phase_start) * 1000
+
+            except Exception as e:
+                # Phase 4 failed - log error but continue processing
+                phase_status['action_item_quality'] = PhaseStatus.FAILED
+                error_messages['action_item_quality'] = str(e)
+                phase_timings['action_item_quality'] = (time.time() - phase_start) * 1000
+                logger.error(
+                    f"Phase 4 (action_item_quality) failed for session {sanitize_for_log(session_id)}: {e}",
+                    exc_info=True
+                )
+
+        # Phase 5: Follow-up Suggestions
+        # Now runs independently on chunk text, not tied to insights
+        if 'follow_up_suggestions' in active_phases:
+            phase_start = time.time()
+            try:
+                follow_up_suggestions = await self.follow_up_service.suggest_follow_ups(
+                    current_topic=current_chunk.text,
+                    insight_type='general',  # Not tied to specific insight type anymore
+                    project_id=project_id,
+                    organization_id=organization_id,
+                    context=context,
+                    session_id=session_id
+                )
+
+                for suggestion in follow_up_suggestions:
+                    proactive_responses.append({
+                        'type': 'follow_up_suggestion',
+                        'insight_id': f"followup_{session_id}_{current_chunk.index}",
+                        'topic': suggestion.topic,
+                        'reason': suggestion.reason,
+                        'related_content_id': suggestion.related_content_id,
+                        'related_title': suggestion.related_title,
+                        'related_date': suggestion.related_date.isoformat(),
+                        'urgency': suggestion.urgency,
+                        'context_snippet': suggestion.context_snippet,
+                        'confidence': suggestion.confidence,
+                        'timestamp': datetime.now().isoformat()
+                    })
+
+                    logger.info(
+                        f"Suggested follow-up ({suggestion.urgency}) for session "
+                        f"{sanitize_for_log(session_id)}: '{suggestion.topic}' "
+                        f"(confidence: {suggestion.confidence:.2f})"
+                    )
+
+                # Mark Phase 5 as successful
+                phase_status['follow_up_suggestions'] = PhaseStatus.SUCCESS
+                phase_timings['follow_up_suggestions'] = (time.time() - phase_start) * 1000
+
+            except Exception as e:
+                # Phase 5 failed - log error but continue processing
+                phase_status['follow_up_suggestions'] = PhaseStatus.FAILED
+                error_messages['follow_up_suggestions'] = str(e)
+                phase_timings['follow_up_suggestions'] = (time.time() - phase_start) * 1000
+                logger.error(
+                    f"Phase 5 (follow_up_suggestions) failed for session {sanitize_for_log(session_id)}: {e}",
+                    exc_info=True
+                )
 
         # DEDUPLICATION: Merge redundant assistance cards (Oct 2025)
         # Issue #3: Action items often generate both "clarification_needed" and "incomplete_action_item"

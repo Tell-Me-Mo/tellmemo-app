@@ -22,16 +22,7 @@ _$LiveInsightsSettingsImpl _$$LiveInsightsSettingsImplFromJson(
       (json['enabledInsightTypes'] as List<dynamic>?)
           ?.map((e) => $enumDecode(_$LiveInsightTypeEnumMap, e))
           .toSet() ??
-      const {
-        LiveInsightType.actionItem,
-        LiveInsightType.decision,
-        LiveInsightType.question,
-        LiveInsightType.risk,
-        LiveInsightType.keyPoint,
-        LiveInsightType.relatedDiscussion,
-        LiveInsightType.contradiction,
-        LiveInsightType.missingInfo,
-      },
+      const {LiveInsightType.decision, LiveInsightType.risk},
   quietMode: json['quietMode'] as bool? ?? false,
   showCollapsedItems: json['showCollapsedItems'] as bool? ?? true,
   enableFeedback: json['enableFeedback'] as bool? ?? true,
@@ -62,12 +53,6 @@ const _$ProactiveAssistanceTypeEnumMap = {
 };
 
 const _$LiveInsightTypeEnumMap = {
-  LiveInsightType.actionItem: 'action_item',
   LiveInsightType.decision: 'decision',
-  LiveInsightType.question: 'question',
   LiveInsightType.risk: 'risk',
-  LiveInsightType.keyPoint: 'key_point',
-  LiveInsightType.relatedDiscussion: 'related_discussion',
-  LiveInsightType.contradiction: 'contradiction',
-  LiveInsightType.missingInfo: 'missing_info',
 };

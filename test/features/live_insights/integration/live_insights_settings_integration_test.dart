@@ -14,22 +14,16 @@ void main() {
       // Arrange: User enables only specific insight types (cost optimization)
       const settings = LiveInsightsSettings(
         enabledInsightTypes: {
-          LiveInsightType.actionItem,
           LiveInsightType.risk,
           LiveInsightType.decision,
         },
       );
 
-      // Simulate insights coming from backend (8 different types)
+      // Simulate insights coming from backend (2 different types)
       final allInsights = [
-        _createInsight(LiveInsightType.actionItem, 'Schedule code review'),
         _createInsight(LiveInsightType.risk, 'Database bottleneck detected'),
         _createInsight(LiveInsightType.decision, 'Use PostgreSQL'),
-        _createInsight(LiveInsightType.question, 'What about caching?'),
-        _createInsight(LiveInsightType.keyPoint, 'Performance matters'),
-        _createInsight(LiveInsightType.relatedDiscussion, 'Last sprint discussion'),
-        _createInsight(LiveInsightType.contradiction, 'Conflicts with previous decision'),
-        _createInsight(LiveInsightType.missingInfo, 'Need deployment details'),
+        _createInsight(LiveInsightType.risk, 'Another risk found'),
       ];
 
       // Act: Filter insights through settings (simulating frontend filtering)
@@ -39,27 +33,14 @@ void main() {
 
       // Assert: Only enabled types should pass through
       expect(filteredInsights.length, equals(3),
-          reason: 'Only 3 types enabled: actionItem, risk, decision');
+          reason: 'Only 2 types enabled: risk, decision');
 
       expect(
         filteredInsights.every((i) =>
-            i.type == LiveInsightType.actionItem ||
             i.type == LiveInsightType.risk ||
             i.type == LiveInsightType.decision),
         true,
         reason: 'All filtered insights should be of enabled types',
-      );
-
-      // Disabled types should be filtered out
-      expect(
-        filteredInsights.any((i) => i.type == LiveInsightType.question),
-        false,
-        reason: 'Questions should be filtered out',
-      );
-      expect(
-        filteredInsights.any((i) => i.type == LiveInsightType.keyPoint),
-        false,
-        reason: 'Key points should be filtered out',
       );
     });
 
@@ -72,7 +53,6 @@ void main() {
       );
 
       final allInsights = [
-        _createInsight(LiveInsightType.actionItem, 'Do something'),
         _createInsight(LiveInsightType.risk, 'Critical risk identified'),
         _createInsight(LiveInsightType.decision, 'Decision made'),
         _createInsight(LiveInsightType.risk, 'Another risk found'),
@@ -97,8 +77,8 @@ void main() {
       // Arrange
       const settings = LiveInsightsSettings(
         enabledInsightTypes: {
-          LiveInsightType.actionItem,
           LiveInsightType.risk,
+          LiveInsightType.decision,
         },
       );
 
@@ -112,7 +92,7 @@ void main() {
       // Deserialize and verify
       final restored = LiveInsightsSettings.fromJson(json);
       expect(restored.enabledInsightTypes.length, equals(2));
-      expect(restored.enabledInsightTypes.contains(LiveInsightType.actionItem), true);
+      expect(restored.enabledInsightTypes.contains(LiveInsightType.decision), true);
       expect(restored.enabledInsightTypes.contains(LiveInsightType.risk), true);
     });
 
@@ -120,8 +100,8 @@ void main() {
       // Arrange & Act
       const settings = LiveInsightsSettings();
 
-      // Assert: All 8 types enabled by default (no cost optimization)
-      expect(settings.enabledInsightTypes.length, equals(8));
+      // Assert: All 2 types enabled by default (no cost optimization)
+      expect(settings.enabledInsightTypes.length, equals(2));
       expect(settings.enabledInsightTypes, equals(LiveInsightsSettings.allInsightTypes));
 
       // All insights should pass through with default settings
@@ -133,7 +113,7 @@ void main() {
           .where((insight) => settings.shouldShowInsight(insight))
           .toList();
 
-      expect(filtered.length, equals(8),
+      expect(filtered.length, equals(2),
           reason: 'All types should pass with default settings');
     });
   });

@@ -1131,22 +1131,10 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel>
   // Helper methods
   Color _getInsightTypeColor(LiveInsightType type) {
     switch (type) {
-      case LiveInsightType.actionItem:
-        return Colors.blue;
       case LiveInsightType.decision:
         return Colors.green;
-      case LiveInsightType.question:
-        return Colors.orange;
       case LiveInsightType.risk:
         return Colors.red;
-      case LiveInsightType.keyPoint:
-        return Colors.purple;
-      case LiveInsightType.relatedDiscussion:
-        return Colors.teal;
-      case LiveInsightType.contradiction:
-        return Colors.deepOrange;
-      case LiveInsightType.missingInfo:
-        return Colors.amber;
     }
   }
 
@@ -1165,22 +1153,10 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel>
 
   String _getInsightTypeLabel(LiveInsightType type) {
     switch (type) {
-      case LiveInsightType.actionItem:
-        return 'ACTION ITEM';
       case LiveInsightType.decision:
         return 'DECISION';
-      case LiveInsightType.question:
-        return 'QUESTION';
       case LiveInsightType.risk:
         return 'RISK';
-      case LiveInsightType.keyPoint:
-        return 'KEY POINT';
-      case LiveInsightType.relatedDiscussion:
-        return 'RELATED';
-      case LiveInsightType.contradiction:
-        return 'CONTRADICTION';
-      case LiveInsightType.missingInfo:
-        return 'MISSING INFO';
     }
   }
 

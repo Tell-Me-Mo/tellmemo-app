@@ -207,43 +207,19 @@ class InsightCard extends StatelessWidget {
 
   IconData _getTypeIcon() {
     switch (insight.type) {
-      case LiveInsightType.actionItem:
-        return Icons.task_alt;
       case LiveInsightType.decision:
         return Icons.gavel;
-      case LiveInsightType.question:
-        return Icons.help_outline;
       case LiveInsightType.risk:
         return Icons.warning_amber;
-      case LiveInsightType.keyPoint:
-        return Icons.lightbulb_outline;
-      case LiveInsightType.relatedDiscussion:
-        return Icons.link;
-      case LiveInsightType.contradiction:
-        return Icons.report_problem_outlined;
-      case LiveInsightType.missingInfo:
-        return Icons.info_outline;
     }
   }
 
   String _getTypeLabel() {
     switch (insight.type) {
-      case LiveInsightType.actionItem:
-        return 'Action Item';
       case LiveInsightType.decision:
         return 'Decision';
-      case LiveInsightType.question:
-        return 'Question';
       case LiveInsightType.risk:
         return 'Risk';
-      case LiveInsightType.keyPoint:
-        return 'Key Point';
-      case LiveInsightType.relatedDiscussion:
-        return 'Related';
-      case LiveInsightType.contradiction:
-        return 'Contradiction';
-      case LiveInsightType.missingInfo:
-        return 'Missing Info';
     }
   }
 

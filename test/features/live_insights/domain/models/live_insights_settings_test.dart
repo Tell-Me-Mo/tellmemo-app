@@ -477,19 +477,13 @@ void main() {
       test('should have all insight types enabled by default', () {
         const settings = LiveInsightsSettings();
 
-        expect(settings.enabledInsightTypes.length, 8);
+        expect(settings.enabledInsightTypes.length, 2);
         expect(settings.enabledInsightTypes, LiveInsightsSettings.allInsightTypes);
         expect(
           settings.enabledInsightTypes,
           containsAll([
-            LiveInsightType.actionItem,
             LiveInsightType.decision,
-            LiveInsightType.question,
             LiveInsightType.risk,
-            LiveInsightType.keyPoint,
-            LiveInsightType.relatedDiscussion,
-            LiveInsightType.contradiction,
-            LiveInsightType.missingInfo,
           ]),
         );
       });
@@ -497,27 +491,17 @@ void main() {
       test('should filter insights based on enabled types', () {
         const settings = LiveInsightsSettings(
           enabledInsightTypes: {
-            LiveInsightType.actionItem,
             LiveInsightType.risk,
           },
         );
 
         // Enabled types - should show
-        final actionItem = _createMockInsight(LiveInsightType.actionItem);
-        expect(settings.shouldShowInsight(actionItem), true);
-
         final risk = _createMockInsight(LiveInsightType.risk);
         expect(settings.shouldShowInsight(risk), true);
 
         // Disabled types - should NOT show
         final decision = _createMockInsight(LiveInsightType.decision);
         expect(settings.shouldShowInsight(decision), false);
-
-        final question = _createMockInsight(LiveInsightType.question);
-        expect(settings.shouldShowInsight(question), false);
-
-        final keyPoint = _createMockInsight(LiveInsightType.keyPoint);
-        expect(settings.shouldShowInsight(keyPoint), false);
       });
 
       test('should hide all insights when no types enabled', () {
@@ -552,36 +536,12 @@ void main() {
 
       test('getLabelForInsightType returns correct labels', () {
         expect(
-          LiveInsightsSettings.getLabelForInsightType(LiveInsightType.actionItem),
-          'Action Items',
-        );
-        expect(
           LiveInsightsSettings.getLabelForInsightType(LiveInsightType.decision),
           'Decisions',
         );
         expect(
-          LiveInsightsSettings.getLabelForInsightType(LiveInsightType.question),
-          'Questions',
-        );
-        expect(
           LiveInsightsSettings.getLabelForInsightType(LiveInsightType.risk),
           'Risks',
-        );
-        expect(
-          LiveInsightsSettings.getLabelForInsightType(LiveInsightType.keyPoint),
-          'Key Points',
-        );
-        expect(
-          LiveInsightsSettings.getLabelForInsightType(LiveInsightType.relatedDiscussion),
-          'Related Discussions',
-        );
-        expect(
-          LiveInsightsSettings.getLabelForInsightType(LiveInsightType.contradiction),
-          'Contradictions',
-        );
-        expect(
-          LiveInsightsSettings.getLabelForInsightType(LiveInsightType.missingInfo),
-          'Missing Info',
         );
       });
 
@@ -603,7 +563,6 @@ void main() {
       test('JSON serialization includes enabledInsightTypes', () {
         const original = LiveInsightsSettings(
           enabledInsightTypes: {
-            LiveInsightType.actionItem,
             LiveInsightType.risk,
             LiveInsightType.decision,
           },
@@ -612,11 +571,10 @@ void main() {
         final json = original.toJson();
         final deserialized = LiveInsightsSettings.fromJson(json);
 
-        expect(deserialized.enabledInsightTypes.length, 3);
+        expect(deserialized.enabledInsightTypes.length, 2);
         expect(
           deserialized.enabledInsightTypes,
           containsAll([
-            LiveInsightType.actionItem,
             LiveInsightType.risk,
             LiveInsightType.decision,
           ]),
