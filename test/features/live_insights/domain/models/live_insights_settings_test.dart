@@ -33,7 +33,7 @@ void main() {
       });
 
       test('allPhases should contain all assistance types', () {
-        expect(LiveInsightsSettings.allPhases.length, 6);
+        expect(LiveInsightsSettings.allPhases.length, 5);
         expect(
           LiveInsightsSettings.allPhases,
           containsAll([
@@ -42,7 +42,6 @@ void main() {
             ProactiveAssistanceType.conflictDetected,
             ProactiveAssistanceType.incompleteActionItem,
             ProactiveAssistanceType.followUpSuggestion,
-            ProactiveAssistanceType.repetitionDetected,
           ]),
         );
       });
@@ -89,15 +88,6 @@ void main() {
         expect(
           LiveInsightsSettings.getPriorityForType(
             ProactiveAssistanceType.followUpSuggestion,
-          ),
-          AssistancePriority.informational,
-        );
-      });
-
-      test('repetitionDetected should be informational priority', () {
-        expect(
-          LiveInsightsSettings.getPriorityForType(
-            ProactiveAssistanceType.repetitionDetected,
           ),
           AssistancePriority.informational,
         );
@@ -171,12 +161,6 @@ void main() {
           DisplayMode.immediate,
         );
         expect(settings.shouldShowAssistance(followUp), false);
-
-        final repetition = _createMockAssistance(
-          ProactiveAssistanceType.repetitionDetected,
-          DisplayMode.immediate,
-        );
-        expect(settings.shouldShowAssistance(repetition), false);
       });
 
       test('quiet mode respects enabled phases filter', () {
@@ -433,12 +417,6 @@ void main() {
           ),
           'Follow-up Suggestions',
         );
-        expect(
-          LiveInsightsSettings.getLabelForType(
-            ProactiveAssistanceType.repetitionDetected,
-          ),
-          'Repetition Detection',
-        );
       });
 
       test('getDescriptionForType returns non-empty descriptions', () {
@@ -680,8 +658,6 @@ ProactiveAssistanceModel _createMockAssistance(
         ProactiveAssistanceType.clarificationNeeded => 0.75,
         // For followUp: need > 0.65 but <= 0.75
         ProactiveAssistanceType.followUpSuggestion => 0.70,
-        // For repetition: need > 0.70 but <= 0.80
-        ProactiveAssistanceType.repetitionDetected => 0.75,
         // Action items use completeness score, not confidence
         ProactiveAssistanceType.incompleteActionItem => 0.0,
       },
@@ -751,20 +727,6 @@ ProactiveAssistanceModel _createMockAssistance(
           urgency: 'medium',
           contextSnippet: 'Context snippet',
           confidence: confidence,
-          timestamp: now,
-        ),
-      ),
-    ProactiveAssistanceType.repetitionDetected => ProactiveAssistanceModel(
-        type: type,
-        repetitionDetection: RepetitionDetectionAssistance(
-          topic: 'Test topic',
-          firstMentionIndex: 0,
-          currentMentionIndex: 5,
-          occurrences: 3,
-          timeSpanMinutes: 10.0,
-          confidence: confidence,
-          reasoning: 'Test reasoning',
-          suggestions: ['Suggestion'],
           timestamp: now,
         ),
       ),

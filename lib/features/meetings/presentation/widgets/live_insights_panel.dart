@@ -234,10 +234,6 @@ class _LiveInsightsPanelState extends ConsumerState<LiveInsightsPanel>
         insightId = assistance.followUpSuggestion?.insightId;
         confidenceScore = assistance.followUpSuggestion?.confidence;
         break;
-      case ProactiveAssistanceType.repetitionDetected:
-        insightId = assistance.repetitionDetection?.topic; // Use topic as ID
-        confidenceScore = assistance.repetitionDetection?.confidence;
-        break;
     }
 
     if (insightId == null) {

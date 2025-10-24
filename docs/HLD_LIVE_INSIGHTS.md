@@ -56,7 +56,6 @@ During meetings, participants often:
 - ❤️ **Conflict Detection** - Alerts when current decisions contradict past decisions
 - 💛 **Action Item Quality** - Ensures action items are complete with owner, deadline, and clear description
 - 💜 **Follow-up Suggestions** - Recommends related topics and open items from past meetings
-- 🔶 **Meeting Efficiency** - Detects repetitive discussions and monitors time usage
 
 ### Value Proposition
 
@@ -75,7 +74,6 @@ During meetings, participants often:
 - **Conflict Avoidance** - Prevent contradictory decisions before they're finalized
 - **Quality Enforcement** - Ensure 90%+ of action items have clear owners and deadlines
 - **Continuity Maintenance** - Never forget related open items or past decisions
-- **Meeting Efficiency** - Reduce meeting time by 15% with repetition detection and time alerts
 
 **Insight Evolution (NEW - Oct 2025):**
 - **Priority Escalation** - Track when insights become more critical (LOW → CRITICAL)
@@ -103,7 +101,6 @@ During meetings, participants often:
 | Time saved per meeting | 5-10 min | 7 min avg |
 | Action item completeness | >85% | ~88% |
 | Conflict detection accuracy | >80% | ~82% |
-| Meeting efficiency improvement | 10-15% | ~12% |
 
 ---
 
@@ -343,10 +340,6 @@ User asks question → System detects question → Searches past meetings → Sy
 │  ├─ FollowUpSuggestionsService: Find related open items         │
 │  └─ LLM analysis for relevance and urgency                      │
 │                                                                  │
-│  Phase 6: Meeting Efficiency (🔶)                               │
-│  ├─ RepetitionDetectorService: Detect circular discussions      │
-│  └─ MeetingTimeTrackerService: Monitor time usage               │
-│                                                                  │
 └────────────────────────┬────────────────────────────────────────┘
                          ↓
 ┌─────────────────────────────────────────────────────────────────┐
@@ -358,15 +351,13 @@ User asks question → System detects question → Searches past meetings → Sy
 │      { "type": "clarification_needed", ... },                    │
 │      { "type": "conflict_detected", ... },                       │
 │      { "type": "incomplete_action_item", ... },                  │
-│      { "type": "follow_up_suggestion", ... },                    │
-│      { "type": "repetition_detected", ... },                     │
-│      { "type": "time_usage_alert", ... }                         │
+│      { "type": "follow_up_suggestion", ... }                     │
 │    ]                                                             │
 │  }                                                               │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Six Phases of Active Intelligence
+### Five Phases of Active Intelligence
 
 | Phase | Feature | Latency | Cost/Event | User Value |
 |-------|---------|---------|------------|------------|
@@ -375,19 +366,18 @@ User asks question → System detects question → Searches past meetings → Sy
 | **3** | Conflict Detection | 2.5-3.5s | ~$0.0008 | Alerts contradictory decisions |
 | **4** | Action Item Quality | 1-2s | ~$0.0003 | Ensures complete, actionable items |
 | **5** | Follow-up Suggestions | 3-4s | ~$0.0006 | Maintains meeting continuity |
-| **6** | Meeting Efficiency | 1-3s | ~$0.0005 | Detects repetition, tracks time |
 
 **Total Cost Impact (with selective execution):** ~$0.0012 per chunk (40-60% reduction) = **$0.072 per 30-minute meeting** (vs $0.18 without optimization)
 
 **Selective Execution Optimization (Oct 2025):**
-- **Before:** All 6 phases run on every chunk = ~$0.003/chunk
+- **Before:** All 5 phases run on every chunk = ~$0.003/chunk
 - **After:** Only relevant phases run based on content = ~$0.0012/chunk
 - **Savings:** 40-60% reduction in Active Intelligence costs
 - **Method:** Pre-analyze chunk text and insights to determine which phases apply
 
 ### Selective Phase Execution (Optimization)
 
-**Problem:** Running all 6 Active Intelligence phases on every chunk wastes LLM calls when most phases aren't relevant to the current content.
+**Problem:** Running all 5 Active Intelligence phases on every chunk wastes LLM calls when most phases aren't relevant to the current content.
 
 **Solution:** Pre-analyze chunk text and extracted insights to determine which phases should run.
 
@@ -412,14 +402,11 @@ def _determine_active_phases(chunk_text: str, insights: List[MeetingInsight]) ->
 
     Phase 5 (follow_up_suggestions):
         Activate if: decision insight extracted OR key_point insight extracted
-
-    Phase 6 (meeting_efficiency):
-        Always active (lightweight time tracking, no LLM calls)
     """
 ```
 
 **Performance Impact:**
-- **Average phases per chunk:** 1.5 (vs 6 without optimization)
+- **Average phases per chunk:** 1.5 (vs 5 without optimization)
 - **Cost reduction:** 40-60% fewer Active Intelligence LLM calls
 - **Latency:** No change (phases only run when relevant)
 - **Accuracy:** No degradation (same logic, just selective execution)
@@ -428,10 +415,10 @@ def _determine_active_phases(chunk_text: str, insights: List[MeetingInsight]) ->
 
 | Chunk Content | Active Phases | Savings |
 |---------------|---------------|---------|
-| "What's our budget for Q4?" | Phase 1 (question), Phase 6 (efficiency) | 4 phases skipped (67% savings) |
-| "Let's use GraphQL for APIs" | Phase 2 (clarify), Phase 3 (conflict), Phase 5 (follow-up), Phase 6 | 2 phases skipped (33% savings) |
-| "John will finish the API by Friday" | Phase 2 (clarify), Phase 4 (quality), Phase 6 | 3 phases skipped (50% savings) |
-| "We discussed the weather" | Phase 6 only | 5 phases skipped (83% savings) |
+| "What's our budget for Q4?" | Phase 1 (question) | 4 phases skipped (80% savings) |
+| "Let's use GraphQL for APIs" | Phase 2 (clarify), Phase 3 (conflict), Phase 5 (follow-up) | 2 phases skipped (40% savings) |
+| "John will finish the API by Friday" | Phase 2 (clarify), Phase 4 (quality) | 3 phases skipped (60% savings) |
+| "We discussed the weather" | None | 5 phases skipped (100% savings) |
 
 ### Performance Characteristics
 
@@ -441,7 +428,6 @@ def _determine_active_phases(chunk_text: str, insights: List[MeetingInsight]) ->
 - Conflict detection: 2.5-3.5 seconds (vector search + LLM analysis)
 - Quality checking: 1-2 seconds (pattern matching + LLM improvement)
 - Follow-up suggestions: 3-4 seconds (dual search + LLM relevance)
-- Repetition/time alerts: 1-3 seconds (embedding similarity + LLM)
 
 **Accuracy Rates:**
 - Question detection: >90%
@@ -450,7 +436,6 @@ def _determine_active_phases(chunk_text: str, insights: List[MeetingInsight]) ->
 - Conflict identification: >80%
 - Quality completeness: >90%
 - Follow-up relevance: >75%
-- Repetition detection: >80%
 
 ---
 
@@ -691,51 +676,7 @@ class FollowUpSuggestionsService:
 
 **Performance:** 3-4 seconds, $0.0006 per check, returns top 3 suggestions
 
-#### 10. RepetitionDetectorService (Phase 6 - Active Intelligence)
-
-**Purpose:** Detect circular discussions that aren't making progress.
-
-**Features:**
-- Session-specific topic tracking using embeddings
-- Semantic similarity (threshold: 0.75)
-- LLM analysis to distinguish repetition from progress
-- Configurable thresholds (min 3 occurrences, 15-minute window)
-
-**Key Methods:**
-```python
-class RepetitionDetectorService:
-    async def detect_repetition(
-        self, session_id: str, current_text: str,
-        chunk_index: int, chunk_timestamp: datetime
-    ) -> Optional[RepetitionAlert]:
-        """Detect if topic discussed repeatedly without progress"""
-```
-
-**Performance:** 1-3 seconds when repetition detected, $0.0005 per analysis
-
-#### 11. MeetingTimeTrackerService (Phase 6 - Active Intelligence)
-
-**Purpose:** Monitor meeting duration and topic-level time usage.
-
-**Features:**
-- Session and topic-level time tracking
-- Smart alerting with cooldown (5-minute intervals)
-- Two alert types: long_discussion (>10 min) and time_limit_approaching (>45 min)
-- Checks every 5 chunks for performance
-
-**Key Methods:**
-```python
-class MeetingTimeTrackerService:
-    async def track_time_usage(
-        self, session_id: str, current_text: str,
-        chunk_timestamp: datetime, current_topic: Optional[str] = None
-    ) -> Optional[TimeUsageAlert]:
-        """Track time and alert when thresholds exceeded"""
-```
-
-**Performance:** <10ms (time calculation), alerts only when needed
-
-#### 12. Selective Phase Execution Manager (Optimization) ✅ NEW Oct 2025
+#### 10. Selective Phase Execution Manager (Optimization) ✅ NEW Oct 2025
 
 **Purpose:** Optimize Active Intelligence by only running phases relevant to chunk content.
 
@@ -743,7 +684,6 @@ class MeetingTimeTrackerService:
 - Fast pattern-based phase detection (no LLM needed)
 - Keyword matching for questions, decisions, assignments
 - Insight-type based activation
-- Phase 6 always runs (lightweight)
 
 **Key Methods:**
 ```python
@@ -760,13 +700,12 @@ class RealtimeMeetingInsightsService:
 - **Phase 3 (conflict_detection):** decided/agreed/approved/let's/we'll OR decision insight
 - **Phase 4 (action_item_quality):** action_item insight
 - **Phase 5 (follow_up_suggestions):** decision insight OR key_point insight
-- **Phase 6 (meeting_efficiency):** Always active
 
 **Performance:** <1ms (pattern matching only), 40-60% cost reduction
 
 **Status:** ✅ Production Ready (October 23, 2025)
 
-#### 13. AdaptiveInsightProcessor (Phase 7 - Smart Processing) ✅ NEW Oct 2025
+#### 11. AdaptiveInsightProcessor (Phase 6 - Smart Processing) ✅ NEW Oct 2025
 
 **Purpose:** Replace blind fixed-interval batching with intelligent semantic trigger-based processing.
 
@@ -903,7 +842,7 @@ Chunk 3: "We should also update the docs"
 
 **Status:** ✅ Production Ready (October 22, 2025)
 
-#### 14. TopicCoherenceDetector (Phase 8 - Smart Batching) ✅ NEW Oct 2025
+#### 12. TopicCoherenceDetector (Phase 7 - Smart Batching) ✅ NEW Oct 2025
 
 **Purpose:** Detect topic changes in conversation flow to batch related chunks together and process before context shifts.
 
@@ -1071,7 +1010,7 @@ Chunk 5: "We need to migrate PostgreSQL to latest"
 
 **Status:** ✅ Production Ready (October 23, 2025)
 
-#### 15. SharedSearchCacheManager ✅ NEW Oct 2025
+#### 13. SharedSearchCacheManager ✅ NEW Oct 2025
 
 **Purpose:** Eliminate redundant Qdrant vector searches across Active Intelligence phases (1, 3, 5).
 
@@ -1160,7 +1099,7 @@ Phase 5 (Follow-up Suggestions):
 
 **Status:** ✅ Production Ready (October 23, 2025)
 
-#### 15. TranscriptValidator ✅ NEW Oct 2025
+#### 14. TranscriptValidator ✅ NEW Oct 2025
 
 **Purpose:** Filter empty, noise-only, and low-quality transcripts before insight extraction.
 
@@ -1300,7 +1239,7 @@ Transcript messages now include quality metadata:
 
 **Status:** ✅ Production Ready (October 23, 2025)
 
-#### 16. EarlyDuplicateDetection (Phase 0 - Cost Optimization) ✅ NEW Oct 2025
+#### 15. EarlyDuplicateDetection (Phase 0 - Cost Optimization) ✅ NEW Oct 2025
 
 **Purpose:** Prevent redundant LLM calls by detecting semantically duplicate chunks BEFORE insight extraction.
 
@@ -1451,7 +1390,7 @@ Assuming 10% of chunks are duplicates in typical meetings:
 
 **Status:** ✅ Production Ready (October 23, 2025)
 
-#### 17. ProactiveAssistanceFeedbackService ✅ NEW Oct 2025
+#### 16. ProactiveAssistanceFeedbackService ✅ NEW Oct 2025
 
 **Purpose:** Collect and analyze user feedback to continuously improve AI assistance quality.
 
@@ -1631,7 +1570,7 @@ If acceptance rate < 70% (target) and sample size >= 30:
 
 **Status:** ✅ Production Ready (October 23, 2025)
 
-#### 18. InsightEvolutionTracker ✅ NEW Oct 2025
+#### 17. InsightEvolutionTracker ✅ NEW Oct 2025
 
 **Purpose:** Track how insights and proactive assistance evolve over time during a meeting, enabling UI updates instead of duplicate entries.
 
@@ -1813,7 +1752,7 @@ void _handleEvolvedInsights(List<dynamic> evolvedInsights) {
 
 **Status:** ✅ Production Ready (October 23, 2025)
 
-#### 19. Processing Decision Visibility ✅ NEW Oct 2025
+#### 18. Processing Decision Visibility ✅ NEW Oct 2025
 
 **Purpose:** Provide transparency into why and how insights are processed for debugging and user understanding.
 
@@ -2050,8 +1989,6 @@ enum ProactiveAssistanceType {
   conflictDetected,         // Phase 3 ❤️
   incompleteActionItem,     // Phase 4 💛
   followUpSuggestion,       // Phase 5 💜
-  repetitionDetected,       // Phase 6 🔶
-  timeUsageAlert,           // Phase 6 🔶
 }
 
 // NEW - Oct 2025: Confidence-based display control
@@ -2118,28 +2055,6 @@ class FollowUpSuggestionAssistance {
 }
 
 @freezed
-class RepetitionDetectionAssistance {
-  String topic;
-  int firstMentionIndex;
-  int currentMentionIndex;
-  int occurrences;
-  double timeSpanMinutes;
-  double confidence;
-  String reasoning;
-  List<String> suggestions;
-}
-
-@freezed
-class TimeUsageAlertAssistance {
-  String alertType;
-  String topic;
-  double timeSpentMinutes;
-  String severity;
-  String reasoning;
-  List<String> suggestions;
-}
-
-@freezed
 class ProactiveAssistanceModel {
   ProactiveAssistanceType type;
   DateTime timestamp;
@@ -2148,8 +2063,6 @@ class ProactiveAssistanceModel {
   ConflictAssistance? conflict;
   ActionItemQualityAssistance? actionItemQuality;
   FollowUpSuggestionAssistance? followUpSuggestion;
-  RepetitionDetectionAssistance? repetitionDetection;
-  TimeUsageAlertAssistance? timeUsageAlert;
 }
 ```
 
@@ -2158,7 +2071,7 @@ class ProactiveAssistanceModel {
 **Purpose:** Display proactive assistance with color-coded themes and confidence-based display modes.
 
 **Features:**
-- Six distinct visual themes (blue, orange, red, yellow, purple, deep orange)
+- Five distinct visual themes (blue, orange, red, yellow, purple)
 - **Confidence-based display thresholds** (NEW - Oct 2025)
 - Expandable/collapsible design
 - Confidence badges
@@ -2231,8 +2144,6 @@ class ProactiveAssistanceCard extends StatefulWidget {
   Widget _buildConflictContent(ConflictAssistance);
   Widget _buildActionItemQualityContent(ActionItemQualityAssistance);
   Widget _buildFollowUpSuggestionContent(FollowUpSuggestionAssistance);
-  Widget _buildRepetitionDetectionContent(RepetitionDetectionAssistance);
-  Widget _buildTimeUsageAlertContent(TimeUsageAlertAssistance);
 }
 ```
 
@@ -2243,13 +2154,13 @@ class ProactiveAssistanceCard extends StatefulWidget {
 **Purpose:** Give users control over which AI assistance features they see, reducing information overload.
 
 **Problem Solved:**
-- **Before:** All 6 Active Intelligence phases shown to all users → overwhelming for some users
+- **Before:** All 5 Active Intelligence phases shown to all users → overwhelming for some users
 - **After:** Users can customize which phases to enable + Quiet Mode for critical-only alerts
 
 **Features:**
 
 1. **Quiet Mode** - Only show critical alerts (conflicts and incomplete action items)
-2. **Phase Toggle** - Enable/disable each of the 6 Active Intelligence phases
+2. **Phase Toggle** - Enable/disable each of the 5 Active Intelligence phases
 3. **Collapsed Items Control** - Show/hide medium-confidence items
 4. **Auto-Expand Control** - Automatically expand high-confidence items
 5. **Feedback Toggle** - Enable/disable thumbs up/down feedback buttons

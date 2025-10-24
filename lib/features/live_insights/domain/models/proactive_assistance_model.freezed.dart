@@ -21,11 +21,14 @@ AnswerSource _$AnswerSourceFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$AnswerSource {
+  @JsonKey(name: 'content_id')
   String get contentId => throw _privateConstructorUsedError;
   String get title => throw _privateConstructorUsedError;
   String get snippet => throw _privateConstructorUsedError;
   DateTime get date => throw _privateConstructorUsedError;
+  @JsonKey(name: 'relevance_score')
   double get relevanceScore => throw _privateConstructorUsedError;
+  @JsonKey(name: 'meeting_type')
   String get meetingType => throw _privateConstructorUsedError;
 
   /// Serializes this AnswerSource to a JSON map.
@@ -46,12 +49,12 @@ abstract class $AnswerSourceCopyWith<$Res> {
   ) = _$AnswerSourceCopyWithImpl<$Res, AnswerSource>;
   @useResult
   $Res call({
-    String contentId,
+    @JsonKey(name: 'content_id') String contentId,
     String title,
     String snippet,
     DateTime date,
-    double relevanceScore,
-    String meetingType,
+    @JsonKey(name: 'relevance_score') double relevanceScore,
+    @JsonKey(name: 'meeting_type') String meetingType,
   });
 }
 
@@ -119,12 +122,12 @@ abstract class _$$AnswerSourceImplCopyWith<$Res>
   @override
   @useResult
   $Res call({
-    String contentId,
+    @JsonKey(name: 'content_id') String contentId,
     String title,
     String snippet,
     DateTime date,
-    double relevanceScore,
-    String meetingType,
+    @JsonKey(name: 'relevance_score') double relevanceScore,
+    @JsonKey(name: 'meeting_type') String meetingType,
   });
 }
 
@@ -184,18 +187,19 @@ class __$$AnswerSourceImplCopyWithImpl<$Res>
 @JsonSerializable()
 class _$AnswerSourceImpl implements _AnswerSource {
   const _$AnswerSourceImpl({
-    required this.contentId,
+    @JsonKey(name: 'content_id') required this.contentId,
     required this.title,
     required this.snippet,
     required this.date,
-    required this.relevanceScore,
-    required this.meetingType,
+    @JsonKey(name: 'relevance_score') required this.relevanceScore,
+    @JsonKey(name: 'meeting_type') required this.meetingType,
   });
 
   factory _$AnswerSourceImpl.fromJson(Map<String, dynamic> json) =>
       _$$AnswerSourceImplFromJson(json);
 
   @override
+  @JsonKey(name: 'content_id')
   final String contentId;
   @override
   final String title;
@@ -204,8 +208,10 @@ class _$AnswerSourceImpl implements _AnswerSource {
   @override
   final DateTime date;
   @override
+  @JsonKey(name: 'relevance_score')
   final double relevanceScore;
   @override
+  @JsonKey(name: 'meeting_type')
   final String meetingType;
 
   @override
@@ -257,18 +263,19 @@ class _$AnswerSourceImpl implements _AnswerSource {
 
 abstract class _AnswerSource implements AnswerSource {
   const factory _AnswerSource({
-    required final String contentId,
+    @JsonKey(name: 'content_id') required final String contentId,
     required final String title,
     required final String snippet,
     required final DateTime date,
-    required final double relevanceScore,
-    required final String meetingType,
+    @JsonKey(name: 'relevance_score') required final double relevanceScore,
+    @JsonKey(name: 'meeting_type') required final String meetingType,
   }) = _$AnswerSourceImpl;
 
   factory _AnswerSource.fromJson(Map<String, dynamic> json) =
       _$AnswerSourceImpl.fromJson;
 
   @override
+  @JsonKey(name: 'content_id')
   String get contentId;
   @override
   String get title;
@@ -277,8 +284,10 @@ abstract class _AnswerSource implements AnswerSource {
   @override
   DateTime get date;
   @override
+  @JsonKey(name: 'relevance_score')
   double get relevanceScore;
   @override
+  @JsonKey(name: 'meeting_type')
   String get meetingType;
 
   /// Create a copy of AnswerSource
@@ -2432,389 +2441,6 @@ abstract class _FollowUpSuggestionAssistance
   get copyWith => throw _privateConstructorUsedError;
 }
 
-RepetitionDetectionAssistance _$RepetitionDetectionAssistanceFromJson(
-  Map<String, dynamic> json,
-) {
-  return _RepetitionDetectionAssistance.fromJson(json);
-}
-
-/// @nodoc
-mixin _$RepetitionDetectionAssistance {
-  String get topic => throw _privateConstructorUsedError;
-  @JsonKey(name: 'first_mention_index')
-  int get firstMentionIndex => throw _privateConstructorUsedError;
-  @JsonKey(name: 'current_mention_index')
-  int get currentMentionIndex => throw _privateConstructorUsedError;
-  int get occurrences => throw _privateConstructorUsedError;
-  @JsonKey(name: 'time_span_minutes')
-  double get timeSpanMinutes => throw _privateConstructorUsedError;
-  double get confidence => throw _privateConstructorUsedError;
-  String get reasoning => throw _privateConstructorUsedError;
-  List<String> get suggestions => throw _privateConstructorUsedError;
-  DateTime get timestamp => throw _privateConstructorUsedError;
-
-  /// Serializes this RepetitionDetectionAssistance to a JSON map.
-  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of RepetitionDetectionAssistance
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  $RepetitionDetectionAssistanceCopyWith<RepetitionDetectionAssistance>
-  get copyWith => throw _privateConstructorUsedError;
-}
-
-/// @nodoc
-abstract class $RepetitionDetectionAssistanceCopyWith<$Res> {
-  factory $RepetitionDetectionAssistanceCopyWith(
-    RepetitionDetectionAssistance value,
-    $Res Function(RepetitionDetectionAssistance) then,
-  ) =
-      _$RepetitionDetectionAssistanceCopyWithImpl<
-        $Res,
-        RepetitionDetectionAssistance
-      >;
-  @useResult
-  $Res call({
-    String topic,
-    @JsonKey(name: 'first_mention_index') int firstMentionIndex,
-    @JsonKey(name: 'current_mention_index') int currentMentionIndex,
-    int occurrences,
-    @JsonKey(name: 'time_span_minutes') double timeSpanMinutes,
-    double confidence,
-    String reasoning,
-    List<String> suggestions,
-    DateTime timestamp,
-  });
-}
-
-/// @nodoc
-class _$RepetitionDetectionAssistanceCopyWithImpl<
-  $Res,
-  $Val extends RepetitionDetectionAssistance
->
-    implements $RepetitionDetectionAssistanceCopyWith<$Res> {
-  _$RepetitionDetectionAssistanceCopyWithImpl(this._value, this._then);
-
-  // ignore: unused_field
-  final $Val _value;
-  // ignore: unused_field
-  final $Res Function($Val) _then;
-
-  /// Create a copy of RepetitionDetectionAssistance
-  /// with the given fields replaced by the non-null parameter values.
-  @pragma('vm:prefer-inline')
-  @override
-  $Res call({
-    Object? topic = null,
-    Object? firstMentionIndex = null,
-    Object? currentMentionIndex = null,
-    Object? occurrences = null,
-    Object? timeSpanMinutes = null,
-    Object? confidence = null,
-    Object? reasoning = null,
-    Object? suggestions = null,
-    Object? timestamp = null,
-  }) {
-    return _then(
-      _value.copyWith(
-            topic: null == topic
-                ? _value.topic
-                : topic // ignore: cast_nullable_to_non_nullable
-                      as String,
-            firstMentionIndex: null == firstMentionIndex
-                ? _value.firstMentionIndex
-                : firstMentionIndex // ignore: cast_nullable_to_non_nullable
-                      as int,
-            currentMentionIndex: null == currentMentionIndex
-                ? _value.currentMentionIndex
-                : currentMentionIndex // ignore: cast_nullable_to_non_nullable
-                      as int,
-            occurrences: null == occurrences
-                ? _value.occurrences
-                : occurrences // ignore: cast_nullable_to_non_nullable
-                      as int,
-            timeSpanMinutes: null == timeSpanMinutes
-                ? _value.timeSpanMinutes
-                : timeSpanMinutes // ignore: cast_nullable_to_non_nullable
-                      as double,
-            confidence: null == confidence
-                ? _value.confidence
-                : confidence // ignore: cast_nullable_to_non_nullable
-                      as double,
-            reasoning: null == reasoning
-                ? _value.reasoning
-                : reasoning // ignore: cast_nullable_to_non_nullable
-                      as String,
-            suggestions: null == suggestions
-                ? _value.suggestions
-                : suggestions // ignore: cast_nullable_to_non_nullable
-                      as List<String>,
-            timestamp: null == timestamp
-                ? _value.timestamp
-                : timestamp // ignore: cast_nullable_to_non_nullable
-                      as DateTime,
-          )
-          as $Val,
-    );
-  }
-}
-
-/// @nodoc
-abstract class _$$RepetitionDetectionAssistanceImplCopyWith<$Res>
-    implements $RepetitionDetectionAssistanceCopyWith<$Res> {
-  factory _$$RepetitionDetectionAssistanceImplCopyWith(
-    _$RepetitionDetectionAssistanceImpl value,
-    $Res Function(_$RepetitionDetectionAssistanceImpl) then,
-  ) = __$$RepetitionDetectionAssistanceImplCopyWithImpl<$Res>;
-  @override
-  @useResult
-  $Res call({
-    String topic,
-    @JsonKey(name: 'first_mention_index') int firstMentionIndex,
-    @JsonKey(name: 'current_mention_index') int currentMentionIndex,
-    int occurrences,
-    @JsonKey(name: 'time_span_minutes') double timeSpanMinutes,
-    double confidence,
-    String reasoning,
-    List<String> suggestions,
-    DateTime timestamp,
-  });
-}
-
-/// @nodoc
-class __$$RepetitionDetectionAssistanceImplCopyWithImpl<$Res>
-    extends
-        _$RepetitionDetectionAssistanceCopyWithImpl<
-          $Res,
-          _$RepetitionDetectionAssistanceImpl
-        >
-    implements _$$RepetitionDetectionAssistanceImplCopyWith<$Res> {
-  __$$RepetitionDetectionAssistanceImplCopyWithImpl(
-    _$RepetitionDetectionAssistanceImpl _value,
-    $Res Function(_$RepetitionDetectionAssistanceImpl) _then,
-  ) : super(_value, _then);
-
-  /// Create a copy of RepetitionDetectionAssistance
-  /// with the given fields replaced by the non-null parameter values.
-  @pragma('vm:prefer-inline')
-  @override
-  $Res call({
-    Object? topic = null,
-    Object? firstMentionIndex = null,
-    Object? currentMentionIndex = null,
-    Object? occurrences = null,
-    Object? timeSpanMinutes = null,
-    Object? confidence = null,
-    Object? reasoning = null,
-    Object? suggestions = null,
-    Object? timestamp = null,
-  }) {
-    return _then(
-      _$RepetitionDetectionAssistanceImpl(
-        topic: null == topic
-            ? _value.topic
-            : topic // ignore: cast_nullable_to_non_nullable
-                  as String,
-        firstMentionIndex: null == firstMentionIndex
-            ? _value.firstMentionIndex
-            : firstMentionIndex // ignore: cast_nullable_to_non_nullable
-                  as int,
-        currentMentionIndex: null == currentMentionIndex
-            ? _value.currentMentionIndex
-            : currentMentionIndex // ignore: cast_nullable_to_non_nullable
-                  as int,
-        occurrences: null == occurrences
-            ? _value.occurrences
-            : occurrences // ignore: cast_nullable_to_non_nullable
-                  as int,
-        timeSpanMinutes: null == timeSpanMinutes
-            ? _value.timeSpanMinutes
-            : timeSpanMinutes // ignore: cast_nullable_to_non_nullable
-                  as double,
-        confidence: null == confidence
-            ? _value.confidence
-            : confidence // ignore: cast_nullable_to_non_nullable
-                  as double,
-        reasoning: null == reasoning
-            ? _value.reasoning
-            : reasoning // ignore: cast_nullable_to_non_nullable
-                  as String,
-        suggestions: null == suggestions
-            ? _value._suggestions
-            : suggestions // ignore: cast_nullable_to_non_nullable
-                  as List<String>,
-        timestamp: null == timestamp
-            ? _value.timestamp
-            : timestamp // ignore: cast_nullable_to_non_nullable
-                  as DateTime,
-      ),
-    );
-  }
-}
-
-/// @nodoc
-@JsonSerializable()
-class _$RepetitionDetectionAssistanceImpl
-    implements _RepetitionDetectionAssistance {
-  const _$RepetitionDetectionAssistanceImpl({
-    required this.topic,
-    @JsonKey(name: 'first_mention_index') required this.firstMentionIndex,
-    @JsonKey(name: 'current_mention_index') required this.currentMentionIndex,
-    required this.occurrences,
-    @JsonKey(name: 'time_span_minutes') required this.timeSpanMinutes,
-    required this.confidence,
-    required this.reasoning,
-    required final List<String> suggestions,
-    required this.timestamp,
-  }) : _suggestions = suggestions;
-
-  factory _$RepetitionDetectionAssistanceImpl.fromJson(
-    Map<String, dynamic> json,
-  ) => _$$RepetitionDetectionAssistanceImplFromJson(json);
-
-  @override
-  final String topic;
-  @override
-  @JsonKey(name: 'first_mention_index')
-  final int firstMentionIndex;
-  @override
-  @JsonKey(name: 'current_mention_index')
-  final int currentMentionIndex;
-  @override
-  final int occurrences;
-  @override
-  @JsonKey(name: 'time_span_minutes')
-  final double timeSpanMinutes;
-  @override
-  final double confidence;
-  @override
-  final String reasoning;
-  final List<String> _suggestions;
-  @override
-  List<String> get suggestions {
-    if (_suggestions is EqualUnmodifiableListView) return _suggestions;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_suggestions);
-  }
-
-  @override
-  final DateTime timestamp;
-
-  @override
-  String toString() {
-    return 'RepetitionDetectionAssistance(topic: $topic, firstMentionIndex: $firstMentionIndex, currentMentionIndex: $currentMentionIndex, occurrences: $occurrences, timeSpanMinutes: $timeSpanMinutes, confidence: $confidence, reasoning: $reasoning, suggestions: $suggestions, timestamp: $timestamp)';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is _$RepetitionDetectionAssistanceImpl &&
-            (identical(other.topic, topic) || other.topic == topic) &&
-            (identical(other.firstMentionIndex, firstMentionIndex) ||
-                other.firstMentionIndex == firstMentionIndex) &&
-            (identical(other.currentMentionIndex, currentMentionIndex) ||
-                other.currentMentionIndex == currentMentionIndex) &&
-            (identical(other.occurrences, occurrences) ||
-                other.occurrences == occurrences) &&
-            (identical(other.timeSpanMinutes, timeSpanMinutes) ||
-                other.timeSpanMinutes == timeSpanMinutes) &&
-            (identical(other.confidence, confidence) ||
-                other.confidence == confidence) &&
-            (identical(other.reasoning, reasoning) ||
-                other.reasoning == reasoning) &&
-            const DeepCollectionEquality().equals(
-              other._suggestions,
-              _suggestions,
-            ) &&
-            (identical(other.timestamp, timestamp) ||
-                other.timestamp == timestamp));
-  }
-
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @override
-  int get hashCode => Object.hash(
-    runtimeType,
-    topic,
-    firstMentionIndex,
-    currentMentionIndex,
-    occurrences,
-    timeSpanMinutes,
-    confidence,
-    reasoning,
-    const DeepCollectionEquality().hash(_suggestions),
-    timestamp,
-  );
-
-  /// Create a copy of RepetitionDetectionAssistance
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @override
-  @pragma('vm:prefer-inline')
-  _$$RepetitionDetectionAssistanceImplCopyWith<
-    _$RepetitionDetectionAssistanceImpl
-  >
-  get copyWith =>
-      __$$RepetitionDetectionAssistanceImplCopyWithImpl<
-        _$RepetitionDetectionAssistanceImpl
-      >(this, _$identity);
-
-  @override
-  Map<String, dynamic> toJson() {
-    return _$$RepetitionDetectionAssistanceImplToJson(this);
-  }
-}
-
-abstract class _RepetitionDetectionAssistance
-    implements RepetitionDetectionAssistance {
-  const factory _RepetitionDetectionAssistance({
-    required final String topic,
-    @JsonKey(name: 'first_mention_index') required final int firstMentionIndex,
-    @JsonKey(name: 'current_mention_index')
-    required final int currentMentionIndex,
-    required final int occurrences,
-    @JsonKey(name: 'time_span_minutes') required final double timeSpanMinutes,
-    required final double confidence,
-    required final String reasoning,
-    required final List<String> suggestions,
-    required final DateTime timestamp,
-  }) = _$RepetitionDetectionAssistanceImpl;
-
-  factory _RepetitionDetectionAssistance.fromJson(Map<String, dynamic> json) =
-      _$RepetitionDetectionAssistanceImpl.fromJson;
-
-  @override
-  String get topic;
-  @override
-  @JsonKey(name: 'first_mention_index')
-  int get firstMentionIndex;
-  @override
-  @JsonKey(name: 'current_mention_index')
-  int get currentMentionIndex;
-  @override
-  int get occurrences;
-  @override
-  @JsonKey(name: 'time_span_minutes')
-  double get timeSpanMinutes;
-  @override
-  double get confidence;
-  @override
-  String get reasoning;
-  @override
-  List<String> get suggestions;
-  @override
-  DateTime get timestamp;
-
-  /// Create a copy of RepetitionDetectionAssistance
-  /// with the given fields replaced by the non-null parameter values.
-  @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  _$$RepetitionDetectionAssistanceImplCopyWith<
-    _$RepetitionDetectionAssistanceImpl
-  >
-  get copyWith => throw _privateConstructorUsedError;
-}
-
 /// @nodoc
 mixin _$ProactiveAssistanceModel {
   ProactiveAssistanceType get type => throw _privateConstructorUsedError;
@@ -2825,8 +2451,6 @@ mixin _$ProactiveAssistanceModel {
   ActionItemQualityAssistance? get actionItemQuality =>
       throw _privateConstructorUsedError;
   FollowUpSuggestionAssistance? get followUpSuggestion =>
-      throw _privateConstructorUsedError;
-  RepetitionDetectionAssistance? get repetitionDetection =>
       throw _privateConstructorUsedError;
 
   /// Create a copy of ProactiveAssistanceModel
@@ -2850,7 +2474,6 @@ abstract class $ProactiveAssistanceModelCopyWith<$Res> {
     ConflictAssistance? conflict,
     ActionItemQualityAssistance? actionItemQuality,
     FollowUpSuggestionAssistance? followUpSuggestion,
-    RepetitionDetectionAssistance? repetitionDetection,
   });
 
   $AutoAnswerAssistanceCopyWith<$Res>? get autoAnswer;
@@ -2858,7 +2481,6 @@ abstract class $ProactiveAssistanceModelCopyWith<$Res> {
   $ConflictAssistanceCopyWith<$Res>? get conflict;
   $ActionItemQualityAssistanceCopyWith<$Res>? get actionItemQuality;
   $FollowUpSuggestionAssistanceCopyWith<$Res>? get followUpSuggestion;
-  $RepetitionDetectionAssistanceCopyWith<$Res>? get repetitionDetection;
 }
 
 /// @nodoc
@@ -2885,7 +2507,6 @@ class _$ProactiveAssistanceModelCopyWithImpl<
     Object? conflict = freezed,
     Object? actionItemQuality = freezed,
     Object? followUpSuggestion = freezed,
-    Object? repetitionDetection = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -2913,10 +2534,6 @@ class _$ProactiveAssistanceModelCopyWithImpl<
                 ? _value.followUpSuggestion
                 : followUpSuggestion // ignore: cast_nullable_to_non_nullable
                       as FollowUpSuggestionAssistance?,
-            repetitionDetection: freezed == repetitionDetection
-                ? _value.repetitionDetection
-                : repetitionDetection // ignore: cast_nullable_to_non_nullable
-                      as RepetitionDetectionAssistance?,
           )
           as $Val,
     );
@@ -2999,23 +2616,6 @@ class _$ProactiveAssistanceModelCopyWithImpl<
       },
     );
   }
-
-  /// Create a copy of ProactiveAssistanceModel
-  /// with the given fields replaced by the non-null parameter values.
-  @override
-  @pragma('vm:prefer-inline')
-  $RepetitionDetectionAssistanceCopyWith<$Res>? get repetitionDetection {
-    if (_value.repetitionDetection == null) {
-      return null;
-    }
-
-    return $RepetitionDetectionAssistanceCopyWith<$Res>(
-      _value.repetitionDetection!,
-      (value) {
-        return _then(_value.copyWith(repetitionDetection: value) as $Val);
-      },
-    );
-  }
 }
 
 /// @nodoc
@@ -3034,7 +2634,6 @@ abstract class _$$ProactiveAssistanceModelImplCopyWith<$Res>
     ConflictAssistance? conflict,
     ActionItemQualityAssistance? actionItemQuality,
     FollowUpSuggestionAssistance? followUpSuggestion,
-    RepetitionDetectionAssistance? repetitionDetection,
   });
 
   @override
@@ -3047,8 +2646,6 @@ abstract class _$$ProactiveAssistanceModelImplCopyWith<$Res>
   $ActionItemQualityAssistanceCopyWith<$Res>? get actionItemQuality;
   @override
   $FollowUpSuggestionAssistanceCopyWith<$Res>? get followUpSuggestion;
-  @override
-  $RepetitionDetectionAssistanceCopyWith<$Res>? get repetitionDetection;
 }
 
 /// @nodoc
@@ -3075,7 +2672,6 @@ class __$$ProactiveAssistanceModelImplCopyWithImpl<$Res>
     Object? conflict = freezed,
     Object? actionItemQuality = freezed,
     Object? followUpSuggestion = freezed,
-    Object? repetitionDetection = freezed,
   }) {
     return _then(
       _$ProactiveAssistanceModelImpl(
@@ -3103,10 +2699,6 @@ class __$$ProactiveAssistanceModelImplCopyWithImpl<$Res>
             ? _value.followUpSuggestion
             : followUpSuggestion // ignore: cast_nullable_to_non_nullable
                   as FollowUpSuggestionAssistance?,
-        repetitionDetection: freezed == repetitionDetection
-            ? _value.repetitionDetection
-            : repetitionDetection // ignore: cast_nullable_to_non_nullable
-                  as RepetitionDetectionAssistance?,
       ),
     );
   }
@@ -3122,7 +2714,6 @@ class _$ProactiveAssistanceModelImpl extends _ProactiveAssistanceModel {
     this.conflict,
     this.actionItemQuality,
     this.followUpSuggestion,
-    this.repetitionDetection,
   }) : super._();
 
   @override
@@ -3137,12 +2728,10 @@ class _$ProactiveAssistanceModelImpl extends _ProactiveAssistanceModel {
   final ActionItemQualityAssistance? actionItemQuality;
   @override
   final FollowUpSuggestionAssistance? followUpSuggestion;
-  @override
-  final RepetitionDetectionAssistance? repetitionDetection;
 
   @override
   String toString() {
-    return 'ProactiveAssistanceModel(type: $type, autoAnswer: $autoAnswer, clarification: $clarification, conflict: $conflict, actionItemQuality: $actionItemQuality, followUpSuggestion: $followUpSuggestion, repetitionDetection: $repetitionDetection)';
+    return 'ProactiveAssistanceModel(type: $type, autoAnswer: $autoAnswer, clarification: $clarification, conflict: $conflict, actionItemQuality: $actionItemQuality, followUpSuggestion: $followUpSuggestion)';
   }
 
   @override
@@ -3160,9 +2749,7 @@ class _$ProactiveAssistanceModelImpl extends _ProactiveAssistanceModel {
             (identical(other.actionItemQuality, actionItemQuality) ||
                 other.actionItemQuality == actionItemQuality) &&
             (identical(other.followUpSuggestion, followUpSuggestion) ||
-                other.followUpSuggestion == followUpSuggestion) &&
-            (identical(other.repetitionDetection, repetitionDetection) ||
-                other.repetitionDetection == repetitionDetection));
+                other.followUpSuggestion == followUpSuggestion));
   }
 
   @override
@@ -3174,7 +2761,6 @@ class _$ProactiveAssistanceModelImpl extends _ProactiveAssistanceModel {
     conflict,
     actionItemQuality,
     followUpSuggestion,
-    repetitionDetection,
   );
 
   /// Create a copy of ProactiveAssistanceModel
@@ -3197,7 +2783,6 @@ abstract class _ProactiveAssistanceModel extends ProactiveAssistanceModel {
     final ConflictAssistance? conflict,
     final ActionItemQualityAssistance? actionItemQuality,
     final FollowUpSuggestionAssistance? followUpSuggestion,
-    final RepetitionDetectionAssistance? repetitionDetection,
   }) = _$ProactiveAssistanceModelImpl;
   const _ProactiveAssistanceModel._() : super._();
 
@@ -3213,8 +2798,6 @@ abstract class _ProactiveAssistanceModel extends ProactiveAssistanceModel {
   ActionItemQualityAssistance? get actionItemQuality;
   @override
   FollowUpSuggestionAssistance? get followUpSuggestion;
-  @override
-  RepetitionDetectionAssistance? get repetitionDetection;
 
   /// Create a copy of ProactiveAssistanceModel
   /// with the given fields replaced by the non-null parameter values.

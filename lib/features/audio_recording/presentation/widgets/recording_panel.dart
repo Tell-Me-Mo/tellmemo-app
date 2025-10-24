@@ -990,11 +990,6 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel>
         content = assistance.followUpSuggestion?.topic ?? 'Follow-up recommended';
         icon = Icons.lightbulb_outline;
         break;
-      case ProactiveAssistanceType.repetitionDetected:
-        title = 'Repetition Detected';
-        content = assistance.repetitionDetection?.topic ?? 'Topic repeated';
-        icon = Icons.repeat;
-        break;
     }
 
     return Container(

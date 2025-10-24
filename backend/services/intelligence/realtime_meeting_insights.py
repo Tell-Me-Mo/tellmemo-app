@@ -43,8 +43,6 @@ from services.intelligence.clarification_service import ClarificationService
 from services.intelligence.conflict_detection_service import ConflictDetectionService
 from services.intelligence.action_item_quality_service import ActionItemQualityService
 from services.intelligence.follow_up_suggestions_service import FollowUpSuggestionsService
-from services.intelligence.repetition_detector_service import RepetitionDetectorService
-from services.intelligence.meeting_time_tracker_service import MeetingTimeTrackerService
 from services.intelligence.shared_search_cache import shared_search_cache
 from services.intelligence.insight_evolution_tracker import get_evolution_tracker, EvolutionType
 
@@ -374,12 +372,6 @@ class RealtimeMeetingInsightsService:
             embedding_service=embedding_service,
             search_cache=self.search_cache
         )
-        # Phase 6: Meeting Efficiency Features
-        self.repetition_detector = RepetitionDetectorService(
-            llm_client=self.llm_client,
-            embedding_service=embedding_service
-        )
-        self.time_tracker = MeetingTimeTrackerService()
 
         # Insight Evolution Tracker - tracks how insights change over time
         self.evolution_tracker = get_evolution_tracker()
@@ -1058,10 +1050,6 @@ class RealtimeMeetingInsightsService:
         if session_id in self.last_semantic_search:
             del self.last_semantic_search[session_id]
 
-        # Phase 6: Clean up repetition detector and time tracker session history
-        self.repetition_detector.clear_session(session_id)
-        self.time_tracker.clear_session(session_id)
-
         # Clean up shared search cache for this session
         self.search_cache.clear_session(session_id)
 
@@ -1183,9 +1171,6 @@ class RealtimeMeetingInsightsService:
                 f"decision={has_decision_insight}, key_point={has_key_point_insight}"
             )
 
-        # Phase 6: Meeting Efficiency - Always active (lightweight operations)
-        # Note: This phase runs outside the insight loop, so no explicit activation needed
-
         return active_phases
 
     async def _process_proactive_assistance(
@@ -1217,8 +1202,6 @@ class RealtimeMeetingInsightsService:
                  (owner, deadline, clarity) and suggests improvements.
         Phase 5: Follow-up Suggestions - Suggests related topics to discuss based on
                  current conversation (open items, past decisions with implications).
-        Phase 6: Meeting Efficiency Features - Detects repetitive discussions, tracks
-                 meeting time usage, and monitors agenda completion.
 
         Args:
             session_id: Current session ID
@@ -1248,7 +1231,7 @@ class RealtimeMeetingInsightsService:
 
         # Initialize phase status for all possible phases
         all_phases = ['question_answering', 'clarification', 'conflict_detection',
-                      'action_item_quality', 'follow_up_suggestions', 'meeting_efficiency']
+                      'action_item_quality', 'follow_up_suggestions']
         for phase in all_phases:
             if phase not in active_phases:
                 phase_status[phase] = PhaseStatus.SKIPPED
@@ -1519,76 +1502,6 @@ class RealtimeMeetingInsightsService:
                         exc_info=True
                     )
 
-        # Phase 6: Meeting Efficiency Features - Always run (lightweight operations)
-        # Wrap Phase 6 in try-except for resilience
-        try:
-            # Repetition Detection - Check once per chunk if discussion is becoming repetitive
-            repetition_alert = await self.repetition_detector.detect_repetition(
-                session_id=session_id,
-                current_text=current_chunk.text,
-                chunk_index=current_chunk.index,
-                chunk_timestamp=current_chunk.timestamp
-            )
-
-            if repetition_alert:
-                proactive_responses.append({
-                    'type': 'repetition_detected',
-                    'topic': repetition_alert.topic,
-                    'first_mention_index': repetition_alert.first_mention_index,
-                    'current_mention_index': repetition_alert.current_mention_index,
-                    'occurrences': repetition_alert.occurrences,
-                    'time_span_minutes': repetition_alert.time_span_minutes,
-                    'confidence': repetition_alert.confidence,
-                    'reasoning': repetition_alert.reasoning,
-                    'suggestions': repetition_alert.suggestions,
-                    'timestamp': repetition_alert.timestamp.isoformat()
-                })
-
-                logger.warning(
-                    f"Detected repetitive discussion for session {sanitize_for_log(session_id)}: "
-                    f"'{repetition_alert.topic}' discussed {repetition_alert.occurrences} times "
-                    f"over {repetition_alert.time_span_minutes:.1f} minutes "
-                    f"(confidence: {repetition_alert.confidence:.2f})"
-                )
-
-            # Phase 6: Meeting Efficiency Features - Time Tracking
-            # Track meeting time usage and alert if running long
-            time_usage_alert = await self.time_tracker.track_time_usage(
-                session_id=session_id,
-                current_text=current_chunk.text,
-                chunk_timestamp=current_chunk.timestamp,
-                current_topic=repetition_alert.topic if repetition_alert else None
-            )
-
-            if time_usage_alert:
-                proactive_responses.append({
-                    'type': 'time_usage_alert',
-                    'alert_type': time_usage_alert.alert_type,
-                    'topic': time_usage_alert.topic,
-                    'time_spent_minutes': time_usage_alert.time_spent_minutes,
-                    'severity': time_usage_alert.severity,
-                    'reasoning': time_usage_alert.reasoning,
-                    'suggestions': time_usage_alert.suggestions,
-                    'timestamp': time_usage_alert.timestamp.isoformat()
-                })
-
-                logger.warning(
-                    f"Time usage alert ({time_usage_alert.alert_type}) for session "
-                    f"{sanitize_for_log(session_id)}: '{time_usage_alert.topic}' "
-                    f"({time_usage_alert.time_spent_minutes:.1f} minutes, severity: {time_usage_alert.severity})"
-                )
-
-            # Mark Phase 6 as successful
-            phase_status['meeting_efficiency'] = PhaseStatus.SUCCESS
-
-        except Exception as e:
-            # Phase 6 failed - log error but continue processing
-            phase_status['meeting_efficiency'] = PhaseStatus.FAILED
-            error_messages['meeting_efficiency'] = str(e)
-            logger.error(
-                f"Phase 6 (meeting_efficiency) failed for session {sanitize_for_log(session_id)}: {e}",
-                exc_info=True
-            )
 
         # DEDUPLICATION: Merge redundant assistance cards (Oct 2025)
         # Issue #3: Action items often generate both "clarification_needed" and "incomplete_action_item"
