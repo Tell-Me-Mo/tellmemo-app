@@ -27,31 +27,54 @@ class ClarificationSuggestion:
 class ClarificationService:
     """Service for detecting vague statements and suggesting clarifications"""
 
+    # Refined patterns - reduced false positives (Oct 2025)
+    # Only trigger on genuinely vague statements, not normal language
     VAGUE_PATTERNS = {
         'time': [
-            r'\b(soon|later|eventually|sometime|next week|next month)\b',
+            r'\b(eventually|sometime)\b',  # Removed "soon", "later" (too common)
             r'\b(probably|maybe|might)\s+(next|this)\s+(week|month)\b',
             r'\basap\b',
-            r'\bwhen (we|you) (can|have time)\b'
+            r'\bwhen (we|you) (can|have time|get around to)\b'
         ],
         'assignment': [
-            r'\b(someone|somebody)\s+(should|needs to|has to|will|must)\b',
-            r'\bwe need to\b(?!\s+(discuss|talk|meet))',  # "we need to" without discussion context
+            r'\b(someone|somebody|anyone)\s+(should|needs to|has to|will|must|can|could)\b',
             r'\bit would be good if\b',
-            r'\bsomeone can\b',
-            r'\banyone (can|should|could)\b'
+            r'\bwhoever (is|has) (available|free)\b'
         ],
         'detail': [
-            r'\bthe (bug|issue|problem)(?!\s+(with|in|about|is|was))',  # "the bug" without context
-            r'\bthat (feature|thing|stuff|item)\b',
-            r'\bthis (needs to be|should be|has to be)\b(?!\s+\w+ed)',  # vague action without specifics
-            r'\b(fix|update|improve|enhance) (it|this|that)\b'
+            r'\bthe (bug|issue|problem)(?!\s+(with|in|about|is|was|that|where|when))',  # More exclusions
+            r'\bthat thing\b',  # Removed "that feature/item" (often clear from context)
+            r'\bstuff (needs|should|has to)\b',  # Only very vague language
+            r'\b(fix|update) (it|this|that)(?!\s+\w)',  # Only if not followed by details
         ],
         'scope': [
-            r'\b(probably|maybe|might|possibly|perhaps)\b',
+            r'\b(probably|maybe|possibly|perhaps)\s+(we|I|they)\s+(should|could|might)\b',  # More specific
             r'\bkind of|sort of\b',
-            r'\bI think\b(?!\s+(we should|it\'s))',
+            r'\bI think\b(?!\s+(we should|it\'s|that|the))',  # More exclusions
             r'\bnot sure (if|whether|about)\b'
+        ]
+    }
+
+    # Whitelist - phrases that look vague but are actually acceptable
+    VAGUENESS_WHITELIST = {
+        'time': [
+            r'\bnext (week|month|quarter)\b',  # Common planning language
+            r'\bsoon\b(?=\s+(as possible|after))',  # "soon as possible" is acceptable
+            r'\blater (today|this week)\b'  # Relative but clear timeframe
+        ],
+        'assignment': [
+            r'\bwe need to\b',  # Team action, not vague assignment
+            r'\bteam (will|should|needs to)\b',  # Team ownership clear
+            r'\beveryone (should|needs to)\b'  # Broadcast action
+        ],
+        'detail': [
+            r'\b(complete|finish|review|update|fix|implement) \w+\b',  # Action + object = clear
+            r'\bschedule (a |the )?\w+\b',  # "schedule demo" is clear enough
+            r'\bthe \w+ (integration|module|feature|service|component)\b'  # Technical terms clear
+        ],
+        'scope': [
+            r'\bI think (we should|that|the)\b',  # Opinion followed by specifics
+            r'\bmaybe (we can|next|after)\b'  # Tentative but clear direction
         ]
     }
 
@@ -81,6 +104,140 @@ class ClarificationService:
     def __init__(self, llm_client):
         self.llm_client = llm_client
 
+    def _is_whitelisted(self, statement: str, vague_type: str) -> bool:
+        """
+        Check if statement matches whitelist patterns (acceptable "vague" language).
+        Added Oct 2025 to reduce false positives on normal business language.
+
+        Args:
+            statement: The statement to check
+            vague_type: Type of vagueness (time, assignment, detail, scope)
+
+        Returns:
+            True if statement is whitelisted (should NOT alert), False otherwise
+        """
+        whitelist = self.VAGUENESS_WHITELIST.get(vague_type, [])
+        for pattern in whitelist:
+            if re.search(pattern, statement, re.IGNORECASE):
+                logger.debug(f"Statement matches whitelist pattern for {vague_type}: {pattern}")
+                return True
+        return False
+
+    def _has_specific_details(self, statement: str) -> bool:
+        """
+        Check if statement contains specific technical details or concrete information.
+        Helps filter out false positives where context makes intent clear.
+
+        Args:
+            statement: The statement to check
+
+        Returns:
+            True if statement has sufficient specificity, False if genuinely vague
+        """
+        # Check for technical specificity indicators
+        specificity_indicators = [
+            r'\b(API|database|frontend|backend|UI|UX|service|module|component)\b',
+            r'\b(OAuth|JWT|PostgreSQL|MongoDB|TypeScript|JavaScript|Python)\b',  # Technologies
+            r'\b\d+\s+(days?|weeks?|months?|hours?|minutes?)\b',  # Quantified time
+            r'\b(version|release|milestone|sprint)\s+\d+',  # Versions/iterations
+            r'\b[A-Z][a-z]+\s+(will|should|to|needs to)\b',  # Named person + action
+            r'\b(by|before|until)\s+(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|today|tomorrow)\b',  # Specific dates
+            r'\b(complete|finish|implement|deploy|test|review|update)\s+\w+\s+\w+',  # Action + multi-word object
+        ]
+
+        for pattern in specificity_indicators:
+            if re.search(pattern, statement, re.IGNORECASE):
+                return True
+
+        # Check statement length - longer statements usually have more context
+        word_count = len(statement.split())
+        if word_count >= 8:  # 8+ words likely has sufficient detail
+            return True
+
+        return False
+
+    def _has_sufficient_context(
+        self,
+        statement: str,
+        context: str,
+        vague_type: str
+    ) -> bool:
+        """
+        Check if surrounding context provides sufficient clarity for a potentially vague statement.
+        Added Oct 2025 to reduce false positives.
+
+        Args:
+            statement: The potentially vague statement
+            context: Surrounding meeting context
+            vague_type: Type of vagueness detected (time, assignment, detail, scope)
+
+        Returns:
+            True if context provides clarity, False if still vague
+        """
+        if not context:
+            return False
+
+        # Create search window: 100 chars before statement + statement + 100 chars after
+        # Find statement in context
+        statement_pos = context.find(statement)
+        if statement_pos == -1:
+            # Statement not in context, check full context
+            search_text = context
+        else:
+            start = max(0, statement_pos - 100)
+            end = min(len(context), statement_pos + len(statement) + 100)
+            search_text = context[start:end]
+
+        # Type-specific context checks
+        if vague_type == 'assignment':
+            # Check for owner mentions
+            owner_patterns = [
+                r'\b(John|Sarah|Mike|Lisa|Alice|Bob|Tom|Jane|David|Emma)\b',  # Common names
+                r'\b(assigned to|owner:|responsible:)\b',
+                r'\b([A-Z][a-z]+)\s+(will|can|should|to)\s+',  # "John will", "Sarah to"
+            ]
+            for pattern in owner_patterns:
+                if re.search(pattern, search_text, re.IGNORECASE):
+                    return True
+
+        elif vague_type == 'time':
+            # Check for deadline mentions
+            deadline_patterns = [
+                r'\b(by|before|until)\s+\w+\s+\d+',  # "by October 25"
+                r'\b(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b',
+                r'\b(today|tomorrow|next week|this week|EOD|end of day)\b',
+                r'\b(deadline|due date|target date)\b',
+                r'\bby\s+(end of|start of)\s+(week|month|quarter)\b',
+            ]
+            for pattern in deadline_patterns:
+                if re.search(pattern, search_text, re.IGNORECASE):
+                    return True
+
+        elif vague_type == 'detail':
+            # Check for specific details nearby
+            detail_patterns = [
+                r'\b(specifically|exactly|in detail|details:)\b',
+                r'\b(API|database|frontend|backend|UI|UX)\b',  # Technical specifics
+                r'\b\d+\s+(items|tasks|bugs|features)\b',  # Quantities
+                r'\b(version|release|milestone)\s+\d+',  # Versions
+            ]
+            for pattern in detail_patterns:
+                if re.search(pattern, search_text, re.IGNORECASE):
+                    return True
+
+        elif vague_type == 'scope':
+            # Check for firm commitments nearby
+            firm_patterns = [
+                r'\b(definitely|certainly|confirmed|approved|decided)\b',
+                r'\b(we will|we shall|agreed to)\b',
+                r'\b(committed|committed to|commitment)\b',
+            ]
+            for pattern in firm_patterns:
+                if re.search(pattern, search_text, re.IGNORECASE):
+                    return True
+
+        return False
+
     async def detect_vagueness(
         self,
         statement: str,
@@ -88,6 +245,7 @@ class ClarificationService:
     ) -> Optional[ClarificationSuggestion]:
         """
         Detect if a statement is vague and needs clarification.
+        Enhanced with multi-layer filtering (Oct 2025) to reduce false positives.
         Returns None if statement is clear enough.
         """
         if not statement or len(statement.strip()) < 5:
@@ -98,11 +256,37 @@ class ClarificationService:
             for pattern in patterns:
                 if re.search(pattern, statement, re.IGNORECASE):
                     logger.info(f"Detected {vague_type} vagueness via pattern: {pattern}")
+
+                    # Layer 1: Whitelist check - acceptable "vague" phrases
+                    if self._is_whitelisted(statement, vague_type):
+                        logger.debug(
+                            f"Pattern matched but statement is whitelisted for {vague_type}, "
+                            f"skipping alert"
+                        )
+                        continue
+
+                    # Layer 2: Specificity check - does statement have concrete details?
+                    if self._has_specific_details(statement):
+                        logger.debug(
+                            f"Pattern matched but statement has specific details, "
+                            f"skipping alert"
+                        )
+                        continue
+
+                    # Layer 3: Context check - does surrounding context provide clarity?
+                    if self._has_sufficient_context(statement, context, vague_type):
+                        logger.debug(
+                            f"Pattern matched but context provides clarity for {vague_type}, "
+                            f"skipping alert"
+                        )
+                        continue
+
+                    # All filters passed - genuinely vague, generate clarification
                     return await self._generate_clarification(
                         statement=statement,
                         vagueness_type=vague_type,
                         context=context,
-                        confidence=0.85
+                        confidence=0.90  # Raised from 0.85 to 0.90 (Oct 2025)
                     )
 
         # Use LLM for more subtle vagueness (slower, broader coverage)
