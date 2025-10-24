@@ -123,8 +123,6 @@ class LiveInsightsSettingsService {
         return 'incomplete_action_item';
       case ProactiveAssistanceType.followUpSuggestion:
         return 'follow_up_suggestion';
-      case ProactiveAssistanceType.repetitionDetected:
-        return 'repetition_detected';
     }
   }
 
@@ -141,8 +139,6 @@ class LiveInsightsSettingsService {
         return ProactiveAssistanceType.incompleteActionItem;
       case 'follow_up_suggestion':
         return ProactiveAssistanceType.followUpSuggestion;
-      case 'repetition_detected':
-        return ProactiveAssistanceType.repetitionDetected;
       default:
         return null;
     }

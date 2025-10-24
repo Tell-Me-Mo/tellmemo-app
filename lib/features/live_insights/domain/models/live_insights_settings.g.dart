@@ -59,7 +59,6 @@ const _$ProactiveAssistanceTypeEnumMap = {
   ProactiveAssistanceType.conflictDetected: 'conflict_detected',
   ProactiveAssistanceType.incompleteActionItem: 'incomplete_action_item',
   ProactiveAssistanceType.followUpSuggestion: 'follow_up_suggestion',
-  ProactiveAssistanceType.repetitionDetected: 'repetition_detected',
 };
 
 const _$LiveInsightTypeEnumMap = {

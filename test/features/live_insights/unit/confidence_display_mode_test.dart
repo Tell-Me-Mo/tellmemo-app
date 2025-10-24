@@ -3,7 +3,7 @@ import 'package:pm_master_v2/features/live_insights/domain/models/proactive_assi
 
 void main() {
   group('Confidence-Based Display Mode', () {
-    test('Auto-answer: high confidence (>0.85) shows immediate', () {
+    test('Auto-answer: high confidence (>0.80) shows immediate', () {
       final assistance = ProactiveAssistanceModel(
         type: ProactiveAssistanceType.autoAnswer,
         autoAnswer: AutoAnswerAssistance(
@@ -20,14 +20,14 @@ void main() {
       expect(assistance.displayMode, DisplayMode.immediate);
     });
 
-    test('Auto-answer: medium confidence (0.75-0.85) shows collapsed', () {
+    test('Auto-answer: medium confidence (0.65-0.80) shows collapsed', () {
       final assistance = ProactiveAssistanceModel(
         type: ProactiveAssistanceType.autoAnswer,
         autoAnswer: AutoAnswerAssistance(
           insightId: 'test_2',
           question: 'What is the budget?',
           answer: 'Budget might be 50K',
-          confidence: 0.80,
+          confidence: 0.70,
           sources: [],
           reasoning: 'Found in past meeting',
           timestamp: DateTime.now(),
@@ -37,14 +37,14 @@ void main() {
       expect(assistance.displayMode, DisplayMode.collapsed);
     });
 
-    test('Auto-answer: low confidence (<0.75) is hidden', () {
+    test('Auto-answer: low confidence (<0.65) is hidden', () {
       final assistance = ProactiveAssistanceModel(
         type: ProactiveAssistanceType.autoAnswer,
         autoAnswer: AutoAnswerAssistance(
           insightId: 'test_3',
           question: 'What is the budget?',
           answer: 'Budget uncertain',
-          confidence: 0.70,
+          confidence: 0.60,
           sources: [],
           reasoning: 'Weak match',
           timestamp: DateTime.now(),
@@ -54,7 +54,7 @@ void main() {
       expect(assistance.displayMode, DisplayMode.hidden);
     });
 
-    test('Conflict: high confidence (>0.80) shows immediate', () {
+    test('Conflict: high confidence (>0.75) shows immediate', () {
       final assistance = ProactiveAssistanceModel(
         type: ProactiveAssistanceType.conflictDetected,
         conflict: ConflictAssistance(
@@ -75,7 +75,7 @@ void main() {
       expect(assistance.displayMode, DisplayMode.immediate);
     });
 
-    test('Conflict: medium confidence (0.70-0.80) shows collapsed', () {
+    test('Conflict: medium confidence (0.65-0.75) shows collapsed', () {
       final assistance = ProactiveAssistanceModel(
         type: ProactiveAssistanceType.conflictDetected,
         conflict: ConflictAssistance(
@@ -86,7 +86,7 @@ void main() {
           conflictingSnippet: 'Decided to use GraphQL',
           conflictingDate: DateTime.now(),
           conflictSeverity: 'medium',
-          confidence: 0.75,
+          confidence: 0.70,
           reasoning: 'Possible contradiction',
           resolutionSuggestions: [],
           timestamp: DateTime.now(),
@@ -96,7 +96,7 @@ void main() {
       expect(assistance.displayMode, DisplayMode.collapsed);
     });
 
-    test('Conflict: low confidence (<0.70) is hidden', () {
+    test('Conflict: low confidence (<0.65) is hidden', () {
       final assistance = ProactiveAssistanceModel(
         type: ProactiveAssistanceType.conflictDetected,
         conflict: ConflictAssistance(
@@ -107,7 +107,7 @@ void main() {
           conflictingSnippet: 'Decided to use GraphQL',
           conflictingDate: DateTime.now(),
           conflictSeverity: 'low',
-          confidence: 0.65,
+          confidence: 0.60,
           reasoning: 'Weak conflict',
           resolutionSuggestions: [],
           timestamp: DateTime.now(),
@@ -155,7 +155,7 @@ void main() {
       expect(assistance.displayMode, DisplayMode.collapsed);
     });
 
-    test('Follow-up suggestion: high confidence (>0.75) shows immediate', () {
+    test('Follow-up suggestion: high confidence (>0.70) shows immediate', () {
       final assistance = ProactiveAssistanceModel(
         type: ProactiveAssistanceType.followUpSuggestion,
         followUpSuggestion: FollowUpSuggestionAssistance(
@@ -175,26 +175,7 @@ void main() {
       expect(assistance.displayMode, DisplayMode.immediate);
     });
 
-    test('Repetition detection: high confidence (>0.80) shows immediate', () {
-      final assistance = ProactiveAssistanceModel(
-        type: ProactiveAssistanceType.repetitionDetected,
-        repetitionDetection: RepetitionDetectionAssistance(
-          topic: 'GraphQL vs REST',
-          firstMentionIndex: 0,
-          currentMentionIndex: 5,
-          occurrences: 3,
-          timeSpanMinutes: 15.5,
-          confidence: 0.85,
-          reasoning: 'Same topic discussed 3 times',
-          suggestions: ['Make a decision', 'Move on'],
-          timestamp: DateTime.now(),
-        ),
-      );
-
-      expect(assistance.displayMode, DisplayMode.immediate);
-    });
-
-    test('Clarification: high confidence (>0.80) shows immediate', () {
+    test('Clarification: high confidence (>0.75) shows immediate', () {
       final assistance = ProactiveAssistanceModel(
         type: ProactiveAssistanceType.clarificationNeeded,
         clarification: ClarificationAssistance(

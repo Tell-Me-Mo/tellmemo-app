@@ -95,18 +95,18 @@ void main() {
         'proactive_assistance': [
           {
             'type': 'auto_answer',
-            'insightId': 'insight_123',
+            'insight_id': 'insight_123',
             'question': 'What was our Q4 budget?',
             'answer': 'In the October 10 planning meeting, you allocated \$50K for Q4 marketing.',
             'confidence': 0.89,
             'sources': [
               {
-                'contentId': 'content_abc',
+                'content_id': 'content_abc',
                 'title': 'Q4 Planning Meeting',
                 'snippet': 'Budget allocated: \$50K for marketing...',
                 'date': DateTime.now().toIso8601String(),
-                'relevanceScore': 0.92,
-                'meetingType': 'planning',
+                'relevance_score': 0.92,
+                'meeting_type': 'planning',
               }
             ],
             'reasoning': 'Found exact budget numbers in Q4 planning notes',
@@ -152,7 +152,7 @@ void main() {
         'proactive_assistance': [
           {
             'type': 'auto_answer',
-            'insightId': 'insight_1',
+            'insight_id': 'insight_1',
             'question': 'What was the deadline?',
             'answer': 'The deadline is December 31st.',
             'confidence': 0.85,
@@ -162,7 +162,7 @@ void main() {
           },
           {
             'type': 'auto_answer',
-            'insightId': 'insight_2',
+            'insight_id': 'insight_2',
             'question': 'Who is the project lead?',
             'answer': 'Sarah Johnson is the project lead.',
             'confidence': 0.95,
@@ -257,34 +257,16 @@ void main() {
       // Verify source is displayed
       expect(find.text('Q4 Planning Meeting'), findsOneWidget);
 
-      // Verify buttons are present
-      expect(find.text('Dismiss'), findsOneWidget);
+      // Verify feedback buttons are present (auto-answer type has feedback, not action buttons)
       expect(find.text('Helpful'), findsOneWidget);
+      expect(find.text('Not Helpful'), findsOneWidget);
 
-      // Test accept button
+      // Test that tapping feedback button works without crashing
       await tester.tap(find.text('Helpful'));
       await tester.pumpAndSettle();
-      expect(wasAccepted, isTrue);
 
-      // Reset and test dismiss button
-      wasAccepted = false;
-      wasDismissed = false;
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: ProactiveAssistanceCard(
-              assistance: assistance,
-              onAccept: () => wasAccepted = true,
-              onDismiss: () => wasDismissed = true,
-            ),
-          ),
-        ),
-      );
-
-      await tester.tap(find.text('Dismiss'));
-      await tester.pumpAndSettle();
-      expect(wasDismissed, isTrue);
+      // Verify snackbar appears after feedback
+      expect(find.text('Thank you! This helps improve our AI.'), findsOneWidget);
     });
 
     testWidgets('Confidence badge colors are correct', (WidgetTester tester) async {
@@ -427,7 +409,7 @@ void main() {
           'proactive_assistance': [
             {
               'type': 'auto_answer',
-              'insightId': 'insight_$i',
+              'insight_id': 'insight_$i',
               'question': 'Question $i?',
               'answer': 'Answer $i',
               'confidence': 0.8,

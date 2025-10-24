@@ -15,8 +15,6 @@ enum ProactiveAssistanceType {
   incompleteActionItem,
   @JsonValue('follow_up_suggestion')
   followUpSuggestion,
-  @JsonValue('repetition_detected')
-  repetitionDetected,
 }
 
 /// Display mode for proactive assistance based on confidence thresholds
@@ -35,12 +33,12 @@ enum DisplayMode {
 @freezed
 class AnswerSource with _$AnswerSource {
   const factory AnswerSource({
-    required String contentId,
+    @JsonKey(name: 'content_id') required String contentId,
     required String title,
     required String snippet,
     required DateTime date,
-    required double relevanceScore,
-    required String meetingType,
+    @JsonKey(name: 'relevance_score') required double relevanceScore,
+    @JsonKey(name: 'meeting_type') required String meetingType,
   }) = _AnswerSource;
 
   factory AnswerSource.fromJson(Map<String, dynamic> json) =>
@@ -158,24 +156,6 @@ class FollowUpSuggestionAssistance with _$FollowUpSuggestionAssistance {
       _$FollowUpSuggestionAssistanceFromJson(json);
 }
 
-/// Repetition detection alert for circular discussions
-@freezed
-class RepetitionDetectionAssistance with _$RepetitionDetectionAssistance {
-  const factory RepetitionDetectionAssistance({
-    required String topic,
-    @JsonKey(name: 'first_mention_index') required int firstMentionIndex,
-    @JsonKey(name: 'current_mention_index') required int currentMentionIndex,
-    required int occurrences,
-    @JsonKey(name: 'time_span_minutes') required double timeSpanMinutes,
-    required double confidence,
-    required String reasoning,
-    required List<String> suggestions,
-    required DateTime timestamp,
-  }) = _RepetitionDetectionAssistance;
-
-  factory RepetitionDetectionAssistance.fromJson(Map<String, dynamic> json) =>
-      _$RepetitionDetectionAssistanceFromJson(json);
-}
 
 /// Main proactive assistance model
 @freezed
@@ -189,7 +169,6 @@ class ProactiveAssistanceModel with _$ProactiveAssistanceModel {
     ConflictAssistance? conflict,
     ActionItemQualityAssistance? actionItemQuality,
     FollowUpSuggestionAssistance? followUpSuggestion,
-    RepetitionDetectionAssistance? repetitionDetection,
   }) = _ProactiveAssistanceModel;
 
   /// Get the confidence score for this assistance
@@ -205,8 +184,6 @@ class ProactiveAssistanceModel with _$ProactiveAssistanceModel {
         return 1.0; // Quality checks always shown (completeness score is different)
       case ProactiveAssistanceType.followUpSuggestion:
         return followUpSuggestion?.confidence ?? 0.0;
-      case ProactiveAssistanceType.repetitionDetected:
-        return repetitionDetection?.confidence ?? 0.0;
     }
   }
 
@@ -241,11 +218,6 @@ class ProactiveAssistanceModel with _$ProactiveAssistanceModel {
       ProactiveAssistanceType.followUpSuggestion when conf > 0.70 => DisplayMode.immediate,
       ProactiveAssistanceType.followUpSuggestion when conf > 0.55 => DisplayMode.collapsed,
       ProactiveAssistanceType.followUpSuggestion => DisplayMode.hidden,
-
-      // Repetition detection: Lowered thresholds (was 80%/70%, now 75%/65%)
-      ProactiveAssistanceType.repetitionDetected when conf > 0.75 => DisplayMode.immediate,
-      ProactiveAssistanceType.repetitionDetected when conf > 0.65 => DisplayMode.collapsed,
-      ProactiveAssistanceType.repetitionDetected => DisplayMode.hidden,
     };
   }
 
@@ -279,11 +251,6 @@ class ProactiveAssistanceModel with _$ProactiveAssistanceModel {
           type: assistanceType,
           followUpSuggestion: FollowUpSuggestionAssistance.fromJson(json),
         );
-      case ProactiveAssistanceType.repetitionDetected:
-        return ProactiveAssistanceModel(
-          type: assistanceType,
-          repetitionDetection: RepetitionDetectionAssistance.fromJson(json),
-        );
       default:
         return ProactiveAssistanceModel(type: assistanceType);
     }
@@ -301,8 +268,6 @@ class ProactiveAssistanceModel with _$ProactiveAssistanceModel {
         return ProactiveAssistanceType.incompleteActionItem;
       case 'follow_up_suggestion':
         return ProactiveAssistanceType.followUpSuggestion;
-      case 'repetition_detected':
-        return ProactiveAssistanceType.repetitionDetected;
       default:
         throw ArgumentError('Unknown assistance type: $type');
     }

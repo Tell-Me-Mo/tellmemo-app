@@ -180,8 +180,6 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
       confidence = widget.assistance.conflict?.confidence;
     } else if (widget.assistance.type == ProactiveAssistanceType.followUpSuggestion) {
       confidence = widget.assistance.followUpSuggestion?.confidence;
-    } else if (widget.assistance.type == ProactiveAssistanceType.repetitionDetected) {
-      confidence = widget.assistance.repetitionDetection?.confidence;
     }
 
     if (confidence == null) return const SizedBox.shrink();
@@ -223,8 +221,6 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
         return _buildActionItemQualityContent();
       case ProactiveAssistanceType.followUpSuggestion:
         return _buildFollowUpSuggestionContent();
-      case ProactiveAssistanceType.repetitionDetected:
-        return _buildRepetitionDetectionContent();
     }
   }
 
@@ -1192,201 +1188,6 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
     );
   }
 
-  Widget _buildRepetitionDetectionContent() {
-    final repetition = widget.assistance.repetitionDetection;
-    if (repetition == null) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Topic
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.deepOrange[50],
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.deepOrange[300]!, width: 2),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.loop, color: Colors.deepOrange[700], size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Repeated Topic',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.deepOrange[900],
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        repetition.topic,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.deepOrange[900],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Occurrences and time span
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.deepOrange[200]!),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.history, color: Colors.deepOrange[700], size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Discussed ${repetition.occurrences} times over ${repetition.timeSpanMinutes.toStringAsFixed(1)} minutes',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.grey[800],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Reasoning
-          Text(
-            'Why this matters:',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[700],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.amber[50],
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.amber[200]!),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.lightbulb_outline, color: Colors.amber[700], size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    repetition.reasoning,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.amber[900],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Suggestions
-          if (repetition.suggestions.isNotEmpty) ...[
-            Text(
-              'Suggestions to move forward:',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[700],
-              ),
-            ),
-            const SizedBox(height: 8),
-            ...repetition.suggestions.take(4).map((suggestion) =>
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      margin: const EdgeInsets.only(top: 6),
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: Colors.deepOrange[700],
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        suggestion,
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            ),
-          ],
-
-          // Action buttons
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              TextButton.icon(
-                onPressed: _handleDismiss,
-                icon: const Icon(Icons.close, size: 18),
-                label: const Text('Dismiss'),
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.grey[600],
-                ),
-              ),
-              const SizedBox(width: 8),
-              TextButton.icon(
-                onPressed: () {
-                  // Handle continue action
-                  widget.onDismiss?.call();
-                  _animateDismiss();
-                },
-                icon: const Icon(Icons.arrow_forward, size: 18),
-                label: const Text('Continue'),
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.grey[700],
-                ),
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton.icon(
-                onPressed: _handleAccept,
-                icon: const Icon(Icons.pause_circle_outline, size: 18),
-                label: const Text('Table Discussion'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepOrange,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildUrgencyBadge(String urgency) {
     Color color;
@@ -1646,8 +1447,6 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
         return Icons.error_outline;
       case ProactiveAssistanceType.followUpSuggestion:
         return Icons.tips_and_updates;
-      case ProactiveAssistanceType.repetitionDetected:
-        return Icons.loop;
     }
   }
 
@@ -1663,8 +1462,6 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
         return Colors.amber[700]!;
       case ProactiveAssistanceType.followUpSuggestion:
         return Colors.purple[700]!;
-      case ProactiveAssistanceType.repetitionDetected:
-        return Colors.deepOrange[700]!;
     }
   }
 
@@ -1680,8 +1477,6 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
         return '📝 Incomplete Action Item';
       case ProactiveAssistanceType.followUpSuggestion:
         return '💭 Follow-up Suggestion';
-      case ProactiveAssistanceType.repetitionDetected:
-        return 'Repetitive Discussion Detected';
     }
   }
 
@@ -1697,8 +1492,6 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
         return widget.assistance.actionItemQuality?.actionItem;
       case ProactiveAssistanceType.followUpSuggestion:
         return widget.assistance.followUpSuggestion?.topic;
-      case ProactiveAssistanceType.repetitionDetected:
-        return widget.assistance.repetitionDetection?.topic;
       default:
         return null;
     }
@@ -1716,8 +1509,6 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
         return Colors.amber[50]!;
       case ProactiveAssistanceType.followUpSuggestion:
         return Colors.purple[50]!;
-      case ProactiveAssistanceType.repetitionDetected:
-        return Colors.deepOrange[50]!;
     }
   }
 
@@ -1733,8 +1524,6 @@ class _ProactiveAssistanceCardState extends State<ProactiveAssistanceCard>
         return Colors.amber[300]!;
       case ProactiveAssistanceType.followUpSuggestion:
         return Colors.purple[300]!;
-      case ProactiveAssistanceType.repetitionDetected:
-        return Colors.deepOrange[300]!;
     }
   }
 }

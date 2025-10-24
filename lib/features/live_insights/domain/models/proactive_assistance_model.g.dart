@@ -8,22 +8,22 @@ part of 'proactive_assistance_model.dart';
 
 _$AnswerSourceImpl _$$AnswerSourceImplFromJson(Map<String, dynamic> json) =>
     _$AnswerSourceImpl(
-      contentId: json['contentId'] as String,
+      contentId: json['content_id'] as String,
       title: json['title'] as String,
       snippet: json['snippet'] as String,
       date: DateTime.parse(json['date'] as String),
-      relevanceScore: (json['relevanceScore'] as num).toDouble(),
-      meetingType: json['meetingType'] as String,
+      relevanceScore: (json['relevance_score'] as num).toDouble(),
+      meetingType: json['meeting_type'] as String,
     );
 
 Map<String, dynamic> _$$AnswerSourceImplToJson(_$AnswerSourceImpl instance) =>
     <String, dynamic>{
-      'contentId': instance.contentId,
+      'content_id': instance.contentId,
       'title': instance.title,
       'snippet': instance.snippet,
       'date': instance.date.toIso8601String(),
-      'relevanceScore': instance.relevanceScore,
-      'meetingType': instance.meetingType,
+      'relevance_score': instance.relevanceScore,
+      'meeting_type': instance.meetingType,
     };
 
 _$AutoAnswerAssistanceImpl _$$AutoAnswerAssistanceImplFromJson(
@@ -190,35 +190,5 @@ Map<String, dynamic> _$$FollowUpSuggestionAssistanceImplToJson(
   'urgency': instance.urgency,
   'context_snippet': instance.contextSnippet,
   'confidence': instance.confidence,
-  'timestamp': instance.timestamp.toIso8601String(),
-};
-
-_$RepetitionDetectionAssistanceImpl
-_$$RepetitionDetectionAssistanceImplFromJson(Map<String, dynamic> json) =>
-    _$RepetitionDetectionAssistanceImpl(
-      topic: json['topic'] as String,
-      firstMentionIndex: (json['first_mention_index'] as num).toInt(),
-      currentMentionIndex: (json['current_mention_index'] as num).toInt(),
-      occurrences: (json['occurrences'] as num).toInt(),
-      timeSpanMinutes: (json['time_span_minutes'] as num).toDouble(),
-      confidence: (json['confidence'] as num).toDouble(),
-      reasoning: json['reasoning'] as String,
-      suggestions: (json['suggestions'] as List<dynamic>)
-          .map((e) => e as String)
-          .toList(),
-      timestamp: DateTime.parse(json['timestamp'] as String),
-    );
-
-Map<String, dynamic> _$$RepetitionDetectionAssistanceImplToJson(
-  _$RepetitionDetectionAssistanceImpl instance,
-) => <String, dynamic>{
-  'topic': instance.topic,
-  'first_mention_index': instance.firstMentionIndex,
-  'current_mention_index': instance.currentMentionIndex,
-  'occurrences': instance.occurrences,
-  'time_span_minutes': instance.timeSpanMinutes,
-  'confidence': instance.confidence,
-  'reasoning': instance.reasoning,
-  'suggestions': instance.suggestions,
   'timestamp': instance.timestamp.toIso8601String(),
 };

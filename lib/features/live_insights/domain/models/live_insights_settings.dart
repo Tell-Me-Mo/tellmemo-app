@@ -71,7 +71,6 @@ class LiveInsightsSettings with _$LiveInsightsSettings {
     ProactiveAssistanceType.conflictDetected,
     ProactiveAssistanceType.incompleteActionItem,
     ProactiveAssistanceType.followUpSuggestion,
-    ProactiveAssistanceType.repetitionDetected,
   };
 
   /// All available insight types
@@ -110,7 +109,6 @@ class LiveInsightsSettings with _$LiveInsightsSettings {
         return AssistancePriority.important;
 
       case ProactiveAssistanceType.followUpSuggestion:
-      case ProactiveAssistanceType.repetitionDetected:
         return AssistancePriority.informational;
     }
   }
@@ -165,8 +163,6 @@ class LiveInsightsSettings with _$LiveInsightsSettings {
         return 'Action Item Quality';
       case ProactiveAssistanceType.followUpSuggestion:
         return 'Follow-up Suggestions';
-      case ProactiveAssistanceType.repetitionDetected:
-        return 'Repetition Detection';
     }
   }
 
@@ -183,8 +179,6 @@ class LiveInsightsSettings with _$LiveInsightsSettings {
         return 'Ensure action items have owners, deadlines, and clear descriptions';
       case ProactiveAssistanceType.followUpSuggestion:
         return 'Recommend related topics and open items from past meetings';
-      case ProactiveAssistanceType.repetitionDetected:
-        return 'Detect circular discussions and monitor time usage';
     }
   }
 
@@ -201,8 +195,6 @@ class LiveInsightsSettings with _$LiveInsightsSettings {
         return '💛';
       case ProactiveAssistanceType.followUpSuggestion:
         return '💜';
-      case ProactiveAssistanceType.repetitionDetected:
-        return '🔶';
     }
   }
 
