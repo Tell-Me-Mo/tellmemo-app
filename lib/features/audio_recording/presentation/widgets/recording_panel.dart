@@ -504,16 +504,17 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel>
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Live Insights settings button
-                IconButton(
-                  icon: const Icon(Icons.settings_outlined, size: 18),
-                  onPressed: () => _showLiveInsightsSettings(context),
-                  tooltip: 'Live Insights Settings',
-                  style: IconButton.styleFrom(
-                    padding: const EdgeInsets.all(8),
-                  ),
-                ),
               ],
+
+              // Live Insights settings button - always visible
+              IconButton(
+                icon: const Icon(Icons.settings_outlined, size: 18),
+                onPressed: () => _showLiveInsightsSettings(context),
+                tooltip: 'Live Insights Settings',
+                style: IconButton.styleFrom(
+                  padding: const EdgeInsets.all(8),
+                ),
+              ),
 
               IconButton(
                 icon: const Icon(Icons.close, size: 20),
@@ -957,90 +958,6 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel>
     );
   }
 
-  // Old custom card builder removed - now using ProactiveAssistanceCard widget
-  Widget _buildAssistanceCard_DEPRECATED(ProactiveAssistanceModel assistance,
-      ThemeData theme, ColorScheme colorScheme) {
-    String title;
-    String content;
-    IconData icon;
-
-    switch (assistance.type) {
-      case ProactiveAssistanceType.autoAnswer:
-        title = 'Auto-Answer';
-        content = assistance.autoAnswer?.question ?? 'Question answered';
-        icon = Icons.quiz;
-        break;
-      case ProactiveAssistanceType.clarificationNeeded:
-        title = 'Clarification Needed';
-        content = assistance.clarification?.statement ?? 'Needs clarification';
-        icon = Icons.help_outline;
-        break;
-      case ProactiveAssistanceType.conflictDetected:
-        title = 'Conflict Detected';
-        content = assistance.conflict?.currentStatement ?? 'Conflict found';
-        icon = Icons.warning_amber;
-        break;
-      case ProactiveAssistanceType.incompleteActionItem:
-        title = 'Incomplete Action Item';
-        content = assistance.actionItemQuality?.actionItem ?? 'Action item needs improvement';
-        icon = Icons.assignment_late;
-        break;
-      case ProactiveAssistanceType.followUpSuggestion:
-        title = 'Follow-Up Suggestion';
-        content = assistance.followUpSuggestion?.topic ?? 'Follow-up recommended';
-        icon = Icons.lightbulb_outline;
-        break;
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colorScheme.primaryContainer.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: colorScheme.primary.withValues(alpha: 0.2),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: colorScheme.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Icon(
-                  icon,
-                  size: 16,
-                  color: colorScheme.primary,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  title,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            content,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              height: 1.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildEmptyInsightsState(ThemeData theme, ColorScheme colorScheme) {
     return Center(

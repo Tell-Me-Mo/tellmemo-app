@@ -64,11 +64,6 @@ class LiveInsightsSettingsDialog extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Quick toggles
-                    _buildQuickToggles(settings, notifier),
-
-                    const SizedBox(height: 32),
-
                     // Phase toggles
                     _buildPhaseToggles(settings, notifier),
 
@@ -129,96 +124,6 @@ class LiveInsightsSettingsDialog extends ConsumerWidget {
     );
   }
 
-  Widget _buildQuickToggles(LiveInsightsSettings settings, LiveInsightsSettingsNotifier notifier) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Quick Settings',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 16),
-
-        // Quiet Mode
-        SwitchListTile(
-          value: settings.quietMode,
-          onChanged: (_) => notifier.toggleQuietMode(),
-          title: const Row(
-            children: [
-              Icon(Icons.volume_off, size: 20),
-              SizedBox(width: 8),
-              Text('Quiet Mode'),
-            ],
-          ),
-          subtitle: const Text(
-            'Only show critical alerts (conflicts and action item quality)',
-            style: TextStyle(fontSize: 12),
-          ),
-          contentPadding: EdgeInsets.zero,
-        ),
-
-        const Divider(),
-
-        // Show Collapsed Items
-        SwitchListTile(
-          value: settings.showCollapsedItems,
-          onChanged: (_) => notifier.toggleShowCollapsedItems(),
-          title: const Row(
-            children: [
-              Icon(Icons.expand_more, size: 20),
-              SizedBox(width: 8),
-              Text('Show Medium Confidence Items'),
-            ],
-          ),
-          subtitle: const Text(
-            'Display items with medium confidence in collapsed state',
-            style: TextStyle(fontSize: 12),
-          ),
-          contentPadding: EdgeInsets.zero,
-        ),
-
-        const Divider(),
-
-        // Auto-expand high confidence
-        SwitchListTile(
-          value: settings.autoExpandHighConfidence,
-          onChanged: (_) => notifier.toggleAutoExpandHighConfidence(),
-          title: const Row(
-            children: [
-              Icon(Icons.unfold_more, size: 20),
-              SizedBox(width: 8),
-              Text('Auto-Expand High Confidence'),
-            ],
-          ),
-          subtitle: const Text(
-            'Automatically expand items with high confidence scores',
-            style: TextStyle(fontSize: 12),
-          ),
-          contentPadding: EdgeInsets.zero,
-        ),
-
-        const Divider(),
-
-        // Enable Feedback
-        SwitchListTile(
-          value: settings.enableFeedback,
-          onChanged: (_) => notifier.toggleEnableFeedback(),
-          title: const Row(
-            children: [
-              Icon(Icons.thumb_up_outlined, size: 20),
-              SizedBox(width: 8),
-              Text('Enable Feedback Collection'),
-            ],
-          ),
-          subtitle: const Text(
-            'Show thumbs up/down buttons to help improve AI accuracy',
-            style: TextStyle(fontSize: 12),
-          ),
-          contentPadding: EdgeInsets.zero,
-        ),
-      ],
-    );
-  }
 
   Widget _buildPhaseToggles(LiveInsightsSettings settings, LiveInsightsSettingsNotifier notifier) {
     return Column(
