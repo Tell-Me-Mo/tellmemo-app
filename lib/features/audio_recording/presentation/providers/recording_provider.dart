@@ -240,6 +240,12 @@ class RecordingNotifier extends _$RecordingNotifier {
   Future<void> pauseRecording() async {
     await _audioService.pauseRecording();
 
+    // Pause audio streaming if live insights are enabled
+    if (state.liveInsightsEnabled && _audioStreamingService != null) {
+      await _audioStreamingService!.pauseStreaming();
+      print('[RecordingProvider] Paused live audio streaming');
+    }
+
     // Log recording paused analytics
     try {
       await FirebaseAnalyticsService().logRecordingPaused(
@@ -253,6 +259,12 @@ class RecordingNotifier extends _$RecordingNotifier {
   // Resume recording
   Future<void> resumeRecording() async {
     await _audioService.resumeRecording();
+
+    // Resume audio streaming if live insights are enabled
+    if (state.liveInsightsEnabled && _audioStreamingService != null) {
+      await _audioStreamingService!.resumeStreaming();
+      print('[RecordingProvider] Resumed live audio streaming');
+    }
 
     // Log recording resumed analytics
     try {
