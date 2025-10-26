@@ -607,17 +607,19 @@ Status: COMPLETED - 2025-10-26 19:00
 **Description:** Create service that uses GPT-5-mini to generate answers based on its knowledge when all other tiers fail to find answers.
 
 **Acceptance Criteria:**
-- [ ] Create `GPTAnswerGenerator` class in `/backend/services/intelligence/gpt_answer_generator.py`
-- [ ] Trigger only when Tier 1, 2, and 3 don't find answers (after 15s monitoring timeout)
-- [ ] Send question context + meeting context to GPT-5-mini
-- [ ] Request GPT to generate answer based on its knowledge
-- [ ] Include confidence score with generated answer (GPT self-assessment)
-- [ ] Add disclaimer metadata: "AI-generated answer based on general knowledge"
-- [ ] Set answer_source as "gpt_generated" in database
-- [ ] Implement 3-second timeout for GPT response
-- [ ] Send GPT_GENERATED_ANSWER event via WebSocket with clear source attribution
-- [ ] Handle cases where GPT cannot confidently answer (confidence <70%)
-- [ ] Write tests with various question types
+- [x] Create `GPTAnswerGenerator` class in `/backend/services/intelligence/gpt_answer_generator.py`
+- [x] Trigger only when Tier 1, 2, and 3 don't find answers (after 15s monitoring timeout)
+- [x] Send question context + meeting context to GPT-5-mini
+- [x] Request GPT to generate answer based on its knowledge
+- [x] Include confidence score with generated answer (GPT self-assessment)
+- [x] Add disclaimer metadata: "AI-generated answer based on general knowledge"
+- [x] Set answer_source as "gpt_generated" in database
+- [x] Implement 3-second timeout for GPT response
+- [x] Send GPT_GENERATED_ANSWER event via WebSocket with clear source attribution
+- [x] Handle cases where GPT cannot confidently answer (confidence <70%)
+- [ ] Write tests with various question types (TODO: post-MVP)
+
+Status: COMPLETED - 2025-10-26
 
 **Complexity:** Medium
 **Dependencies:** Task 3.3

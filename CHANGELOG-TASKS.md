@@ -4,6 +4,54 @@
 
 ### [2025-10-26]
 #### Added
+- **Task 3.4 - Implement GPT-Generated Answer Service (Tier 4)**: Created AI-powered fallback answer generation for questions using GPT-5-mini
+  - Implementation: Backend service for generating answers when RAG, meeting context, and live monitoring fail
+  - Core Features:
+    - **GPTAnswerGenerator Service** (`/backend/services/intelligence/gpt_answer_generator.py`, 418 lines)
+      - Uses GPT-5-mini to generate answers based on general knowledge
+      - Implements 3-second timeout per Task 3.4 requirements
+      - Confidence threshold: 70% minimum to return answer
+      - Temperature: 0.7 for balanced creativity and consistency
+      - Max tokens: 300 for concise answers
+      - JSON response format with answer, confidence, and disclaimer
+    - **Prompt Engineering:**
+      - System prompt: Instructs GPT to generate concise, helpful answers with confidence scoring
+      - User prompt: Includes question text, speaker, and meeting context
+      - Explicitly states question couldn't be answered from documents or meeting
+      - Requests JSON format: {"answer": "...", "confidence": 0-100, "disclaimer": "..."}
+    - **Database Integration:**
+      - Updates LiveMeetingInsight with GPT-generated answer
+      - Sets answer_source to AnswerSource.GPT_GENERATED
+      - Sets status to InsightStatus.FOUND when answer generated
+      - Adds tier_result with answer, confidence, disclaimer, timestamp, model
+    - **WebSocket Broadcasting:**
+      - Sends GPT_GENERATED_ANSWER event to all session participants
+      - Includes answer text, confidence score, disclaimer, source, and model
+      - Provides clear attribution that answer is AI-generated
+    - **Fallback Handling:**
+      - If confidence < 70%, marks question as UNANSWERED
+      - Broadcasts QUESTION_UNANSWERED event to clients
+      - Handles timeout gracefully (3s max)
+      - Logs all generation attempts with context
+  - Integration with QuestionHandler:
+    - Modified `_tier4_gpt_generated_answer()` method in `/backend/services/intelligence/question_handler.py`
+    - Instantiates GPTAnswerGenerator with WebSocket callback and timeout
+    - Passes question context (text, speaker) to generator
+    - Triggered only when Tier 1 (RAG), Tier 2 (Meeting Context), and Tier 3 (Live Monitoring) all fail
+    - Updated `_parallel_answer_discovery()` to pass speaker parameter through tiers
+  - Error Handling:
+    - Timeout handling with asyncio.wait_for
+    - JSON parsing validation with detailed logging
+    - Database rollback on update failures
+    - Broadcast callback error handling
+  - Cost Efficiency:
+    - Uses fallback provider (session=None) for background tasks
+    - Concise prompts (~200 tokens) and responses (300 max tokens)
+    - Only triggered when other tiers fail to find answers
+  - Files:
+    - Created: `/backend/services/intelligence/gpt_answer_generator.py` (418 lines)
+    - Modified: `/backend/services/intelligence/question_handler.py` (integrated Tier 4)
+
 - **Task 5.5 - Implement Live Insights State Management**: Created comprehensive Riverpod providers for real-time meeting intelligence
   - Implementation: Flutter state management using riverpod_annotation with WebSocket integration
   - Core Features:

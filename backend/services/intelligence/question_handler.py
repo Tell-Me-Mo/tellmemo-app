@@ -130,7 +130,8 @@ class QuestionHandler:
                     question_id=db_question_id,
                     question_text=question_text,
                     project_id=project_id,
-                    organization_id=organization_id
+                    organization_id=organization_id,
+                    speaker=speaker
                 )
             )
 
@@ -153,7 +154,8 @@ class QuestionHandler:
         question_id: str,
         question_text: str,
         project_id: str,
-        organization_id: str
+        organization_id: str,
+        speaker: Optional[str] = None
     ) -> None:
         """Execute parallel answer discovery across four tiers.
 
@@ -169,6 +171,7 @@ class QuestionHandler:
             question_text: The question text
             project_id: Project UUID string
             organization_id: Organization UUID string
+            speaker: Speaker who asked the question (optional)
         """
         try:
             # Execute Tier 1 and Tier 2 in parallel
@@ -205,7 +208,7 @@ class QuestionHandler:
             if not answer_found:
                 # Tier 4: GPT-generated answer (fallback)
                 logger.info(f"No answer found in Tiers 1-3 for question {question_id}, triggering Tier 4")
-                await self._tier4_gpt_generated_answer(session_id, question_id, question_text)
+                await self._tier4_gpt_generated_answer(session_id, question_id, question_text, speaker)
 
         except Exception as e:
             logger.error(
@@ -402,7 +405,8 @@ class QuestionHandler:
         self,
         session_id: str,
         question_id: str,
-        question_text: str
+        question_text: str,
+        speaker: Optional[str] = None
     ) -> bool:
         """Tier 4: Generate answer using GPT-5-mini (fallback when all tiers fail).
 
@@ -410,18 +414,49 @@ class QuestionHandler:
             session_id: Meeting session ID
             question_id: Question database ID
             question_text: The question text
+            speaker: Speaker who asked the question (optional)
 
         Returns:
             True if GPT generated a confident answer, False otherwise
         """
         try:
-            logger.debug(f"Tier 4: Requesting GPT-generated answer for question {question_id}")
+            logger.info(f"Tier 4: Requesting GPT-generated answer for question {question_id}")
 
-            # TODO: Implement GPT answer generation service (Task 3.4)
-            # For now, mark as unanswered
+            # Import GPT Answer Generator
+            from services.intelligence.gpt_answer_generator import GPTAnswerGenerator
 
+            # Create generator with broadcast callback and configured timeout
+            generator = GPTAnswerGenerator(
+                broadcast_callback=self._ws_broadcast_callback,
+                timeout=self.gpt_generation_timeout,
+                confidence_threshold=0.70
+            )
+
+            # Get database session for updates
             from db.database import SessionLocal
             async with SessionLocal() as db_session:
+                # Generate answer
+                success = await generator.generate_answer(
+                    session_id=session_id,
+                    question_id=question_id,
+                    question_text=question_text,
+                    speaker=speaker,
+                    meeting_context=None,  # TODO: Add meeting context if available
+                    db_session=db_session
+                )
+
+                if success:
+                    logger.info(
+                        f"Tier 4: Successfully generated GPT answer for question {question_id}"
+                    )
+                    return True
+
+                # If GPT generation failed or confidence too low, mark as unanswered
+                logger.info(
+                    f"Tier 4: GPT could not confidently answer question {question_id}, "
+                    "marking as unanswered"
+                )
+
                 result = await db_session.execute(
                     select(LiveMeetingInsight).where(
                         LiveMeetingInsight.id == uuid.UUID(question_id)
@@ -432,17 +467,16 @@ class QuestionHandler:
                 if question:
                     question.update_status(InsightStatus.UNANSWERED.value)
                     question.set_answer_source(AnswerSource.UNANSWERED.value)
-
                     await db_session.commit()
 
                     # Broadcast unanswered event
                     await self._broadcast_event(session_id, {
                         "type": "QUESTION_UNANSWERED",
-                        "question_id": question_id
+                        "question_id": question_id,
+                        "timestamp": datetime.utcnow().isoformat()
                     })
 
-            logger.info(f"Tier 4: Question {question_id} marked as unanswered")
-            return False
+                return False
 
         except Exception as e:
             logger.error(
