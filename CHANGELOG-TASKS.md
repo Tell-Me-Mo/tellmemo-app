@@ -4,6 +4,66 @@
 
 ### [2025-10-26]
 #### Added
+- **Task 2.0 - Implement Audio Streaming Pipeline (PARTIAL)**: Created Flutter services for real-time audio streaming to backend
+  - Implementation: Two new services for audio capture and WebSocket transmission
+  - Core Components:
+    - `LiveAudioStreamingService`: Real-time audio capture with chunk emission
+      - Uses `record` package's `startStream()` API for PCM streaming
+      - Audio format: PCM 16kHz, 16-bit, mono (AssemblyAI compatible)
+      - Real-time chunk emission via `Stream<Uint8List>`
+      - Audio quality monitoring: amplitude calculation, silence/clipping detection
+      - Streaming statistics: bytes streamed, chunk count, duration tracking
+    - `LiveAudioWebSocketService`: Binary audio transmission to backend
+      - WebSocket client for `/ws/live-insights/{session_id}` endpoint
+      - Binary frame support: sends `Uint8List` audio chunks directly
+      - Platform-specific channels: `IOWebSocketChannel` (native) and `HtmlWebSocketChannel` (web)
+      - Reconnection logic: exponential backoff (max 5 attempts)
+      - Heartbeat mechanism: 30-second ping/pong
+      - Transcription event handling: `TRANSCRIPTION_PARTIAL` and `TRANSCRIPTION_FINAL`
+  - Audio Configuration:
+    - Encoder: `AudioEncoder.pcm16bits` (raw PCM 16-bit)
+    - Sample Rate: 16kHz (AssemblyAI standard)
+    - Channels: Mono
+    - Bit Rate: 256kbps (16 bits × 16000 Hz)
+    - Features: Auto-gain, echo cancellation, noise suppression enabled
+  - Quality Monitoring:
+    - RMS amplitude calculation from PCM data
+    - Silence detection: amplitude < 1%
+    - Clipping detection: amplitude > 95%
+    - Quality metrics emitted every 500ms via `AudioQualityMetrics` stream
+    - Recent amplitude history (50 samples, 5 seconds)
+  - Statistics Tracking:
+    - `StreamingStatistics`: duration, bytes, chunks, average chunk size
+    - `ConnectionStatistics`: state, chunks sent, bytes sent, connection duration, reconnect attempts
+    - Sequence numbering for all audio chunks
+    - Total bytes streamed counter
+  - State Management:
+    - `StreamingState`: idle, streaming, error
+    - `ConnectionState`: disconnected, connecting, connected, error, failed
+    - Stream controllers for audio chunks, quality metrics, transcription events, state changes
+  - Error Handling:
+    - Permission checks (native platforms)
+    - Stream error recovery
+    - WebSocket error handling with reconnection
+    - Graceful degradation on failures
+  - Remaining Work:
+    - Backend audio reception endpoint (receive binary frames)
+    - Audio buffering strategy (300-500ms buffer before sending)
+    - Circular buffer implementation for memory management
+    - Timestamp synchronization (client ↔ backend)
+    - Integration tests for end-to-end flow
+    - Network condition testing (slow, packet loss)
+    - Backend integration with AssemblyAI
+  - Files:
+    - `/lib/features/audio_recording/domain/services/live_audio_streaming_service.dart` (351 lines)
+    - `/lib/features/audio_recording/domain/services/live_audio_websocket_service.dart` (390 lines)
+  - Testing:
+    - Compile-time validation passed (flutter analyze)
+    - Runtime testing pending
+    - Integration tests not yet written
+
+### [2025-10-26]
+#### Added
 - **Task 7.1 - Create Streaming Intelligence Orchestrator**: Implemented main orchestrator service for coordinating all streaming intelligence components
   - Implementation: Python orchestrator class with session-based singleton pattern and comprehensive component integration
   - Core Components:
