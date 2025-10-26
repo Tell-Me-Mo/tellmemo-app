@@ -9,7 +9,7 @@ STEP 1: INITIAL SCAN (REQUIRED)
 Execute these commands:
 - cat CHANGELOG-TASKS.md | tail -50  (Read last ~2 weeks of changes)
 - cat TASKS-MEETINGS-ASSISTNACE.md                 (Read ALL tasks and general info about the app)
-- cat PROACTIVE_MEETING_ASSISTANCE_HLD.md (Understand the entire requirements)
+- cat docs/PROACTIVE_MEETING_ASSISTANCE_HLD.md (Understand the entire requirements)
 
 Identify:
 - Recent changes in related areas
