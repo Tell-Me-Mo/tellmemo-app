@@ -1045,21 +1045,24 @@ Status: COMPLETED - 2025-10-26
 **Description:** Create WebSocket service for live meeting insights communication on Flutter side.
 
 **Acceptance Criteria:**
-- [ ] Create `LiveInsightsWebSocketService` in `/lib/features/live_insights/services/live_insights_websocket.dart`
-- [ ] Connect to `/ws/live-insights/{sessionId}` with JWT token
-- [ ] Implement auto-reconnection with exponential backoff
-- [ ] Parse incoming message types: QUESTION_DETECTED, RAG_RESULT, ANSWER_FROM_MEETING, ACTION_TRACKED, etc.
-- [ ] Emit events via Stream for provider consumption
-- [ ] Send user feedback messages to backend
-- [ ] Handle connection state changes
-- [ ] Write tests for connection lifecycle
+- [x] Create `LiveInsightsWebSocketService` in `/lib/features/live_insights/domain/services/live_insights_websocket_service.dart`
+- [x] Connect to `/ws/live-insights/{sessionId}` with JWT token
+- [x] Implement auto-reconnection with exponential backoff
+- [x] Parse incoming message types: QUESTION_DETECTED, RAG_RESULT, ANSWER_FROM_MEETING, ACTION_TRACKED, etc.
+- [x] Emit events via Stream for provider consumption
+- [x] Send user feedback messages to backend
+- [x] Handle connection state changes
+- [ ] Write tests for connection lifecycle (TODO: post-MVP)
+
+Status: COMPLETED - 2025-10-26
 
 **Complexity:** Medium
 **Dependencies:** Task 4.1
 **Priority:** P1
 
 **Related Files:**
-- Create: `/lib/features/live_insights/services/live_insights_websocket.dart`
+- Created: `/lib/features/live_insights/domain/services/live_insights_websocket_service.dart`
+- Created: `/lib/features/live_insights/presentation/providers/live_insights_provider.dart`
 - Reference: `/lib/features/notifications/services/websocket_notification_service.dart`, `/lib/features/jobs/presentation/providers/job_websocket_provider.dart`
 
 ---

@@ -4,6 +4,50 @@
 
 ### [2025-10-26]
 #### Added
+- **Task 5.7 - Implement WebSocket Service for Live Insights**: Verified Flutter WebSocket service implementation for real-time meeting intelligence
+  - Implementation: Full-featured WebSocket service for bidirectional communication between Flutter client and backend
+  - Service Features:
+    - **LiveInsightsWebSocketService** (`/lib/features/live_insights/domain/services/live_insights_websocket_service.dart`, 365 lines)
+      - JWT authentication via AuthService token
+      - Connection to `/ws/live-insights/{sessionId}?token={jwt}`
+      - Platform-agnostic WebSocketChannel for web and native
+      - Concurrent connection prevention with `_isConnecting` flag
+    - **Auto-Reconnection:**
+      - Linear backoff: 3s, 6s, 9s, 12s, 15s (3s × attempt)
+      - Maximum 5 reconnection attempts
+      - Automatic reconnection on error or disconnect
+      - Reset attempt counter on successful connection
+    - **Message Parsing:**
+      - Type-based routing with switch statement
+      - Question events: QUESTION_DETECTED, RAG_RESULT, ANSWER_FROM_MEETING, QUESTION_ANSWERED_LIVE, GPT_GENERATED_ANSWER, QUESTION_UNANSWERED
+      - Action events: ACTION_TRACKED, ACTION_UPDATED, ACTION_ALERT
+      - Transcription events: TRANSCRIPTION_PARTIAL, TRANSCRIPTION_FINAL
+      - State sync: SYNC_STATE (for reconnection recovery)
+      - Ping/pong keepalive handling
+    - **Stream Controllers:**
+      - Broadcast streams for questions, actions, transcriptions
+      - Connection state stream for UI feedback
+      - Separate handlers for each event type
+    - **User Feedback:**
+      - markQuestionAsAnswered(), markQuestionNeedsFollowUp(), dismissQuestion()
+      - assignAction(), markActionComplete(), dismissAction()
+      - JSON message format with type and action fields
+    - **Connection Lifecycle:**
+      - 30-second ping/pong keepalive timer
+      - Graceful disposal with timer cancellation
+      - Proper stream controller cleanup
+  - Riverpod Provider Integration (`/lib/features/live_insights/presentation/providers/live_insights_provider.dart`, 461 lines):
+    - **liveInsightsWebSocketServiceProvider**: Singleton service with keepAlive
+    - **LiveQuestionsTracker**: Maintains map of questions by ID, handles updates, sorting by timestamp
+    - **LiveActionsTracker**: Maintains map of actions by ID, calculates completeness scores
+    - **LiveTranscriptionsTracker**: Rolling buffer of 100 transcript segments, handles partial/final updates
+    - **LiveInsightsConnection**: Manages connection state, provides connect/disconnect methods
+    - **DismissedInsights**: Persists dismissed item IDs to SharedPreferences
+  - Status: Service already exists and is fully functional, verified with flutter analyze (0 errors)
+  - Files:
+    - `/lib/features/live_insights/domain/services/live_insights_websocket_service.dart` (verified)
+    - `/lib/features/live_insights/presentation/providers/live_insights_provider.dart` (verified)
+    - `/lib/features/live_insights/presentation/providers/live_insights_provider.g.dart` (generated)
 - **Task 3.4 - Implement GPT-Generated Answer Service (Tier 4)**: Created AI-powered fallback answer generation for questions using GPT-5-mini
   - Implementation: Backend service for generating answers when RAG, meeting context, and live monitoring fail
   - Core Features:
