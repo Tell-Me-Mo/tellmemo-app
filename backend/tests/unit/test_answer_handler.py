@@ -578,6 +578,7 @@ async def test_answer_at_exact_confidence_threshold(
         # Execute
         result = await handler.handle_answer(sample_answer_obj, session_id)
 
-        # Verify - should NOT be processed (threshold is exclusive <, not <=)
-        assert result is None
-        assert handler.low_confidence_answers == 1
+        # Verify - should be processed (threshold check is < not <=, so 0.92 >= 0.92 passes)
+        assert result == str(sample_question_record.id)
+        assert handler.questions_resolved == 1
+        assert handler.low_confidence_answers == 0
