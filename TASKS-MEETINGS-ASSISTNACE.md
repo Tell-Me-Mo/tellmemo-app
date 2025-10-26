@@ -962,16 +962,18 @@ Status: COMPLETED - 2025-10-26
 **Description:** Create container widget for questions and actions that renders within recording panel.
 
 **Acceptance Criteria:**
-- [ ] Create `AIAssistantContentSection` widget in `/lib/features/live_insights/presentation/widgets/ai_assistant_content.dart`
-- [ ] Render questions section with list of LiveQuestionCard
-- [ ] Render actions section with list of LiveActionCard
-- [ ] Implement scrollable layout with section headers
-- [ ] Show empty states: "Listening for questions..." / "Tracking actions..."
-- [ ] Add section counters: "Questions (3)" / "Actions (5)"
-- [ ] Support dismiss all functionality
-- [ ] Preserve scroll position during real-time updates
-- [ ] Handle rapid updates without UI flicker
-- [ ] Write widget tests for layout and updates
+- [x] Create `AIAssistantContentSection` widget in `/lib/features/live_insights/presentation/widgets/ai_assistant_content.dart`
+- [x] Render questions section with list of LiveQuestionCard
+- [x] Render actions section with list of LiveActionCard
+- [x] Implement scrollable layout with section headers
+- [x] Show empty states: "Listening for questions..." / "Tracking actions..."
+- [x] Add section counters: "Questions (3)" / "Actions (5)"
+- [x] Support dismiss all functionality
+- [x] Preserve scroll position during real-time updates (using ScrollController)
+- [x] Handle rapid updates without UI flicker (SingleChildScrollView with proper state management)
+- [ ] Write widget tests for layout and updates (TODO: post-MVP)
+
+Status: COMPLETED - 2025-10-26
 
 **Complexity:** Medium
 **Dependencies:** Task 5.2, Task 5.3

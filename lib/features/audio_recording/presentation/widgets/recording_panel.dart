@@ -11,6 +11,8 @@ import '../../../../core/services/notification_service.dart';
 import '../../../../core/utils/screen_info.dart';
 import '../../../live_insights/presentation/widgets/live_transcription_widget.dart';
 import '../../../live_insights/data/models/transcript_model.dart';
+import '../../../live_insights/presentation/widgets/ai_assistant_content.dart';
+import '../../../live_insights/data/models/live_insight_model.dart';
 
 enum ProjectSelectionMode { automatic, manual, specific }
 
@@ -42,6 +44,10 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
   // Live transcription state
   final List<TranscriptModel> _transcripts = [];
   bool _transcriptionCollapsed = false;
+
+  // Live insights state (questions and actions)
+  final List<LiveQuestion> _questions = [];
+  final List<LiveAction> _actions = [];
 
   @override
   void initState() {
@@ -718,30 +724,51 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
 
           const SizedBox(height: 16),
 
-          // Section 3: Questions & Actions (Placeholder for Task 5.4)
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHigh.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.info_outline,
-                  size: 16,
-                  color: colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Questions and actions will appear below (Task 5.4)',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ),
-              ],
+          // Section 3: Questions & Actions (AI Assistant Content)
+          SizedBox(
+            height: 400,
+            child: AIAssistantContentSection(
+              questions: _questions,
+              actions: _actions,
+              onQuestionMarkAnswered: (questionId) {
+                // TODO: Implement in Task 5.5 (State Management)
+                debugPrint('Mark question as answered: $questionId');
+              },
+              onQuestionNeedsFollowUp: (questionId) {
+                // TODO: Implement in Task 5.5 (State Management)
+                debugPrint('Question needs follow-up: $questionId');
+              },
+              onQuestionDismiss: (questionId) {
+                // TODO: Implement in Task 5.5 (State Management)
+                setState(() {
+                  _questions.removeWhere((q) => q.id == questionId);
+                });
+              },
+              onActionAssignOwner: (actionId, owner) {
+                // TODO: Implement in Task 5.5 (State Management)
+                debugPrint('Assign owner $owner to action: $actionId');
+              },
+              onActionSetDeadline: (actionId, deadline) {
+                // TODO: Implement in Task 5.5 (State Management)
+                debugPrint('Set deadline $deadline for action: $actionId');
+              },
+              onActionMarkComplete: (actionId) {
+                // TODO: Implement in Task 5.5 (State Management)
+                debugPrint('Mark action as complete: $actionId');
+              },
+              onActionDismiss: (actionId) {
+                // TODO: Implement in Task 5.5 (State Management)
+                setState(() {
+                  _actions.removeWhere((a) => a.id == actionId);
+                });
+              },
+              onDismissAll: () {
+                // TODO: Implement in Task 5.5 (State Management)
+                setState(() {
+                  _questions.clear();
+                  _actions.clear();
+                });
+              },
             ),
           ),
         ],
