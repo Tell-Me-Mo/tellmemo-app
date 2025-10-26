@@ -4,6 +4,36 @@
 
 ### [2025-10-26]
 #### Added
+- **Task 7.2 - Integrate Orchestrator with Recording Workflow**: Completed end-to-end integration with meeting summary generation
+  - Implementation: Automatic meeting summary generation on recording stop with comprehensive statistics
+  - Key Features:
+    - **Automatic Summary Generation**: Triggered on `cleanup_orchestrator()` call after recording ends
+    - **Statistics Collection**: Aggregates questions (total, answered, unanswered) and actions (total, complete, incomplete)
+    - **Answer Source Breakdown**: Tracks which tiers provided answers (RAG, meeting context, live conversation, GPT-generated)
+    - **WebSocket Broadcasting**: Sends `MEETING_SUMMARY` event to all connected clients with final statistics
+    - **Database Persistence**: Updates `Recording.recording_metadata` with `live_insights_summary` JSON field
+  - Integration Points:
+    - Cleanup triggered from WebSocket handlers (`stop_audio` message and disconnect events)
+    - Queries all `LiveMeetingInsight` records for session via SQLAlchemy
+    - Broadcasts summary via `insights_manager.broadcast_to_session()`
+    - Updates recording metadata atomically with database transaction
+  - Summary Data Structure:
+    - Total questions/actions detected during meeting
+    - Answered/unanswered question counts
+    - Complete/incomplete action counts
+    - Answer source distribution (rag, meeting_context, live_conversation, gpt_generated)
+    - Meeting title and timestamps
+  - Error Handling:
+    - Graceful degradation if summary generation fails (logs error, doesn't block cleanup)
+    - Safe handling of missing recording_id (uses "Untitled Meeting" fallback)
+    - Exception handling for broadcast failures (non-blocking)
+  - Files Modified:
+    - `/backend/services/intelligence/streaming_orchestrator.py`:
+      - Modified `cleanup_orchestrator()` function (lines 524-548): Added summary generation call
+      - Added `_generate_meeting_summary()` helper function (lines 555-657): Core summary logic
+      - Added imports: `Recording`, `RecordingTranscript`, `LiveMeetingInsight` models
+    - Updated: `TASKS-MEETINGS-ASSISTNACE.md` (Task 7.2 marked complete with all criteria met)
+
 - **Task 3.5 - Implement Segment Detector Service**: Created intelligent meeting breakpoint detection system
   - Implementation: SegmentDetector service with three detection mechanisms:
     - **Time-based intervals**: Automatic segment detection every 10 minutes

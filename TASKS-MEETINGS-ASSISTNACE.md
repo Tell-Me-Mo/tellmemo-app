@@ -1223,13 +1223,13 @@ Status: COMPLETED - 2025-10-26 20:30
 **Acceptance Criteria:**
 - [x] Extend recording session to initialize StreamingIntelligenceOrchestrator when AI Assistant enabled
 - [x] Pass transcription chunks from AssemblyAI to orchestrator in real-time
-- [ ] Store final insights in database at meeting end (handled by orchestrator cleanup)
-- [ ] Generate meeting summary with all questions and actions (TODO post-MVP)
+- [x] Store final insights in database at meeting end (handled by orchestrator cleanup)
+- [x] Generate meeting summary with all questions and actions
 - [x] Clean up resources on recording stop
 - [ ] Handle recording pause/resume gracefully (TODO future enhancement)
 - [ ] Write integration tests for full recording flow (TODO post-MVP)
 
-Status: COMPLETED (Core integration) - 2025-10-26
+Status: COMPLETED - 2025-10-26 20:45
 
 **Complexity:** Medium
 **Dependencies:** Task 7.1

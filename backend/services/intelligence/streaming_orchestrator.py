@@ -42,6 +42,10 @@ from services.intelligence.segment_detector import get_segment_detector
 # WebSocket import
 from routers.websocket_live_insights import insights_manager
 
+# Model imports for summary generation
+from models.recording import Recording, RecordingTranscript
+from models.live_insight import LiveMeetingInsight
+
 logger = get_logger(__name__)
 
 
@@ -521,22 +525,136 @@ def get_orchestrator(
     return _orchestrator_instances[session_id]
 
 
-async def cleanup_orchestrator(session_id: str):
+async def cleanup_orchestrator(session_id: str, generate_summary: bool = True):
     """
     Cleanup and remove orchestrator instance for a session.
 
     Args:
         session_id: Session identifier to cleanup
+        generate_summary: Whether to generate meeting summary after cleanup (default: True)
     """
     if session_id in _orchestrator_instances:
         orchestrator = _orchestrator_instances[session_id]
         await orchestrator.cleanup()
+
+        # Generate meeting summary if requested
+        if generate_summary:
+            try:
+                await _generate_meeting_summary(session_id, orchestrator.recording_id)
+            except Exception as e:
+                logger.error(f"Error generating meeting summary for session {sanitize_for_log(session_id)}: {e}", exc_info=True)
+
         del _orchestrator_instances[session_id]
 
         # Also cleanup router singleton
         cleanup_stream_router(session_id)
 
         logger.info(f"Removed orchestrator instance for session {sanitize_for_log(session_id)}")
+
+
+async def _generate_meeting_summary(session_id: str, recording_id: Optional[UUID]) -> None:
+    """
+    Generate and store meeting summary after recording ends.
+
+    This function queries all live insights and creates a comprehensive meeting summary.
+
+    Args:
+        session_id: Session identifier
+        recording_id: Optional recording UUID
+    """
+    logger.info(f"Generating meeting summary for session {sanitize_for_log(session_id)}")
+
+    try:
+        async with get_db_context() as db:
+            # Query all live insights for this session
+            from sqlalchemy import select
+
+            # Get all questions
+            questions_result = await db.execute(
+                select(LiveMeetingInsight)
+                .where(LiveMeetingInsight.session_id == session_id)
+                .where(LiveMeetingInsight.insight_type == "question")
+                .order_by(LiveMeetingInsight.detected_at)
+            )
+            questions = questions_result.scalars().all()
+
+            # Get all actions
+            actions_result = await db.execute(
+                select(LiveMeetingInsight)
+                .where(LiveMeetingInsight.session_id == session_id)
+                .where(LiveMeetingInsight.insight_type == "action")
+                .order_by(LiveMeetingInsight.detected_at)
+            )
+            actions = actions_result.scalars().all()
+
+            # Get recording if available
+            recording = None
+            if recording_id:
+                recording_result = await db.execute(
+                    select(Recording).where(Recording.id == recording_id)
+                )
+                recording = recording_result.scalar_one_or_none()
+
+            # Build summary statistics
+            total_questions = len(questions)
+            answered_questions = sum(1 for q in questions if q.status == "answered")
+            total_actions = len(actions)
+            complete_actions = sum(1 for a in actions if a.status == "complete")
+
+            # Get answer source breakdown
+            answer_sources = {}
+            for q in questions:
+                if q.answer_source:
+                    answer_sources[q.answer_source] = answer_sources.get(q.answer_source, 0) + 1
+
+            summary_data = {
+                "session_id": session_id,
+                "recording_id": str(recording_id) if recording_id else None,
+                "meeting_title": recording.meeting_title if recording else "Untitled Meeting",
+                "total_questions": total_questions,
+                "answered_questions": answered_questions,
+                "unanswered_questions": total_questions - answered_questions,
+                "answer_source_breakdown": answer_sources,
+                "total_actions": total_actions,
+                "complete_actions": complete_actions,
+                "incomplete_actions": total_actions - complete_actions,
+                "generated_at": datetime.utcnow().isoformat()
+            }
+
+            logger.info(
+                f"Meeting summary generated for session {sanitize_for_log(session_id)}: "
+                f"{total_questions} questions ({answered_questions} answered), "
+                f"{total_actions} actions ({complete_actions} complete)"
+            )
+
+            # Broadcast summary to connected clients
+            try:
+                await insights_manager.broadcast_to_session(
+                    session_id,
+                    {
+                        "type": "MEETING_SUMMARY",
+                        "summary": summary_data,
+                        "timestamp": datetime.utcnow().isoformat()
+                    }
+                )
+            except Exception as broadcast_error:
+                logger.warning(f"Could not broadcast meeting summary: {broadcast_error}")
+
+            # Update recording metadata with summary if recording exists
+            if recording:
+                try:
+                    recording.recording_metadata = {
+                        **recording.recording_metadata,
+                        "live_insights_summary": summary_data
+                    }
+                    await db.commit()
+                    logger.info(f"Updated recording {recording_id} with meeting summary metadata")
+                except Exception as update_error:
+                    logger.error(f"Failed to update recording metadata: {update_error}")
+
+    except Exception as e:
+        logger.error(f"Error generating meeting summary: {e}", exc_info=True)
+        raise
 
 
 async def get_orchestrator_metrics(session_id: str) -> Optional[Dict[str, Any]]:
