@@ -226,13 +226,15 @@ class Settings(BaseSettings):
     logstash_port: int = Field(default=8080, env="LOGSTASH_PORT")  # HTTP input port
 
     # Transcription Service Configuration (Defaults - can be overridden by UI integration settings)
-    # Options: "whisper" (local), "salad" (Salad API), or "replicate" (Replicate API)
+    # Options: "whisper" (local), "salad" (Salad API), "replicate" (Replicate API), or "assemblyai" (AssemblyAI Real-Time)
     default_transcription_service: str = Field(default="whisper", env="DEFAULT_TRANSCRIPTION_SERVICE")
     # Salad API credentials (only needed if using Salad as default)
     salad_api_key: str = Field(default="", env="SALAD_API_KEY")
     salad_organization_name: str = Field(default="", env="SALAD_ORGANIZATION_NAME")
     # Replicate API credentials (only needed if using Replicate as default)
     replicate_api_key: str = Field(default="", env="REPLICATE_API_KEY")
+    # AssemblyAI API credentials (only needed for real-time transcription)
+    assemblyai_api_key: str = Field(default="", env="ASSEMBLYAI_API_KEY")
     
     class Config:
         # Look for .env in parent directory (root of project)

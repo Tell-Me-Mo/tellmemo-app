@@ -4,6 +4,65 @@
 
 ### [2025-10-26]
 #### Added
+- **Task 2.0.5 - Implement AssemblyAI Streaming Integration (Core functionality)**: Integrated AssemblyAI Real-Time Transcription API with single-connection-per-session architecture
+  - Implementation: WebSocket-based real-time speech-to-text with speaker diarization
+  - Core Components:
+    - `AssemblyAIConnectionManager`: Manages single WebSocket connection per session for cost efficiency
+      - Session-based connection pooling: One connection per `session_id`, reused by all clients
+      - Connection lifecycle: Auto-create on first client, reuse for additional clients, close when last client disconnects
+      - Automatic reconnection with exponential backoff (1s, 2s, 5s delays)
+      - Connection states: DISCONNECTED, CONNECTING, CONNECTED, ERROR, FAILED
+    - `AssemblyAIConnection`: Individual WebSocket connection to AssemblyAI
+      - Connects to `wss://api.assemblyai.com/v2/realtime/ws` with auth token
+      - Audio format: PCM 16kHz, 16-bit, mono (matches Flutter audio streaming spec)
+      - Enables speaker diarization (`enable_speaker_labels=true`)
+      - Background listener task for receiving transcriptions
+      - Automatic reconnection with max 3 attempts
+    - `TranscriptionMetrics`: Comprehensive cost and performance tracking
+      - Audio duration tracking: bytes → seconds conversion (bytes / 32000 for PCM 16kHz 16-bit mono)
+      - Cost estimation: $0.00025/second = $0.015/minute = $0.90/hour
+      - Transcription counts: total, partial, final, errors
+      - Session duration and connection attempts tracking
+    - `TranscriptionResult`: Parsed transcription data model
+      - Fields: text, is_final, speaker, confidence, audio_start, audio_end, created_at, words
+      - Speaker extraction from AssemblyAI speaker_labels or words array
+  - WebSocket Integration:
+    - New endpoint: `/ws/audio-stream/{session_id}` for binary audio streaming
+      - Authentication: JWT token via query parameter
+      - Accepts binary audio frames from Flutter client
+      - Forwards audio to AssemblyAI for transcription
+      - Supports mixed JSON control messages (ping/pong, audio_quality, stop_audio)
+    - Transcription event broadcasting:
+      - `TRANSCRIPTION_PARTIAL`: Real-time unstable transcripts for immediate UI feedback
+      - `TRANSCRIPTION_FINAL`: Stable transcripts after ~2s delay for GPT processing
+      - `TRANSCRIPTION_ERROR`: Error notifications with details
+    - Callback handlers:
+      - `handle_transcription_result()`: Routes transcriptions to broadcast functions and orchestrator (TODO)
+      - `handle_assemblyai_error()`: Broadcasts errors to all session participants
+  - Configuration:
+    - Added `assemblyai_api_key` to `backend/config.py` (env: ASSEMBLYAI_API_KEY)
+    - Updated `default_transcription_service` options to include "assemblyai"
+  - Architecture Benefits:
+    - **Cost Optimization:** Single connection per session saves $0.90/hour per additional client
+    - **Transcription Consistency:** All participants receive identical transcripts with synchronized speaker labels
+    - **Automatic Reconnection:** Handles network interruptions gracefully
+    - **Performance Tracking:** Real-time cost and quality metrics
+  - Integration Points:
+    - TODO: Audio mixing for multiple simultaneous clients (post-MVP)
+    - TODO: Redis persistence for connection state (post-MVP, currently in-memory)
+    - TODO: Integration with StreamingIntelligenceOrchestrator for GPT processing (Task 7.2)
+    - TODO: Integration tests with mock AssemblyAI responses (post-MVP)
+  - Files:
+    - Created: `/backend/services/transcription/assemblyai_service.py` (506 lines)
+    - Modified: `/backend/routers/websocket_live_insights.py` (added binary audio endpoint, +193 lines)
+    - Modified: `/backend/config.py` (added assemblyai_api_key)
+  - Testing:
+    - Compile-time validation passed (Python syntax checks)
+    - Runtime testing pending (requires AssemblyAI API key)
+    - Integration with Flutter audio streaming pending
+
+### [2025-10-26]
+#### Added
 - **Task 2.0 - Implement Audio Streaming Pipeline (PARTIAL)**: Created Flutter services for real-time audio streaming to backend
   - Implementation: Two new services for audio capture and WebSocket transmission
   - Core Components:

@@ -18,6 +18,10 @@ from models.user import User
 from db.database import get_db
 from middleware.auth_middleware import get_current_user_ws
 from utils.logger import get_logger, sanitize_for_log
+from services.transcription.assemblyai_service import (
+    assemblyai_manager,
+    TranscriptionResult
+)
 
 logger = get_logger(__name__)
 
@@ -458,8 +462,195 @@ async def broadcast_sync_state(session_id: str, state_data: dict):
 
 
 # =============================================================================
-# WebSocket Endpoint
+# AssemblyAI Transcription Callback Handlers
 # =============================================================================
+
+async def handle_transcription_result(session_id: str, result: TranscriptionResult):
+    """
+    Handle transcription result from AssemblyAI and broadcast to clients.
+
+    Args:
+        session_id: The meeting session identifier
+        result: Parsed transcription result
+    """
+    try:
+        # Prepare transcript data for broadcasting
+        transcript_data = {
+            "text": result.text,
+            "speaker": result.speaker or "Unknown",
+            "confidence": result.confidence,
+            "audio_start": result.audio_start,
+            "audio_end": result.audio_end,
+            "created_at": result.created_at,
+            "words": result.words
+        }
+
+        # Broadcast appropriate event based on transcription type
+        if result.is_final:
+            await broadcast_transcription_final(session_id, transcript_data)
+
+            # TODO: Task 7.2 - Send final transcription to streaming orchestrator
+            # from services.intelligence.streaming_orchestrator import get_orchestrator
+            # orchestrator = get_orchestrator(session_id)
+            # await orchestrator.process_transcription_chunk(result.text, result.speaker)
+
+        else:
+            await broadcast_transcription_partial(session_id, transcript_data)
+
+    except Exception as e:
+        logger.error(f"Error handling transcription for session {sanitize_for_log(session_id)}: {e}")
+
+
+async def handle_assemblyai_error(session_id: str, error: str):
+    """
+    Handle AssemblyAI connection error.
+
+    Args:
+        session_id: The meeting session identifier
+        error: Error message
+    """
+    logger.error(f"AssemblyAI error for session {sanitize_for_log(session_id)}: {error}")
+
+    # Broadcast error to clients
+    await insights_manager.broadcast_to_session(
+        session_id,
+        {
+            "type": "TRANSCRIPTION_ERROR",
+            "error": error,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    )
+
+
+# =============================================================================
+# WebSocket Endpoints
+# =============================================================================
+
+@router.websocket("/ws/audio-stream/{session_id}")
+async def websocket_audio_stream(
+    websocket: WebSocket,
+    session_id: str,
+    token: str = Query(..., description="Authentication token"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    WebSocket endpoint for audio streaming with binary frame support.
+
+    Receives binary audio frames from Flutter client and forwards to AssemblyAI
+    for real-time transcription with speaker diarization.
+
+    Audio format: PCM 16kHz, 16-bit, mono (as specified in Task 2.0)
+
+    Args:
+        websocket: The WebSocket connection
+        session_id: The meeting session identifier
+        token: JWT authentication token
+        db: Database session
+    """
+    user = None
+    assemblyai_connection = None
+
+    try:
+        # Authenticate user
+        user = await get_current_user_ws(token, db)
+        if not user:
+            await websocket.close(code=4001, reason="Unauthorized")
+            logger.warning(f"Unauthorized audio stream connection attempt for session {sanitize_for_log(session_id)}")
+            return
+
+        user_id = str(user.id)
+
+        # Accept WebSocket connection
+        await websocket.accept()
+        logger.info(f"Audio stream connected: session={sanitize_for_log(session_id)}, user={sanitize_for_log(user_id)}")
+
+        # Send connection confirmation
+        await websocket.send_json({
+            "type": "audio_stream_connected",
+            "status": "ready",
+            "session_id": session_id,
+            "timestamp": datetime.utcnow().isoformat()
+        })
+
+        # Get or create AssemblyAI connection for this session
+        assemblyai_connection = await assemblyai_manager.get_or_create_connection(
+            session_id=session_id,
+            on_transcription=handle_transcription_result,
+            on_error=handle_assemblyai_error
+        )
+
+        if not assemblyai_connection:
+            await websocket.send_json({
+                "type": "error",
+                "error": "Failed to connect to transcription service",
+                "timestamp": datetime.utcnow().isoformat()
+            })
+            await websocket.close(code=1011, reason="Transcription service unavailable")
+            return
+
+        # Audio streaming loop
+        while True:
+            try:
+                # Receive message from client
+                message = await websocket.receive()
+
+                # Handle different message types
+                if "bytes" in message:
+                    # Binary audio frame
+                    audio_data = message["bytes"]
+
+                    # Forward to AssemblyAI
+                    success = await assemblyai_manager.send_audio(session_id, audio_data)
+
+                    if not success:
+                        logger.warning(f"Failed to send audio to AssemblyAI for session {sanitize_for_log(session_id)}")
+
+                elif "text" in message:
+                    # JSON control message
+                    try:
+                        data = json.loads(message["text"])
+                        message_type = data.get("type")
+
+                        if message_type == "ping":
+                            # Heartbeat response
+                            await websocket.send_json({
+                                "type": "pong",
+                                "timestamp": datetime.utcnow().isoformat()
+                            })
+
+                        elif message_type == "audio_quality":
+                            # Audio quality metrics from client (optional)
+                            logger.debug(f"Audio quality metrics from client: {data}")
+
+                        elif message_type == "stop_audio":
+                            # Client requests to stop audio streaming
+                            logger.info(f"Client requested to stop audio for session {sanitize_for_log(session_id)}")
+                            break
+
+                        else:
+                            logger.warning(f"Unknown message type from audio client: {message_type}")
+
+                    except json.JSONDecodeError as e:
+                        logger.error(f"Invalid JSON from audio client: {e}")
+
+            except Exception as e:
+                logger.error(f"Error processing audio message: {e}")
+                # Continue processing other messages
+
+    except WebSocketDisconnect:
+        logger.info(f"Audio stream disconnected for session {sanitize_for_log(session_id)}")
+
+    except Exception as e:
+        logger.error(f"Audio stream error for session {sanitize_for_log(session_id)}: {e}")
+
+    finally:
+        # Check if this was the last client for this session
+        # If no other audio streams are active, we can close the AssemblyAI connection
+        # For now, we'll keep the connection open until explicitly stopped
+        # This will be improved in Task 4.3 (State Synchronization)
+
+        logger.info(f"Audio stream cleanup for session {sanitize_for_log(session_id)}")
+
 
 @router.websocket("/ws/live-insights/{session_id}")
 async def websocket_live_insights(
