@@ -4,6 +4,59 @@
 
 ### [2025-10-26]
 #### Added
+- **Task 2.4 - Implement Question Handler Service**: Created intelligent question detection and four-tier answer discovery service
+  - Implementation: Python service class with parallel search orchestration and lifecycle management
+  - Core Components:
+    - `QuestionHandler` class: Main handler for question detection and answer discovery with WebSocket broadcast support
+    - Question lifecycle management: State transitions (searching → found → monitoring → answered/unanswered)
+    - Four-tier answer discovery with parallel execution:
+      - Tier 1: RAG Search (2s timeout) - searches organization's document repository
+      - Tier 2: Meeting Context Search (1.5s timeout) - searches earlier meeting transcript (placeholder)
+      - Tier 3: Live Monitoring (15s window) - monitors subsequent conversation for answers
+      - Tier 4: GPT-Generated Answer (3s timeout) - fallback AI-generated answer (placeholder)
+    - Database integration: Stores questions in `live_meeting_insights` table with proper status and answer_source tracking
+    - WebSocket broadcasting: Real-time event updates to connected clients
+  - Tier Implementations:
+    - **Tier 1 (RAG)**: Integrates with existing `enhanced_rag_service` with timeout protection
+      - Stores RAG results with document sources and confidence scores
+      - Broadcasts RAG_RESULT events with "📚 From Documents" label
+      - Updates question status to FOUND when documents found
+    - **Tier 2 (Meeting Context)**: Placeholder for future meeting context search service (Task 3.2)
+    - **Tier 3 (Live Monitoring)**: Async monitoring with 15-second window
+      - Tracks active monitoring tasks per session
+      - Cancellable monitoring for early answer detection
+      - Updates status to MONITORING during wait period
+    - **Tier 4 (GPT-Generated)**: Placeholder for GPT answer generation service (Task 3.4)
+      - Triggered only when Tiers 1-3 fail to find answers
+      - Marks questions as UNANSWERED if not implemented
+  - Parallel Search Orchestration:
+    - Executes Tier 1 and Tier 2 in parallel using `asyncio.gather()`
+    - Tier 3 runs concurrently with 15-second monitoring window
+    - Tier 4 triggered sequentially only if all other tiers fail
+    - Proper error handling and graceful degradation for each tier
+  - Resource Management:
+    - Active monitoring task tracking per session
+    - Cancel monitoring on early answer detection
+    - Session cleanup with task cancellation
+    - WebSocket callback configuration for event broadcasting
+  - Error Handling:
+    - Graceful degradation when RAG service unavailable
+    - Timeout protection for all tier searches
+    - Exception handling with proper logging and fallback
+    - Database transaction rollback on errors
+  - Testing: 15 comprehensive unit tests (100% pass rate)
+    - Initialization and configuration (2 tests)
+    - Question handling and lifecycle (3 tests)
+    - Tier 1 RAG search (3 tests): no results, timeout, exception
+    - Parallel answer discovery (2 tests): parallel execution, tier fallback logic
+    - Resource cleanup (2 tests): cancel monitoring, session cleanup
+    - WebSocket broadcast (3 tests): with callback, without callback, exception handling
+  - Files:
+    - `/backend/services/intelligence/question_handler.py` (created - 495 lines)
+    - `/backend/tests/unit/test_question_handler.py` (created - 15 tests, 410 lines)
+  - Status: Question Handler ready for integration with WebSocket Router (Task 4.1) and orchestrator (Task 7.1)
+  - Future Work: Implement Tier 2 (Task 3.2), Tier 3 answer detection (Task 2.6, 3.3), and Tier 4 (Task 3.4)
+
 - **Task 2.3 - Implement Stream Router**: Created message routing service that dispatches NDJSON objects from GPT-5-mini to appropriate handlers
   - Implementation: Python service class with handler registration pattern and bidirectional state tracking
   - Core Components:

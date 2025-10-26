@@ -1,0 +1,500 @@
+"""Question Handler Service.
+
+Processes question detection events from GPT stream, triggers parallel searches
+across four tiers (RAG, Meeting Context, Live Monitoring, GPT-Generated), and manages
+question lifecycle.
+"""
+
+import asyncio
+import uuid
+from datetime import datetime
+from typing import Dict, Any, Optional, List, Callable
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_
+
+from models.live_insight import (
+    LiveMeetingInsight,
+    InsightType,
+    InsightStatus,
+    AnswerSource
+)
+from services.rag.enhanced_rag_service_refactored import enhanced_rag_service
+from utils.logger import get_logger, sanitize_for_log
+
+logger = get_logger(__name__)
+
+
+class QuestionHandler:
+    """Handler for question detection and four-tier answer discovery."""
+
+    def __init__(self):
+        """Initialize the question handler."""
+        # Question lifecycle configuration
+        self.monitoring_timeout_seconds = 15  # Tier 3: Live monitoring timeout
+        self.rag_search_timeout = 2.0  # Tier 1: RAG search timeout
+        self.meeting_context_timeout = 1.5  # Tier 2: Meeting context timeout
+        self.gpt_generation_timeout = 3.0  # Tier 4: GPT answer generation timeout
+
+        # Active questions being monitored (session_id -> {question_id -> task})
+        self._active_monitoring: Dict[str, Dict[str, asyncio.Task]] = {}
+
+        # WebSocket broadcast callback (set by orchestrator)
+        self._ws_broadcast_callback: Optional[Callable] = None
+
+    def set_websocket_callback(self, callback: Callable) -> None:
+        """Set the WebSocket broadcast callback.
+
+        Args:
+            callback: Async function to broadcast updates to clients
+        """
+        self._ws_broadcast_callback = callback
+
+    async def handle_question(
+        self,
+        session_id: str,
+        question_data: dict,
+        session: AsyncSession,
+        project_id: str,
+        organization_id: str,
+        recording_id: str
+    ) -> Optional[LiveMeetingInsight]:
+        """Process question detection event and trigger parallel answer discovery.
+
+        Args:
+            session_id: The meeting session ID
+            question_data: Question data from GPT stream {id, text, speaker, timestamp, ...}
+            session: Database session
+            project_id: Project UUID
+            organization_id: Organization UUID
+            recording_id: Recording UUID
+
+        Returns:
+            Created LiveMeetingInsight instance or None if failed
+        """
+        try:
+            question_id = question_data.get("id", f"q_{uuid.uuid4()}")
+            question_text = question_data.get("text", "")
+            speaker = question_data.get("speaker")
+            timestamp_str = question_data.get("timestamp")
+            confidence = question_data.get("confidence", 0.0)
+            category = question_data.get("category", "factual")
+
+            # Parse timestamp
+            detected_at = datetime.utcnow()
+            if timestamp_str:
+                try:
+                    detected_at = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                except Exception as e:
+                    logger.warning(f"Failed to parse timestamp {timestamp_str}: {e}")
+
+            logger.info(
+                f"Processing question for session {sanitize_for_log(session_id)}: "
+                f"{sanitize_for_log(question_text[:100])}"
+            )
+
+            # Create LiveMeetingInsight record
+            question_insight = LiveMeetingInsight(
+                session_id=session_id,
+                recording_id=uuid.UUID(recording_id),
+                project_id=uuid.UUID(project_id),
+                organization_id=uuid.UUID(organization_id),
+                insight_type=InsightType.QUESTION,
+                detected_at=detected_at,
+                speaker=speaker,
+                content=question_text,
+                status=InsightStatus.SEARCHING.value,
+                insight_metadata={
+                    "gpt_id": question_id,
+                    "category": category,
+                    "confidence": confidence,
+                    "tier_results": {}
+                }
+            )
+
+            session.add(question_insight)
+            await session.flush()  # Get the database ID
+
+            db_question_id = str(question_insight.id)
+
+            # Broadcast QUESTION_DETECTED event
+            await self._broadcast_event(session_id, {
+                "type": "QUESTION_DETECTED",
+                "question": question_insight.to_dict()
+            })
+
+            # Start parallel answer discovery (Tiers 1, 2, and 3)
+            # Note: Tier 4 (GPT-generated) will be triggered only if other tiers fail
+            asyncio.create_task(
+                self._parallel_answer_discovery(
+                    session_id=session_id,
+                    question_id=db_question_id,
+                    question_text=question_text,
+                    project_id=project_id,
+                    organization_id=organization_id
+                )
+            )
+
+            await session.commit()
+
+            logger.info(
+                f"Question {db_question_id} created and answer discovery started for session {session_id}"
+            )
+
+            return question_insight
+
+        except Exception as e:
+            logger.error(f"Failed to handle question for session {session_id}: {e}", exc_info=True)
+            await session.rollback()
+            return None
+
+    async def _parallel_answer_discovery(
+        self,
+        session_id: str,
+        question_id: str,
+        question_text: str,
+        project_id: str,
+        organization_id: str
+    ) -> None:
+        """Execute parallel answer discovery across four tiers.
+
+        Tiers execute in parallel:
+        - Tier 1: RAG Search (2s timeout)
+        - Tier 2: Meeting Context Search (1.5s timeout)
+        - Tier 3: Live Conversation Monitoring (15s window)
+        - Tier 4: GPT-Generated Answer (triggered only if all others fail, 3s timeout)
+
+        Args:
+            session_id: Meeting session ID
+            question_id: Database question ID (UUID)
+            question_text: The question text
+            project_id: Project UUID string
+            organization_id: Organization UUID string
+        """
+        try:
+            # Execute Tier 1 and Tier 2 in parallel
+            tier1_task = asyncio.create_task(
+                self._tier1_rag_search(session_id, question_id, question_text, project_id, organization_id)
+            )
+            tier2_task = asyncio.create_task(
+                self._tier2_meeting_context_search(session_id, question_id, question_text)
+            )
+
+            # Start Tier 3: Live monitoring (15s window)
+            tier3_task = asyncio.create_task(
+                self._tier3_live_monitoring(session_id, question_id, question_text)
+            )
+
+            # Store monitoring task for potential cancellation
+            if session_id not in self._active_monitoring:
+                self._active_monitoring[session_id] = {}
+            self._active_monitoring[session_id][question_id] = tier3_task
+
+            # Wait for Tier 1 and Tier 2 to complete
+            tier1_found, tier2_found = await asyncio.gather(tier1_task, tier2_task)
+
+            # Wait for Tier 3 to complete (or timeout)
+            tier3_found = await tier3_task
+
+            # Clean up monitoring task
+            if session_id in self._active_monitoring:
+                self._active_monitoring[session_id].pop(question_id, None)
+
+            # Check if any tier found an answer
+            answer_found = tier1_found or tier2_found or tier3_found
+
+            if not answer_found:
+                # Tier 4: GPT-generated answer (fallback)
+                logger.info(f"No answer found in Tiers 1-3 for question {question_id}, triggering Tier 4")
+                await self._tier4_gpt_generated_answer(session_id, question_id, question_text)
+
+        except Exception as e:
+            logger.error(
+                f"Error in parallel answer discovery for question {question_id}: {e}",
+                exc_info=True
+            )
+
+    async def _tier1_rag_search(
+        self,
+        session_id: str,
+        question_id: str,
+        question_text: str,
+        project_id: str,
+        organization_id: str
+    ) -> bool:
+        """Tier 1: Search organization's document repository (RAG).
+
+        Args:
+            session_id: Meeting session ID
+            question_id: Question database ID
+            question_text: The question text
+            project_id: Project UUID string
+            organization_id: Organization UUID string
+
+        Returns:
+            True if relevant documents found, False otherwise
+        """
+        try:
+            logger.debug(f"Tier 1: Starting RAG search for question {question_id}")
+
+            # Execute RAG search with timeout
+            try:
+                rag_result = await asyncio.wait_for(
+                    enhanced_rag_service.query_project(
+                        project_id=project_id,
+                        question=question_text,
+                        conversation_id=None  # No conversation context for live meetings
+                    ),
+                    timeout=self.rag_search_timeout
+                )
+            except asyncio.TimeoutError:
+                logger.warning(f"Tier 1: RAG search timeout for question {question_id}")
+                return False
+
+            # Check if we got meaningful results
+            sources = rag_result.get("sources", [])
+            answer = rag_result.get("answer", "")
+
+            if not sources or not answer:
+                logger.debug(f"Tier 1: No RAG results for question {question_id}")
+                return False
+
+            # Store tier result in database
+            from db.database import SessionLocal
+            async with SessionLocal() as db_session:
+                result = await db_session.execute(
+                    select(LiveMeetingInsight).where(
+                        LiveMeetingInsight.id == uuid.UUID(question_id)
+                    )
+                )
+                question = result.scalar_one_or_none()
+
+                if question:
+                    # Add RAG tier result
+                    question.add_tier_result("rag", {
+                        "answer": answer,
+                        "sources": sources,
+                        "confidence": rag_result.get("confidence", 0.0),
+                        "timestamp": datetime.utcnow().isoformat()
+                    })
+
+                    # Update status
+                    question.update_status(InsightStatus.FOUND.value)
+                    question.set_answer_source(AnswerSource.RAG.value, rag_result.get("confidence"))
+
+                    await db_session.commit()
+
+                    # Broadcast RAG result to clients
+                    await self._broadcast_event(session_id, {
+                        "type": "RAG_RESULT",
+                        "question_id": question_id,
+                        "answer": answer,
+                        "sources": sources,
+                        "tier": "rag",
+                        "label": "📚 From Documents"
+                    })
+
+                    logger.info(f"Tier 1: Found RAG answer for question {question_id}")
+                    return True
+
+            return False
+
+        except Exception as e:
+            logger.error(f"Tier 1: RAG search failed for question {question_id}: {e}", exc_info=True)
+            return False
+
+    async def _tier2_meeting_context_search(
+        self,
+        session_id: str,
+        question_id: str,
+        question_text: str
+    ) -> bool:
+        """Tier 2: Search current meeting transcript for answers.
+
+        Args:
+            session_id: Meeting session ID
+            question_id: Question database ID
+            question_text: The question text
+
+        Returns:
+            True if answer found in meeting context, False otherwise
+        """
+        try:
+            logger.debug(f"Tier 2: Starting meeting context search for question {question_id}")
+
+            # TODO: Implement meeting context search service (Task 3.2)
+            # For now, return False to indicate not implemented
+            logger.debug(f"Tier 2: Meeting context search not yet implemented for question {question_id}")
+
+            # Placeholder for future implementation:
+            # 1. Get transcript buffer for session_id
+            # 2. Use GPT-5-mini to semantically search for answers
+            # 3. Return quotes with speaker attribution and timestamp
+            # 4. Broadcast ANSWER_FROM_MEETING event
+
+            return False
+
+        except Exception as e:
+            logger.error(
+                f"Tier 2: Meeting context search failed for question {question_id}: {e}",
+                exc_info=True
+            )
+            return False
+
+    async def _tier3_live_monitoring(
+        self,
+        session_id: str,
+        question_id: str,
+        question_text: str
+    ) -> bool:
+        """Tier 3: Monitor live conversation for answers (15 second window).
+
+        Args:
+            session_id: Meeting session ID
+            question_id: Question database ID
+            question_text: The question text
+
+        Returns:
+            True if answer detected in live conversation, False if timeout
+        """
+        try:
+            logger.debug(
+                f"Tier 3: Starting live monitoring for question {question_id} "
+                f"({self.monitoring_timeout_seconds}s window)"
+            )
+
+            # Wait for monitoring timeout
+            # In production, this would listen for answer events from AnswerHandler
+            # For now, we'll just wait and return False (no answer detected)
+            await asyncio.sleep(self.monitoring_timeout_seconds)
+
+            # TODO: Implement actual live monitoring logic (Task 3.3)
+            # This should be integrated with AnswerHandler to detect answers in real-time
+            # For now, marking as unanswered after timeout
+
+            from db.database import SessionLocal
+            async with SessionLocal() as db_session:
+                result = await db_session.execute(
+                    select(LiveMeetingInsight).where(
+                        LiveMeetingInsight.id == uuid.UUID(question_id)
+                    )
+                )
+                question = result.scalar_one_or_none()
+
+                if question and question.status == InsightStatus.SEARCHING.value:
+                    # Only update if still searching (not already answered by other tiers)
+                    question.update_status(InsightStatus.MONITORING.value)
+                    await db_session.commit()
+
+            logger.debug(f"Tier 3: Live monitoring timeout for question {question_id}")
+            return False
+
+        except asyncio.CancelledError:
+            logger.debug(f"Tier 3: Live monitoring cancelled for question {question_id}")
+            return False
+        except Exception as e:
+            logger.error(
+                f"Tier 3: Live monitoring failed for question {question_id}: {e}",
+                exc_info=True
+            )
+            return False
+
+    async def _tier4_gpt_generated_answer(
+        self,
+        session_id: str,
+        question_id: str,
+        question_text: str
+    ) -> bool:
+        """Tier 4: Generate answer using GPT-5-mini (fallback when all tiers fail).
+
+        Args:
+            session_id: Meeting session ID
+            question_id: Question database ID
+            question_text: The question text
+
+        Returns:
+            True if GPT generated a confident answer, False otherwise
+        """
+        try:
+            logger.debug(f"Tier 4: Requesting GPT-generated answer for question {question_id}")
+
+            # TODO: Implement GPT answer generation service (Task 3.4)
+            # For now, mark as unanswered
+
+            from db.database import SessionLocal
+            async with SessionLocal() as db_session:
+                result = await db_session.execute(
+                    select(LiveMeetingInsight).where(
+                        LiveMeetingInsight.id == uuid.UUID(question_id)
+                    )
+                )
+                question = result.scalar_one_or_none()
+
+                if question:
+                    question.update_status(InsightStatus.UNANSWERED.value)
+                    question.set_answer_source(AnswerSource.UNANSWERED.value)
+
+                    await db_session.commit()
+
+                    # Broadcast unanswered event
+                    await self._broadcast_event(session_id, {
+                        "type": "QUESTION_UNANSWERED",
+                        "question_id": question_id
+                    })
+
+            logger.info(f"Tier 4: Question {question_id} marked as unanswered")
+            return False
+
+        except Exception as e:
+            logger.error(
+                f"Tier 4: GPT answer generation failed for question {question_id}: {e}",
+                exc_info=True
+            )
+            return False
+
+    async def cancel_monitoring(self, session_id: str, question_id: str) -> None:
+        """Cancel live monitoring for a question (called when answer found early).
+
+        Args:
+            session_id: Meeting session ID
+            question_id: Question database ID
+        """
+        if session_id in self._active_monitoring:
+            if question_id in self._active_monitoring[session_id]:
+                task = self._active_monitoring[session_id][question_id]
+                if not task.done():
+                    task.cancel()
+                    logger.debug(f"Cancelled monitoring for question {question_id}")
+
+    async def cleanup_session(self, session_id: str) -> None:
+        """Cleanup resources for a meeting session.
+
+        Args:
+            session_id: Meeting session ID
+        """
+        if session_id in self._active_monitoring:
+            # Cancel all active monitoring tasks
+            for question_id, task in self._active_monitoring[session_id].items():
+                if not task.done():
+                    task.cancel()
+
+            del self._active_monitoring[session_id]
+            logger.info(f"Cleaned up question handler resources for session {session_id}")
+
+    async def _broadcast_event(self, session_id: str, event_data: dict) -> None:
+        """Broadcast event to WebSocket clients.
+
+        Args:
+            session_id: Meeting session ID
+            event_data: Event data to broadcast
+        """
+        if self._ws_broadcast_callback:
+            try:
+                await self._ws_broadcast_callback(session_id, event_data)
+            except Exception as e:
+                logger.error(f"Failed to broadcast event to clients: {e}")
+        else:
+            logger.debug("No WebSocket callback configured, skipping broadcast")
+
+
+# Global service instance
+question_handler = QuestionHandler()

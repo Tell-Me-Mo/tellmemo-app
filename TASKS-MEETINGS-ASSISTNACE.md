@@ -438,15 +438,17 @@ Status: COMPLETED - 2025-10-26 10:15
 **Description:** Create service to process question detection events, trigger parallel searches, and manage question lifecycle.
 
 **Acceptance Criteria:**
-- [ ] Create `QuestionHandler` class in `/backend/services/intelligence/question_handler.py`
-- [ ] Implement question detection event processing
-- [ ] Trigger parallel RAG and meeting context searches
-- [ ] Manage question state transitions (searching → found/monitoring → answered/unanswered)
-- [ ] Aggregate results from all four tiers (RAG, Meeting Context, Live Monitoring, GPT-Generated)
-- [ ] Store questions in `live_meeting_insights` table with answer_source field
-- [ ] Broadcast updates via WebSocket to connected clients
-- [ ] Implement 15-second monitoring timeout
-- [ ] Write unit tests for all state transitions
+- [x] Create `QuestionHandler` class in `/backend/services/intelligence/question_handler.py`
+- [x] Implement question detection event processing
+- [x] Trigger parallel RAG and meeting context searches
+- [x] Manage question state transitions (searching → found/monitoring → answered/unanswered)
+- [x] Aggregate results from all four tiers (RAG, Meeting Context, Live Monitoring, GPT-Generated)
+- [x] Store questions in `live_meeting_insights` table with answer_source field
+- [x] Broadcast updates via WebSocket to connected clients
+- [x] Implement 15-second monitoring timeout
+- [x] Write unit tests for all state transitions
+
+Status: COMPLETED - 2025-10-26 12:05
 
 **Complexity:** Complex
 **Dependencies:** Task 2.3, Task 1.2
