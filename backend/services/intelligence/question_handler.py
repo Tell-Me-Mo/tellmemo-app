@@ -18,7 +18,7 @@ from models.live_insight import (
     InsightStatus,
     AnswerSource
 )
-from services.rag.enhanced_rag_service_refactored import enhanced_rag_service
+from services.intelligence.rag_search import rag_search_service
 from utils.logger import get_logger, sanitize_for_log
 
 logger = get_logger(__name__)
@@ -226,6 +226,8 @@ class QuestionHandler:
     ) -> bool:
         """Tier 1: Search organization's document repository (RAG).
 
+        Uses streaming RAG search service to progressively return top 5 relevant documents.
+
         Args:
             session_id: Meeting session ID
             question_id: Question database ID
@@ -239,29 +241,58 @@ class QuestionHandler:
         try:
             logger.debug(f"Tier 1: Starting RAG search for question {question_id}")
 
-            # Execute RAG search with timeout
-            try:
-                rag_result = await asyncio.wait_for(
-                    enhanced_rag_service.query_project(
-                        project_id=project_id,
-                        question=question_text,
-                        conversation_id=None  # No conversation context for live meetings
-                    ),
-                    timeout=self.rag_search_timeout
-                )
-            except asyncio.TimeoutError:
-                logger.warning(f"Tier 1: RAG search timeout for question {question_id}")
+            # Check if RAG service is available
+            if not rag_search_service.is_available():
+                logger.warning("Tier 1: RAG service unavailable, skipping search")
                 return False
 
-            # Check if we got meaningful results
-            sources = rag_result.get("sources", [])
-            answer = rag_result.get("answer", "")
+            # Track if any results were found
+            found_results = False
+            collected_sources = []
 
-            if not sources or not answer:
+            # Execute streaming RAG search with progressive updates
+            try:
+                async for result in rag_search_service.search(
+                    question=question_text,
+                    project_id=project_id,
+                    organization_id=organization_id,
+                    streaming=True
+                ):
+                    found_results = True
+                    collected_sources.append(result.to_dict())
+
+                    # Broadcast progressive RAG result to clients (streaming UI update)
+                    await self._broadcast_event(session_id, {
+                        "type": "RAG_RESULT_PROGRESSIVE",
+                        "question_id": question_id,
+                        "document": {
+                            "title": result.title,
+                            "content": result.content[:500],  # First 500 chars
+                            "relevance_score": result.relevance_score,
+                            "url": result.url
+                        },
+                        "tier": "rag",
+                        "label": "📚 From Documents"
+                    })
+
+                    logger.debug(
+                        f"Tier 1: Streamed RAG result for question {question_id}: "
+                        f"{result.title} (score: {result.relevance_score:.3f})"
+                    )
+
+            except asyncio.TimeoutError:
+                logger.warning(f"Tier 1: RAG search timeout for question {question_id}")
+                # Continue with results found so far
+            except Exception as search_error:
+                logger.error(f"Tier 1: RAG search error for question {question_id}: {search_error}")
+                return False
+
+            # If no results found, return False
+            if not found_results:
                 logger.debug(f"Tier 1: No RAG results for question {question_id}")
                 return False
 
-            # Store tier result in database
+            # Update database with all collected results
             from db.database import SessionLocal
             async with SessionLocal() as db_session:
                 result = await db_session.execute(
@@ -272,31 +303,37 @@ class QuestionHandler:
                 question = result.scalar_one_or_none()
 
                 if question:
-                    # Add RAG tier result
+                    # Calculate average confidence from relevance scores
+                    avg_confidence = sum(s["relevance_score"] for s in collected_sources) / len(collected_sources)
+
+                    # Add RAG tier result with all sources
                     question.add_tier_result("rag", {
-                        "answer": answer,
-                        "sources": sources,
-                        "confidence": rag_result.get("confidence", 0.0),
+                        "sources": collected_sources,
+                        "num_sources": len(collected_sources),
+                        "confidence": avg_confidence,
                         "timestamp": datetime.utcnow().isoformat()
                     })
 
                     # Update status
                     question.update_status(InsightStatus.FOUND.value)
-                    question.set_answer_source(AnswerSource.RAG.value, rag_result.get("confidence"))
+                    question.set_answer_source(AnswerSource.RAG.value, avg_confidence)
 
                     await db_session.commit()
 
-                    # Broadcast RAG result to clients
+                    # Broadcast final RAG completion event
                     await self._broadcast_event(session_id, {
-                        "type": "RAG_RESULT",
+                        "type": "RAG_RESULT_COMPLETE",
                         "question_id": question_id,
-                        "answer": answer,
-                        "sources": sources,
+                        "num_sources": len(collected_sources),
+                        "confidence": avg_confidence,
                         "tier": "rag",
                         "label": "📚 From Documents"
                     })
 
-                    logger.info(f"Tier 1: Found RAG answer for question {question_id}")
+                    logger.info(
+                        f"Tier 1: Found {len(collected_sources)} RAG sources for question {question_id} "
+                        f"(confidence: {avg_confidence:.3f})"
+                    )
                     return True
 
             return False

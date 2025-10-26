@@ -58,11 +58,27 @@ class LiveQuestionsTracker extends _$LiveQuestionsTracker {
     debugPrint(
         '[LiveQuestionsTracker] Received question update: ${question.id} - ${question.status}');
 
-    // Update or add question to map
-    _questions[question.id] = question;
+    // Check if question was dismissed by user (skip if dismissed)
+    final dismissedState = ref.read(dismissedInsightsProvider);
+    dismissedState.whenData((dismissed) {
+      if (dismissed['questions']?.contains(question.id) == true) {
+        debugPrint(
+            '[LiveQuestionsTracker] Skipping dismissed question: ${question.id}');
+        return;
+      }
 
-    // Update state with new list
-    _updateState();
+      // Update or add question to map
+      _questions[question.id] = question;
+
+      // Update state with new list
+      _updateState();
+    });
+
+    // If state not loaded yet, add question anyway (will be filtered later)
+    if (!dismissedState.hasValue) {
+      _questions[question.id] = question;
+      _updateState();
+    }
   }
 
   /// Update provider state with current questions list
@@ -162,11 +178,27 @@ class LiveActionsTracker extends _$LiveActionsTracker {
     debugPrint(
         '[LiveActionsTracker] Received action update: ${action.id} - ${action.status} (completeness: ${action.completenessScore})');
 
-    // Update or add action to map
-    _actions[action.id] = action;
+    // Check if action was dismissed by user (skip if dismissed)
+    final dismissedState = ref.read(dismissedInsightsProvider);
+    dismissedState.whenData((dismissed) {
+      if (dismissed['actions']?.contains(action.id) == true) {
+        debugPrint(
+            '[LiveActionsTracker] Skipping dismissed action: ${action.id}');
+        return;
+      }
 
-    // Update state with new list
-    _updateState();
+      // Update or add action to map
+      _actions[action.id] = action;
+
+      // Update state with new list
+      _updateState();
+    });
+
+    // If state not loaded yet, add action anyway (will be filtered later)
+    if (!dismissedState.hasValue) {
+      _actions[action.id] = action;
+      _updateState();
+    }
   }
 
   /// Update provider state with current actions list

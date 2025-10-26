@@ -4,6 +4,46 @@
 
 ### [2025-10-26]
 #### Added
+- **Task 3.1 - Implement RAG Search Service (Tier 1 Answer Discovery)**: Created streaming semantic search service for organization documents
+  - Implementation: Dedicated RAG search service with progressive streaming results for real-time question answering
+  - Service Features:
+    - **RAGSearchService** (`/backend/services/intelligence/rag_search.py`, 438 lines)
+      - Streaming async generator pattern with configurable timeout (2s default)
+      - Returns top 5 relevant documents with relevance scores (configurable)
+      - Progressive UI updates with 50ms delay between results
+      - MRL two-stage search support (128d fast + 768d precise reranking)
+      - Score threshold filtering (0.3 default minimum relevance)
+    - **Search Strategy Fallback:**
+      - Primary: Enhanced RAG service with full LLM pipeline (context-aware answers)
+      - Fallback: Direct vector search (semantic similarity only)
+      - Availability check: Graceful degradation if vector store unavailable
+    - **RAGSearchResult Model:**
+      - Document metadata: ID, title, content, relevance score, URL, last_updated
+      - Serialization support with to_dict() method
+      - JSONB-compatible metadata field
+    - **QuestionHandler Integration:**
+      - Updated _tier1_rag_search() to use streaming RAG service
+      - Progressive WebSocket broadcasting:
+        - `RAG_RESULT_PROGRESSIVE`: Streams each document as found (real-time UI updates)
+        - `RAG_RESULT_COMPLETE`: Final summary with total sources and average confidence
+      - Collects all streaming results for database storage
+      - Calculates average confidence from relevance scores
+      - Graceful timeout handling (continues with partial results)
+  - Vector Database Integration:
+    - Qdrant multi-tenant architecture with MRL support
+    - EmbeddingGemma 768d embeddings (google/embeddinggemma-300m)
+    - Two-stage MRL search: 128d candidates → 768d reranking
+    - Project-level filtering and organization isolation
+  - Error Handling:
+    - Timeout handling with asyncio.wait_for()
+    - Vector store availability check before search
+    - Graceful fallback on enhanced_rag_service failure
+    - Comprehensive error logging with sanitized inputs
+  - Status: Core functionality complete, integration tests deferred to post-MVP
+  - Files:
+    - `/backend/services/intelligence/rag_search.py` (created)
+    - `/backend/services/intelligence/question_handler.py` (modified)
+
 - **Task 5.7 - Implement WebSocket Service for Live Insights**: Verified Flutter WebSocket service implementation for real-time meeting intelligence
   - Implementation: Full-featured WebSocket service for bidirectional communication between Flutter client and backend
   - Service Features:

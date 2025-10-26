@@ -462,6 +462,95 @@ async def broadcast_sync_state(session_id: str, state_data: dict):
     logger.info(f"Broadcast SYNC_STATE to session {sanitize_for_log(session_id)}")
 
 
+async def get_session_state(session_id: str, db: AsyncSession) -> dict:
+    """
+    Retrieve complete session state from database for reconnection sync.
+
+    Queries live_meeting_insights table for all questions and actions
+    associated with the session_id.
+
+    Args:
+        session_id: The meeting session identifier
+        db: Database session
+
+    Returns:
+        dict: Session state with questions and actions arrays
+    """
+    from models.live_insight import LiveMeetingInsight, InsightType
+    from sqlalchemy import select
+
+    try:
+        # Query all insights for this session
+        stmt = (
+            select(LiveMeetingInsight)
+            .where(LiveMeetingInsight.session_id == session_id)
+            .order_by(LiveMeetingInsight.detected_at.asc())
+        )
+        result = await db.execute(stmt)
+        insights = result.scalars().all()
+
+        questions = []
+        actions = []
+
+        for insight in insights:
+            if insight.insight_type == InsightType.QUESTION:
+                # Convert database model to Flutter-compatible format
+                question_data = {
+                    "id": str(insight.id),
+                    "text": insight.content,
+                    "speaker": insight.speaker,
+                    "timestamp": insight.detected_at.isoformat() if insight.detected_at else None,
+                    "status": insight.status,
+                    "answer_source": insight.answer_source,
+                    "tier_results": insight.insight_metadata.get("tier_results", []) if insight.insight_metadata else [],
+                    "metadata": insight.insight_metadata or {}
+                }
+                questions.append(question_data)
+
+            elif insight.insight_type == InsightType.ACTION:
+                # Convert database model to Flutter-compatible format
+                metadata = insight.insight_metadata or {}
+                action_data = {
+                    "id": str(insight.id),
+                    "description": insight.content,
+                    "owner": metadata.get("owner"),
+                    "deadline": metadata.get("deadline"),
+                    "speaker": insight.speaker,
+                    "timestamp": insight.detected_at.isoformat() if insight.detected_at else None,
+                    "completeness": metadata.get("completeness_score", 0.0),
+                    "status": insight.status,
+                    "metadata": metadata
+                }
+                actions.append(action_data)
+
+        state_data = {
+            "session_id": session_id,
+            "timestamp": datetime.utcnow().isoformat(),
+            "questions": questions,
+            "actions": actions
+        }
+
+        logger.info(
+            f"Retrieved session state for {sanitize_for_log(session_id)}: "
+            f"{len(questions)} questions, {len(actions)} actions"
+        )
+
+        return state_data
+
+    except Exception as e:
+        logger.error(
+            f"Error retrieving session state for {sanitize_for_log(session_id)}: {e}",
+            exc_info=True
+        )
+        # Return empty state on error
+        return {
+            "session_id": session_id,
+            "timestamp": datetime.utcnow().isoformat(),
+            "questions": [],
+            "actions": []
+        }
+
+
 # =============================================================================
 # AssemblyAI Transcription Callback Handlers
 # =============================================================================
@@ -721,8 +810,25 @@ async def websocket_live_insights(
             "timestamp": datetime.utcnow().isoformat()
         })
 
-        # TODO: Send SYNC_STATE if user is reconnecting or joining late
-        # This will be implemented in Task 4.3 (State Synchronization on Reconnect)
+        # Task 4.3: Send SYNC_STATE for reconnection and late join support
+        # Retrieve and send current session state from database
+        try:
+            state_data = await get_session_state(session_id, db)
+            await websocket.send_json({
+                "type": "SYNC_STATE",
+                "data": state_data,
+                "timestamp": datetime.utcnow().isoformat()
+            })
+            logger.info(
+                f"Sent SYNC_STATE to user {sanitize_for_log(user_id)} for session {sanitize_for_log(session_id)}: "
+                f"{len(state_data.get('questions', []))} questions, {len(state_data.get('actions', []))} actions"
+            )
+        except Exception as e:
+            logger.error(
+                f"Failed to send SYNC_STATE to user {sanitize_for_log(user_id)}: {e}",
+                exc_info=True
+            )
+            # Continue execution - sync failure shouldn't prevent connection
 
         # Message handling loop
         while True:
