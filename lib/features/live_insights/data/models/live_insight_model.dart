@@ -446,3 +446,54 @@ extension ActionCompletenessX on ActionCompleteness {
     }
   }
 }
+
+// ============================================================================
+// TRANSCRIPT SEGMENT MODEL
+// ============================================================================
+
+/// A segment of live transcription from the meeting
+@freezed
+class TranscriptSegment with _$TranscriptSegment {
+  const TranscriptSegment._();
+
+  const factory TranscriptSegment({
+    /// Unique identifier for this transcript segment
+    required String id,
+
+    /// The transcribed text
+    required String text,
+
+    /// Speaker who spoke this segment
+    String? speaker,
+
+    /// Start timestamp of this segment
+    @DateTimeConverter() required DateTime startTime,
+
+    /// End timestamp of this segment
+    @DateTimeConverterNullable() DateTime? endTime,
+
+    /// Whether this is a final (stable) transcript or partial (in-progress)
+    @Default(false) bool isFinal,
+
+    /// Confidence score of transcription (0.0 - 1.0)
+    @Default(0.0) double confidence,
+
+    /// Additional metadata (audio_level, etc.)
+    @Default({}) Map<String, dynamic> metadata,
+  }) = _TranscriptSegment;
+
+  factory TranscriptSegment.fromJson(Map<String, dynamic> json) =>
+      _$TranscriptSegmentFromJson(json);
+
+  /// Get display-friendly speaker label
+  String get displaySpeaker => speaker ?? 'Unknown Speaker';
+
+  /// Get duration of this segment
+  Duration? get duration {
+    if (endTime == null) return null;
+    return endTime!.difference(startTime);
+  }
+
+  /// Check if this is a partial (unstable) transcript
+  bool get isPartial => !isFinal;
+}

@@ -1272,3 +1272,384 @@ abstract class _LiveAction extends LiveAction {
   _$$LiveActionImplCopyWith<_$LiveActionImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
+
+TranscriptSegment _$TranscriptSegmentFromJson(Map<String, dynamic> json) {
+  return _TranscriptSegment.fromJson(json);
+}
+
+/// @nodoc
+mixin _$TranscriptSegment {
+  /// Unique identifier for this transcript segment
+  String get id => throw _privateConstructorUsedError;
+
+  /// The transcribed text
+  String get text => throw _privateConstructorUsedError;
+
+  /// Speaker who spoke this segment
+  String? get speaker => throw _privateConstructorUsedError;
+
+  /// Start timestamp of this segment
+  @DateTimeConverter()
+  DateTime get startTime => throw _privateConstructorUsedError;
+
+  /// End timestamp of this segment
+  @DateTimeConverterNullable()
+  DateTime? get endTime => throw _privateConstructorUsedError;
+
+  /// Whether this is a final (stable) transcript or partial (in-progress)
+  bool get isFinal => throw _privateConstructorUsedError;
+
+  /// Confidence score of transcription (0.0 - 1.0)
+  double get confidence => throw _privateConstructorUsedError;
+
+  /// Additional metadata (audio_level, etc.)
+  Map<String, dynamic> get metadata => throw _privateConstructorUsedError;
+
+  /// Serializes this TranscriptSegment to a JSON map.
+  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
+
+  /// Create a copy of TranscriptSegment
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $TranscriptSegmentCopyWith<TranscriptSegment> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $TranscriptSegmentCopyWith<$Res> {
+  factory $TranscriptSegmentCopyWith(
+    TranscriptSegment value,
+    $Res Function(TranscriptSegment) then,
+  ) = _$TranscriptSegmentCopyWithImpl<$Res, TranscriptSegment>;
+  @useResult
+  $Res call({
+    String id,
+    String text,
+    String? speaker,
+    @DateTimeConverter() DateTime startTime,
+    @DateTimeConverterNullable() DateTime? endTime,
+    bool isFinal,
+    double confidence,
+    Map<String, dynamic> metadata,
+  });
+}
+
+/// @nodoc
+class _$TranscriptSegmentCopyWithImpl<$Res, $Val extends TranscriptSegment>
+    implements $TranscriptSegmentCopyWith<$Res> {
+  _$TranscriptSegmentCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of TranscriptSegment
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? id = null,
+    Object? text = null,
+    Object? speaker = freezed,
+    Object? startTime = null,
+    Object? endTime = freezed,
+    Object? isFinal = null,
+    Object? confidence = null,
+    Object? metadata = null,
+  }) {
+    return _then(
+      _value.copyWith(
+            id: null == id
+                ? _value.id
+                : id // ignore: cast_nullable_to_non_nullable
+                      as String,
+            text: null == text
+                ? _value.text
+                : text // ignore: cast_nullable_to_non_nullable
+                      as String,
+            speaker: freezed == speaker
+                ? _value.speaker
+                : speaker // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            startTime: null == startTime
+                ? _value.startTime
+                : startTime // ignore: cast_nullable_to_non_nullable
+                      as DateTime,
+            endTime: freezed == endTime
+                ? _value.endTime
+                : endTime // ignore: cast_nullable_to_non_nullable
+                      as DateTime?,
+            isFinal: null == isFinal
+                ? _value.isFinal
+                : isFinal // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            confidence: null == confidence
+                ? _value.confidence
+                : confidence // ignore: cast_nullable_to_non_nullable
+                      as double,
+            metadata: null == metadata
+                ? _value.metadata
+                : metadata // ignore: cast_nullable_to_non_nullable
+                      as Map<String, dynamic>,
+          )
+          as $Val,
+    );
+  }
+}
+
+/// @nodoc
+abstract class _$$TranscriptSegmentImplCopyWith<$Res>
+    implements $TranscriptSegmentCopyWith<$Res> {
+  factory _$$TranscriptSegmentImplCopyWith(
+    _$TranscriptSegmentImpl value,
+    $Res Function(_$TranscriptSegmentImpl) then,
+  ) = __$$TranscriptSegmentImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({
+    String id,
+    String text,
+    String? speaker,
+    @DateTimeConverter() DateTime startTime,
+    @DateTimeConverterNullable() DateTime? endTime,
+    bool isFinal,
+    double confidence,
+    Map<String, dynamic> metadata,
+  });
+}
+
+/// @nodoc
+class __$$TranscriptSegmentImplCopyWithImpl<$Res>
+    extends _$TranscriptSegmentCopyWithImpl<$Res, _$TranscriptSegmentImpl>
+    implements _$$TranscriptSegmentImplCopyWith<$Res> {
+  __$$TranscriptSegmentImplCopyWithImpl(
+    _$TranscriptSegmentImpl _value,
+    $Res Function(_$TranscriptSegmentImpl) _then,
+  ) : super(_value, _then);
+
+  /// Create a copy of TranscriptSegment
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? id = null,
+    Object? text = null,
+    Object? speaker = freezed,
+    Object? startTime = null,
+    Object? endTime = freezed,
+    Object? isFinal = null,
+    Object? confidence = null,
+    Object? metadata = null,
+  }) {
+    return _then(
+      _$TranscriptSegmentImpl(
+        id: null == id
+            ? _value.id
+            : id // ignore: cast_nullable_to_non_nullable
+                  as String,
+        text: null == text
+            ? _value.text
+            : text // ignore: cast_nullable_to_non_nullable
+                  as String,
+        speaker: freezed == speaker
+            ? _value.speaker
+            : speaker // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        startTime: null == startTime
+            ? _value.startTime
+            : startTime // ignore: cast_nullable_to_non_nullable
+                  as DateTime,
+        endTime: freezed == endTime
+            ? _value.endTime
+            : endTime // ignore: cast_nullable_to_non_nullable
+                  as DateTime?,
+        isFinal: null == isFinal
+            ? _value.isFinal
+            : isFinal // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        confidence: null == confidence
+            ? _value.confidence
+            : confidence // ignore: cast_nullable_to_non_nullable
+                  as double,
+        metadata: null == metadata
+            ? _value._metadata
+            : metadata // ignore: cast_nullable_to_non_nullable
+                  as Map<String, dynamic>,
+      ),
+    );
+  }
+}
+
+/// @nodoc
+@JsonSerializable()
+class _$TranscriptSegmentImpl extends _TranscriptSegment {
+  const _$TranscriptSegmentImpl({
+    required this.id,
+    required this.text,
+    this.speaker,
+    @DateTimeConverter() required this.startTime,
+    @DateTimeConverterNullable() this.endTime,
+    this.isFinal = false,
+    this.confidence = 0.0,
+    final Map<String, dynamic> metadata = const {},
+  }) : _metadata = metadata,
+       super._();
+
+  factory _$TranscriptSegmentImpl.fromJson(Map<String, dynamic> json) =>
+      _$$TranscriptSegmentImplFromJson(json);
+
+  /// Unique identifier for this transcript segment
+  @override
+  final String id;
+
+  /// The transcribed text
+  @override
+  final String text;
+
+  /// Speaker who spoke this segment
+  @override
+  final String? speaker;
+
+  /// Start timestamp of this segment
+  @override
+  @DateTimeConverter()
+  final DateTime startTime;
+
+  /// End timestamp of this segment
+  @override
+  @DateTimeConverterNullable()
+  final DateTime? endTime;
+
+  /// Whether this is a final (stable) transcript or partial (in-progress)
+  @override
+  @JsonKey()
+  final bool isFinal;
+
+  /// Confidence score of transcription (0.0 - 1.0)
+  @override
+  @JsonKey()
+  final double confidence;
+
+  /// Additional metadata (audio_level, etc.)
+  final Map<String, dynamic> _metadata;
+
+  /// Additional metadata (audio_level, etc.)
+  @override
+  @JsonKey()
+  Map<String, dynamic> get metadata {
+    if (_metadata is EqualUnmodifiableMapView) return _metadata;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableMapView(_metadata);
+  }
+
+  @override
+  String toString() {
+    return 'TranscriptSegment(id: $id, text: $text, speaker: $speaker, startTime: $startTime, endTime: $endTime, isFinal: $isFinal, confidence: $confidence, metadata: $metadata)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$TranscriptSegmentImpl &&
+            (identical(other.id, id) || other.id == id) &&
+            (identical(other.text, text) || other.text == text) &&
+            (identical(other.speaker, speaker) || other.speaker == speaker) &&
+            (identical(other.startTime, startTime) ||
+                other.startTime == startTime) &&
+            (identical(other.endTime, endTime) || other.endTime == endTime) &&
+            (identical(other.isFinal, isFinal) || other.isFinal == isFinal) &&
+            (identical(other.confidence, confidence) ||
+                other.confidence == confidence) &&
+            const DeepCollectionEquality().equals(other._metadata, _metadata));
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  int get hashCode => Object.hash(
+    runtimeType,
+    id,
+    text,
+    speaker,
+    startTime,
+    endTime,
+    isFinal,
+    confidence,
+    const DeepCollectionEquality().hash(_metadata),
+  );
+
+  /// Create a copy of TranscriptSegment
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$TranscriptSegmentImplCopyWith<_$TranscriptSegmentImpl> get copyWith =>
+      __$$TranscriptSegmentImplCopyWithImpl<_$TranscriptSegmentImpl>(
+        this,
+        _$identity,
+      );
+
+  @override
+  Map<String, dynamic> toJson() {
+    return _$$TranscriptSegmentImplToJson(this);
+  }
+}
+
+abstract class _TranscriptSegment extends TranscriptSegment {
+  const factory _TranscriptSegment({
+    required final String id,
+    required final String text,
+    final String? speaker,
+    @DateTimeConverter() required final DateTime startTime,
+    @DateTimeConverterNullable() final DateTime? endTime,
+    final bool isFinal,
+    final double confidence,
+    final Map<String, dynamic> metadata,
+  }) = _$TranscriptSegmentImpl;
+  const _TranscriptSegment._() : super._();
+
+  factory _TranscriptSegment.fromJson(Map<String, dynamic> json) =
+      _$TranscriptSegmentImpl.fromJson;
+
+  /// Unique identifier for this transcript segment
+  @override
+  String get id;
+
+  /// The transcribed text
+  @override
+  String get text;
+
+  /// Speaker who spoke this segment
+  @override
+  String? get speaker;
+
+  /// Start timestamp of this segment
+  @override
+  @DateTimeConverter()
+  DateTime get startTime;
+
+  /// End timestamp of this segment
+  @override
+  @DateTimeConverterNullable()
+  DateTime? get endTime;
+
+  /// Whether this is a final (stable) transcript or partial (in-progress)
+  @override
+  bool get isFinal;
+
+  /// Confidence score of transcription (0.0 - 1.0)
+  @override
+  double get confidence;
+
+  /// Additional metadata (audio_level, etc.)
+  @override
+  Map<String, dynamic> get metadata;
+
+  /// Create a copy of TranscriptSegment
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$TranscriptSegmentImplCopyWith<_$TranscriptSegmentImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}

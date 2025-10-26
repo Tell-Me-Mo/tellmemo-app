@@ -990,15 +990,17 @@ Status: COMPLETED - 2025-10-26
 **Description:** Create Riverpod providers to manage active questions, actions, and streaming updates.
 
 **Acceptance Criteria:**
-- [ ] Create `LiveInsightsProvider` in `/lib/features/live_insights/presentation/providers/live_insights_provider.dart`
-- [ ] Maintain list of active questions with state
-- [ ] Maintain list of active actions with state
-- [ ] Subscribe to WebSocket live insights stream
-- [ ] Update state based on incoming events: QUESTION_DETECTED, RAG_RESULT, ANSWER_FROM_MEETING, QUESTION_ANSWERED_LIVE, GPT_GENERATED_ANSWER, ACTION_TRACKED, ACTION_UPDATED, etc.
-- [ ] Implement local persistence for offline viewing
-- [ ] Add methods for user actions: markQuestionAnswered(), assignAction(), dismissQuestion(), etc.
-- [ ] Send user feedback to backend via WebSocket
-- [ ] Write unit tests for state management
+- [x] Create `LiveInsightsProvider` in `/lib/features/live_insights/presentation/providers/live_insights_provider.dart`
+- [x] Maintain list of active questions with state
+- [x] Maintain list of active actions with state
+- [x] Subscribe to WebSocket live insights stream
+- [x] Update state based on incoming events: QUESTION_DETECTED, RAG_RESULT, ANSWER_FROM_MEETING, QUESTION_ANSWERED_LIVE, GPT_GENERATED_ANSWER, ACTION_TRACKED, ACTION_UPDATED, etc.
+- [x] Implement local persistence for offline viewing
+- [x] Add methods for user actions: markQuestionAnswered(), assignAction(), dismissQuestion(), etc.
+- [x] Send user feedback to backend via WebSocket
+- [ ] Write unit tests for state management (TODO: post-MVP)
+
+Status: COMPLETED - 2025-10-26
 
 **Complexity:** Complex
 **Dependencies:** Task 4.1

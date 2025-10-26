@@ -126,3 +126,29 @@ Map<String, dynamic> _$$LiveActionImplToJson(
   'metadata': instance.metadata,
   'completedAt': const DateTimeConverterNullable().toJson(instance.completedAt),
 };
+
+_$TranscriptSegmentImpl _$$TranscriptSegmentImplFromJson(
+  Map<String, dynamic> json,
+) => _$TranscriptSegmentImpl(
+  id: json['id'] as String,
+  text: json['text'] as String,
+  speaker: json['speaker'] as String?,
+  startTime: const DateTimeConverter().fromJson(json['startTime']),
+  endTime: const DateTimeConverterNullable().fromJson(json['endTime']),
+  isFinal: json['isFinal'] as bool? ?? false,
+  confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
+  metadata: json['metadata'] as Map<String, dynamic>? ?? const {},
+);
+
+Map<String, dynamic> _$$TranscriptSegmentImplToJson(
+  _$TranscriptSegmentImpl instance,
+) => <String, dynamic>{
+  'id': instance.id,
+  'text': instance.text,
+  'speaker': instance.speaker,
+  'startTime': const DateTimeConverter().toJson(instance.startTime),
+  'endTime': const DateTimeConverterNullable().toJson(instance.endTime),
+  'isFinal': instance.isFinal,
+  'confidence': instance.confidence,
+  'metadata': instance.metadata,
+};
