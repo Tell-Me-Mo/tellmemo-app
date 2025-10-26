@@ -4,6 +4,53 @@
 
 ### [2025-10-26]
 #### Added
+- **Task 2.3 - Implement Stream Router**: Created message routing service that dispatches NDJSON objects from GPT-5-mini to appropriate handlers
+  - Implementation: Python service class with handler registration pattern and bidirectional state tracking
+  - Core Components:
+    - `StreamRouter` class: Main routing engine with handler callback registration
+    - Object validation: Validates type, required fields, and UUID format for all NDJSON objects
+    - ID validation: Validates GPT-generated UUIDs (q_{uuid}, a_{uuid}) with graceful fallback
+    - State tracking: Bidirectional mappings (question_ids, action_ids, id_to_session) for session management
+    - Metric collection: Tracks latency, throughput, error rates per session
+  - Routing Logic:
+    - Supported types: question, action, action_update, answer
+    - Handler registration: Async callbacks for each object type (QuestionHandler, ActionHandler, AnswerHandler)
+    - Type-based routing: Dispatches objects to registered handlers based on 'type' field
+    - State management: Tracks active question/action IDs, maps GPT IDs to session_id
+  - Error Handling:
+    - Malformed objects: Graceful degradation (logs warning, increments counter, continues processing)
+    - UUID validation: Logs warning for invalid UUIDs but allows processing
+    - Handler exceptions: Catches and wraps as StreamRouterException with context
+    - Missing handlers: Logs warning but doesn't fail (allows partial system operation)
+  - ID Validation Strategy:
+    - GPT system prompt instructs format: q_{uuid} for questions, a_{uuid} for actions
+    - Router validates UUID part after prefix using uuid.UUID()
+    - Invalid UUIDs logged as warnings but don't block routing
+    - Backend can generate new UUIDs if needed (handlers decide)
+  - Metrics Collection (RouterMetrics dataclass):
+    - total_objects_processed: Total objects successfully routed
+    - questions_routed, actions_routed, action_updates_routed, answers_routed: Per-type counters
+    - malformed_objects, routing_errors: Error tracking
+    - average_latency_ms: Per-object routing latency with automatic averaging
+  - Factory Pattern:
+    - `get_stream_router(session_id)`: Singleton factory for session-specific routers
+    - `cleanup_stream_router(session_id)`: Session cleanup with state clearing
+    - Session isolation: Each session has independent router instance
+  - Testing: 30 comprehensive unit tests (100% pass rate)
+    - Initialization and factory pattern (2 tests)
+    - Handler registration (3 tests)
+    - Object validation: valid/invalid cases for all types (8 tests)
+    - ID validation: valid UUID formats, invalid formats, edge cases (4 tests)
+    - Routing: all object types with handlers (5 tests)
+    - Error handling: malformed objects, handler exceptions (2 tests)
+    - Metrics: collection and calculation (2 tests)
+    - State management and cleanup (2 tests)
+    - Integration: full conversation flow with multiple objects (2 tests)
+  - Files:
+    - `/backend/services/intelligence/stream_router.py` (created - 400 lines)
+    - `/backend/tests/unit/test_stream_router.py` (created - 30 tests, 525 lines)
+  - Status: Stream Router ready for integration with QuestionHandler, ActionHandler, AnswerHandler (Tasks 2.4, 2.5, 2.6)
+
 - **Task 2.2 - Implement GPT Streaming Interface**: Created OpenAI GPT-5-mini streaming service with NDJSON parsing and comprehensive error handling
   - Implementation: Dedicated streaming client with async generator pattern for real-time intelligence detection
   - Core Components:

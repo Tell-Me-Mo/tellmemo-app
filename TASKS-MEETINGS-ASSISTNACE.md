@@ -400,20 +400,22 @@ async def stream_intelligence(transcript_buffer: str, context: dict) -> AsyncGen
 **Description:** Create message router that receives objects from GPT stream and routes to appropriate handlers.
 
 **Acceptance Criteria:**
-- [ ] Create `StreamRouter` class in `/backend/services/intelligence/stream_router.py`
-- [ ] Parse streaming JSON objects by type: question, action, action_update, answer
-- [ ] Maintain mapping of question/action IDs to state
-- [ ] Route messages to QuestionHandler, ActionHandler, AnswerHandler
-- [ ] Implement error handling for malformed objects
-- [ ] Add metric collection (latency, throughput)
-- [ ] **ID Generation Strategy:**
-  - [ ] Backend generates actual UUIDs for database storage
-  - [ ] GPT system prompt instructs to use `q_{uuid}` and `a_{uuid}` format
-  - [ ] Stream Router validates UUID format from GPT
-  - [ ] If invalid UUID from GPT, backend generates new UUID and logs warning
-  - [ ] Store mapping: `gpt_id → backend_uuid` for cross-reference
-  - [ ] Example: GPT outputs `"id": "q_3f8a9b2c-1d4e-4f9a-b8c3-2a1b4c5d6e7f"`, backend validates UUID part
-- [ ] Write integration tests with mock handlers
+- [x] Create `StreamRouter` class in `/backend/services/intelligence/stream_router.py`
+- [x] Parse streaming JSON objects by type: question, action, action_update, answer
+- [x] Maintain mapping of question/action IDs to state
+- [x] Route messages to QuestionHandler, ActionHandler, AnswerHandler
+- [x] Implement error handling for malformed objects
+- [x] Add metric collection (latency, throughput)
+- [x] **ID Generation Strategy:**
+  - [x] Backend generates actual UUIDs for database storage
+  - [x] GPT system prompt instructs to use `q_{uuid}` and `a_{uuid}` format
+  - [x] Stream Router validates UUID format from GPT
+  - [x] If invalid UUID from GPT, backend generates new UUID and logs warning
+  - [x] Store mapping: `gpt_id → backend_uuid` for cross-reference
+  - [x] Example: GPT outputs `"id": "q_3f8a9b2c-1d4e-4f9a-b8c3-2a1b4c5d6e7f"`, backend validates UUID part
+- [x] Write integration tests with mock handlers
+
+Status: COMPLETED - 2025-10-26 10:15
 
 **Complexity:** Medium
 **Dependencies:** Task 2.2
