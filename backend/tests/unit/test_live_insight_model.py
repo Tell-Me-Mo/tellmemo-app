@@ -45,7 +45,9 @@ def test_answer_source_enum_values():
 
 def test_create_question_insight():
     """Test creating a question insight with required fields."""
+    question_id = uuid.uuid4()
     question = LiveMeetingInsight(
+        id=question_id,
         session_id="session-123",
         recording_id=uuid.uuid4(),
         project_id=uuid.uuid4(),
@@ -57,7 +59,7 @@ def test_create_question_insight():
         status="searching"
     )
 
-    assert question.id is not None
+    assert question.id == question_id
     assert question.insight_type == InsightType.QUESTION
     assert question.content == "What is the budget for Q4?"
     assert question.speaker == "Sarah"
@@ -76,28 +78,31 @@ def test_create_action_insight():
         speaker="John",
         content="Update the documentation by Friday",
         status="tracked",
-        metadata={
+        insight_metadata={
             "owner": "John",
             "deadline": "2025-10-30"
         }
     )
 
     assert action.insight_type == InsightType.ACTION
-    assert action.metadata["owner"] == "John"
-    assert action.metadata["deadline"] == "2025-10-30"
+    assert action.insight_metadata["owner"] == "John"
+    assert action.insight_metadata["deadline"] == "2025-10-30"
 
 
 def test_update_status_method():
     """Test update_status helper method."""
+    now = datetime.utcnow()
     insight = LiveMeetingInsight(
         session_id="session-789",
         recording_id=uuid.uuid4(),
         project_id=uuid.uuid4(),
         organization_id=uuid.uuid4(),
         insight_type=InsightType.QUESTION,
-        detected_at=datetime.utcnow(),
+        detected_at=now,
         content="Sample question?",
-        status="searching"
+        status="searching",
+        created_at=now,
+        updated_at=now
     )
 
     original_updated_at = insight.updated_at
@@ -119,7 +124,7 @@ def test_add_tier_result_method():
         detected_at=datetime.utcnow(),
         content="What is the project timeline?",
         status="searching",
-        metadata={}
+        insight_metadata={}
     )
 
     # Add Tier 1 (RAG) result
@@ -130,9 +135,9 @@ def test_add_tier_result_method():
         "confidence": 0.9
     })
 
-    assert "tier_results" in question.metadata
-    assert "rag" in question.metadata["tier_results"]
-    assert question.metadata["tier_results"]["rag"]["confidence"] == 0.9
+    assert "tier_results" in question.insight_metadata
+    assert "rag" in question.insight_metadata["tier_results"]
+    assert question.insight_metadata["tier_results"]["rag"]["confidence"] == 0.9
 
     # Add Tier 2 (Meeting Context) result
     question.add_tier_result("meeting_context", {
@@ -142,7 +147,7 @@ def test_add_tier_result_method():
         "confidence": 0.95
     })
 
-    assert "meeting_context" in question.metadata["tier_results"]
+    assert "meeting_context" in question.insight_metadata["tier_results"]
 
     # Add Tier 4 (GPT Generated) result
     question.add_tier_result("gpt_generated", {
@@ -151,8 +156,8 @@ def test_add_tier_result_method():
         "disclaimer": "AI-generated, not from documents"
     })
 
-    assert "gpt_generated" in question.metadata["tier_results"]
-    assert len(question.metadata["tier_results"]) == 3
+    assert "gpt_generated" in question.insight_metadata["tier_results"]
+    assert len(question.insight_metadata["tier_results"]) == 3
 
 
 def test_calculate_completeness_for_question():
@@ -182,13 +187,13 @@ def test_calculate_completeness_description_only():
         insight_type=InsightType.ACTION,
         detected_at=datetime.utcnow(),
         content="Update the documentation",
-        metadata={}
+        insight_metadata={}
     )
 
     completeness = action.calculate_completeness()
 
     assert completeness == 0.4
-    assert action.metadata["completeness_score"] == 0.4
+    assert action.insight_metadata["completeness_score"] == 0.4
 
 
 def test_calculate_completeness_with_owner():
@@ -201,7 +206,7 @@ def test_calculate_completeness_with_owner():
         insight_type=InsightType.ACTION,
         detected_at=datetime.utcnow(),
         content="Update the documentation",
-        metadata={"owner": "John"}
+        insight_metadata={"owner": "John"}
     )
 
     completeness = action.calculate_completeness()
@@ -219,7 +224,7 @@ def test_calculate_completeness_with_deadline():
         insight_type=InsightType.ACTION,
         detected_at=datetime.utcnow(),
         content="Update the documentation",
-        metadata={"deadline": "2025-10-30"}
+        insight_metadata={"deadline": "2025-10-30"}
     )
 
     completeness = action.calculate_completeness()
@@ -237,7 +242,7 @@ def test_calculate_completeness_complete_action():
         insight_type=InsightType.ACTION,
         detected_at=datetime.utcnow(),
         content="Update the documentation by Friday",
-        metadata={
+        insight_metadata={
             "owner": "Sarah",
             "deadline": "2025-10-30"
         }
@@ -246,7 +251,7 @@ def test_calculate_completeness_complete_action():
     completeness = action.calculate_completeness()
 
     assert completeness == 1.0
-    assert action.metadata["completeness_score"] == 1.0
+    assert action.insight_metadata["completeness_score"] == 1.0
 
 
 def test_set_answer_source_method():
@@ -266,7 +271,7 @@ def test_set_answer_source_method():
     question.set_answer_source("rag", confidence=0.92)
 
     assert question.answer_source == "rag"
-    assert question.metadata["confidence"] == 0.92
+    assert question.insight_metadata["confidence"] == 0.92
 
 
 def test_set_answer_source_gpt_generated():
@@ -286,7 +291,7 @@ def test_set_answer_source_gpt_generated():
     question.set_answer_source("gpt_generated", confidence=0.78)
 
     assert question.answer_source == "gpt_generated"
-    assert question.metadata["confidence"] == 0.78
+    assert question.insight_metadata["confidence"] == 0.78
 
 
 def test_to_dict_method():
@@ -307,7 +312,7 @@ def test_to_dict_method():
         content="What is the timeline?",
         status="answered",
         answer_source="meeting_context",
-        metadata={"confidence": 0.95}
+        insight_metadata={"confidence": 0.95}
     )
 
     result = question.to_dict()
@@ -344,7 +349,7 @@ def test_to_dict_with_null_speaker():
 
 
 def test_metadata_initialization():
-    """Test metadata field initializes as empty dict by default."""
+    """Test insight_metadata field initializes as empty dict by default."""
     insight = LiveMeetingInsight(
         session_id="session-init",
         recording_id=uuid.uuid4(),
@@ -355,4 +360,4 @@ def test_metadata_initialization():
         content="Test action"
     )
 
-    assert insight.metadata == {} or insight.metadata is None
+    assert insight.insight_metadata == {} or insight.insight_metadata is None

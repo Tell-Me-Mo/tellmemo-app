@@ -88,9 +88,10 @@ class LiveMeetingInsight(Base):
     # Answer source (for questions)
     answer_source = Column(String(50), nullable=True)
 
-    # Metadata stored as JSONB for flexibility
+    # Insight metadata stored as JSONB for flexibility
     # Stores: tier_results, completeness_score, confidence, etc.
-    metadata = Column(JSONB, nullable=True, default={})
+    # Note: Using 'insight_metadata' instead of 'metadata' (reserved by SQLAlchemy)
+    insight_metadata = Column(JSONB, nullable=True, default={})
 
     # Timestamps
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
@@ -116,19 +117,19 @@ class LiveMeetingInsight(Base):
         self.updated_at = datetime.utcnow()
 
     def add_tier_result(self, tier_type: str, result_data: dict) -> None:
-        """Add a tier result to the metadata.
+        """Add a tier result to the insight metadata.
 
         Args:
             tier_type: The tier type (rag, meeting_context, live_conversation, gpt_generated)
             result_data: Dictionary containing tier result data
         """
-        if not self.metadata:
-            self.metadata = {}
+        if not self.insight_metadata:
+            self.insight_metadata = {}
 
-        if "tier_results" not in self.metadata:
-            self.metadata["tier_results"] = {}
+        if "tier_results" not in self.insight_metadata:
+            self.insight_metadata["tier_results"] = {}
 
-        self.metadata["tier_results"][tier_type] = result_data
+        self.insight_metadata["tier_results"][tier_type] = result_data
         self.updated_at = datetime.utcnow()
 
     def calculate_completeness(self) -> float:
@@ -151,17 +152,17 @@ class LiveMeetingInsight(Base):
         if self.content:
             score += 0.4
 
-        # Check metadata for owner and deadline
-        if self.metadata:
-            if self.metadata.get("owner"):
+        # Check insight_metadata for owner and deadline
+        if self.insight_metadata:
+            if self.insight_metadata.get("owner"):
                 score += 0.3
-            if self.metadata.get("deadline"):
+            if self.insight_metadata.get("deadline"):
                 score += 0.3
 
-        # Store completeness in metadata
-        if not self.metadata:
-            self.metadata = {}
-        self.metadata["completeness_score"] = score
+        # Store completeness in insight_metadata
+        if not self.insight_metadata:
+            self.insight_metadata = {}
+        self.insight_metadata["completeness_score"] = score
 
         return score
 
@@ -175,9 +176,9 @@ class LiveMeetingInsight(Base):
         self.answer_source = source
 
         if confidence is not None:
-            if not self.metadata:
-                self.metadata = {}
-            self.metadata["confidence"] = confidence
+            if not self.insight_metadata:
+                self.insight_metadata = {}
+            self.insight_metadata["confidence"] = confidence
 
         self.updated_at = datetime.utcnow()
 
@@ -199,7 +200,7 @@ class LiveMeetingInsight(Base):
             "content": self.content,
             "status": self.status,
             "answer_source": self.answer_source,
-            "metadata": self.metadata or {},
+            "metadata": self.insight_metadata or {},
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
