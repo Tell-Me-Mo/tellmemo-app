@@ -4,6 +4,79 @@
 
 ### [2025-10-26]
 #### Added
+- **Task 5.2 - Create Live Questions Card Widget**: Implemented comprehensive UI component for displaying real-time questions with four-tier answer discovery
+  - Implementation: Flutter stateful widget with expand/collapse animation, tier-based result display, and user action buttons
+  - Core Features:
+    - **LiveQuestionCard Widget** (`/lib/features/live_insights/presentation/widgets/live_question_card.dart`, 600+ lines)
+      - Card-based layout with status-colored border (1px, alpha 0.3)
+      - Header: Status icon, speaker name, timestamp (formatTimeAgo), status badge with icon + label
+      - Expand/collapse animation: AnimatedRotation for chevron (0 → 0.25 turns, 200ms easeInOut)
+      - Question text: SelectableText with fontWeight w500, height 1.4
+      - Compact tier status: 4 icon badges showing which tiers have results
+      - Expanded view: Full tier results sections with color-coded containers
+    - **Four-Tier Answer Display** with clear source attribution:
+      - **Tier 1 - RAG**: 📚 "From Documents" - Blue theme (Colors.blue.shade600)
+        - Document icon, source name, confidence badge
+        - Results in blue-tinted container (alpha 0.05 background, 0.2 border)
+      - **Tier 2 - Meeting Context**: 💬 "Earlier in Meeting" - Purple theme (Colors.purple.shade600)
+        - Timestamp icon, meeting timestamp reference
+        - Results in purple-tinted container
+      - **Tier 3 - Live Conversation**: 👂 "Answered Live" - Green theme (Colors.green.shade600)
+        - Mic icon, live conversation excerpt
+        - Results in green-tinted container
+      - **Tier 4 - GPT Generated**: 🤖 "AI Answer" - Orange theme (Colors.orange.shade600)
+        - AI icon, answer text, confidence score
+        - **Prominent disclaimer**: Orange warning badge with "AI-generated answer. Please verify accuracy."
+        - Results in orange-tinted container
+    - **Status Indicators** (with color coding):
+      - Searching: 🔍 Blue.shade600 - CircularProgressIndicator in gray container
+      - Found: ✓ Green.shade600
+      - Monitoring: 👀 Orange.shade600
+      - Answered: ✅ Green.shade700
+      - Unanswered: ❓ Grey.shade600
+    - **Progressive Result Display**:
+      - Tier results render as they arrive
+      - Each tier section shows count badge if multiple results
+      - Confidence badges: Green (≥80%), Orange (≥60%), Grey (<60%)
+      - Source metadata: Icon + text (document name, timestamp, etc.)
+    - **User Action Buttons**:
+      - "Mark as Answered": Green outlined button with check icon
+      - "Needs Follow-up": Orange outlined button with flag icon
+      - "Dismiss": Icon button with close icon
+      - Buttons only shown when expanded
+    - **Visual Design Patterns**:
+      - Card elevation: 1, border radius: 12px
+      - Status-colored border (1px solid, alpha 0.3)
+      - Status badge: Rounded (8px), background alpha 0.1, border alpha 0.3
+      - Tier icons: 4px padding, rounded (4px), colored when has results
+      - Spacing: LayoutConstants (spacingXs: 4px, spacingSm: 8px, spacingMd: 16px)
+      - Animation duration: 200ms (UIConstants.shortAnimation equivalent)
+  - Architecture Benefits:
+    - **Freezed Model Integration**: Uses LiveQuestion model with extension methods
+    - **Tier-specific getters**: ragResults, meetingContextResults, liveConversationResults, gptGeneratedResults
+    - **Status-based UI**: Dynamic rendering based on InsightStatus enum
+    - **Clear Source Attribution**: Every answer explicitly labeled with source tier
+    - **GPT Disclaimer**: Mandatory warning for AI-generated answers (FR-U2 requirement)
+    - **Responsive Layout**: Expands/collapses to save screen space
+    - **Progressive Enhancement**: Shows results as they arrive, no blocking UI
+  - Design References:
+    - Card layout: `/lib/features/tasks/presentation/widgets/task_kanban_card.dart`
+    - Status badges: `/lib/features/summaries/presentation/widgets/open_questions_widget.dart:80-96`
+    - Color patterns: Theme-aware, status-based color mapping
+    - Animation: Single-provider stateful widget with AnimationController
+  - Testing:
+    - Flutter analyze passed: 0 errors, 0 warnings
+    - Widget tests: TODO (Task 5.2 acceptance criterion, post-MVP)
+  - Files:
+    - Created: `/lib/features/live_insights/presentation/widgets/live_question_card.dart` (600+ lines)
+  - Next Steps:
+    - Task 5.3: Create Live Actions Card Widget (uses similar pattern)
+    - Task 5.4: Create AI Assistant Content Section (integrates question cards)
+    - Task 5.5: Implement Live Insights State Management (manages LiveQuestion instances)
+    - Task 5.7: Implement WebSocket Service (provides real-time question updates)
+
+### [2025-10-26]
+#### Added
 - **Task 5.6 - Create Live Insights Data Models (Flutter)**: Implemented comprehensive Freezed data models for live meeting intelligence
   - Implementation: Flutter Freezed models with JSON serialization, enums, and rich extension methods
   - Core Models:
