@@ -1009,14 +1009,16 @@ Status: COMPLETED - 2025-10-26
 **Description:** Create freezed data models for questions, actions, and answers on Flutter side.
 
 **Acceptance Criteria:**
-- [ ] Create models in `/lib/features/live_insights/data/models/live_insight_model.dart`
-- [ ] Define `LiveQuestion` model with fields: id, text, speaker, timestamp, status, tierResults, answerSource, metadata
-- [ ] Define `LiveAction` model with fields: id, description, owner, deadline, completenessScore, status, metadata
-- [ ] Define `TierResult` model for all four answer sources with fields: tierType, content, confidence, metadata, source
-- [ ] Define enums: InsightStatus, TierType (rag/meetingContext/liveMonitoring/gptGenerated), AnswerSource, ActionCompleteness
-- [ ] Add JSON serialization/deserialization
-- [ ] Implement copyWith methods for state updates
+- [x] Create models in `/lib/features/live_insights/data/models/live_insight_model.dart`
+- [x] Define `LiveQuestion` model with fields: id, text, speaker, timestamp, status, tierResults, answerSource, metadata
+- [x] Define `LiveAction` model with fields: id, description, owner, deadline, completenessScore, status, metadata
+- [x] Define `TierResult` model for all four answer sources with fields: tierType, content, confidence, metadata, source
+- [x] Define enums: InsightStatus, TierType (rag/meetingContext/liveMonitoring/gptGenerated), AnswerSource, ActionCompleteness
+- [x] Add JSON serialization/deserialization
+- [x] Implement copyWith methods for state updates
 - [ ] Write unit tests for model operations
+
+Status: COMPLETED - 2025-10-26
 
 **Complexity:** Simple
 **Dependencies:** None
