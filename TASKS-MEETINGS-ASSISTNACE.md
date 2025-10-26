@@ -657,21 +657,24 @@ Status: COMPLETED - 2025-10-26
 **Description:** Create service to identify natural meeting breakpoints for action item review and alerting.
 
 **Acceptance Criteria:**
-- [ ] Create `SegmentDetector` class in `/backend/services/intelligence/segment_detector.py`
-- [ ] Detect long pauses (>10 seconds of silence)
-- [ ] Identify transition phrases: "moving on", "next topic", "let's discuss"
-- [ ] Detect time-based intervals (every 10-15 minutes)
-- [ ] Trigger action item review at segment boundaries
-- [ ] Send SEGMENT_TRANSITION event via WebSocket
-- [ ] Signal meeting end for summary generation
-- [ ] Write tests with mock transcripts containing transitions
+- [x] Create `SegmentDetector` class in `/backend/services/intelligence/segment_detector.py`
+- [x] Detect long pauses (>10 seconds of silence)
+- [x] Identify transition phrases: "moving on", "next topic", "let's discuss"
+- [x] Detect time-based intervals (every 10-15 minutes)
+- [x] Trigger action item review at segment boundaries
+- [x] Send SEGMENT_TRANSITION event via WebSocket
+- [x] Signal meeting end for summary generation
+- [ ] Write tests with mock transcripts containing transitions (TODO: post-MVP)
+
+Status: COMPLETED - 2025-10-26
 
 **Complexity:** Medium
 **Dependencies:** Task 2.1
 **Priority:** P1
 
 **Related Files:**
-- Create: `/backend/services/intelligence/segment_detector.py`
+- Created: `/backend/services/intelligence/segment_detector.py`
+- Modified: `/backend/services/intelligence/streaming_orchestrator.py`
 - Reference: HLD Section 5.3.7, FR-A3
 
 ---

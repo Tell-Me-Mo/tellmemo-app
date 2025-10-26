@@ -37,6 +37,7 @@ from services.intelligence.stream_router import StreamRouter, get_stream_router,
 from services.intelligence.question_handler import QuestionHandler
 from services.intelligence.action_handler import ActionHandler
 from services.intelligence.answer_handler import AnswerHandler
+from services.intelligence.segment_detector import get_segment_detector
 
 # WebSocket import
 from routers.websocket_live_insights import insights_manager
@@ -123,6 +124,7 @@ class StreamingIntelligenceOrchestrator:
         self.question_handler = QuestionHandler()
         self.action_handler = ActionHandler()
         self.answer_handler = AnswerHandler()
+        self.segment_detector = get_segment_detector()
 
         # Active streaming task
         self._streaming_task: Optional[asyncio.Task] = None
@@ -136,6 +138,9 @@ class StreamingIntelligenceOrchestrator:
 
         # Set cross-handler dependencies
         self.answer_handler.set_question_handler(self.question_handler)
+
+        # Initialize segment detector session
+        asyncio.create_task(self.segment_detector.initialize_session(session_id))
 
         logger.info(f"StreamingIntelligenceOrchestrator initialized for session {sanitize_for_log(session_id)}")
 
@@ -160,6 +165,7 @@ class StreamingIntelligenceOrchestrator:
         self.question_handler.set_websocket_callback(broadcast_wrapper)
         self.action_handler.set_websocket_callback(broadcast_wrapper)
         self.answer_handler.set_websocket_callback(broadcast_wrapper)
+        self.segment_detector.set_websocket_callback(broadcast_wrapper)
 
         logger.debug(f"WebSocket callbacks set for session {self.session_id}")
 
@@ -237,6 +243,29 @@ class StreamingIntelligenceOrchestrator:
             # Stream intelligence from GPT
             async with get_db_context() as session:
                 await self._stream_gpt_intelligence(transcript_context, session)
+
+            # Check for segment boundaries
+            boundary_info = await self.segment_detector.check_boundary(
+                session_id=self.session_id,
+                current_time=timestamp or datetime.utcnow(),
+                recent_text=text
+            )
+
+            # If segment boundary detected, trigger action alerts
+            if boundary_info:
+                async with get_db_context() as session:
+                    # Trigger action completeness alerts
+                    await self.action_handler.generate_segment_alerts(
+                        session_id=self.session_id,
+                        session=session
+                    )
+
+                    # Broadcast segment transition
+                    await self.segment_detector.handle_segment_boundary(
+                        session_id=self.session_id,
+                        boundary_info=boundary_info,
+                        current_time=timestamp or datetime.utcnow()
+                    )
 
             # Update metrics
             self.metrics.total_chunks_processed += 1
@@ -436,10 +465,14 @@ class StreamingIntelligenceOrchestrator:
                 except asyncio.CancelledError:
                     pass
 
+            # Signal meeting end for final segment
+            await self.segment_detector.signal_meeting_end(self.session_id)
+
             # Cleanup handlers (persist to database)
             await self.question_handler.cleanup_session(self.session_id)
             await self.action_handler.cleanup_session(self.session_id)
             await self.answer_handler.cleanup_session(self.session_id)
+            await self.segment_detector.cleanup_session(self.session_id)
 
             # Clear router state
             self.stream_router.clear_state()

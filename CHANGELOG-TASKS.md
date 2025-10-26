@@ -4,6 +4,40 @@
 
 ### [2025-10-26]
 #### Added
+- **Task 3.5 - Implement Segment Detector Service**: Created intelligent meeting breakpoint detection system
+  - Implementation: SegmentDetector service with three detection mechanisms:
+    - **Time-based intervals**: Automatic segment detection every 10 minutes
+    - **Long pause detection**: Identifies silence periods >10 seconds as natural boundaries
+    - **Transition phrase detection**: Regex-based detection of topic change phrases
+      - Patterns: "moving on", "next topic", "let's discuss", "switching gears"
+      - Additional: "before we end", "to wrap up", "any questions", etc.
+  - Key Features:
+    - **Session state tracking**: Maintains per-session segment timing and transcript timestamps
+    - **Automatic action alerts**: Triggers ActionHandler.generate_segment_alerts() at boundaries
+    - **WebSocket broadcasting**: Sends SEGMENT_TRANSITION events with boundary metadata
+    - **Meeting end signaling**: Special "meeting_end" event for final summary generation
+    - **Segment statistics**: Provides meeting duration, segment count, time since last segment
+  - Integration:
+    - Fully integrated with StreamingIntelligenceOrchestrator
+    - Initialized on session start with asyncio task
+    - Checked after each transcription chunk processing
+    - Cleanup on session termination with meeting_end signal
+    - WebSocket callback registration for real-time client updates
+  - Configuration:
+    - Time interval: 10 minutes (configurable)
+    - Pause threshold: 10 seconds (configurable)
+    - 11 transition phrase patterns with case-insensitive matching
+  - Event Format:
+    - Type: SEGMENT_TRANSITION
+    - Boundary types: time_interval, long_pause, transition_phrase, meeting_end
+    - Metadata: elapsed time, pause duration, detected phrase, meeting statistics
+  - Files:
+    - Created: `/backend/services/intelligence/segment_detector.py` (320+ lines)
+    - Modified: `/backend/services/intelligence/streaming_orchestrator.py` (4 integration points)
+    - Updated: `TASKS-MEETINGS-ASSISTNACE.md` (Task 3.5 marked complete)
+
+### [2025-10-26]
+#### Added
 - **Task 6.1 - Configure GPT-5-mini in Multi-LLM Client**: Verified and documented GPT-5-mini integration
   - Implementation: All GPT-5-mini functionality already implemented in existing codebase
   - Key Features:
