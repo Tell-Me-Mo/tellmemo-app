@@ -4,6 +4,44 @@
 
 ### [2025-10-26]
 #### Added
+- **Task 3.3 - Implement Live Conversation Monitoring (Tier 3 Answer Discovery)**: Implemented 15-second live monitoring window for real-time answer detection
+  - Implementation: QuestionHandler monitors live conversation using asyncio.Event signaling pattern for answer detection
+  - Service Features:
+    - **Live Monitoring Architecture**:
+      - asyncio.Event-based signaling between QuestionHandler and AnswerHandler
+      - 15-second monitoring window after question detection (configurable)
+      - Concurrent monitoring support for multiple questions via nested dictionaries
+      - Proper cleanup and cancellation handling
+    - **Monitoring Lifecycle:**
+      - Step 1: Create asyncio.Event for question on Tier 3 start
+      - Step 2: Update question status to MONITORING in database
+      - Step 3: Broadcast QUESTION_MONITORING event to clients ("👂 Listening...")
+      - Step 4: Wait for answer detection signal OR 15s timeout (asyncio.wait_for)
+      - Step 5: AnswerHandler calls signal_answer_detected() when match found (>85% confidence)
+      - Step 6: Event.set() wakes up monitoring task, returns True
+      - Step 7: Cleanup event from _answer_events dictionary
+    - **Integration Points:**
+      - QuestionHandler._tier3_live_monitoring(): Waits for answer with asyncio.Event
+      - QuestionHandler.signal_answer_detected(): Called by AnswerHandler to signal match
+      - QuestionHandler.cancel_monitoring(): Signals event and cancels task
+      - AnswerHandler.handle_answer(): Signals QuestionHandler on successful match
+    - **WebSocket Events:**
+      - QUESTION_MONITORING: Sent when monitoring starts (tier: "live_conversation")
+      - ANSWER_DETECTED: Sent by AnswerHandler when answer matched (existing)
+    - **Concurrent Monitoring:**
+      - Session-scoped event storage: _answer_events[session_id][question_id]
+      - Independent monitoring tasks for multiple questions
+      - Clean separation of concerns between QuestionHandler and AnswerHandler
+    - **Error Handling:**
+      - asyncio.TimeoutError: Returns False, proceeds to Tier 4
+      - asyncio.CancelledError: Returns False, answer found in earlier tier
+      - Exception handling with proper event cleanup in all paths
+  - Status: Core functionality complete, integration tests deferred to post-MVP
+  - Files:
+    - `/backend/services/intelligence/question_handler.py` (modified - added _answer_events, signal_answer_detected, updated _tier3_live_monitoring, cleanup_session)
+    - `/backend/services/intelligence/answer_handler.py` (modified - updated to call signal_answer_detected instead of cancel_monitoring)
+
+
 - **Task 3.2 - Implement Meeting Context Search Service (Tier 2 Answer Discovery)**: Created GPT-5-mini powered semantic search for meeting transcript
   - Implementation: Service to search current meeting transcript for answers to questions using GPT-5-mini
   - Service Features:

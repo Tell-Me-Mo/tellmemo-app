@@ -39,6 +39,9 @@ class QuestionHandler:
         # Active questions being monitored (session_id -> {question_id -> task})
         self._active_monitoring: Dict[str, Dict[str, asyncio.Task]] = {}
 
+        # Answer detection events for Tier 3 live monitoring (session_id -> {question_id -> Event})
+        self._answer_events: Dict[str, Dict[str, asyncio.Event]] = {}
+
         # WebSocket broadcast callback (set by orchestrator)
         self._ws_broadcast_callback: Optional[Callable] = None
 
@@ -454,6 +457,11 @@ class QuestionHandler:
     ) -> bool:
         """Tier 3: Monitor live conversation for answers (15 second window).
 
+        This method waits for up to 15 seconds for AnswerHandler to detect and signal
+        an answer in the live conversation. The AnswerHandler processes answer events
+        from GPT stream and signals this monitoring task via asyncio.Event when a
+        match is found.
+
         Args:
             session_id: Meeting session ID
             question_id: Question database ID
@@ -468,15 +476,14 @@ class QuestionHandler:
                 f"({self.monitoring_timeout_seconds}s window)"
             )
 
-            # Wait for monitoring timeout
-            # In production, this would listen for answer events from AnswerHandler
-            # For now, we'll just wait and return False (no answer detected)
-            await asyncio.sleep(self.monitoring_timeout_seconds)
+            # Create event for this question to signal answer detection
+            if session_id not in self._answer_events:
+                self._answer_events[session_id] = {}
 
-            # TODO: Implement actual live monitoring logic (Task 3.3)
-            # This should be integrated with AnswerHandler to detect answers in real-time
-            # For now, marking as unanswered after timeout
+            answer_event = asyncio.Event()
+            self._answer_events[session_id][question_id] = answer_event
 
+            # Update status to MONITORING
             from db.database import SessionLocal
             async with SessionLocal() as db_session:
                 result = await db_session.execute(
@@ -486,22 +493,75 @@ class QuestionHandler:
                 )
                 question = result.scalar_one_or_none()
 
-                if question and question.status == InsightStatus.SEARCHING.value:
-                    # Only update if still searching (not already answered by other tiers)
-                    question.update_status(InsightStatus.MONITORING.value)
-                    await db_session.commit()
+                if question:
+                    # Only update to monitoring if not already answered by Tier 1 or 2
+                    if question.status in [InsightStatus.SEARCHING.value, InsightStatus.FOUND.value]:
+                        question.update_status(InsightStatus.MONITORING.value)
+                        await db_session.commit()
 
-            logger.debug(f"Tier 3: Live monitoring timeout for question {question_id}")
-            return False
+                        # Broadcast MONITORING status to clients
+                        await self._broadcast_event(session_id, {
+                            "type": "QUESTION_MONITORING",
+                            "question_id": question_id,
+                            "tier": "live_conversation",
+                            "label": "👂 Listening...",
+                            "duration_seconds": self.monitoring_timeout_seconds
+                        })
+
+            # Wait for either answer detection or timeout
+            try:
+                await asyncio.wait_for(
+                    answer_event.wait(),
+                    timeout=self.monitoring_timeout_seconds
+                )
+
+                # Answer was detected!
+                logger.info(
+                    f"Tier 3: Answer detected in live conversation for question {question_id}"
+                )
+
+                # Clean up event
+                if session_id in self._answer_events:
+                    self._answer_events[session_id].pop(question_id, None)
+
+                return True
+
+            except asyncio.TimeoutError:
+                # Timeout - no answer detected in 15 seconds
+                logger.debug(
+                    f"Tier 3: Live monitoring timeout for question {question_id} "
+                    f"(no answer in {self.monitoring_timeout_seconds}s)"
+                )
+
+                # Clean up event
+                if session_id in self._answer_events:
+                    self._answer_events[session_id].pop(question_id, None)
+
+                return False
 
         except asyncio.CancelledError:
-            logger.debug(f"Tier 3: Live monitoring cancelled for question {question_id}")
+            # Monitoring was cancelled (likely because answer found in Tier 1 or 2)
+            logger.debug(
+                f"Tier 3: Live monitoring cancelled for question {question_id} "
+                "(answer found in earlier tier)"
+            )
+
+            # Clean up event
+            if session_id in self._answer_events:
+                self._answer_events[session_id].pop(question_id, None)
+
             return False
+
         except Exception as e:
             logger.error(
                 f"Tier 3: Live monitoring failed for question {question_id}: {e}",
                 exc_info=True
             )
+
+            # Clean up event
+            if session_id in self._answer_events:
+                self._answer_events[session_id].pop(question_id, None)
+
             return False
 
     async def _tier4_gpt_generated_answer(
@@ -588,34 +648,75 @@ class QuestionHandler:
             )
             return False
 
-    async def cancel_monitoring(self, session_id: str, question_id: str) -> None:
-        """Cancel live monitoring for a question (called when answer found early).
+    def signal_answer_detected(self, session_id: str, question_id: str) -> None:
+        """Signal that an answer was detected for a monitored question.
+
+        This method is called by AnswerHandler when it detects an answer in the
+        live conversation that matches a question being monitored by Tier 3.
 
         Args:
             session_id: Meeting session ID
             question_id: Question database ID
         """
+        if session_id in self._answer_events:
+            if question_id in self._answer_events[session_id]:
+                event = self._answer_events[session_id][question_id]
+                event.set()  # Signal the monitoring task
+                logger.debug(
+                    f"Signaled answer detection for question {question_id} "
+                    f"in session {session_id}"
+                )
+            else:
+                logger.debug(
+                    f"Question {question_id} not in active monitoring events "
+                    f"for session {session_id}"
+                )
+        else:
+            logger.debug(
+                f"Session {session_id} has no active monitoring events"
+            )
+
+    async def cancel_monitoring(self, session_id: str, question_id: str) -> None:
+        """Cancel live monitoring for a question (called when answer found early).
+
+        This method cancels the Tier 3 monitoring task and signals any waiting
+        answer detection event.
+
+        Args:
+            session_id: Meeting session ID
+            question_id: Question database ID
+        """
+        # Signal answer event (in case monitoring is waiting)
+        self.signal_answer_detected(session_id, question_id)
+
+        # Cancel monitoring task
         if session_id in self._active_monitoring:
             if question_id in self._active_monitoring[session_id]:
                 task = self._active_monitoring[session_id][question_id]
                 if not task.done():
                     task.cancel()
-                    logger.debug(f"Cancelled monitoring for question {question_id}")
+                    logger.debug(f"Cancelled monitoring task for question {question_id}")
 
     async def cleanup_session(self, session_id: str) -> None:
         """Cleanup resources for a meeting session.
 
+        Cancels all active monitoring tasks and clears answer detection events.
+
         Args:
             session_id: Meeting session ID
         """
+        # Cancel all active monitoring tasks
         if session_id in self._active_monitoring:
-            # Cancel all active monitoring tasks
             for question_id, task in self._active_monitoring[session_id].items():
                 if not task.done():
                     task.cancel()
-
             del self._active_monitoring[session_id]
-            logger.info(f"Cleaned up question handler resources for session {session_id}")
+
+        # Clean up answer detection events
+        if session_id in self._answer_events:
+            del self._answer_events[session_id]
+
+        logger.info(f"Cleaned up question handler resources for session {session_id}")
 
     async def _broadcast_event(self, session_id: str, event_data: dict) -> None:
         """Broadcast event to WebSocket clients.

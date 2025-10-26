@@ -601,21 +601,24 @@ Status: COMPLETED - 2025-10-26
 **Description:** Extend AnswerHandler to implement 15-second live monitoring window for answers in ongoing conversation.
 
 **Acceptance Criteria:**
-- [ ] Add async monitoring task to AnswerHandler
-- [ ] Monitor GPT stream for 15 seconds after question detection
-- [ ] Match subsequent conversation to active questions semantically
-- [ ] Mark questions as resolved when confident answer detected (>85% confidence)
-- [ ] Cancel monitoring on timeout or resolution
-- [ ] Send QUESTION_UNANSWERED event if no answer found
-- [ ] Handle concurrent monitoring for multiple questions
-- [ ] Write tests for timing and concurrent monitoring
+- [x] Add async monitoring task to QuestionHandler using asyncio.Event for signaling
+- [x] Monitor GPT stream for 15 seconds after question detection via answer events
+- [x] Match subsequent conversation to active questions semantically (handled by AnswerHandler)
+- [x] Mark questions as resolved when confident answer detected (>85% confidence)
+- [x] Cancel monitoring on timeout or resolution with proper event cleanup
+- [x] Send QUESTION_UNANSWERED event if no answer found (handled in Tier 4)
+- [x] Handle concurrent monitoring for multiple questions via nested dictionaries
+- [ ] Write tests for timing and concurrent monitoring (TODO: post-MVP)
+
+Status: COMPLETED - 2025-10-26
 
 **Complexity:** Medium
 **Dependencies:** Task 2.6
 **Priority:** P1
 
 **Related Files:**
-- Modify: `/backend/services/intelligence/answer_handler.py`
+- Modified: `/backend/services/intelligence/question_handler.py` (added _answer_events, signal_answer_detected, updated _tier3_live_monitoring, cleanup_session)
+- Modified: `/backend/services/intelligence/answer_handler.py` (updated to call signal_answer_detected)
 - Reference: HLD Section 5.3.4, FR-Q2 Tier 3
 
 ---

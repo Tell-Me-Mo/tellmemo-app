@@ -154,18 +154,19 @@ class AnswerHandler:
                 )
                 return None
 
-            # Cancel Tier 3 monitoring if active
+            # Signal Tier 3 live monitoring that answer was detected
             if self._question_handler:
                 try:
-                    await self._question_handler.cancel_monitoring(
+                    # Signal the monitoring task (this will set the asyncio.Event)
+                    self._question_handler.signal_answer_detected(
                         session_id, str(db_question_id)
                     )
                     logger.debug(
-                        f"Cancelled monitoring for question {db_question_id}"
+                        f"Signaled answer detection for question {db_question_id}"
                     )
                 except Exception as e:
                     logger.warning(
-                        f"Failed to cancel monitoring for question {db_question_id}: {e}"
+                        f"Failed to signal answer detection for question {db_question_id}: {e}"
                     )
 
             # Broadcast answer detected event
