@@ -281,20 +281,22 @@ AudioFormat(
 **Description:** Create a rolling window buffer that maintains the last 60 seconds of transcription with timestamps for GPT context.
 
 **Acceptance Criteria:**
-- [ ] Create `TranscriptionBuffer` class in `/backend/services/intelligence/transcription_buffer.py`
-- [ ] Implement rolling window with 60-second TTL
-- [ ] Store sentences with timestamps and speaker info
-- [ ] Implement auto-trim for old content
-- [ ] Provide formatted output for GPT consumption
-- [ ] Add Redis integration for distributed buffer storage
-- [ ] Write unit tests with time-based assertions
+- [x] Create `TranscriptionBuffer` class in `/backend/services/transcription/transcription_buffer_service.py`
+- [x] Implement rolling window with 60-second TTL
+- [x] Store sentences with timestamps and speaker info
+- [x] Implement auto-trim for old content
+- [x] Provide formatted output for GPT consumption
+- [x] Add Redis integration for distributed buffer storage
+- [x] Write unit tests with time-based assertions
+
+Status: COMPLETED - 2025-10-26 09:30
 
 **Complexity:** Medium
 **Dependencies:** None
 **Priority:** P0
 
 **Related Files:**
-- Create: `/backend/services/intelligence/transcription_buffer.py`
+- Create: `/backend/services/transcription/transcription_buffer_service.py`
 - Reference: `/backend/services/intelligence/meeting_intelligence.py`
 
 ---

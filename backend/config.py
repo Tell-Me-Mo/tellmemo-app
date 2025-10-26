@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     redis_password: str = Field(default="", env="REDIS_PASSWORD")
     redis_db: int = Field(default=0, env="REDIS_DB")
     session_cache_ttl_minutes: int = Field(default=30, env="SESSION_CACHE_TTL_MINUTES")
+
+    # Transcription Buffer Configuration
+    transcription_buffer_window_seconds: int = Field(default=60, env="TRANSCRIPTION_BUFFER_WINDOW_SECONDS")
+    transcription_buffer_max_sentences: int = Field(default=100, env="TRANSCRIPTION_BUFFER_MAX_SENTENCES")
+    transcription_buffer_ttl_hours: int = Field(default=2, env="TRANSCRIPTION_BUFFER_TTL_HOURS")
     
     # Qdrant Configuration
     qdrant_host: str = Field(default="localhost", env="QDRANT_HOST")

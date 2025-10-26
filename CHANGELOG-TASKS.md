@@ -4,6 +4,38 @@
 
 ### [2025-10-26]
 #### Added
+- **Task 2.1 - Implement Transcription Buffer Manager**: Created rolling window buffer service for managing real-time transcription context
+  - Implementation: Python service with Redis-based distributed storage and automatic time/count-based trimming
+  - Service Features:
+    - `TranscriptionSentence` dataclass: Structured sentence representation with timestamp, speaker, confidence, metadata
+    - Rolling 60-second window with automatic trimming (configurable via `TRANSCRIPTION_BUFFER_WINDOW_SECONDS`)
+    - Size-based limiting (max 100 sentences, configurable via `TRANSCRIPTION_BUFFER_MAX_SENTENCES`)
+    - Redis Sorted Set (ZSET) for efficient time-based ordering and range queries
+    - Graceful degradation when Redis is unavailable
+    - TTL-based auto-cleanup (2 hours after session end)
+  - Core Methods:
+    - `add_sentence()`: Add sentence with automatic trimming and TTL management
+    - `get_buffer()`: Retrieve sentences in chronological order with optional time window
+    - `get_formatted_context()`: Generate GPT-ready formatted transcription (with/without timestamps and speakers)
+    - `get_buffer_stats()`: Monitoring metrics (sentence count, time span, TTL, Redis status)
+    - `clear_buffer()`: Manual buffer cleanup for session end
+  - Redis Integration:
+    - Password authentication support
+    - Async connection pooling with lazy initialization
+    - Sorted Set operations: ZADD, ZRANGE, ZREMRANGEBYSCORE, ZREMRANGEBYRANK, ZCARD
+    - Key pattern: `transcription_buffer:{session_id}`
+  - Configuration:
+    - Added 3 settings to `/backend/config.py`: window_seconds (60), max_sentences (100), ttl_hours (2)
+    - Environment variables: `TRANSCRIPTION_BUFFER_WINDOW_SECONDS`, `TRANSCRIPTION_BUFFER_MAX_SENTENCES`, `TRANSCRIPTION_BUFFER_TTL_HOURS`
+  - Testing: 24 comprehensive unit tests covering all service methods, edge cases, and graceful degradation
+  - Files:
+    - `/backend/services/transcription/transcription_buffer_service.py` (created - 366 lines)
+    - `/backend/config.py` (modified - added 3 buffer configuration fields)
+    - `/backend/tests/unit/test_transcription_buffer_service.py` (created - 24 tests, 593 lines)
+  - Status: Service ready for integration with GPT Streaming Interface (Task 2.2) and Meeting Context Search (Task 3.2)
+
+### [2025-10-26]
+#### Added
 - **Task 1.2 - Create Live Insights SQLAlchemy Model**: Implemented Python ORM model for live meeting insights
   - Implementation: Created comprehensive model with three enums (InsightType, InsightStatus, AnswerSource)
   - Model Features:
