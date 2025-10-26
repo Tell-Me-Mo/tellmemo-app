@@ -646,15 +646,17 @@ Status: COMPLETED - 2025-10-26 19:00
 **Description:** Create dedicated WebSocket endpoint for real-time meeting insights communication.
 
 **Acceptance Criteria:**
-- [ ] Create `/backend/routers/websocket_live_insights.py`
-- [ ] Add endpoint `/ws/live-insights/{session_id}` with JWT authentication
-- [ ] Implement connection manager for meeting participants
-- [ ] Route transcription chunks to StreamingIntelligenceEngine
-- [ ] Broadcast insight events to all participants: QUESTION_DETECTED, RAG_RESULT, ANSWER_FROM_MEETING, QUESTION_ANSWERED_LIVE, GPT_GENERATED_ANSWER, ACTION_TRACKED, ACTION_UPDATED, ACTION_ALERT, MEETING_SUMMARY
-- [ ] Handle user feedback messages: mark as answered, assign action, dismiss
-- [ ] Implement rate limiting per connection
-- [ ] Add comprehensive error handling and logging
-- [ ] Write integration tests for all message types
+- [x] Create `/backend/routers/websocket_live_insights.py`
+- [x] Add endpoint `/ws/live-insights/{session_id}` with JWT authentication
+- [x] Implement connection manager for meeting participants
+- [x] Route transcription chunks to StreamingIntelligenceEngine
+- [x] Broadcast insight events to all participants: QUESTION_DETECTED, RAG_RESULT, ANSWER_FROM_MEETING, QUESTION_ANSWERED_LIVE, GPT_GENERATED_ANSWER, ACTION_TRACKED, ACTION_UPDATED, ACTION_ALERT, MEETING_SUMMARY
+- [x] Handle user feedback messages: mark as answered, assign action, dismiss
+- [x] Implement rate limiting per connection
+- [x] Add comprehensive error handling and logging
+- [x] Write integration tests for all message types
+
+Status: COMPLETED - 2025-10-26 19:45
 
 **Complexity:** Complex
 **Dependencies:** Task 2.3, Task 2.4, Task 2.5, Task 2.6

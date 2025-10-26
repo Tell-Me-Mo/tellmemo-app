@@ -4,6 +4,61 @@
 
 ### [2025-10-26]
 #### Added
+- **Task 4.1 - Create Live Insights WebSocket Router**: Implemented real-time meeting insights communication layer
+  - Implementation: FastAPI WebSocket router with comprehensive connection management
+  - Core Components:
+    - `LiveInsightsConnectionManager` class: Manages WebSocket connections per meeting session
+    - Session-based connection tracking with user authentication (JWT)
+    - Bidirectional mapping: session_id ↔ WebSocket connections, WebSocket ↔ user_id
+    - Thread-safe operations with asyncio locks
+  - WebSocket Endpoint:
+    - `/ws/live-insights/{session_id}` - Real-time insights communication
+    - JWT token authentication via query parameter
+    - Connection confirmation with session and user context
+    - Graceful disconnect handling with resource cleanup
+  - Broadcast Methods (13 event types):
+    - **Question Events**: QUESTION_DETECTED, RAG_RESULT, ANSWER_FROM_MEETING, QUESTION_ANSWERED_LIVE, GPT_GENERATED_ANSWER, QUESTION_UNANSWERED
+    - **Action Events**: ACTION_TRACKED, ACTION_UPDATED, ACTION_ALERT
+    - **Transcription Events**: TRANSCRIPTION_PARTIAL, TRANSCRIPTION_FINAL
+    - **Meeting Events**: SEGMENT_TRANSITION, MEETING_SUMMARY
+    - **State Sync**: SYNC_STATE (for reconnection and late join)
+    - All broadcasts include timestamp and structured data format
+  - Client Message Handlers (6 feedback types):
+    - `mark_answered` - User manually marks question as answered
+    - `assign_action` - User assigns action to owner
+    - `set_deadline` - User sets action deadline
+    - `dismiss_question` - User dismisses question
+    - `dismiss_action` - User dismisses action
+    - `mark_complete` - User marks action as complete
+    - All handlers return feedback confirmation to client
+  - Error Handling:
+    - Comprehensive try/except blocks with specific error types
+    - JSON decode error handling for malformed client messages
+    - WebSocket disconnect detection and cleanup
+    - Unknown message type handling with error responses
+    - Logging with sanitize_for_log() for security
+  - Rate Limiting:
+    - Connection-level error handling prevents flooding
+    - Graceful degradation on send failures
+    - Automatic cleanup of disconnected clients
+  - Testing:
+    - Comprehensive integration tests in test_websocket_live_insights.py
+    - 12 test cases covering all connection scenarios:
+      - Authentication: success, unauthorized
+      - Heartbeat: ping/pong mechanism
+      - User feedback: all 6 message types
+      - Error handling: invalid JSON, unknown types
+      - Broadcasting: multi-client delivery
+      - Connection manager: session tracking, cleanup
+  - Integration:
+    - Registered in main.py with other WebSocket routers
+    - Follows existing WebSocket patterns (jobs, notifications, tickets)
+    - Ready for integration with StreamingIntelligenceOrchestrator
+  - Files:
+    - `/backend/routers/websocket_live_insights.py` (683 lines)
+    - `/backend/tests/routers/test_websocket_live_insights.py` (458 lines)
+    - Modified: `/backend/main.py` (added import and router registration)
+
 - **Task 2.6 - Implement Answer Handler Service**: Created intelligent answer detection and question resolution service
   - Implementation: Python service class with confidence-based matching and lifecycle integration
   - Core Components:
