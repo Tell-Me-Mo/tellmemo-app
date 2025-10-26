@@ -22,6 +22,7 @@ from services.transcription.assemblyai_service import (
     assemblyai_manager,
     TranscriptionResult
 )
+from services.intelligence.streaming_orchestrator import get_orchestrator, cleanup_orchestrator
 
 logger = get_logger(__name__)
 
@@ -489,10 +490,19 @@ async def handle_transcription_result(session_id: str, result: TranscriptionResu
         if result.is_final:
             await broadcast_transcription_final(session_id, transcript_data)
 
-            # TODO: Task 7.2 - Send final transcription to streaming orchestrator
-            # from services.intelligence.streaming_orchestrator import get_orchestrator
-            # orchestrator = get_orchestrator(session_id)
-            # await orchestrator.process_transcription_chunk(result.text, result.speaker)
+            # Task 7.2: Send final transcription to streaming orchestrator for intelligence processing
+            try:
+                orchestrator = get_orchestrator(session_id)
+                await orchestrator.process_transcription_chunk(
+                    text=result.text,
+                    speaker=result.speaker,
+                    timestamp=datetime.fromisoformat(result.created_at.replace('Z', '+00:00')) if result.created_at else datetime.utcnow(),
+                    is_final=True
+                )
+                logger.debug(f"Forwarded final transcription to orchestrator for session {sanitize_for_log(session_id)}")
+            except Exception as e:
+                logger.error(f"Failed to process transcription with orchestrator for session {sanitize_for_log(session_id)}: {e}", exc_info=True)
+                # Continue execution - don't fail transcription if intelligence processing fails
 
         else:
             await broadcast_transcription_partial(session_id, transcript_data)
@@ -625,6 +635,14 @@ async def websocket_audio_stream(
                         elif message_type == "stop_audio":
                             # Client requests to stop audio streaming
                             logger.info(f"Client requested to stop audio for session {sanitize_for_log(session_id)}")
+
+                            # Cleanup orchestrator when audio streaming stops
+                            try:
+                                await cleanup_orchestrator(session_id)
+                                logger.info(f"Orchestrator cleaned up for session {sanitize_for_log(session_id)}")
+                            except Exception as e:
+                                logger.error(f"Error cleaning up orchestrator: {e}")
+
                             break
 
                         else:
@@ -648,6 +666,13 @@ async def websocket_audio_stream(
         # If no other audio streams are active, we can close the AssemblyAI connection
         # For now, we'll keep the connection open until explicitly stopped
         # This will be improved in Task 4.3 (State Synchronization)
+
+        # Cleanup orchestrator on disconnect
+        try:
+            await cleanup_orchestrator(session_id)
+            logger.info(f"Orchestrator cleaned up for session {sanitize_for_log(session_id)}")
+        except Exception as e:
+            logger.error(f"Error cleaning up orchestrator in finally block: {e}")
 
         logger.info(f"Audio stream cleanup for session {sanitize_for_log(session_id)}")
 
