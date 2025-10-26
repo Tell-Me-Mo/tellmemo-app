@@ -1,4 +1,4 @@
-Analyze MIGRATION.md file completely and create a comprehensive TASKS.md file that breaks down the requirements into actionable development tasks.
+Analyze PROACTIVE_MEETING_ASSISTANCE_HLD.md file completely and create a comprehensive TASKS-MEETINGS-ASSISTNACE.md file that breaks down the requirements into actionable development tasks.
 Tasks should not be too small. Since tasks will be developed by Claude Code, for small tasks, it will take more time to each time investigate the codebase.
 
 PRELIMINARY ANALYSIS:
@@ -10,7 +10,7 @@ PRELIMINARY ANALYSIS:
    - API endpoints already created
    - UI components already built
 
-Structure the TASKS.md file as follows:
+Structure the TASKS-MEETINGS-ASSISTNACE.md file as follows:
 
 1. Use markdown format with clear hierarchy
 2. Group tasks by major features or components from the PRD
@@ -46,4 +46,4 @@ Add a summary section at the top with:
 - Breakdown by complexity
 - Critical path highlights
 
-Read the MIGRATION.md file and use ultrathink to generate the complete TASKS.md file based on these guidelines.
+Read the PROACTIVE_MEETING_ASSISTANCE_HLD.md file and use ultrathink to generate the complete TASKS-MEETINGS-ASSISTNACE.md file based on these guidelines.

@@ -1,0 +1,1280 @@
+# TellMeMo Real-Time Meeting Intelligence - Development Tasks
+
+**Generated:** October 2025
+**Based on:** PROACTIVE_MEETING_ASSISTANCE_HLD.md
+**Project:** PM Master V2
+
+---
+
+## EXECUTIVE SUMMARY
+
+This document breaks down the implementation of TellMeMo's real-time meeting intelligence system into actionable development tasks. The system provides automatic question detection with **four-tier answer discovery**, action item tracking, and progressive UI updates during live meetings.
+
+### Task Overview
+
+- **Total Tasks:** 26
+- **Priority Breakdown:**
+  - P0 (Critical): 11 tasks
+  - P1 (High): 11 tasks
+  - P2 (Nice-to-have): 4 tasks
+- **Complexity Breakdown:**
+  - Simple: 4 tasks
+  - Medium: 12 tasks
+  - Complex: 10 tasks
+- **Estimated Timeline:** 8-10 weeks
+
+### Critical Path Highlights
+
+1. Database schema setup → Backend streaming engine → Four-tier answer discovery
+2. Flutter UI components (with clear answer source labeling) → WebSocket integration → Real-time updates
+3. Testing and optimization → Production deployment
+
+### Existing Infrastructure
+
+**Already Implemented:**
+- Recording panel UI and backend models ✓
+- WebSocket server and client infrastructure ✓
+- Meeting intelligence analysis engine ✓
+- Multi-LLM client (Claude/OpenAI) ✓
+- Summary models with structured data ✓
+- Basic question/action display widgets ✓
+
+**To Be Built:**
+- **Audio streaming pipeline** (Flutter → WebSocket → Backend)
+- **AssemblyAI integration** for real-time transcription with speaker diarization
+- Real-time streaming intelligence engine with GPT-5-mini
+- Four-tier answer discovery system (RAG → Meeting Context → Live Monitoring → GPT-Generated)
+- **State synchronization** for reconnection, late join, multi-device support
+- Live meeting UI integration in recording panel with clear answer source attribution
+- Redis hot state management
+- Segment detection and alerting
+
+---
+
+## 1. DATABASE & SCHEMA
+
+### Task 1.1: Create Live Meeting Insights Table
+
+**Description:** Create a new database table to store real-time questions and actions detected during live meetings, separate from post-meeting summaries.
+
+**Acceptance Criteria:**
+- [ ] Create `live_meeting_insights` table with columns:
+  - [ ] `id` (UUID, primary key)
+  - [ ] `session_id` (String, indexed)
+  - [ ] `recording_id` (UUID, foreign key to recordings table)
+  - [ ] `project_id` (UUID, foreign key to projects table)
+  - [ ] `organization_id` (UUID, foreign key to organizations table)
+  - [ ] `insight_type` (Enum: question, action, answer)
+  - [ ] `detected_at` (DateTime with timezone)
+  - [ ] `speaker` (String, nullable - for speaker attribution)
+  - [ ] `content` (Text - question/action description)
+  - [ ] `status` (String - searching, found, monitoring, answered, unanswered, tracked, complete)
+  - [ ] `answer_source` (String, nullable - rag, meeting_context, live_conversation, gpt_generated)
+  - [ ] `metadata` (JSONB - tier_results, completeness_score, confidence, etc.)
+  - [ ] `created_at` (DateTime with timezone)
+  - [ ] `updated_at` (DateTime with timezone)
+- [ ] Add foreign key constraints to recordings, projects, organizations
+- [ ] Create indexes:
+  - [ ] Index on session_id
+  - [ ] Index on recording_id
+  - [ ] Index on project_id
+  - [ ] Index on organization_id
+  - [ ] Index on insight_type
+  - [ ] Index on detected_at
+  - [ ] Index on speaker
+  - [ ] Composite index on (project_id, created_at)
+  - [ ] Composite index on (session_id, detected_at)
+- [ ] Write Alembic migration script
+- [ ] Test migration up/down operations
+
+**Complexity:** Medium
+**Dependencies:** None
+**Priority:** P0
+
+**Related Files:**
+- Create: `/backend/alembic/versions/[timestamp]_create_live_meeting_insights_table.py`
+- Reference: `/backend/models/recording.py`
+
+---
+
+### Task 1.2: Create Live Insights SQLAlchemy Model
+
+**Description:** Create Python model classes for live meeting insights with proper relationships and validation.
+
+**Acceptance Criteria:**
+- [ ] Create `LiveMeetingInsight` model class in `/backend/models/live_insight.py`
+- [ ] Define enum for InsightType (QUESTION, ACTION, ANSWER)
+- [ ] Define enum for InsightStatus (SEARCHING, FOUND, MONITORING, ANSWERED, UNANSWERED, TRACKED, COMPLETE)
+- [ ] Add JSONB fields for: question_metadata, action_metadata, answer_sources, tier_results
+- [ ] Add relationships to Recording, Project, Organization models
+- [ ] Add helper methods: update_status(), add_tier_result(), calculate_completeness()
+- [ ] Write unit tests for model operations
+
+**Complexity:** Medium
+**Dependencies:** Task 1.1
+**Priority:** P0
+
+**Related Files:**
+- Create: `/backend/models/live_insight.py`
+- Reference: `/backend/models/recording.py`, `/backend/models/summary.py`
+
+---
+
+## 2. BACKEND STREAMING INTELLIGENCE ENGINE
+
+### Task 2.0: Implement Audio Streaming Pipeline
+
+**Description:** Create real-time audio streaming infrastructure from Flutter client to backend with proper format handling, buffering, and WebSocket binary transmission.
+
+**Acceptance Criteria:**
+- [ ] **Flutter Audio Capture:**
+  - [ ] Integrate `record` or `flutter_sound` plugin for microphone access
+  - [ ] Configure audio format: PCM 16kHz, 16-bit, mono
+  - [ ] Implement chunking: 100-200ms chunks (1600-3200 bytes per chunk)
+  - [ ] Add audio level monitoring (amplitude) for UI feedback
+- [ ] **Audio Buffering Strategy:**
+  - [ ] Buffer 3-5 chunks before sending (300-500ms buffer)
+  - [ ] Implement circular buffer to prevent memory growth
+  - [ ] Handle overflow gracefully (drop oldest chunks)
+- [ ] **WebSocket Binary Transmission:**
+  - [ ] Send audio as binary WebSocket frames (not Base64)
+  - [ ] Add chunk metadata: timestamp, sequence number, audio level
+  - [ ] Implement chunked transfer with proper framing
+- [ ] **Backend Audio Reception:**
+  - [ ] Receive binary audio chunks via WebSocket
+  - [ ] Validate chunk format and sequence
+  - [ ] Buffer chunks for AssemblyAI streaming (500-1000ms)
+  - [ ] Handle out-of-order or missing chunks
+- [ ] **Timestamp Synchronization:**
+  - [ ] Client sends local timestamp with each chunk
+  - [ ] Backend calculates offset between client and server time
+  - [ ] Store synchronized timestamps for transcript alignment
+- [ ] **Audio Quality Monitoring:**
+  - [ ] Detect silence periods (amplitude < threshold)
+  - [ ] Detect audio clipping (amplitude > threshold)
+  - [ ] Report quality metrics via WebSocket
+- [ ] Write integration tests for end-to-end audio flow
+- [ ] Test with various network conditions (slow, packet loss)
+
+**Complexity:** Complex
+**Dependencies:** None
+**Priority:** P0
+
+**Technical Specifications:**
+```dart
+// Flutter audio format
+AudioFormat(
+  sampleRate: 16000,      // 16kHz (Whisper/AssemblyAI standard)
+  numChannels: 1,         // Mono
+  bitsPerSample: 16,      // 16-bit PCM
+)
+
+// Chunk size calculation
+// 16kHz * 16-bit * 1 channel * 0.1s = 3200 bytes per 100ms chunk
+```
+
+**Related Files:**
+- Create: `/lib/features/audio_recording/services/audio_stream_service.dart`
+- Create: `/backend/services/audio/audio_receiver.py`
+- Modify: `/backend/routers/websocket_live_insights.py` (add binary frame handling)
+
+---
+
+### Task 2.0.5: Implement AssemblyAI Streaming Integration
+
+**Description:** Integrate AssemblyAI Real-Time Transcription API for streaming speech-to-text with speaker diarization.
+
+**Acceptance Criteria:**
+- [ ] **AssemblyAI WebSocket Connection:**
+  - [ ] Connect to AssemblyAI real-time endpoint: `wss://api.assemblyai.com/v2/realtime/ws`
+  - [ ] Authenticate with API key
+  - [ ] Configure parameters: sample_rate=16000, encoding=pcm_s16le, enable_speaker_labels=true
+- [ ] **Audio Streaming to AssemblyAI:**
+  - [ ] Forward audio chunks from client to AssemblyAI
+  - [ ] Maintain persistent connection during meeting
+  - [ ] Handle AssemblyAI reconnection with exponential backoff
+- [ ] **Transcription Processing:**
+  - [ ] Receive partial transcriptions (real-time, unstable)
+  - [ ] Receive final transcriptions (stable, after ~2s delay)
+  - [ ] Extract speaker labels (Speaker A, Speaker B, etc.)
+  - [ ] Extract timestamps (start, end for each utterance)
+- [ ] **Partial vs Final Handling:**
+  - [ ] Store partial transcriptions in temporary buffer
+  - [ ] Replace with final transcription when received
+  - [ ] Only send final transcriptions to GPT streaming
+  - [ ] Update UI with partial for immediate feedback
+- [ ] **Speaker Diarization:**
+  - [ ] Map AssemblyAI speaker labels to participant names (if available)
+  - [ ] Store speaker attribution with each transcript segment
+  - [ ] Handle speaker changes mid-sentence
+- [ ] **Transcription Events:**
+  - [ ] Send TRANSCRIPTION_PARTIAL event to client (for live display)
+  - [ ] Send TRANSCRIPTION_FINAL event when stable
+  - [ ] Include: text, speaker, start_time, end_time, confidence
+- [ ] **Error Handling:**
+  - [ ] Retry connection with exponential backoff (3 attempts)
+  - [ ] Fall back to silence on persistent failure
+  - [ ] Notify user of transcription gaps
+  - [ ] Log errors with meeting context for debugging
+- [ ] **Cost Tracking:**
+  - [ ] Track audio duration sent to AssemblyAI
+  - [ ] Calculate cost: $0.00025/second = $0.015/minute
+  - [ ] Store in meeting metadata
+- [ ] Write integration tests with mock AssemblyAI responses
+- [ ] Test speaker diarization accuracy with sample audio
+
+**Complexity:** Complex
+**Dependencies:** Task 2.0
+**Priority:** P0
+
+**AssemblyAI Response Format:**
+```json
+{
+  "message_type": "PartialTranscript",
+  "text": "Hello, what is the",
+  "created": "2023-10-26T10:30:05.123Z",
+  "audio_start": 0,
+  "audio_end": 1200,
+  "confidence": 0.92,
+  "words": [...]
+}
+
+{
+  "message_type": "FinalTranscript",
+  "text": "Hello, what is the budget for Q4?",
+  "created": "2023-10-26T10:30:07.456Z",
+  "audio_start": 0,
+  "audio_end": 3200,
+  "confidence": 0.95,
+  "speaker_labels": ["Speaker A"],
+  "words": [...]
+}
+```
+
+**Related Files:**
+- Create: `/backend/services/transcription/assemblyai_service.py`
+- Create: `/backend/services/transcription/speaker_mapper.py`
+- Modify: `/backend/routers/websocket_live_insights.py` (forward to AssemblyAI)
+
+---
+
+### Task 2.1: Implement Transcription Buffer Manager
+
+**Description:** Create a rolling window buffer that maintains the last 60 seconds of transcription with timestamps for GPT context.
+
+**Acceptance Criteria:**
+- [ ] Create `TranscriptionBuffer` class in `/backend/services/intelligence/transcription_buffer.py`
+- [ ] Implement rolling window with 60-second TTL
+- [ ] Store sentences with timestamps and speaker info
+- [ ] Implement auto-trim for old content
+- [ ] Provide formatted output for GPT consumption
+- [ ] Add Redis integration for distributed buffer storage
+- [ ] Write unit tests with time-based assertions
+
+**Complexity:** Medium
+**Dependencies:** None
+**Priority:** P0
+
+**Related Files:**
+- Create: `/backend/services/intelligence/transcription_buffer.py`
+- Reference: `/backend/services/intelligence/meeting_intelligence.py`
+
+---
+
+### Task 2.2: Implement GPT Streaming Interface
+
+**Description:** Create streaming interface to GPT-5-mini API with real-time response parsing and error handling.
+
+**Acceptance Criteria:**
+- [ ] **OpenAI Streaming API Integration:**
+  - [ ] Extend `MultiLLMClient` to support OpenAI streaming mode
+  - [ ] Use endpoint: `https://api.openai.com/v1/chat/completions`
+  - [ ] Configure model: `gpt-5-mini`
+  - [ ] Enable streaming: `stream=True, stream_options={"include_usage": True}`
+  - [ ] Set temperature: 0.3 (for consistent structured output)
+  - [ ] Set max_tokens: 1000 (sufficient for question/action detection)
+- [ ] **Newline-Delimited JSON (NDJSON) Parsing:**
+  - [ ] Buffer stream chunks until newline character received
+  - [ ] Parse each complete line as separate JSON object
+  - [ ] Handle incomplete lines at end of stream
+  - [ ] Example implementation:
+    ```python
+    buffer = ""
+    async for chunk in stream:
+        content = chunk.choices[0].delta.content or ""
+        buffer += content
+        while "\n" in buffer:
+            line, buffer = buffer.split("\n", 1)
+            try:
+                obj = json.loads(line.strip())
+                if obj:  # Skip empty lines
+                    await route_object(obj)
+            except json.JSONDecodeError as e:
+                logger.warning(f"Malformed JSON in stream: {line[:100]}")
+                continue
+    ```
+- [ ] **Token Context Window Management:**
+  - [ ] Limit transcript buffer to ~1200 tokens (60 seconds of conversation)
+  - [ ] Include last 5 questions + actions in context (~500 tokens)
+  - [ ] System prompt: ~300 tokens
+  - [ ] Total per request: ~2000 tokens (well within 128K context limit)
+  - [ ] Track token usage with `stream_options={"include_usage": True}`
+- [ ] **Rate Limit Handling:**
+  - [ ] Implement exponential backoff: 1s, 2s, 4s, 8s, 16s
+  - [ ] Respect OpenAI rate limits (TPM, RPM)
+  - [ ] Circuit breaker after 3 consecutive 429 errors
+  - [ ] Log rate limit events for monitoring
+- [ ] **Stream Interruption Recovery:**
+  - [ ] Detect stream disconnection mid-response
+  - [ ] Retry with same transcript context (idempotent)
+  - [ ] Maximum 3 retry attempts before failing
+  - [ ] Mark in-flight detections as provisional during retry
+- [ ] **Async Generator Pattern:**
+  - [ ] Implement as `async def stream_intelligence(transcript: str) -> AsyncGenerator[dict, None]`
+  - [ ] Yield JSON objects as they're parsed
+  - [ ] Handle generator cleanup on client disconnect
+- [ ] **Comprehensive Logging:**
+  - [ ] Log request: model, tokens, temperature, prompt preview
+  - [ ] Log response: total tokens, duration, object count
+  - [ ] Log errors: rate limits, timeouts, malformed JSON
+  - [ ] Use structured logging (JSON) for parsing
+- [ ] **Testing:**
+  - [ ] Test successful streaming with mock responses
+  - [ ] Test timeout handling (network delay)
+  - [ ] Test partial JSON parsing (stream cuts mid-object)
+  - [ ] Test rate limit recovery
+  - [ ] Test concurrent streams (multiple meetings)
+
+**Complexity:** Complex
+**Dependencies:** Task 2.0.5 (needs transcription input)
+**Priority:** P0
+
+**Example API Call:**
+```python
+async def stream_intelligence(transcript_buffer: str, context: dict) -> AsyncGenerator[dict, None]:
+    """Stream intelligence detections from GPT."""
+    response = await openai_client.chat.completions.create(
+        model="gpt-5-mini",
+        messages=[
+            {"role": "system", "content": STREAMING_INTELLIGENCE_PROMPT},
+            {"role": "user", "content": format_transcript(transcript_buffer, context)}
+        ],
+        stream=True,
+        stream_options={"include_usage": True},
+        temperature=0.3,
+        max_tokens=1000,
+        timeout=30.0
+    )
+
+    buffer = ""
+    async for chunk in response:
+        if chunk.choices[0].delta.content:
+            buffer += chunk.choices[0].delta.content
+
+            while "\n" in buffer:
+                line, buffer = buffer.split("\n", 1)
+                try:
+                    obj = json.loads(line.strip())
+                    if obj and "type" in obj:
+                        yield obj
+                except json.JSONDecodeError:
+                    continue
+```
+
+**Related Files:**
+- Modify: `/backend/services/llm/multi_llm_client.py`
+- Create: `/backend/services/llm/gpt5_streaming.py`
+- Reference: HLD Section 5.3.1 "GPT Streaming Interface"
+
+---
+
+### Task 2.3: Implement Stream Router
+
+**Description:** Create message router that receives objects from GPT stream and routes to appropriate handlers.
+
+**Acceptance Criteria:**
+- [ ] Create `StreamRouter` class in `/backend/services/intelligence/stream_router.py`
+- [ ] Parse streaming JSON objects by type: question, action, action_update, answer
+- [ ] Maintain mapping of question/action IDs to state
+- [ ] Route messages to QuestionHandler, ActionHandler, AnswerHandler
+- [ ] Implement error handling for malformed objects
+- [ ] Add metric collection (latency, throughput)
+- [ ] Write integration tests with mock handlers
+
+**Complexity:** Medium
+**Dependencies:** Task 2.2
+**Priority:** P0
+
+**Related Files:**
+- Create: `/backend/services/intelligence/stream_router.py`
+- Reference: HLD Section 5.3.1 "Stream Router"
+
+---
+
+### Task 2.4: Implement Question Handler Service
+
+**Description:** Create service to process question detection events, trigger parallel searches, and manage question lifecycle.
+
+**Acceptance Criteria:**
+- [ ] Create `QuestionHandler` class in `/backend/services/intelligence/question_handler.py`
+- [ ] Implement question detection event processing
+- [ ] Trigger parallel RAG and meeting context searches
+- [ ] Manage question state transitions (searching → found/monitoring → answered/unanswered)
+- [ ] Aggregate results from all four tiers (RAG, Meeting Context, Live Monitoring, GPT-Generated)
+- [ ] Store questions in `live_meeting_insights` table with answer_source field
+- [ ] Broadcast updates via WebSocket to connected clients
+- [ ] Implement 15-second monitoring timeout
+- [ ] Write unit tests for all state transitions
+
+**Complexity:** Complex
+**Dependencies:** Task 2.3, Task 1.2
+**Priority:** P0
+
+**Related Files:**
+- Create: `/backend/services/intelligence/question_handler.py`
+- Reference: HLD Section 5.3.2, FR-Q1, FR-Q2
+
+---
+
+### Task 2.5: Implement Action Handler Service
+
+**Description:** Create service to detect, track, accumulate, and alert on action items during live meetings.
+
+**Acceptance Criteria:**
+- [ ] Create `ActionHandler` class in `/backend/services/intelligence/action_handler.py`
+- [ ] Process action and action_update events from GPT stream
+- [ ] Implement action state management and accumulation logic
+- [ ] Calculate completeness scores based on: description clarity, assignee presence, deadline presence
+- [ ] Merge related action statements into single items
+- [ ] Generate alerts at segment boundaries for incomplete actions
+- [ ] Store actions in `live_meeting_insights` table
+- [ ] Broadcast tracking badges and updates via WebSocket
+- [ ] Write unit tests for merging and scoring logic
+
+**Complexity:** Complex
+**Dependencies:** Task 2.3, Task 1.2
+**Priority:** P0
+
+**Related Files:**
+- Create: `/backend/services/intelligence/action_handler.py`
+- Reference: HLD Section 5.3.3, FR-A1, FR-A2, FR-A3
+
+---
+
+### Task 2.6: Implement Answer Handler Service
+
+**Description:** Create service to monitor live conversation for answers to active questions and mark them as resolved.
+
+**Acceptance Criteria:**
+- [ ] Create `AnswerHandler` class in `/backend/services/intelligence/answer_handler.py`
+- [ ] Process answer events from GPT stream
+- [ ] Implement semantic matching of answers to active questions
+- [ ] Update question status to "answered" when match confidence > 85%
+- [ ] Remove from active tracking when resolved
+- [ ] Send resolution notifications via WebSocket
+- [ ] Store answer source and timestamp
+- [ ] Write tests for matching algorithms
+
+**Complexity:** Medium
+**Dependencies:** Task 2.3, Task 2.4, Task 1.2
+**Priority:** P1
+
+**Related Files:**
+- Create: `/backend/services/intelligence/answer_handler.py`
+- Reference: HLD Section 5.3.4, FR-Q3
+
+---
+
+## 3. FOUR-TIER ANSWER DISCOVERY SYSTEM
+
+### Task 3.1: Implement RAG Search Service
+
+**Description:** Create service to search organization's document repository for relevant answers with streaming results.
+
+**Acceptance Criteria:**
+- [ ] Create `RAGSearchService` class in `/backend/services/intelligence/rag_search.py`
+- [ ] Integrate with existing vector database (Qdrant or alternative)
+- [ ] Accept search queries from QuestionHandler
+- [ ] Return top 5 relevant documents with relevance scores
+- [ ] Stream results progressively as found (don't wait for all 5)
+- [ ] Implement 2-second timeout
+- [ ] Add document metadata: title, URL, last updated, access permissions
+- [ ] Handle vector store unavailability gracefully
+- [ ] Write integration tests with mock vector store
+
+**Complexity:** Complex
+**Dependencies:** Task 2.4
+**Priority:** P1
+
+**Related Files:**
+- Create: `/backend/services/intelligence/rag_search.py`
+- Reference: HLD Section 5.3.5, FR-Q2 Tier 1
+
+---
+
+### Task 3.2: Implement Meeting Context Search Service
+
+**Description:** Create service to search current meeting transcript for answers using GPT-5-mini semantic search.
+
+**Acceptance Criteria:**
+- [ ] Create `MeetingContextSearch` class in `/backend/services/intelligence/meeting_context_search.py`
+- [ ] Query current meeting transcript buffer for semantic matches
+- [ ] Use GPT-5-mini for improved reference detection and semantic matching
+- [ ] Return exact quotes with speaker attribution and timestamp
+- [ ] Implement 1.5-second timeout (optimized to 1.2s with GPT-5-mini)
+- [ ] Handle cases where question was already answered earlier
+- [ ] Provide clickable timestamp links for UI
+- [ ] Write tests with sample meeting transcripts
+
+**Complexity:** Complex
+**Dependencies:** Task 2.1, Task 2.4
+**Priority:** P1
+
+**Related Files:**
+- Create: `/backend/services/intelligence/meeting_context_search.py`
+- Reference: HLD Section 5.3.6, FR-Q2 Tier 2
+
+---
+
+### Task 3.3: Implement Live Conversation Monitoring
+
+**Description:** Extend AnswerHandler to implement 15-second live monitoring window for answers in ongoing conversation.
+
+**Acceptance Criteria:**
+- [ ] Add async monitoring task to AnswerHandler
+- [ ] Monitor GPT stream for 15 seconds after question detection
+- [ ] Match subsequent conversation to active questions semantically
+- [ ] Mark questions as resolved when confident answer detected (>85% confidence)
+- [ ] Cancel monitoring on timeout or resolution
+- [ ] Send QUESTION_UNANSWERED event if no answer found
+- [ ] Handle concurrent monitoring for multiple questions
+- [ ] Write tests for timing and concurrent monitoring
+
+**Complexity:** Medium
+**Dependencies:** Task 2.6
+**Priority:** P1
+
+**Related Files:**
+- Modify: `/backend/services/intelligence/answer_handler.py`
+- Reference: HLD Section 5.3.4, FR-Q2 Tier 3
+
+---
+
+### Task 3.4: Implement GPT-Generated Answer Service (Tier 4)
+
+**Description:** Create service that uses GPT-5-mini to generate answers based on its knowledge when all other tiers fail to find answers.
+
+**Acceptance Criteria:**
+- [ ] Create `GPTAnswerGenerator` class in `/backend/services/intelligence/gpt_answer_generator.py`
+- [ ] Trigger only when Tier 1, 2, and 3 don't find answers (after 15s monitoring timeout)
+- [ ] Send question context + meeting context to GPT-5-mini
+- [ ] Request GPT to generate answer based on its knowledge
+- [ ] Include confidence score with generated answer (GPT self-assessment)
+- [ ] Add disclaimer metadata: "AI-generated answer based on general knowledge"
+- [ ] Set answer_source as "gpt_generated" in database
+- [ ] Implement 3-second timeout for GPT response
+- [ ] Send GPT_GENERATED_ANSWER event via WebSocket with clear source attribution
+- [ ] Handle cases where GPT cannot confidently answer (confidence <70%)
+- [ ] Write tests with various question types
+
+**Complexity:** Medium
+**Dependencies:** Task 3.3
+**Priority:** P1
+
+**Related Files:**
+- Create: `/backend/services/intelligence/gpt_answer_generator.py`
+- Reference: HLD Section 5.3.6 (extended)
+
+---
+
+### Task 3.5: Implement Segment Detector Service
+
+**Description:** Create service to identify natural meeting breakpoints for action item review and alerting.
+
+**Acceptance Criteria:**
+- [ ] Create `SegmentDetector` class in `/backend/services/intelligence/segment_detector.py`
+- [ ] Detect long pauses (>10 seconds of silence)
+- [ ] Identify transition phrases: "moving on", "next topic", "let's discuss"
+- [ ] Detect time-based intervals (every 10-15 minutes)
+- [ ] Trigger action item review at segment boundaries
+- [ ] Send SEGMENT_TRANSITION event via WebSocket
+- [ ] Signal meeting end for summary generation
+- [ ] Write tests with mock transcripts containing transitions
+
+**Complexity:** Medium
+**Dependencies:** Task 2.1
+**Priority:** P1
+
+**Related Files:**
+- Create: `/backend/services/intelligence/segment_detector.py`
+- Reference: HLD Section 5.3.7, FR-A3
+
+---
+
+## 4. WEBSOCKET INTEGRATION
+
+### Task 4.1: Create Live Insights WebSocket Router
+
+**Description:** Create dedicated WebSocket endpoint for real-time meeting insights communication.
+
+**Acceptance Criteria:**
+- [ ] Create `/backend/routers/websocket_live_insights.py`
+- [ ] Add endpoint `/ws/live-insights/{session_id}` with JWT authentication
+- [ ] Implement connection manager for meeting participants
+- [ ] Route transcription chunks to StreamingIntelligenceEngine
+- [ ] Broadcast insight events to all participants: QUESTION_DETECTED, RAG_RESULT, ANSWER_FROM_MEETING, QUESTION_ANSWERED_LIVE, GPT_GENERATED_ANSWER, ACTION_TRACKED, ACTION_UPDATED, ACTION_ALERT, MEETING_SUMMARY
+- [ ] Handle user feedback messages: mark as answered, assign action, dismiss
+- [ ] Implement rate limiting per connection
+- [ ] Add comprehensive error handling and logging
+- [ ] Write integration tests for all message types
+
+**Complexity:** Complex
+**Dependencies:** Task 2.3, Task 2.4, Task 2.5, Task 2.6
+**Priority:** P0
+
+**Related Files:**
+- Create: `/backend/routers/websocket_live_insights.py`
+- Reference: `/backend/routers/websocket_notifications.py`, `/backend/routers/websocket_jobs.py`, HLD Section 5.3
+
+---
+
+### Task 4.2: Integrate Redis for Hot State Management
+
+**Description:** Set up Redis caching for transcript buffers, active questions, and actions with TTL management.
+
+**Acceptance Criteria:**
+- [ ] Configure Redis connection in backend settings
+- [ ] Store transcript buffer with TTL: meeting duration + 2 hours
+- [ ] Cache active questions and actions per meeting session
+- [ ] Implement pub/sub for multi-instance coordination
+- [ ] Store user preferences with 7-day TTL
+- [ ] Add cache invalidation on meeting end
+- [ ] Implement fallback to PostgreSQL if Redis unavailable
+- [ ] Write tests for cache operations and TTL behavior
+
+**Complexity:** Medium
+**Dependencies:** Task 2.1
+**Priority:** P1
+
+**Related Files:**
+- Modify: `/backend/core/config.py`
+- Create: `/backend/services/cache/redis_service.py`
+- Reference: HLD Section 5.4.1
+
+---
+
+### Task 4.3: Implement State Synchronization on Reconnect
+
+**Description:** Create state synchronization mechanism to handle client disconnections, reconnections, late joins, and multi-device access during live meetings.
+
+**Acceptance Criteria:**
+- [ ] **Reconnection State Sync:**
+  - [ ] On WebSocket reconnect, send SYNC_STATE message with all active questions/actions
+  - [ ] Include current meeting context: session_id, elapsed_time, active_participants
+  - [ ] Resume live monitoring for questions that are still being tracked
+  - [ ] Continue segment detection from last known state
+- [ ] **Client State Reconciliation:**
+  - [ ] Client compares received state with local cached state
+  - [ ] Merge server state with local state (server is source of truth)
+  - [ ] Update UI with any missed questions/actions
+  - [ ] Show notification: "Reconnected - synced X questions, Y actions"
+- [ ] **Late Join Handling:**
+  - [ ] User joins meeting 15+ minutes after start
+  - [ ] Load all questions/actions from meeting start (from Redis)
+  - [ ] Mark items with relative timestamps: "25 minutes ago"
+  - [ ] Provide "Hide Resolved" filter option
+  - [ ] Scroll to most recent items by default
+- [ ] **Multi-Device Support:**
+  - [ ] Allow same user to connect from multiple devices (phone + laptop)
+  - [ ] Track connections by `user_id + device_id`
+  - [ ] Broadcast same state updates to all user devices
+  - [ ] Synchronize user actions across devices:
+    - Dismiss on phone → dismissed on laptop
+    - Assign action on laptop → updated on phone
+  - [ ] Show active devices in UI: "Connected on 2 devices"
+- [ ] **Session State Lifecycle:**
+  - [ ] Create Redis state on first WebSocket connection for session
+  - [ ] TTL: meeting duration + 2 hours (as specified in Task 4.2)
+  - [ ] Persist final state to PostgreSQL on meeting end
+  - [ ] Clean up Redis state after TTL expiration
+  - [ ] Handle orphaned sessions (meeting never ended)
+- [ ] **Concurrent Participant Conflicts:**
+  - [ ] Detect when two users modify same action simultaneously
+  - [ ] Use last-write-wins with timestamp
+  - [ ] Broadcast conflict notification: "User X updated this action"
+  - [ ] Show change history in action metadata
+- [ ] **Offline State Management:**
+  - [ ] If disconnected, continue showing last known state (read-only)
+  - [ ] Queue user actions locally while offline
+  - [ ] On reconnect, replay queued actions to server
+  - [ ] Handle conflicts if server state changed
+- [ ] Write integration tests for all reconnection scenarios
+- [ ] Test with simulated network interruptions (1s, 5s, 30s, 60s)
+
+**Complexity:** Complex
+**Dependencies:** Task 4.1, Task 4.2
+**Priority:** P0
+
+**SYNC_STATE Message Format:**
+```json
+{
+  "type": "SYNC_STATE",
+  "session_id": "abc123",
+  "timestamp": "2025-10-26T10:30:00Z",
+  "meeting_elapsed_seconds": 1520,
+  "active_participants": ["user1", "user2"],
+  "questions": [
+    {
+      "id": "q1",
+      "text": "What's the budget?",
+      "speaker": "Sarah",
+      "timestamp": "2025-10-26T10:15:30Z",
+      "status": "answered",
+      "answer_source": "rag",
+      "tier_results": [...]
+    }
+  ],
+  "actions": [
+    {
+      "id": "a1",
+      "description": "Update documentation",
+      "owner": "John",
+      "deadline": "2025-10-25",
+      "completeness": 1.0,
+      "status": "complete"
+    }
+  ]
+}
+```
+
+**Related Files:**
+- Modify: `/backend/routers/websocket_live_insights.py`
+- Create: `/backend/services/sync/state_sync_service.py`
+- Modify: `/lib/features/live_insights/services/live_insights_websocket.dart`
+- Modify: `/lib/features/live_insights/presentation/providers/live_insights_provider.dart`
+
+---
+
+## 5. FLUTTER UI COMPONENTS
+
+### Task 5.1: Add AI Assistant Toggle to Recording Panel
+
+**Description:** Extend existing recording panel to include AI Assistant toggle and content area for live insights.
+
+**Acceptance Criteria:**
+- [ ] Add "AI Assistant" toggle switch to recording panel header
+- [ ] Store toggle state in recording provider
+- [ ] Show/hide AI Assistant content area based on toggle
+- [ ] Maintain existing recording functionality unchanged
+- [ ] Add smooth expand/collapse animation
+- [ ] Persist toggle state preference per user
+- [ ] Update recording panel to support vertical layout: controls → AI content
+- [ ] Write widget tests for toggle behavior
+
+**Complexity:** Medium
+**Dependencies:** None
+**Priority:** P0
+
+**Related Files:**
+- Modify: `/lib/features/audio_recording/presentation/widgets/recording_panel.dart`
+- Modify: `/lib/features/audio_recording/presentation/providers/recording_provider.dart`
+- Reference: HLD Section 5.1.1, FR-U1
+
+---
+
+### Task 5.2: Create Live Questions Card Widget
+
+**Description:** Create real-time question display component with progressive search result updates.
+
+**Acceptance Criteria:**
+- [ ] Create `LiveQuestionCard` widget in `/lib/features/live_insights/presentation/widgets/live_question_card.dart`
+- [ ] Display question text, speaker, timestamp
+- [ ] Show four-tier search progress with CLEAR SOURCE LABELS:
+  - **Tier 1 - RAG**: "📚 From Documents" (loading/results) - Display document icon and "From Documents" label
+  - **Tier 2 - Meeting Context**: "💬 Earlier in Meeting" (loading/result) - Display chat icon and timestamp link
+  - **Tier 3 - Live Monitoring**: "👂 Listening..." (active/inactive) - Display ear icon while monitoring
+  - **Tier 4 - GPT Generated**: "🤖 AI Answer" (with disclaimer badge) - Display AI icon and "Generated by AI" badge
+- [ ] Display status indicators: searching (spinner), found (checkmark), monitoring (pulse), unanswered (question mark)
+- [ ] Render RAG results progressively as they arrive with document source labels
+- [ ] For GPT-generated answers, show prominent disclaimer: "This answer was generated by AI based on general knowledge, not from your documents or meeting"
+- [ ] Show confidence score for GPT-generated answers (if >70%)
+- [ ] Use distinct visual styling for each answer source type (colors, icons, borders)
+- [ ] Add user action buttons: "Mark as Answered", "Needs Follow-up", "Dismiss"
+- [ ] Implement expand/collapse for detailed view
+- [ ] Add smooth animations for state transitions
+- [ ] Make results tappable (documents open in browser, timestamps jump to transcript)
+- [ ] Write widget tests for all states and all four answer sources
+
+**Complexity:** Complex
+**Dependencies:** Task 5.1
+**Priority:** P0
+
+**Related Files:**
+- Create: `/lib/features/live_insights/presentation/widgets/live_question_card.dart`
+- Reference: `/lib/features/summaries/presentation/widgets/open_questions_widget.dart`, HLD Section 5.1.2, FR-U2
+
+---
+
+### Task 5.3: Create Live Actions Card Widget
+
+**Description:** Create action item tracking component with completeness indicators and user interaction.
+
+**Acceptance Criteria:**
+- [ ] Create `LiveActionCard` widget in `/lib/features/live_insights/presentation/widgets/live_action_card.dart`
+- [ ] Display action description with clarity indicator
+- [ ] Show owner (if assigned) and deadline (if specified)
+- [ ] Implement badge color coding: green (complete info), yellow (partial), gray (tracking)
+- [ ] Show completeness progress bar (description 40%, owner 30%, deadline 30%)
+- [ ] Add user action buttons: "Assign", "Set Deadline", "Mark Complete", "Dismiss"
+- [ ] Support inline editing of owner and deadline
+- [ ] Add expand/collapse for details view
+- [ ] Display related dependencies and context
+- [ ] Write widget tests for all interactions
+
+**Complexity:** Complex
+**Dependencies:** Task 5.1
+**Priority:** P0
+
+**Related Files:**
+- Create: `/lib/features/live_insights/presentation/widgets/live_action_card.dart`
+- Reference: `/lib/features/summaries/presentation/widgets/enhanced_action_items_widget.dart`, HLD Section 5.1.2, FR-U3
+
+---
+
+### Task 5.4: Create AI Assistant Content Section
+
+**Description:** Create container widget for questions and actions that renders within recording panel.
+
+**Acceptance Criteria:**
+- [ ] Create `AIAssistantContentSection` widget in `/lib/features/live_insights/presentation/widgets/ai_assistant_content.dart`
+- [ ] Render questions section with list of LiveQuestionCard
+- [ ] Render actions section with list of LiveActionCard
+- [ ] Implement scrollable layout with section headers
+- [ ] Show empty states: "Listening for questions..." / "Tracking actions..."
+- [ ] Add section counters: "Questions (3)" / "Actions (5)"
+- [ ] Support dismiss all functionality
+- [ ] Preserve scroll position during real-time updates
+- [ ] Handle rapid updates without UI flicker
+- [ ] Write widget tests for layout and updates
+
+**Complexity:** Medium
+**Dependencies:** Task 5.2, Task 5.3
+**Priority:** P0
+
+**Related Files:**
+- Create: `/lib/features/live_insights/presentation/widgets/ai_assistant_content.dart`
+- Reference: HLD Section 5.1.2
+
+---
+
+### Task 5.5: Implement Live Insights State Management
+
+**Description:** Create Riverpod providers to manage active questions, actions, and streaming updates.
+
+**Acceptance Criteria:**
+- [ ] Create `LiveInsightsProvider` in `/lib/features/live_insights/presentation/providers/live_insights_provider.dart`
+- [ ] Maintain list of active questions with state
+- [ ] Maintain list of active actions with state
+- [ ] Subscribe to WebSocket live insights stream
+- [ ] Update state based on incoming events: QUESTION_DETECTED, RAG_RESULT, ANSWER_FROM_MEETING, QUESTION_ANSWERED_LIVE, GPT_GENERATED_ANSWER, ACTION_TRACKED, ACTION_UPDATED, etc.
+- [ ] Implement local persistence for offline viewing
+- [ ] Add methods for user actions: markQuestionAnswered(), assignAction(), dismissQuestion(), etc.
+- [ ] Send user feedback to backend via WebSocket
+- [ ] Write unit tests for state management
+
+**Complexity:** Complex
+**Dependencies:** Task 4.1
+**Priority:** P0
+
+**Related Files:**
+- Create: `/lib/features/live_insights/presentation/providers/live_insights_provider.dart`
+- Reference: `/lib/features/jobs/presentation/providers/job_websocket_provider.dart`, HLD Section 5.1.4
+
+---
+
+### Task 5.6: Create Live Insights Data Models (Flutter)
+
+**Description:** Create freezed data models for questions, actions, and answers on Flutter side.
+
+**Acceptance Criteria:**
+- [ ] Create models in `/lib/features/live_insights/data/models/live_insight_model.dart`
+- [ ] Define `LiveQuestion` model with fields: id, text, speaker, timestamp, status, tierResults, answerSource, metadata
+- [ ] Define `LiveAction` model with fields: id, description, owner, deadline, completenessScore, status, metadata
+- [ ] Define `TierResult` model for all four answer sources with fields: tierType, content, confidence, metadata, source
+- [ ] Define enums: InsightStatus, TierType (rag/meetingContext/liveMonitoring/gptGenerated), AnswerSource, ActionCompleteness
+- [ ] Add JSON serialization/deserialization
+- [ ] Implement copyWith methods for state updates
+- [ ] Write unit tests for model operations
+
+**Complexity:** Simple
+**Dependencies:** None
+**Priority:** P1
+
+**Related Files:**
+- Create: `/lib/features/live_insights/data/models/live_insight_model.dart`
+- Reference: `/lib/features/summaries/data/models/summary_model.dart`
+
+---
+
+### Task 5.7: Implement WebSocket Service for Live Insights
+
+**Description:** Create WebSocket service for live meeting insights communication on Flutter side.
+
+**Acceptance Criteria:**
+- [ ] Create `LiveInsightsWebSocketService` in `/lib/features/live_insights/services/live_insights_websocket.dart`
+- [ ] Connect to `/ws/live-insights/{sessionId}` with JWT token
+- [ ] Implement auto-reconnection with exponential backoff
+- [ ] Parse incoming message types: QUESTION_DETECTED, RAG_RESULT, ANSWER_FROM_MEETING, ACTION_TRACKED, etc.
+- [ ] Emit events via Stream for provider consumption
+- [ ] Send user feedback messages to backend
+- [ ] Handle connection state changes
+- [ ] Write tests for connection lifecycle
+
+**Complexity:** Medium
+**Dependencies:** Task 4.1
+**Priority:** P1
+
+**Related Files:**
+- Create: `/lib/features/live_insights/services/live_insights_websocket.dart`
+- Reference: `/lib/features/notifications/services/websocket_notification_service.dart`, `/lib/features/jobs/presentation/providers/job_websocket_provider.dart`
+
+---
+
+## 6. GPT-5-MINI INTEGRATION
+
+### Task 6.1: Configure GPT-5-mini in Multi-LLM Client
+
+**Description:** Configure multi-LLM client to use OpenAI GPT-5-mini with streaming capabilities.
+
+**Acceptance Criteria:**
+- [ ] Ensure OpenAI provider client exists in `multi_llm_client.py`
+- [ ] Configure GPT-5-mini model (`gpt-5-mini`)
+- [ ] Verify streaming mode support for real-time responses
+- [ ] Confirm rate limit handling with exponential backoff
+- [ ] Verify circuit breaker for API failures
+- [ ] Set up monitoring for latency, error rates, token usage
+- [ ] Document fallback to regex-based detection if API unavailable (optional for future)
+- [ ] Write integration tests with OpenAI GPT-5-mini API
+
+**Complexity:** Medium
+**Dependencies:** None
+**Priority:** P1
+
+**Related Files:**
+- Modify: `/backend/services/llm/multi_llm_client.py`
+- Reference: HLD Section 6.1
+
+---
+
+### Task 6.2: Create GPT-5-mini Prompt Templates
+
+**Description:** Design and implement prompts for question detection, action tracking, and answer identification.
+
+**Acceptance Criteria:**
+- [ ] Create prompt templates in `/backend/prompts/live_insights/`
+- [ ] Design question detection prompt with JSON output format: `{type: "question", id: "q1", text: "...", speaker: "...", timestamp: "...", category: "factual|opinion|action-seeking|clarification"}`
+- [ ] Design action detection prompt with JSON output: `{type: "action", id: "a1", description: "...", owner: null, deadline: null, completeness: 0.4}`
+- [ ] Design action update prompt: `{type: "action_update", id: "a1", owner: "John", completeness: 0.7}`
+- [ ] Design answer detection prompt: `{type: "answer", question_id: "q1", answer_text: "...", confidence: 0.9}`
+- [ ] Add system message for streaming intelligence context
+- [ ] Test prompts with various meeting transcript samples
+- [ ] Iterate based on accuracy metrics (target: 90%+ action detection, 85%+ question answer rate)
+
+**Complexity:** Medium
+**Dependencies:** Task 6.1
+**Priority:** P1
+
+**Related Files:**
+- Create: `/backend/prompts/live_insights/question_detection.txt`
+- Create: `/backend/prompts/live_insights/action_tracking.txt`
+- Create: `/backend/prompts/live_insights/answer_identification.txt`
+- Reference: HLD Section 5.3.1
+
+---
+
+## 7. INTEGRATION & ORCHESTRATION
+
+### Task 7.1: Create Streaming Intelligence Orchestrator
+
+**Description:** Create main orchestrator service that coordinates all streaming intelligence components.
+
+**Acceptance Criteria:**
+- [ ] Create `StreamingIntelligenceOrchestrator` in `/backend/services/intelligence/streaming_orchestrator.py`
+- [ ] Initialize all components: TranscriptionBuffer, GPT Streaming, StreamRouter, QuestionHandler, ActionHandler, AnswerHandler, SegmentDetector
+- [ ] Accept transcription chunks from WebSocket
+- [ ] Feed chunks to TranscriptionBuffer
+- [ ] Send buffer context to GPT streaming API
+- [ ] Route GPT outputs through StreamRouter
+- [ ] Coordinate parallel search services (RAG, Meeting Context)
+- [ ] Handle component failures gracefully
+- [ ] Implement health check endpoint
+- [ ] Add comprehensive logging and metrics
+- [ ] Write integration tests for full pipeline
+
+**Complexity:** Complex
+**Dependencies:** Task 2.1, Task 2.2, Task 2.3, Task 2.4, Task 2.5, Task 2.6, Task 3.4, Task 3.5
+**Priority:** P0
+
+**Related Files:**
+- Create: `/backend/services/intelligence/streaming_orchestrator.py`
+- Reference: HLD Section 4.3
+
+---
+
+### Task 7.2: Integrate Orchestrator with Recording Workflow
+
+**Description:** Connect streaming orchestrator to existing recording and transcription pipeline.
+
+**Acceptance Criteria:**
+- [ ] Extend recording session to initialize StreamingIntelligenceOrchestrator when AI Assistant enabled
+- [ ] Pass transcription chunks from Whisper to orchestrator in real-time
+- [ ] Store final insights in database at meeting end
+- [ ] Generate meeting summary with all questions and actions
+- [ ] Clean up resources on recording stop
+- [ ] Handle recording pause/resume gracefully
+- [ ] Write integration tests for full recording flow
+
+**Complexity:** Medium
+**Dependencies:** Task 7.1
+**Priority:** P1
+
+**Related Files:**
+- Modify: `/backend/routers/recordings.py` (if exists) or recording service
+- Reference: `/backend/models/recording.py`
+
+---
+
+## 8. TESTING & QUALITY ASSURANCE
+
+### Task 8.1: Unit Tests for Backend Services
+
+**Description:** Write comprehensive unit tests for all streaming intelligence services.
+
+**Acceptance Criteria:**
+- [ ] Test TranscriptionBuffer: rolling window, trimming, formatting
+- [ ] Test StreamRouter: message parsing, routing, error handling
+- [ ] Test QuestionHandler: lifecycle, state transitions, aggregation from all four tiers
+- [ ] Test ActionHandler: detection, accumulation, completeness scoring
+- [ ] Test AnswerHandler: semantic matching, resolution
+- [ ] Test GPTAnswerGenerator: answer generation, confidence scoring, fallback behavior
+- [ ] Test SegmentDetector: boundary detection heuristics
+- [ ] Achieve >80% code coverage
+- [ ] Use pytest with async support
+
+**Complexity:** Medium
+**Dependencies:** Tasks 2.1-2.6, 3.4
+**Priority:** P1
+
+**Related Files:**
+- Create: `/backend/tests/services/intelligence/test_*.py`
+
+---
+
+### Task 8.2: Integration Tests for Four-Tier Answer Discovery
+
+**Description:** Write end-to-end integration tests for the complete answer discovery flow.
+
+**Acceptance Criteria:**
+- [ ] Test full flow: question detected → RAG search → meeting context search → live monitoring → GPT-generated answer
+- [ ] Test progressive result delivery across all four tiers
+- [ ] Test timeout handling (RAG 2s, meeting context 1.5s, live 15s, GPT generation 3s)
+- [ ] Test graceful degradation when tiers fail
+- [ ] Test tier priority (RAG > Meeting Context > Live > GPT-generated)
+- [ ] Verify GPT-generated answers only trigger when other tiers fail
+- [ ] Test concurrent questions
+- [ ] Mock vector database and GPT API
+- [ ] Write tests with realistic meeting scenarios
+
+**Complexity:** Complex
+**Dependencies:** Tasks 3.1, 3.2, 3.3, 3.4
+**Priority:** P1
+
+**Related Files:**
+- Create: `/backend/tests/integration/test_answer_discovery.py`
+
+---
+
+### Task 8.3: WebSocket Communication Tests
+
+**Description:** Write tests for WebSocket message protocol and real-time communication.
+
+**Acceptance Criteria:**
+- [ ] Test connection lifecycle: connect, authenticate, disconnect, reconnect
+- [ ] Test all message types: QUESTION_DETECTED, RAG_RESULT, ANSWER_FROM_MEETING, QUESTION_ANSWERED_LIVE, GPT_GENERATED_ANSWER, ACTION_TRACKED, ACTION_UPDATED, ACTION_ALERT, etc.
+- [ ] Test user feedback messages from client
+- [ ] Test broadcast to multiple participants
+- [ ] Test connection error handling
+- [ ] Test rate limiting
+- [ ] Use WebSocket test client
+
+**Complexity:** Medium
+**Dependencies:** Task 4.1
+**Priority:** P1
+
+**Related Files:**
+- Create: `/backend/tests/routers/test_websocket_live_insights.py`
+
+---
+
+### Task 8.4: Flutter Widget Tests
+
+**Description:** Write widget tests for all live insights UI components.
+
+**Acceptance Criteria:**
+- [ ] Test LiveQuestionCard: all states (searching, found via RAG/meeting/live/GPT), user interactions, animations, answer source display
+- [ ] Test LiveActionCard: completeness display, user actions, inline editing
+- [ ] Test AIAssistantContentSection: layout, scroll, empty states
+- [ ] Test recording panel AI Assistant toggle
+- [ ] Test real-time update handling without flicker
+- [ ] Achieve >70% widget test coverage
+- [ ] Use flutter_test and mockito for mocking
+
+**Complexity:** Medium
+**Dependencies:** Tasks 5.1, 5.2, 5.3, 5.4
+**Priority:** P2
+
+**Related Files:**
+- Create: `/test/features/live_insights/presentation/widgets/test_*.dart`
+
+---
+
+## APPENDIX A: TASK DEPENDENCY GRAPH
+
+```
+Database Layer:
+1.1 (Create Table) → 1.2 (Create Model)
+
+Backend Streaming Engine:
+2.1 (Transcription Buffer) → 2.3 (Stream Router)
+2.2 (GPT Streaming) → 2.3 (Stream Router)
+2.3 (Stream Router) → 2.4 (Question Handler)
+2.3 (Stream Router) → 2.5 (Action Handler)
+2.3 (Stream Router) → 2.6 (Answer Handler)
+
+Four-Tier Answer Discovery:
+2.4 (Question Handler) → 3.1 (RAG Search)
+2.4 (Question Handler) → 3.2 (Meeting Context Search)
+2.6 (Answer Handler) → 3.3 (Live Monitoring)
+3.3 (Live Monitoring) → 3.4 (GPT Answer Generator)
+2.1 (Transcription Buffer) → 3.5 (Segment Detector)
+
+WebSocket Integration:
+2.4, 2.5, 2.6 → 4.1 (WebSocket Router)
+2.1 → 4.2 (Redis Integration)
+
+Flutter UI:
+5.1 (AI Toggle) → 5.2 (Questions Widget)
+5.1 (AI Toggle) → 5.3 (Actions Widget)
+5.2, 5.3 → 5.4 (Content Section)
+4.1 → 5.5 (State Management)
+4.1 → 5.7 (WebSocket Service)
+
+GPT-5-mini:
+6.1 (Provider) → 6.2 (Prompts)
+
+Orchestration:
+2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 3.5 → 7.1 (Orchestrator)
+7.1 → 7.2 (Recording Integration)
+
+Testing:
+2.1-2.6, 3.4, 3.5 → 8.1 (Unit Tests)
+3.1, 3.2, 3.3, 3.4 → 8.2 (Integration Tests - Four Tiers)
+4.1 → 8.3 (WebSocket Tests)
+5.1-5.4 → 8.4 (Widget Tests)
+```
+
+---
+
+## APPENDIX E: FOUR-TIER ANSWER DISCOVERY FLOW
+
+### Tier Priority & Execution
+
+```
+Question Detected at t=0s
+    ↓
+    ├─→ Tier 1: RAG Search (parallel, 2s timeout)
+    │   ├─ Found documents → Stream to UI with "📚 From Documents" label
+    │   └─ No results → Continue
+    │
+    ├─→ Tier 2: Meeting Context Search (parallel, 1.5s timeout)
+    │   ├─ Found earlier answer → Send to UI with "💬 Earlier in Meeting" label
+    │   └─ No results → Continue
+    │
+    ├─→ Tier 3: Live Conversation Monitoring (15s window)
+    │   ├─ Answer detected in conversation → Mark resolved with "👂 Answered Live" label
+    │   └─ No answer after 15s → Continue to Tier 4
+    │
+    └─→ Tier 4: GPT-Generated Answer (3s timeout)
+        ├─ GPT generates answer (confidence >70%) → Display with "🤖 AI Answer" + disclaimer
+        └─ GPT cannot answer or low confidence → Mark as UNANSWERED
+```
+
+### UI Answer Source Labels
+
+**Purpose:** Users must clearly understand where each answer came from to assess reliability.
+
+| Tier | Source Label | Icon | Color | Reliability Indicator |
+|------|-------------|------|-------|----------------------|
+| **Tier 1** | "From Documents" | 📚 | Blue | High - From verified documents |
+| **Tier 2** | "Earlier in Meeting" | 💬 | Purple | High - From actual meeting discussion |
+| **Tier 3** | "Answered Live" | 👂 | Green | High - Live conversation response |
+| **Tier 4** | "AI Answer" | 🤖 | Orange | Medium - AI-generated, needs verification |
+
+### Tier 4 Disclaimer Requirements
+
+When displaying GPT-generated answers:
+
+1. **Prominent Badge:** "Generated by AI" badge next to answer
+2. **Disclaimer Text:** "This answer was generated by AI based on general knowledge, not from your documents or meeting"
+3. **Confidence Score:** Display GPT's self-assessed confidence (if >70%)
+4. **Visual Distinction:** Use different background color or border to separate from other answer sources
+5. **User Verification Prompt:** Encourage users to verify answer accuracy
+
+### Answer Source Priority in Database
+
+Store `answer_source` field in `live_meeting_insights` table:
+
+```sql
+answer_source VARCHAR CHECK (answer_source IN (
+    'rag',              -- Tier 1: Found in documents
+    'meeting_context',  -- Tier 2: Earlier in meeting
+    'live_conversation',-- Tier 3: Live monitoring
+    'gpt_generated',    -- Tier 4: AI-generated
+    'user_provided',    -- User manually marked as answered
+    'unanswered'        -- No answer found
+))
+```
+
+### Example UI Mockup (Question Card)
+
+```
+┌─────────────────────────────────────────────────────┐
+│ Q: "What's our Q4 budget for infrastructure?"      │
+│ Asked by Sarah at 10:30:05                         │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│ 📚 From Documents (2 results)                      │
+│ ├─ "Infrastructure Budget Q4 2025.pdf"             │
+│ └─ "Annual Planning Document.docx"                 │
+│                                                     │
+│ 💬 Earlier in Meeting                               │
+│ └─ No prior discussion                             │
+│                                                     │
+│ 🤖 AI Answer (Confidence: 75%)                     │
+│ ┌───────────────────────────────────────────────┐ │
+│ │ ⚠️ Generated by AI - Please verify            │ │
+│ │                                               │ │
+│ │ Based on general knowledge, typical Q4        │ │
+│ │ infrastructure budgets range from...          │ │
+│ │                                               │ │
+│ │ ⓘ This answer was not found in your          │ │
+│ │   documents or meeting discussion             │ │
+│ └───────────────────────────────────────────────┘ │
+│                                                     │
+│ [Mark as Answered] [Needs Follow-up] [Dismiss]     │
+└─────────────────────────────────────────────────────┘
+```
+
+---
+
+**End of Tasks Document**

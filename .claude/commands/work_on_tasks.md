@@ -1,15 +1,15 @@
 MANDATORY WORKFLOW FOR TASK COMPLETION - FOLLOW ALL STEPS
 
 ⚠️ CRITICAL RULES:
-1. NEVER create .sql migration files - update local postgress database directly
+1. NEVER create .sql migration files - use alembic
 2. ALWAYS investigate codebase AND database before implementation
 3. USE flutter-code-searcher to understand existing patterns first
 
 STEP 1: INITIAL SCAN (REQUIRED)
 Execute these commands:
-- cat CHANGELOG.md | tail -50  (Read last ~2 weeks of changes)
-- cat TASKS.md                 (Read ALL tasks and general info about the app)
-- cat MIGRATION.md (Understand the entire requirements)
+- cat CHANGELOG-TASKS.md | tail -50  (Read last ~2 weeks of changes)
+- cat TASKS-MEETINGS-ASSISTNACE.md                 (Read ALL tasks and general info about the app)
+- cat PROACTIVE_MEETING_ASSISTANCE_HLD.md (Understand the entire requirements)
 
 Identify:
 - Recent changes in related areas
@@ -78,13 +78,13 @@ MUST include:
 - Comments for complex logic
 - Proper Clean Architecture separation
 
-STEP 5: UPDATE TASKS.md (REQUIRED)
+STEP 5: UPDATE TASKS-MEETINGS-ASSISTNACE.md (REQUIRED)
 Execute for each completed criterion:
 - Replace [ ] with [x]
 - Add line: Status: COMPLETED - [YYYY-MM-DD HH:MM]
 - Note any partial completions
 
-STEP 6: UPDATE CHANGELOG.md (REQUIRED)
+STEP 6: UPDATE CHANGELOG-TASKS.md (REQUIRED)
 Add at the TOP under ## [Unreleased]:
 
 ### [YYYY-MM-DD]
@@ -107,7 +107,7 @@ Before committing, verify ALL items:
 ### Code Quality:
 - [ ] No console.log, print, or debugPrint statements left
 - [ ] No commented-out code blocks
-- [ ] No TODO comments (unless added to TASKS.md)
+- [ ] No TODO comments (unless added to TASKS-MEETINGS-ASSISTNACE.md)
 - [ ] No hardcoded values (URLs, credentials, magic numbers)
 - [ ] All error messages are user-friendly and specific
 
@@ -149,21 +149,21 @@ git add .
 git commit -m "feat: [Task Name] - [Brief description]
 
 - Implemented [key points]
-- Updated tasks.md and CHANGELOG.md
+- Updated TASKS-MEETINGS-ASSISTNACE.md and CHANGELOG-TASKS.md
 
-Task ID: [from gaps-tasks.md]"
+Task ID: [from GAPS-TASKS-MEETINGS-ASSISTNACE.md]"
 
 VERIFICATION CHECKPOINT:
 Before saying complete, confirm:
 - Task implemented? 
-- tasks.md updated?
-- CHANGELOG.md updated?
+- TASKS-MEETINGS-ASSISTNACE.md updated?
+- CHANGELOG-TASKS.md updated?
 - Code analyzed?
 - Code review checklist passed?
 - Changes committed?
 
 IF ANY STEP BLOCKED:
-- Add "Status: BLOCKED - [reason]" to gaps-tasks.md
+- Add "Status: BLOCKED - [reason]" to GAPS-TASKS-MEETINGS-ASSISTNACE.md
 - Document specific blocker
 - Move to next available task
 
