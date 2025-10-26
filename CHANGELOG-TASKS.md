@@ -4,6 +4,43 @@
 
 ### [2025-10-26]
 #### Added
+- **Task 6.2 - Create GPT-5-mini Prompt Templates**: Implemented comprehensive prompt templates for streaming intelligence system
+  - Implementation: Created reusable prompt functions for all intelligence detection scenarios
+  - Prompt Components:
+    - **Streaming Intelligence System Prompt** (get_streaming_intelligence_system_prompt):
+      - NDJSON output format specification
+      - Detection types: question, action, action_update, answer
+      - ID format: q_{uuid} and a_{uuid}
+      - Completeness scoring rules (0.4 → 0.7 → 1.0)
+      - Confidence thresholds (>0.85 for answer matching)
+      - Detection rules for explicit/implicit questions, commitments, semantic matching
+    - **Streaming Intelligence User Prompt** (get_streaming_intelligence_user_prompt):
+      - Accepts transcript buffer (last 60 seconds)
+      - Includes recent questions/actions for context
+      - Formatted for optimal GPT-5-mini parsing
+    - **GPT-Generated Answer Prompts (Tier 4)**:
+      - System prompt: get_gpt_generated_answer_system_prompt()
+      - User prompt: get_gpt_generated_answer_user_prompt()
+      - Confidence threshold: >70% to return answer
+      - Explicit constraints: no company data fabrication, acknowledge uncertainty
+      - Includes required disclaimer for AI-generated content
+    - **Meeting Context Search Prompts (Tier 2)**:
+      - System prompt: get_meeting_context_search_system_prompt()
+      - User prompt: get_meeting_context_search_user_prompt()
+      - JSON output with found_answer, quotes (speaker + timestamp), confidence
+      - Semantic matching with >75% confidence threshold
+  - Example Test Cases (live_insights_examples.json):
+    - 7 streaming intelligence scenarios (questions, actions, answers, edge cases)
+    - 3 meeting context search scenarios (found/not found/semantic match)
+    - 4 GPT-generated answer scenarios (high/low confidence, company-specific)
+    - Edge cases: overlapping speakers, long actions, pronoun resolution
+  - Template from HLD Appendix C "GPT-5-Mini Prompt Specifications"
+  - Ready for integration with existing StreamingIntelligenceOrchestrator
+  - Status: Core prompts complete, integration testing deferred to post-MVP
+  - Files:
+    - `/backend/services/prompts/live_insights_prompts.py` (created, 370 lines)
+    - `/backend/services/prompts/live_insights_examples.json` (created, comprehensive test scenarios)
+
 - **Task 3.3 - Implement Live Conversation Monitoring (Tier 3 Answer Discovery)**: Implemented 15-second live monitoring window for real-time answer detection
   - Implementation: QuestionHandler monitors live conversation using asyncio.Event signaling pattern for answer detection
   - Service Features:

@@ -1,0 +1,268 @@
+{
+  "streaming_intelligence_examples": [
+    {
+      "name": "Basic question with answer",
+      "description": "Simple factual question answered in the same meeting",
+      "transcript": "[10:15:30] Speaker A: \"Hello everyone, thanks for joining. I wanted to discuss our Q4 infrastructure budget. Does anyone have the latest numbers?\"\n\n[10:16:05] Speaker B: \"I think Sarah sent that in an email last week. Let me check.\"\n\n[10:16:45] Speaker C: \"The budget is $250,000 for infrastructure, including cloud costs and new servers.\"\n\n[10:17:20] Speaker A: \"Perfect, thank you. John, can you update the spreadsheet with those numbers by Friday?\"\n\n[10:17:35] Speaker D (John): \"Sure, I'll update it by end of week.\"",
+      "expected_detections": [
+        {
+          "type": "question",
+          "text": "Does anyone have the latest numbers?",
+          "speaker": "Speaker A",
+          "category": "factual",
+          "confidence": 0.98
+        },
+        {
+          "type": "action",
+          "description": "Update the spreadsheet with infrastructure budget numbers",
+          "owner": "John",
+          "deadline": "2025-10-30",
+          "completeness": 1.0,
+          "confidence": 0.95
+        },
+        {
+          "type": "answer",
+          "answer_text": "The budget is $250,000 for infrastructure, including cloud costs and new servers.",
+          "speaker": "Speaker C",
+          "confidence": 0.97
+        }
+      ]
+    },
+    {
+      "name": "Implicit question",
+      "description": "Question phrased as wondering/curious, not explicit question mark",
+      "transcript": "[14:22:10] Speaker A: \"I'm wondering about our timeline for the product launch. Has that been decided yet?\"\n\n[14:22:45] Speaker B: \"Good question. Marketing suggested mid-November, but we're still finalizing with engineering.\"",
+      "expected_detections": [
+        {
+          "type": "question",
+          "text": "I'm wondering about our timeline for the product launch. Has that been decided yet?",
+          "speaker": "Speaker A",
+          "category": "factual",
+          "confidence": 0.92
+        }
+      ]
+    },
+    {
+      "name": "Action with partial information",
+      "description": "Action mentioned without owner or deadline initially",
+      "transcript": "[09:30:15] Speaker A: \"We need to review the security audit findings.\"\n\n[09:30:45] Speaker B: \"I can take that on. When do you need it by?\"\n\n[09:31:10] Speaker A: \"Let's aim for next Wednesday, before the board meeting.\"",
+      "expected_detections": [
+        {
+          "type": "action",
+          "description": "Review the security audit findings",
+          "owner": null,
+          "deadline": null,
+          "completeness": 0.4,
+          "confidence": 0.88
+        },
+        {
+          "type": "action_update",
+          "owner": "Speaker B",
+          "deadline": null,
+          "completeness": 0.7,
+          "confidence": 0.90
+        },
+        {
+          "type": "action_update",
+          "owner": "Speaker B",
+          "deadline": "2025-10-30",
+          "completeness": 1.0,
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "name": "Multiple commitments",
+      "description": "Several action items discussed in quick succession",
+      "transcript": "[11:05:20] Speaker A: \"Alright, for next steps: Sarah, can you draft the proposal? John will review the budget. And I'll schedule the client meeting.\"\n\n[11:05:50] Speaker B (Sarah): \"Sure, I'll have the draft ready by tomorrow.\"\n\n[11:06:05] Speaker C (John): \"I can review it by end of week.\"",
+      "expected_detections": [
+        {
+          "type": "action",
+          "description": "Draft the proposal",
+          "owner": "Sarah",
+          "deadline": "tomorrow",
+          "completeness": 1.0,
+          "confidence": 0.96
+        },
+        {
+          "type": "action",
+          "description": "Review the budget",
+          "owner": "John",
+          "deadline": "end of week",
+          "completeness": 1.0,
+          "confidence": 0.94
+        },
+        {
+          "type": "action",
+          "description": "Schedule the client meeting",
+          "owner": "Speaker A",
+          "deadline": null,
+          "completeness": 0.7,
+          "confidence": 0.90
+        }
+      ]
+    },
+    {
+      "name": "Opinion question (should not detect)",
+      "description": "Rhetorical or opinion-seeking question that doesn't need tracking",
+      "transcript": "[13:15:30] Speaker A: \"Don't you think the new design looks great?\"\n\n[13:15:45] Speaker B: \"Yeah, I really like it!\"",
+      "expected_detections": []
+    },
+    {
+      "name": "Clarification question",
+      "description": "Question seeking clarification on previous statement",
+      "transcript": "[10:45:20] Speaker A: \"The deployment window is next Tuesday at 3 AM.\"\n\n[10:45:35] Speaker B: \"Wait, is that our time zone or UTC?\"\n\n[10:45:50] Speaker A: \"Our time zone, Eastern Time.\"",
+      "expected_detections": [
+        {
+          "type": "question",
+          "text": "Wait, is that our time zone or UTC?",
+          "speaker": "Speaker B",
+          "category": "clarification",
+          "confidence": 0.95
+        },
+        {
+          "type": "answer",
+          "answer_text": "Our time zone, Eastern Time.",
+          "speaker": "Speaker A",
+          "confidence": 0.98
+        }
+      ]
+    },
+    {
+      "name": "Action-seeking question",
+      "description": "Question that's really a request for someone to do something",
+      "transcript": "[14:10:15] Speaker A: \"Can someone check if the API endpoints are still working after the update?\"\n\n[14:10:40] Speaker B: \"I'll test them right now.\"",
+      "expected_detections": [
+        {
+          "type": "question",
+          "text": "Can someone check if the API endpoints are still working after the update?",
+          "speaker": "Speaker A",
+          "category": "action-seeking",
+          "confidence": 0.93
+        },
+        {
+          "type": "action",
+          "description": "Test API endpoints after the update",
+          "owner": "Speaker B",
+          "deadline": null,
+          "completeness": 0.7,
+          "confidence": 0.91
+        }
+      ]
+    }
+  ],
+  "meeting_context_search_examples": [
+    {
+      "name": "Answer found earlier in meeting",
+      "question": "What's the Q4 infrastructure budget?",
+      "transcript": "[10:00:15] Speaker A: \"Let's start with the budget review.\"\n\n[10:02:30] Speaker B: \"The Q4 infrastructure budget is $250,000, including cloud costs.\"\n\n[10:05:45] Speaker C: \"Noted, thanks.\"\n\n[10:15:30] Speaker D: \"Sorry I joined late. What's the Q4 infrastructure budget?\"",
+      "expected_response": {
+        "found_answer": true,
+        "answer_text": "The Q4 infrastructure budget is $250,000, including cloud costs.",
+        "quotes": [
+          {
+            "text": "The Q4 infrastructure budget is $250,000, including cloud costs.",
+            "speaker": "Speaker B",
+            "timestamp": "[00:02:30]"
+          }
+        ],
+        "confidence": 0.95
+      }
+    },
+    {
+      "name": "Answer not in transcript",
+      "question": "What's our customer retention rate?",
+      "transcript": "[10:00:15] Speaker A: \"Let's discuss the product roadmap.\"\n\n[10:02:30] Speaker B: \"We're planning three major features for Q4.\"\n\n[10:05:45] Speaker C: \"That sounds good.\"",
+      "expected_response": {
+        "found_answer": false,
+        "answer_text": null,
+        "quotes": [],
+        "confidence": 0.0
+      }
+    },
+    {
+      "name": "Semantic match (different wording)",
+      "question": "Who's responsible for the security audit?",
+      "transcript": "[09:15:20] Speaker A: \"We need someone to lead the security review.\"\n\n[09:16:10] Speaker B: \"I can handle the security audit. I'll start next week.\"\n\n[09:17:05] Speaker A: \"Perfect, thanks Sarah.\"",
+      "expected_response": {
+        "found_answer": true,
+        "answer_text": "Sarah is responsible for the security audit, starting next week.",
+        "quotes": [
+          {
+            "text": "I can handle the security audit. I'll start next week.",
+            "speaker": "Speaker B",
+            "timestamp": "[00:01:10]"
+          },
+          {
+            "text": "Perfect, thanks Sarah.",
+            "speaker": "Speaker A",
+            "timestamp": "[00:02:05]"
+          }
+        ],
+        "confidence": 0.88
+      }
+    }
+  ],
+  "gpt_generated_answer_examples": [
+    {
+      "name": "General knowledge question (high confidence)",
+      "question": "What's the typical ROI timeline for infrastructure investments?",
+      "expected_response": {
+        "answer": "Typical infrastructure investments show ROI within 18-36 months, depending on the scope. Cloud infrastructure often delivers faster returns (12-18 months) compared to on-premises hardware (24-36 months). However, this varies significantly based on organization size and usage patterns.",
+        "confidence": 0.78,
+        "sources": "general knowledge",
+        "disclaimer": "This answer is AI-generated and not from your documents or meeting. Please verify accuracy."
+      }
+    },
+    {
+      "name": "Technical best practice question",
+      "question": "What's the recommended approach for database migration in microservices?",
+      "expected_response": {
+        "answer": "Common approaches include: blue-green deployment for zero-downtime migrations, backward-compatible schema changes deployed before code, or using database versioning tools like Flyway or Liquibase. The specific approach depends on your architecture and risk tolerance.",
+        "confidence": 0.75,
+        "sources": "general knowledge",
+        "disclaimer": "This answer is AI-generated and not from your documents or meeting. Please verify accuracy."
+      }
+    },
+    {
+      "name": "Company-specific question (should decline)",
+      "question": "What's our company's revenue for last quarter?",
+      "expected_response": {
+        "answer": "I cannot provide company-specific financial data as this information is not available in general knowledge. Please refer to your company's financial reports or contact your finance team for accurate quarterly revenue figures.",
+        "confidence": 0.40,
+        "sources": "general knowledge",
+        "disclaimer": "This answer is AI-generated and not from your documents or meeting. Please verify accuracy."
+      }
+    },
+    {
+      "name": "Highly uncertain question (low confidence)",
+      "question": "What will be the market trend for our product next year?",
+      "expected_response": {
+        "answer": "Market predictions are highly uncertain and depend on numerous factors specific to your industry, product, and competitive landscape. I recommend consulting market research firms or conducting customer surveys for more reliable forecasts.",
+        "confidence": 0.35,
+        "sources": "general knowledge",
+        "disclaimer": "This answer is AI-generated and not from your documents or meeting. Please verify accuracy."
+      }
+    }
+  ],
+  "edge_cases": [
+    {
+      "name": "Overlapping speakers",
+      "description": "Multiple people talking at once",
+      "transcript": "[11:20:15] Speaker A: \"I think we should—\"\n\n[11:20:16] Speaker B: \"Wait, about the budget—\"\n\n[11:20:18] Speaker A: \"Sorry, go ahead.\"\n\n[11:20:20] Speaker B: \"What's the budget for marketing?\"",
+      "note": "Should detect the complete question, not the interrupted attempts"
+    },
+    {
+      "name": "Very long action description",
+      "description": "Action that spans multiple sentences",
+      "transcript": "[09:45:30] Speaker A: \"Sarah, we need you to coordinate with the design team on the new landing page. You'll need to gather their feedback, create a prototype, test it with users, and present the results to stakeholders by end of month.\"",
+      "note": "Should detect as single action with comprehensive description"
+    },
+    {
+      "name": "Pronouns and implicit references",
+      "description": "Action with pronoun that needs resolution",
+      "transcript": "[10:30:15] Speaker A: \"We need to update the documentation.\"\n\n[10:30:40] Speaker B: \"I'll handle it.\"\n\n[10:30:55] Speaker A: \"Great, can you finish by Tuesday?\"",
+      "note": "Should resolve 'it' to 'update the documentation' and 'you' to Speaker B"
+    }
+  ]
+}
