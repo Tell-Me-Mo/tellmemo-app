@@ -492,14 +492,16 @@ Status: COMPLETED - 2025-10-26 18:30
 **Description:** Create service to monitor live conversation for answers to active questions and mark them as resolved.
 
 **Acceptance Criteria:**
-- [ ] Create `AnswerHandler` class in `/backend/services/intelligence/answer_handler.py`
-- [ ] Process answer events from GPT stream
-- [ ] Implement semantic matching of answers to active questions
-- [ ] Update question status to "answered" when match confidence > 85%
-- [ ] Remove from active tracking when resolved
-- [ ] Send resolution notifications via WebSocket
-- [ ] Store answer source and timestamp
-- [ ] Write tests for matching algorithms
+- [x] Create `AnswerHandler` class in `/backend/services/intelligence/answer_handler.py`
+- [x] Process answer events from GPT stream
+- [x] Implement semantic matching of answers to active questions
+- [x] Update question status to "answered" when match confidence > 85%
+- [x] Remove from active tracking when resolved
+- [x] Send resolution notifications via WebSocket
+- [x] Store answer source and timestamp
+- [x] Write tests for matching algorithms
+
+Status: COMPLETED - 2025-10-26 19:00
 
 **Complexity:** Medium
 **Dependencies:** Task 2.3, Task 2.4, Task 1.2
