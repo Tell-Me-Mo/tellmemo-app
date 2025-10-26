@@ -9,6 +9,8 @@ import 'recording_button.dart';
 import '../../../content/presentation/providers/processing_jobs_provider.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../core/utils/screen_info.dart';
+import '../../../live_insights/presentation/widgets/live_transcription_widget.dart';
+import '../../../live_insights/data/models/transcript_model.dart';
 
 enum ProjectSelectionMode { automatic, manual, specific }
 
@@ -36,6 +38,10 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
   String? _selectedProjectId;
   late AnimationController _animationController;
   late Animation<Offset> _slideAnimation;
+
+  // Live transcription state
+  final List<TranscriptModel> _transcripts = [];
+  bool _transcriptionCollapsed = false;
 
   @override
   void initState() {
@@ -680,9 +686,12 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    // Placeholder content area for future implementation
+    // AI Assistant content with three sections:
+    // Section 1: Recording controls (handled separately)
+    // Section 2: Live Transcription Display (this widget)
+    // Section 3: Questions & Actions (placeholder for Task 5.4)
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
@@ -691,41 +700,25 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
         ),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(
-                Icons.pending_outlined,
-                size: 48,
-                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'AI Assistant Ready',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      recordingState.state == RecordingState.idle
-                          ? 'Start recording to see live insights'
-                          : 'Listening for questions and actions...',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          // Section 2: Live Transcription Display
+          SizedBox(
+            height: 300,
+            child: LiveTranscriptionWidget(
+              transcripts: _transcripts,
+              isCollapsed: _transcriptionCollapsed,
+              onToggleCollapse: () {
+                setState(() {
+                  _transcriptionCollapsed = !_transcriptionCollapsed;
+                });
+              },
+            ),
           ),
+
           const SizedBox(height: 16),
+
+          // Section 3: Questions & Actions (Placeholder for Task 5.4)
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -742,7 +735,7 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Live transcription and AI insights will appear here during recording',
+                    'Questions and actions will appear below (Task 5.4)',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                     ),

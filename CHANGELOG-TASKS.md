@@ -4,6 +4,85 @@
 
 ### [2025-10-26]
 #### Added
+- **Task 5.1.5 - Create Live Transcription Display Widget**: Implemented real-time transcription display component with speaker attribution and auto-scroll
+  - Implementation: Flutter widget with state management, virtualized lists, and responsive UI
+  - Core Components:
+    - **LiveTranscriptionWidget** (`/lib/features/live_insights/presentation/widgets/live_transcription_widget.dart`, 492 lines)
+      - Displays partial and final transcripts with visual state indicators
+      - Speaker attribution with color-coded labels (8 distinct colors)
+      - Auto-scroll with manual pause detection and resume button
+      - Collapsible panel (expanded/collapsed states)
+      - Timestamp display (relative for <5min, absolute for >5min)
+      - Empty state with guidance message
+      - Performance optimized with ListView.builder
+    - **TranscriptModel** (`/lib/features/live_insights/data/models/transcript_model.dart`, 64 lines)
+      - Freezed data class with JSON serialization
+      - Fields: id, text, speaker, timestamp, state, confidence, startMs, endMs
+      - Enums: TranscriptionState (partial, final_)
+      - Extension methods: isPartial, isFinal, displaySpeaker, confidenceDisplay
+    - **Recording Panel Integration** (`/lib/features/audio_recording/presentation/widgets/recording_panel.dart`)
+      - Integrated LiveTranscriptionWidget into AI Assistant content section
+      - Added transcripts list state management
+      - Added transcription collapse toggle state
+      - Prepared placeholder for Task 5.4 (Questions & Actions)
+  - UI/UX Features:
+    - ✅ Speaker Attribution:
+      - Color-coded speaker labels with vertical bar indicator
+      - Consistent speaker colors throughout session (8-color palette)
+      - Speaker name display (fallback to "Unknown Speaker")
+    - ✅ Transcript State Display:
+      - Partial transcripts: italic, lighter color, "[PARTIAL]" badge
+      - Final transcripts: normal weight, full opacity, "[FINAL]" badge with checkmark
+      - Smooth state transitions with visual feedback
+    - ✅ Auto-Scroll Behavior:
+      - Automatic scroll to latest transcript on new arrival
+      - Manual scroll up pauses auto-scroll
+      - "New transcript ↓" floating action button when paused
+      - Auto-resume on button click or scroll to bottom
+    - ✅ Timestamp Display:
+      - Relative time for recent (<5 min): "2m ago", "Just now"
+      - Absolute time for older (>5 min): "10:15", "14:23"
+      - Uses DateTimeUtils.formatTime() and formatTimeAgo()
+    - ✅ Visibility Control:
+      - Expand/collapse toggle button in header
+      - Collapsed: shows last 2 transcripts only
+      - Expanded: full scrollable history (300px height)
+      - Section header with transcript count badge
+    - ✅ Empty State:
+      - Mic icon with "Waiting for audio..." message
+      - Guidance text: "Transcription will appear here in real-time"
+    - ✅ Performance Optimization:
+      - ListView.builder for efficient rendering (virtualized list)
+      - ScrollController for auto-scroll management
+      - Listener pattern for scroll state detection
+      - Minimal rebuilds with setState on collapse toggle only
+  - Integration Points:
+    - Recording panel Section 2: Live Transcription Display (implemented)
+    - Recording panel Section 3: Questions & Actions (placeholder for Task 5.4)
+    - WebSocket integration: Ready to receive TRANSCRIPTION_PARTIAL and TRANSCRIPTION_FINAL events (Task 5.7)
+  - Architecture Benefits:
+    - **Clean Separation:** Widget is self-contained and reusable
+    - **Freezed Pattern:** Immutable state with type-safe models
+    - **Riverpod Ready:** ConsumerStatefulWidget for future provider integration
+    - **Existing Patterns:** Follows codebase conventions (activity_timeline.dart, ask_ai_panel.dart)
+  - Files:
+    - Created: `/lib/features/live_insights/data/models/transcript_model.dart` (64 lines)
+    - Created: `/lib/features/live_insights/data/models/transcript_model.freezed.dart` (generated)
+    - Created: `/lib/features/live_insights/data/models/transcript_model.g.dart` (generated)
+    - Created: `/lib/features/live_insights/presentation/widgets/live_transcription_widget.dart` (492 lines)
+    - Modified: `/lib/features/audio_recording/presentation/widgets/recording_panel.dart` (+8 lines state, +65 lines content)
+  - Testing:
+    - Flutter analyze passed: 0 errors in live_insights directory
+    - Widget tests: TODO (post-MVP, Task 5.1.5 acceptance criteria)
+    - Manual testing: Pending user verification with live WebSocket data
+  - Next Steps:
+    - Task 5.7: Implement LiveInsightsWebSocketService to populate _transcripts list
+    - Task 5.2: Implement Live Questions Card Widget
+    - Task 5.3: Implement Live Actions Card Widget
+    - Task 5.4: Create AI Assistant Content Section with questions & actions
+
+### [2025-10-26]
+#### Added
 - **Task 5.1 - Add AI Assistant Toggle to Recording Panel**: Integrated AI Assistant toggle switch with user preference persistence
   - Implementation: Flutter UI component with state management and persistent storage
   - Core Components:

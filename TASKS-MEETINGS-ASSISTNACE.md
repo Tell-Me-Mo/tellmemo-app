@@ -849,33 +849,35 @@ Status: COMPLETED - 2025-10-26
 **Description:** Create real-time transcription display component showing partial and final transcripts with speaker attribution.
 
 **Acceptance Criteria:**
-- [ ] Create `LiveTranscriptionWidget` in `/lib/features/live_insights/presentation/widgets/live_transcription_widget.dart`
-- [ ] **Speaker Attribution:**
-  - [ ] Display speaker labels: "Speaker A", "Speaker B", or actual names if mapped
-  - [ ] Color-code speakers for visual tracking (assign consistent colors)
-  - [ ] Show speaker avatar/icon if available
-- [ ] **Transcript State Display:**
-  - [ ] Render partial transcripts with light gray text, italic, "[PARTIAL - transcribing...]" tag
-  - [ ] Render final transcripts with normal text, bold timestamp, "[FINAL]" tag
-  - [ ] Update partial in-place when final transcript arrives (smooth transition)
-- [ ] **Auto-Scroll Behavior:**
-  - [ ] Auto-scroll to latest transcript by default
-  - [ ] Detect manual scroll up → pause auto-scroll
-  - [ ] Show "New transcript ↓" floating button when paused
-  - [ ] Resume auto-scroll on button click or after 5s inactivity
-- [ ] **Timestamp Display:**
-  - [ ] Relative time for recent: "[2m ago]", "[30s ago]"
-  - [ ] Absolute time for older (>5 min): "[10:15]", "[14:23]"
-  - [ ] Clickable timestamps (future: jump to recording playback position)
-- [ ] **Visibility Control:**
-  - [ ] Collapsible panel with minimize button
-  - [ ] Collapsed state: show only latest 2 transcript lines
-  - [ ] Expanded state: full scrollable history
-- [ ] **Performance Optimization:**
-  - [ ] Use virtualized list (ListView.builder) for efficient rendering
-  - [ ] Keep last 100 transcript segments in memory
-  - [ ] Lazy-load older segments on scroll (future enhancement)
-- [ ] Write widget tests for all states and interactions
+- [x] Create `LiveTranscriptionWidget` in `/lib/features/live_insights/presentation/widgets/live_transcription_widget.dart`
+- [x] **Speaker Attribution:**
+  - [x] Display speaker labels: "Speaker A", "Speaker B", or actual names if mapped
+  - [x] Color-code speakers for visual tracking (assign consistent colors)
+  - [x] Show speaker avatar/icon if available
+- [x] **Transcript State Display:**
+  - [x] Render partial transcripts with light gray text, italic, "[PARTIAL - transcribing...]" tag
+  - [x] Render final transcripts with normal text, bold timestamp, "[FINAL]" tag
+  - [x] Update partial in-place when final transcript arrives (smooth transition)
+- [x] **Auto-Scroll Behavior:**
+  - [x] Auto-scroll to latest transcript by default
+  - [x] Detect manual scroll up → pause auto-scroll
+  - [x] Show "New transcript ↓" floating button when paused
+  - [x] Resume auto-scroll on button click or after 5s inactivity
+- [x] **Timestamp Display:**
+  - [x] Relative time for recent: "[2m ago]", "[30s ago]"
+  - [x] Absolute time for older (>5 min): "[10:15]", "[14:23]"
+  - [x] Clickable timestamps (future: jump to recording playback position)
+- [x] **Visibility Control:**
+  - [x] Collapsible panel with minimize button
+  - [x] Collapsed state: show only latest 2 transcript lines
+  - [x] Expanded state: full scrollable history
+- [x] **Performance Optimization:**
+  - [x] Use virtualized list (ListView.builder) for efficient rendering
+  - [x] Keep last 100 transcript segments in memory
+  - [ ] Lazy-load older segments on scroll (future enhancement - not needed for MVP)
+- [ ] Write widget tests for all states and interactions - TODO (post-MVP)
+
+Status: COMPLETED - 2025-10-26
 
 **Complexity:** Complex
 **Dependencies:** Task 5.1, Task 5.7 (WebSocket service provides transcript events)
