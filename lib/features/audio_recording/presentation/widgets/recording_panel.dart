@@ -477,57 +477,71 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+    return DropdownButtonFormField<String>(
+      key: ValueKey(_selectedProjectId),
+      initialValue: _selectedProjectId,
+      decoration: InputDecoration(
+        hintText: 'Choose a project',
+        hintStyle: TextStyle(
+          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+        ),
+        prefixIcon: Icon(
+          Icons.folder_outlined,
+          color: _selectedProjectId != null
+              ? colorScheme.primary
+              : colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+          size: 20,
+        ),
+        filled: true,
+        fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: colorScheme.primary,
+            width: 1.5,
+          ),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 14,
         ),
       ),
-      child: DropdownButtonFormField<String>(
-        initialValue: _selectedProjectId,
-        decoration: InputDecoration(
-          hintText: 'Choose a project',
-          hintStyle: TextStyle(
-            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-          ),
-          prefixIcon: Icon(
-            Icons.folder_outlined,
-            color: _selectedProjectId != null
-                ? colorScheme.primary
-                : colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-            size: 20,
-          ),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 14,
-          ),
-        ),
-        dropdownColor: colorScheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(12),
-        elevation: 4,
-        style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface),
-        icon: Icon(
-          Icons.keyboard_arrow_down_rounded,
-          color: colorScheme.onSurfaceVariant,
-        ),
-        items: projects.map((project) {
-          return DropdownMenuItem<String>(
-            value: project.id,
-            child: Text(
-              project.name,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
+      dropdownColor: colorScheme.surfaceContainer,
+      borderRadius: BorderRadius.circular(12),
+      elevation: 8,
+      style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface),
+      icon: Icon(
+        Icons.keyboard_arrow_down_rounded,
+        color: colorScheme.onSurfaceVariant,
+      ),
+      isExpanded: true,
+      items: projects.map((project) {
+        return DropdownMenuItem<String>(
+          value: project.id,
+          child: Text(
+            project.name,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w500,
             ),
-          );
-        }).toList(),
-        onChanged: (value) => setState(() {
-          _selectedProjectId = value;
-        }),
-      ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        );
+      }).toList(),
+      onChanged: (value) => setState(() {
+        _selectedProjectId = value;
+      }),
     );
   }
 
