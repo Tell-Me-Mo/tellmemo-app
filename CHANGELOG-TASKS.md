@@ -4,6 +4,40 @@
 
 ### [2025-10-26]
 #### Added
+- **Task 6.1 - Configure GPT-5-mini in Multi-LLM Client**: Verified and documented GPT-5-mini integration
+  - Implementation: All GPT-5-mini functionality already implemented in existing codebase
+  - Key Features:
+    - **OpenAI Provider Client**: Full GPT-5 model support with automatic parameter handling
+      - `max_completion_tokens` instead of `max_tokens` for GPT-5 models
+      - Automatic temperature override to 1.0 for GPT-5 (lines 250-259 in multi_llm_client.py)
+    - **GPT5StreamingClient**: Dedicated streaming client with NDJSON parsing
+      - Real-time newline-delimited JSON parsing for question/action/answer detection
+      - ~200ms first-token latency optimization
+      - Token usage tracking with `stream_options={"include_usage": true}`
+    - **Reliability Features**:
+      - Exponential backoff retry: 1s → 2s → 4s → 8s → 16s (up to 5 attempts)
+      - Rate limit handling with LLMRateLimitException
+      - Stream interruption recovery (up to 3 retry attempts)
+      - Circuit breaker integration ready (optional with purgatory library)
+    - **Monitoring & Observability**:
+      - Request logging: model, temperature, prompt preview, duration
+      - Performance metrics: latency, object count, error rates
+      - Token usage logging from stream metadata
+  - Documentation:
+    - Created comprehensive configuration guide: `/backend/docs/GPT5_MINI_CONFIGURATION.md`
+    - Includes usage examples, token budget estimates, troubleshooting
+    - Environment variable configuration documented
+    - Cost estimation: ~$0.06/hour for GPT-5-mini (plus AssemblyAI $0.90/hour)
+  - Testing:
+    - Created integration tests: `/backend/tests/services/llm/test_gpt5_streaming.py`
+    - Test coverage: NDJSON parsing, error handling, timeout recovery, rate limits
+    - 20+ test cases covering edge cases, malformed JSON, chunked parsing
+  - Files:
+    - Existing: `/backend/services/llm/multi_llm_client.py` (OpenAI provider, lines 192-389)
+    - Existing: `/backend/services/llm/gpt5_streaming.py` (streaming client, complete)
+    - Created: `/backend/docs/GPT5_MINI_CONFIGURATION.md` (370+ lines)
+    - Created: `/backend/tests/services/llm/test_gpt5_streaming.py` (550+ lines)
+
 - **Task 6.2 - Create GPT-5-mini Prompt Templates**: Implemented comprehensive prompt templates for streaming intelligence system
   - Implementation: Created reusable prompt functions for all intelligence detection scenarios
   - Prompt Components:
