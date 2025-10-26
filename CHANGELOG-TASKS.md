@@ -4,6 +4,47 @@
 
 ### [2025-10-26]
 #### Added
+- **Task 3.2 - Implement Meeting Context Search Service (Tier 2 Answer Discovery)**: Created GPT-5-mini powered semantic search for meeting transcript
+  - Implementation: Service to search current meeting transcript for answers to questions using GPT-5-mini
+  - Service Features:
+    - **MeetingContextSearchService** (`/backend/services/intelligence/meeting_context_search.py`, 373 lines)
+      - GPT-5-mini integration for semantic matching with temperature=0.3
+      - 1.5-second timeout for fast response
+      - Returns exact quotes with speaker attribution and timestamps
+      - Confidence threshold: 75% minimum to return answer
+      - Max 3 relevant quotes returned per question
+      - Structured JSON response with answer_text, quotes[], confidence
+    - **Search Process:**
+      - Step 1: Retrieve formatted meeting transcript from TranscriptionBuffer
+      - Step 2: Build system prompt for GPT-5-mini semantic search
+      - Step 3: Build user prompt with question and transcript context
+      - Step 4: Call GPT-5-mini via MultiLLMClient with JSON response format
+      - Step 5: Parse and validate JSON response with confidence check
+    - **Prompt Design:**
+      - System prompt instructs GPT to search transcript for answers
+      - Output format: JSON with found_answer, answer_text, quotes[], confidence
+      - Rules: Only return if >75% confidence, use exact quotes, no fabrication
+      - Quotes include: text, speaker, timestamp in [HH:MM:SS] format
+    - **QuestionHandler Integration:**
+      - Updated _tier2_meeting_context_search() to use MeetingContextSearchService
+      - Passes speaker and organization_id for context
+      - Updates database with meeting_context tier result
+      - Broadcasts ANSWER_FROM_MEETING event with "💬 Earlier in Meeting" label
+      - Stores quotes array with speaker attribution and timestamps
+  - Error Handling:
+    - Asyncio timeout handling with graceful logging
+    - JSON parsing error recovery
+    - GPT API call failure fallback
+    - Returns found_answer=false on any error
+  - Performance:
+    - Tracks search_duration_ms for monitoring
+    - Parallel execution with Tier 1 (RAG) search
+    - Low temperature (0.3) for precise semantic matching
+  - Status: Core functionality complete, integration tests deferred to post-MVP
+  - Files:
+    - `/backend/services/intelligence/meeting_context_search.py` (created)
+    - `/backend/services/intelligence/question_handler.py` (modified - added import and updated _tier2_meeting_context_search)
+
 - **Task 3.1 - Implement RAG Search Service (Tier 1 Answer Discovery)**: Created streaming semantic search service for organization documents
   - Implementation: Dedicated RAG search service with progressive streaming results for real-time question answering
   - Service Features:

@@ -19,6 +19,7 @@ from models.live_insight import (
     AnswerSource
 )
 from services.intelligence.rag_search import rag_search_service
+from services.intelligence.meeting_context_search import get_meeting_context_search
 from utils.logger import get_logger, sanitize_for_log
 
 logger = get_logger(__name__)
@@ -179,7 +180,9 @@ class QuestionHandler:
                 self._tier1_rag_search(session_id, question_id, question_text, project_id, organization_id)
             )
             tier2_task = asyncio.create_task(
-                self._tier2_meeting_context_search(session_id, question_id, question_text)
+                self._tier2_meeting_context_search(
+                    session_id, question_id, question_text, speaker, organization_id
+                )
             )
 
             # Start Tier 3: Live monitoring (15s window)
@@ -346,14 +349,22 @@ class QuestionHandler:
         self,
         session_id: str,
         question_id: str,
-        question_text: str
+        question_text: str,
+        speaker: Optional[str] = None,
+        organization_id: Optional[str] = None
     ) -> bool:
         """Tier 2: Search current meeting transcript for answers.
+
+        Uses GPT-5-mini to semantically search the current meeting transcript
+        for answers to the detected question. Returns exact quotes with
+        speaker attribution and clickable timestamps.
 
         Args:
             session_id: Meeting session ID
             question_id: Question database ID
             question_text: The question text
+            speaker: Who asked the question (optional)
+            organization_id: Organization ID for tracking (optional)
 
         Returns:
             True if answer found in meeting context, False otherwise
@@ -361,15 +372,70 @@ class QuestionHandler:
         try:
             logger.debug(f"Tier 2: Starting meeting context search for question {question_id}")
 
-            # TODO: Implement meeting context search service (Task 3.2)
-            # For now, return False to indicate not implemented
-            logger.debug(f"Tier 2: Meeting context search not yet implemented for question {question_id}")
+            # Get meeting context search service
+            meeting_context_search = get_meeting_context_search()
 
-            # Placeholder for future implementation:
-            # 1. Get transcript buffer for session_id
-            # 2. Use GPT-5-mini to semantically search for answers
-            # 3. Return quotes with speaker attribution and timestamp
-            # 4. Broadcast ANSWER_FROM_MEETING event
+            # Search meeting transcript for answer
+            result = await meeting_context_search.search(
+                question=question_text,
+                session_id=session_id,
+                speaker=speaker,
+                organization_id=organization_id
+            )
+
+            # If no answer found, return False
+            if not result.found_answer:
+                logger.debug(
+                    f"Tier 2: No answer found in meeting context for question {question_id}"
+                )
+                return False
+
+            # Update database with meeting context result
+            from db.database import SessionLocal
+            async with SessionLocal() as db_session:
+                db_result = await db_session.execute(
+                    select(LiveMeetingInsight).where(
+                        LiveMeetingInsight.id == uuid.UUID(question_id)
+                    )
+                )
+                question = db_result.scalar_one_or_none()
+
+                if question:
+                    # Add meeting context tier result
+                    question.add_tier_result("meeting_context", {
+                        "answer_text": result.answer_text,
+                        "quotes": result.quotes,
+                        "confidence": result.confidence,
+                        "search_duration_ms": result.search_duration_ms,
+                        "timestamp": datetime.utcnow().isoformat()
+                    })
+
+                    # Update status and answer source
+                    question.update_status(InsightStatus.FOUND.value)
+                    question.set_answer_source(
+                        AnswerSource.MEETING_CONTEXT.value,
+                        result.confidence
+                    )
+
+                    await db_session.commit()
+
+                    # Broadcast ANSWER_FROM_MEETING event
+                    await self._broadcast_event(session_id, {
+                        "type": "ANSWER_FROM_MEETING",
+                        "question_id": question_id,
+                        "answer_text": result.answer_text,
+                        "quotes": result.quotes,
+                        "confidence": result.confidence,
+                        "tier": "meeting_context",
+                        "label": "💬 Earlier in Meeting"
+                    })
+
+                    logger.info(
+                        f"Tier 2: Found answer in meeting context for question {question_id} "
+                        f"(confidence: {result.confidence:.3f}, quotes: {len(result.quotes)}, "
+                        f"duration: {result.search_duration_ms}ms)"
+                    )
+                    return True
 
             return False
 
