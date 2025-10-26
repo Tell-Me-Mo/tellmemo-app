@@ -243,6 +243,85 @@ The system provides:
 - Expandable cards for detailed view
 - Non-blocking, dismissible alerts
 
+**FR-U5: Real-Time Transcription Display**
+
+**Layout Specification:**
+
+The recording panel will be divided into sections:
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Recording Panel (Right Side of Screen)             │
+├─────────────────────────────────────────────────────┤
+│  Section 1: Recording Controls                      │
+│  ┌───────────────────────────────────────────────┐ │
+│  │ ⏺ Recording... 15:23                          │ │
+│  │ [Pause] [Stop] [AI Assistant: ON]             │ │
+│  │ Audio Level: ████████░░ 80%                   │ │
+│  └───────────────────────────────────────────────┘ │
+├─────────────────────────────────────────────────────┤
+│  Section 2: Live Transcription (when AI enabled)   │
+│  ┌───────────────────────────────────────────────┐ │
+│  │ 🎤 Live Transcript                            │ │
+│  │ ─────────────────────────────────────────────  │ │
+│  │ [10:15] Speaker A: "What's the budget for..." │ │
+│  │         [FINAL]                                │ │
+│  │                                                │ │
+│  │ [10:16] Speaker B: "I think it's around..."   │ │
+│  │         [PARTIAL - transcribing...]            │ │
+│  │                                                │ │
+│  │ Auto-scrolls to latest transcript              │ │
+│  └───────────────────────────────────────────────┘ │
+├─────────────────────────────────────────────────────┤
+│  Section 3: AI Assistant Content (when enabled)    │
+│  ┌───────────────────────────────────────────────┐ │
+│  │ ❓ Questions (3)                              │ │
+│  │ ───────────────────────────────────────────    │ │
+│  │ [LiveQuestionCard 1]                          │ │
+│  │ [LiveQuestionCard 2]                          │ │
+│  │ [LiveQuestionCard 3]                          │ │
+│  │                                                │ │
+│  │ ✅ Actions (2)                                │ │
+│  │ ───────────────────────────────────────────    │ │
+│  │ [LiveActionCard 1]                            │ │
+│  │ [LiveActionCard 2]                            │ │
+│  └───────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────┘
+```
+
+**Transcription Display Requirements:**
+
+1. **Speaker Attribution:**
+   - Show speaker label from AssemblyAI: "Speaker A", "Speaker B", etc.
+   - If speaker mapping exists, show actual name: "Sarah", "John"
+   - Color-code speakers for easy visual tracking
+
+2. **Transcript State Indicators:**
+   - **[PARTIAL]**: Light gray text, italic - "transcribing..."
+   - **[FINAL]**: Normal text, bold timestamp - stable transcription
+   - Partial transcripts update in-place when final version arrives
+
+3. **Auto-Scroll Behavior:**
+   - Auto-scroll to latest transcript by default
+   - If user manually scrolls up, pause auto-scroll
+   - Show "New transcript ↓" button to resume auto-scroll
+   - Resume auto-scroll after 5 seconds of inactivity
+
+4. **Timestamp Format:**
+   - Relative time: "[2m ago]" for recent
+   - Absolute time: "[10:15]" for older (>5 minutes)
+   - Clickable timestamps to jump in recording playback
+
+5. **Visibility Control:**
+   - Collapsible transcription panel (minimize button)
+   - Collapsed state shows only latest 2 lines
+   - Expanded state shows full scrollable history
+
+6. **Performance Optimization:**
+   - Render only visible transcripts (virtualized list)
+   - Keep last 100 transcript segments in memory
+   - Older segments loaded on-demand from backend
+
 **FR-U2: Question Display**
 - Show question text, speaker, timestamp
 - Progressive display of search results from all four tiers
@@ -324,6 +403,74 @@ The system provides:
 - Enforces user permissions per meeting
 - Session management and token refresh
 
+**4.2.4 WebSocket Connection Lifecycle**
+
+**Connection URL Format:**
+```
+wss://{host}/ws/live-insights/{session_id}?token={jwt}
+```
+
+**When to Connect:**
+- **Recommended Approach:** Client connects WebSocket at recording start
+- Client sends audio stream only when AI Assistant is enabled
+- This allows for seamless toggle ON/OFF without reconnection
+- If AI Assistant is disabled, client continues connection but stops sending audio
+
+**Connection States:**
+1. **Recording Started, AI OFF:**
+   - WebSocket connected
+   - No audio sent to backend
+   - No transcription or intelligence processing
+   - Connection idle (minimal bandwidth)
+
+2. **Recording Started, AI ON:**
+   - WebSocket connected
+   - Audio streaming active (binary frames)
+   - Backend forwards to AssemblyAI
+   - Intelligence processing active
+   - Insights streamed back to client
+
+3. **AI Toggled OFF Mid-Meeting:**
+   - WebSocket remains connected
+   - Client stops sending audio
+   - Backend stops AssemblyAI streaming
+   - Existing insights remain visible (read-only)
+   - State preserved in Redis for potential re-enable
+
+4. **AI Toggled ON Mid-Meeting:**
+   - WebSocket already connected (no reconnection needed)
+   - Client resumes audio streaming
+   - Backend reconnects to AssemblyAI
+   - Intelligence processing resumes
+   - New insights append to existing list
+
+**Alternative Approach (Not Recommended):**
+- Connect WebSocket only when AI Assistant is enabled
+- Disconnect when AI is disabled
+- Requires reconnection and state sync on re-enable
+- More complex state management
+
+**WebSocket Message Flow:**
+```
+Client → Server (Binary Frames):
+- Audio chunks (PCM 16kHz, 16-bit, mono)
+- Metadata: timestamp, sequence_number, audio_level
+
+Client → Server (JSON):
+- User feedback: mark_answered, assign_action, dismiss
+- Toggle events: ai_enabled, ai_disabled
+
+Server → Client (JSON):
+- QUESTION_DETECTED
+- RAG_RESULT (progressive)
+- ANSWER_FROM_MEETING
+- QUESTION_ANSWERED_LIVE
+- GPT_GENERATED_ANSWER
+- ACTION_TRACKED
+- ACTION_UPDATED
+- SYNC_STATE (on reconnect)
+```
+
 ### 4.3 Intelligence Processing Layer
 
 **5.3.1 Streaming Intelligence Engine**
@@ -389,6 +536,114 @@ The system provides:
 - Heuristics: long pauses, transition phrases, time intervals
 - Triggers action item review at segment end
 - Signals meeting end for summary generation
+
+**4.3.8 Session and Recording Lifecycle**
+
+**Session Creation Flow:**
+
+1. **User Starts Recording (No AI Assistant):**
+   ```
+   Recording Start Button Clicked
+       ↓
+   Backend creates Recording record in PostgreSQL
+       ↓
+   recording_id = UUID generated
+   session_id = recording_id (same value)
+       ↓
+   Recording status = "recording"
+   AI Assistant status = "disabled"
+   ```
+
+2. **User Starts Recording with AI Assistant Enabled:**
+   ```
+   Recording Start Button Clicked + AI Toggle ON
+       ↓
+   Backend creates Recording record in PostgreSQL
+       ↓
+   recording_id = UUID generated
+   session_id = recording_id (same value)
+       ↓
+   Recording status = "recording"
+   AI Assistant status = "enabled"
+       ↓
+   Initialize Redis state for session_id:
+       - transcription_buffer = []
+       - active_questions = []
+       - active_actions = []
+       - TTL = 24 hours
+       ↓
+   Connect to AssemblyAI (if AI enabled)
+   ```
+
+3. **User Toggles AI Assistant Mid-Recording:**
+   ```
+   AI Toggle ON (mid-recording):
+       ↓
+   session_id already exists (from recording_id)
+       ↓
+   Initialize Redis state if not exists
+   Connect to AssemblyAI
+   Start streaming intelligence
+
+   AI Toggle OFF (mid-recording):
+       ↓
+   session_id remains active
+       ↓
+   Disconnect from AssemblyAI
+   Stop streaming intelligence
+   Preserve Redis state (read-only access)
+   ```
+
+4. **Recording End:**
+   ```
+   Recording Stop Button Clicked
+       ↓
+   Recording status = "completed"
+   AI Assistant status = "disabled"
+       ↓
+   Disconnect from AssemblyAI (if connected)
+   Stop streaming intelligence
+       ↓
+   Persist final insights to PostgreSQL:
+       - Copy all questions from Redis → live_meeting_insights table
+       - Copy all actions from Redis → live_meeting_insights table
+       - Link via recording_id foreign key
+       ↓
+   Redis state TTL extended to +2 hours for late access
+       ↓
+   Generate meeting summary (existing flow)
+   ```
+
+**Key Design Decisions:**
+
+- `session_id` = `recording_id` (simplicity, 1:1 mapping)
+- Recording record is created immediately on recording start, regardless of AI Assistant state
+- AI Assistant can be enabled/disabled at any time during recording
+- Redis state is initialized only when AI Assistant is first enabled
+- WebSocket connection recommended at recording start (even if AI is OFF initially)
+- AssemblyAI connection is created/destroyed based on AI Assistant state
+- All live insights are persisted to PostgreSQL at recording end for historical access
+
+**Database Schema Linkage:**
+
+```sql
+-- recordings table (already exists)
+CREATE TABLE recordings (
+    id UUID PRIMARY KEY,
+    -- ... existing fields ...
+    ai_assistant_enabled BOOLEAN DEFAULT FALSE,
+    ai_session_started_at TIMESTAMP,
+    ai_session_ended_at TIMESTAMP
+);
+
+-- live_meeting_insights table (new)
+CREATE TABLE live_meeting_insights (
+    id UUID PRIMARY KEY,
+    session_id VARCHAR,  -- matches recording_id
+    recording_id UUID REFERENCES recordings(id) ON DELETE CASCADE,
+    -- ... other fields ...
+);
+```
 
 ### 4.4 Data Layer
 
@@ -575,6 +830,70 @@ Server → Client:
 - **Cost:** $0.00025/second = $0.015/minute = $0.90/hour
 - **Alternative Considered:** OpenAI Whisper API (lacks real-time streaming + diarization)
 
+**AssemblyAI Connection Architecture:**
+
+**Recommended Approach: Single Connection Per Session (Shared by All Clients)**
+
+```
+                    ┌──────────────────────┐
+                    │  AssemblyAI Service  │
+                    │  (wss://...)         │
+                    └──────────┬───────────┘
+                               │ Single WebSocket Connection
+                               │ (per session_id)
+                    ┌──────────▼───────────┐
+                    │  Backend Server      │
+                    │  Audio Mixer         │
+                    │  (session_id: abc)   │
+                    └──────────┬───────────┘
+                               │ Broadcast transcripts
+                   ┌───────────┼───────────┐
+                   │           │           │
+            ┌──────▼─────┐ ┌──▼──────┐ ┌─▼────────┐
+            │ Client 1   │ │Client 2 │ │Client 3  │
+            │ (Phone)    │ │(Laptop) │ │(Tablet)  │
+            └────────────┘ └─────────┘ └──────────┘
+```
+
+**Why Single Connection Per Session:**
+1. **Cost Efficiency:** AssemblyAI charges per audio stream. One connection = $0.90/hour regardless of participant count
+2. **Speaker Diarization Accuracy:** AssemblyAI needs full audio context to identify speakers correctly
+3. **Audio Mixing:** Backend mixes audio from all participants before sending to AssemblyAI
+4. **Transcript Consistency:** All participants see identical transcripts with synchronized speaker labels
+
+**Connection Lifecycle:**
+1. **First client enables AI Assistant:**
+   - Backend creates AssemblyAI WebSocket connection for `session_id`
+   - Connection stored in Redis: `assemblyai:connection:{session_id}`
+   - Audio buffer initialized
+
+2. **Additional clients join:**
+   - Backend reuses existing AssemblyAI connection
+   - Client audio is mixed into shared stream
+   - All clients receive same transcripts via WebSocket broadcast
+
+3. **Client disconnects:**
+   - Backend continues AssemblyAI connection if other clients still active
+   - Audio mixing adjusts to remove disconnected client
+
+4. **Last client disables AI or disconnects:**
+   - Backend closes AssemblyAI connection
+   - Redis connection reference deleted
+
+5. **Client re-enables AI mid-meeting:**
+   - If AssemblyAI connection exists: resume using existing
+   - If no connection: create new connection, continue from current audio
+
+**Audio Mixing Strategy:**
+- If multiple clients send audio simultaneously, backend mixes audio before forwarding
+- Use silence detection to avoid sending empty audio chunks
+- Tag each audio chunk with client_id for debugging
+
+**Alternative Approach (Not Recommended):**
+- One AssemblyAI connection per client
+- Higher cost: $0.90/hour × number of clients
+- Speaker diarization may be inconsistent across clients
+
 **Audio Streaming Protocol:**
 - **Transport:** WebSocket binary frames (not Base64)
 - **Buffering:** 300-500ms client-side buffer before sending
@@ -686,6 +1005,166 @@ Server → Client:
 
 ---
 
+
+---
+
+## APPENDIX C: GPT-5-MINI PROMPT SPECIFICATIONS
+
+### System Prompt for Streaming Intelligence
+
+```
+You are a real-time meeting intelligence assistant. Your job is to analyze live meeting transcripts as they stream in and detect questions, action items, and answers.
+
+OUTPUT FORMAT: Newline-delimited JSON (NDJSON)
+- Each detection must be a complete JSON object on a single line
+- Followed by a newline character
+- No markdown formatting, no code blocks, no explanations
+
+DETECTION TYPES:
+
+1. QUESTION:
+{
+  "type": "question",
+  "id": "q_{uuid}",
+  "text": "The exact question as spoken",
+  "speaker": "Speaker A",
+  "timestamp": "2025-10-26T10:30:05Z",
+  "category": "factual|opinion|action-seeking|clarification",
+  "confidence": 0.95
+}
+
+2. ACTION:
+{
+  "type": "action",
+  "id": "a_{uuid}",
+  "description": "Clear action description",
+  "owner": "John" OR null,
+  "deadline": "2025-10-30" OR null,
+  "speaker": "Speaker B",
+  "timestamp": "2025-10-26T10:31:00Z",
+  "completeness": 0.7,
+  "confidence": 0.92
+}
+
+3. ACTION_UPDATE (when more details emerge):
+{
+  "type": "action_update",
+  "id": "a_{uuid}",
+  "owner": "Sarah",
+  "deadline": "2025-11-05",
+  "completeness": 1.0,
+  "confidence": 0.88
+}
+
+4. ANSWER (when answer appears in conversation):
+{
+  "type": "answer",
+  "question_id": "q_{uuid}",
+  "answer_text": "The answer as spoken",
+  "speaker": "Speaker C",
+  "timestamp": "2025-10-26T10:32:15Z",
+  "confidence": 0.90
+}
+
+DETECTION RULES:
+
+Questions:
+- Detect explicit questions (ending with "?")
+- Detect implicit questions ("I'm wondering about...", "Does anyone know...")
+- Ignore rhetorical questions
+- Ignore questions already answered in the same transcript
+- Include speaker attribution if available
+
+Actions:
+- Detect commitments ("I will...", "We should...", "Let's...")
+- Detect task assignments ("John, can you...", "Sarah will...")
+- Detect deadlines ("by Friday", "before Q4", "next week")
+- Calculate completeness: 0.0-1.0 based on clarity of description, owner, and deadline
+  - Description only: 0.4
+  - Description + owner OR deadline: 0.7
+  - Description + owner + deadline: 1.0
+- Track action updates as more information emerges
+
+Answers:
+- Detect when a question is answered in subsequent conversation
+- Match semantically (not just keyword matching)
+- Confidence >0.85 required to mark as answered
+- Include the actual answer text, not just a flag
+
+IMPORTANT:
+- Generate UUIDs for IDs (e.g., "q_3f8a9b2c-1d4e-4f9a-b8c3-2a1b4c5d6e7f")
+- Keep JSON compact (no unnecessary whitespace)
+- Each object must be on exactly one line
+- Do not output explanations or commentary
+- If no detections in a transcript chunk, output nothing (empty response)
+```
+
+### Example Input Transcript
+
+```
+[10:15:30] Speaker A: "Hello everyone, thanks for joining. I wanted to discuss our Q4 infrastructure budget. Does anyone have the latest numbers?"
+
+[10:16:05] Speaker B: "I think Sarah sent that in an email last week. Let me check."
+
+[10:16:45] Speaker C: "The budget is $250,000 for infrastructure, including cloud costs and new servers."
+
+[10:17:20] Speaker A: "Perfect, thank you. John, can you update the spreadsheet with those numbers by Friday?"
+
+[10:17:35] Speaker D (John): "Sure, I'll update it by end of week."
+```
+
+### Example Output (NDJSON)
+
+```json
+{"type":"question","id":"q_a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d","text":"Does anyone have the latest numbers?","speaker":"Speaker A","timestamp":"2025-10-26T10:15:30Z","category":"factual","confidence":0.98}
+{"type":"action","id":"a_f1e2d3c4-b5a6-4978-8c9d-0a1b2c3d4e5f","description":"Update the spreadsheet with infrastructure budget numbers","owner":"John","deadline":"2025-10-30","speaker":"Speaker A","timestamp":"2025-10-26T10:17:20Z","completeness":1.0,"confidence":0.95}
+{"type":"answer","question_id":"q_a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d","answer_text":"The budget is $250,000 for infrastructure, including cloud costs and new servers.","speaker":"Speaker C","timestamp":"2025-10-26T10:16:45Z","confidence":0.97}
+```
+
+### Prompt for GPT-Generated Answers (Tier 4)
+
+**Used only when Tiers 1-3 fail to find an answer**
+
+```
+You are a knowledgeable assistant helping answer questions that were not found in documents or meeting discussion.
+
+CONTEXT:
+Question: "{question_text}"
+Asked by: {speaker}
+Meeting context: {brief_meeting_summary}
+
+TASK:
+Generate a helpful answer based on your general knowledge. If you cannot answer confidently, say so.
+
+OUTPUT FORMAT (JSON):
+{
+  "answer": "Your detailed answer here",
+  "confidence": 0.75,
+  "sources": "general knowledge",
+  "disclaimer": "This answer is AI-generated and not from your documents or meeting. Please verify accuracy."
+}
+
+RULES:
+- Only answer if confidence >70%
+- Be concise (2-3 sentences max)
+- Acknowledge uncertainty when appropriate
+- Do not fabricate specific company data or internal information
+- Suggest where to find authoritative information if possible
+```
+
+### Example GPT-Generated Answer
+
+**Question:** "What's the typical ROI timeline for infrastructure investments?"
+
+**GPT Response:**
+```json
+{
+  "answer": "Typical infrastructure investments show ROI within 18-36 months, depending on the scope. Cloud infrastructure often delivers faster returns (12-18 months) compared to on-premises hardware (24-36 months). However, this varies significantly based on organization size and usage patterns.",
+  "confidence": 0.78,
+  "sources": "general knowledge",
+  "disclaimer": "This answer is AI-generated and not from your documents or meeting. Please verify accuracy."
+}
+```
 
 ---
 

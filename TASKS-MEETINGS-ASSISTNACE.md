@@ -12,15 +12,15 @@ This document breaks down the implementation of TellMeMo's real-time meeting int
 
 ### Task Overview
 
-- **Total Tasks:** 26
+- **Total Tasks:** 27 (added Task 5.1.5 - Live Transcription Display)
 - **Priority Breakdown:**
-  - P0 (Critical): 11 tasks
+  - P0 (Critical): 12 tasks (added Task 5.1.5)
   - P1 (High): 11 tasks
   - P2 (Nice-to-have): 4 tasks
 - **Complexity Breakdown:**
   - Simple: 4 tasks
   - Medium: 12 tasks
-  - Complex: 10 tasks
+  - Complex: 11 tasks (added Task 5.1.5)
 - **Estimated Timeline:** 8-10 weeks
 
 ### Critical Path Highlights
@@ -185,12 +185,26 @@ AudioFormat(
 **Description:** Integrate AssemblyAI Real-Time Transcription API for streaming speech-to-text with speaker diarization.
 
 **Acceptance Criteria:**
+- [ ] **AssemblyAI Connection Architecture:**
+  - [ ] **Single Connection Per Session:** Create one AssemblyAI WebSocket connection per `session_id`, shared by all clients
+  - [ ] Store connection reference in Redis: `assemblyai:connection:{session_id}`
+  - [ ] **Connection Lifecycle:**
+    - First client enables AI → create AssemblyAI connection
+    - Additional clients join → reuse existing connection, mix audio
+    - Client disconnects → keep connection if others active
+    - Last client disables/disconnects → close connection
+    - Client re-enables AI → reuse existing or create new
+  - [ ] **Audio Mixing:** If multiple clients stream simultaneously, backend mixes audio before forwarding to AssemblyAI
+  - [ ] **Cost Tracking:** Track single connection cost ($0.90/hour) per session, not per client
 - [ ] **AssemblyAI WebSocket Connection:**
   - [ ] Connect to AssemblyAI real-time endpoint: `wss://api.assemblyai.com/v2/realtime/ws`
   - [ ] Authenticate with API key
   - [ ] Configure parameters: sample_rate=16000, encoding=pcm_s16le, enable_speaker_labels=true
 - [ ] **Audio Streaming to AssemblyAI:**
-  - [ ] Forward audio chunks from client to AssemblyAI
+  - [ ] Forward audio chunks from client(s) to AssemblyAI
+  - [ ] Implement audio mixing if multiple clients active
+  - [ ] Use silence detection to avoid sending empty chunks
+  - [ ] Tag audio chunks with client_id for debugging
   - [ ] Maintain persistent connection during meeting
   - [ ] Handle AssemblyAI reconnection with exponential backoff
 - [ ] **Transcription Processing:**
@@ -399,15 +413,28 @@ async def stream_intelligence(transcript_buffer: str, context: dict) -> AsyncGen
 - [ ] Route messages to QuestionHandler, ActionHandler, AnswerHandler
 - [ ] Implement error handling for malformed objects
 - [ ] Add metric collection (latency, throughput)
+- [ ] **ID Generation Strategy:**
+  - [ ] Backend generates actual UUIDs for database storage
+  - [ ] GPT system prompt instructs to use `q_{uuid}` and `a_{uuid}` format
+  - [ ] Stream Router validates UUID format from GPT
+  - [ ] If invalid UUID from GPT, backend generates new UUID and logs warning
+  - [ ] Store mapping: `gpt_id → backend_uuid` for cross-reference
+  - [ ] Example: GPT outputs `"id": "q_3f8a9b2c-1d4e-4f9a-b8c3-2a1b4c5d6e7f"`, backend validates UUID part
 - [ ] Write integration tests with mock handlers
 
 **Complexity:** Medium
 **Dependencies:** Task 2.2
 **Priority:** P0
 
+**ID Generation Rationale:**
+- **GPT generates UUIDs:** Allows GPT to reference questions in subsequent `answer` objects without backend round-trip
+- **Backend validates:** Ensures data integrity and proper UUID format
+- **Fallback to backend generation:** Handles cases where GPT produces invalid UUIDs
+- **Prefix convention:** `q_` for questions, `a_` for actions makes debugging easier
+
 **Related Files:**
 - Create: `/backend/services/intelligence/stream_router.py`
-- Reference: HLD Section 5.3.1 "Stream Router"
+- Reference: HLD Section 5.3.1 "Stream Router", Appendix C "GPT-5-Mini Prompt Specifications"
 
 ---
 
@@ -768,7 +795,10 @@ async def stream_intelligence(transcript_buffer: str, context: dict) -> AsyncGen
 - [ ] Maintain existing recording functionality unchanged
 - [ ] Add smooth expand/collapse animation
 - [ ] Persist toggle state preference per user
-- [ ] Update recording panel to support vertical layout: controls → AI content
+- [ ] Update recording panel to support vertical layout with 3 sections:
+  - **Section 1:** Recording controls (existing)
+  - **Section 2:** Live transcription display (new, when AI enabled)
+  - **Section 3:** AI Assistant content - questions & actions (new, when AI enabled)
 - [ ] Write widget tests for toggle behavior
 
 **Complexity:** Medium
@@ -778,7 +808,55 @@ async def stream_intelligence(transcript_buffer: str, context: dict) -> AsyncGen
 **Related Files:**
 - Modify: `/lib/features/audio_recording/presentation/widgets/recording_panel.dart`
 - Modify: `/lib/features/audio_recording/presentation/providers/recording_provider.dart`
-- Reference: HLD Section 5.1.1, FR-U1
+- Reference: HLD Section 5.1.1, FR-U1, FR-U5
+
+---
+
+### Task 5.1.5: Create Live Transcription Display Widget
+
+**Description:** Create real-time transcription display component showing partial and final transcripts with speaker attribution.
+
+**Acceptance Criteria:**
+- [ ] Create `LiveTranscriptionWidget` in `/lib/features/live_insights/presentation/widgets/live_transcription_widget.dart`
+- [ ] **Speaker Attribution:**
+  - [ ] Display speaker labels: "Speaker A", "Speaker B", or actual names if mapped
+  - [ ] Color-code speakers for visual tracking (assign consistent colors)
+  - [ ] Show speaker avatar/icon if available
+- [ ] **Transcript State Display:**
+  - [ ] Render partial transcripts with light gray text, italic, "[PARTIAL - transcribing...]" tag
+  - [ ] Render final transcripts with normal text, bold timestamp, "[FINAL]" tag
+  - [ ] Update partial in-place when final transcript arrives (smooth transition)
+- [ ] **Auto-Scroll Behavior:**
+  - [ ] Auto-scroll to latest transcript by default
+  - [ ] Detect manual scroll up → pause auto-scroll
+  - [ ] Show "New transcript ↓" floating button when paused
+  - [ ] Resume auto-scroll on button click or after 5s inactivity
+- [ ] **Timestamp Display:**
+  - [ ] Relative time for recent: "[2m ago]", "[30s ago]"
+  - [ ] Absolute time for older (>5 min): "[10:15]", "[14:23]"
+  - [ ] Clickable timestamps (future: jump to recording playback position)
+- [ ] **Visibility Control:**
+  - [ ] Collapsible panel with minimize button
+  - [ ] Collapsed state: show only latest 2 transcript lines
+  - [ ] Expanded state: full scrollable history
+- [ ] **Performance Optimization:**
+  - [ ] Use virtualized list (ListView.builder) for efficient rendering
+  - [ ] Keep last 100 transcript segments in memory
+  - [ ] Lazy-load older segments on scroll (future enhancement)
+- [ ] Write widget tests for all states and interactions
+
+**Complexity:** Complex
+**Dependencies:** Task 5.1, Task 5.7 (WebSocket service provides transcript events)
+**Priority:** P0
+
+**WebSocket Events to Handle:**
+- `TRANSCRIPTION_PARTIAL`: Update UI with partial transcript
+- `TRANSCRIPTION_FINAL`: Replace partial with final, mark as stable
+
+**Related Files:**
+- Create: `/lib/features/live_insights/presentation/widgets/live_transcription_widget.dart`
+- Create: `/lib/features/live_insights/data/models/transcript_model.dart`
+- Reference: HLD Section FR-U5 "Real-Time Transcription Display"
 
 ---
 
@@ -972,11 +1050,23 @@ async def stream_intelligence(transcript_buffer: str, context: dict) -> AsyncGen
 
 **Acceptance Criteria:**
 - [ ] Create prompt templates in `/backend/prompts/live_insights/`
-- [ ] Design question detection prompt with JSON output format: `{type: "question", id: "q1", text: "...", speaker: "...", timestamp: "...", category: "factual|opinion|action-seeking|clarification"}`
-- [ ] Design action detection prompt with JSON output: `{type: "action", id: "a1", description: "...", owner: null, deadline: null, completeness: 0.4}`
-- [ ] Design action update prompt: `{type: "action_update", id: "a1", owner: "John", completeness: 0.7}`
-- [ ] Design answer detection prompt: `{type: "answer", question_id: "q1", answer_text: "...", confidence: 0.9}`
-- [ ] Add system message for streaming intelligence context
+- [ ] **Implement Streaming Intelligence System Prompt:**
+  - [ ] Use template from HLD Appendix C "GPT-5-Mini Prompt Specifications"
+  - [ ] Output format: Newline-delimited JSON (NDJSON)
+  - [ ] Detection types: question, action, action_update, answer
+  - [ ] ID format: `q_{uuid}` for questions, `a_{uuid}` for actions
+  - [ ] Include completeness scoring rules (0.4 description only, 0.7 partial, 1.0 complete)
+  - [ ] Include confidence thresholds (>0.85 for answer matching)
+- [ ] **Implement GPT-Generated Answer Prompt (Tier 4):**
+  - [ ] Use template from HLD Appendix C
+  - [ ] Trigger only when Tiers 1-3 fail
+  - [ ] Output format: JSON with answer, confidence, sources, disclaimer
+  - [ ] Confidence threshold: >70% to return answer
+  - [ ] Include rules: no fabrication of company data, acknowledge uncertainty
+- [ ] **Example Inputs/Outputs:**
+  - [ ] Add example transcript from Appendix C
+  - [ ] Add expected NDJSON output
+  - [ ] Test with various meeting scenarios (factual questions, opinions, actions)
 - [ ] Test prompts with various meeting transcript samples
 - [ ] Iterate based on accuracy metrics (target: 90%+ action detection, 85%+ question answer rate)
 
@@ -985,10 +1075,10 @@ async def stream_intelligence(transcript_buffer: str, context: dict) -> AsyncGen
 **Priority:** P1
 
 **Related Files:**
-- Create: `/backend/prompts/live_insights/question_detection.txt`
-- Create: `/backend/prompts/live_insights/action_tracking.txt`
-- Create: `/backend/prompts/live_insights/answer_identification.txt`
-- Reference: HLD Section 5.3.1
+- Create: `/backend/prompts/live_insights/streaming_intelligence_system.txt`
+- Create: `/backend/prompts/live_insights/gpt_generated_answer.txt`
+- Create: `/backend/prompts/live_insights/examples.json`
+- Reference: HLD Appendix C "GPT-5-Mini Prompt Specifications"
 
 ---
 
