@@ -15,7 +15,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.user import User
-from database import get_db
+from db.database import get_db
 from middleware.auth_middleware import get_current_user_ws
 from utils.logger import get_logger, sanitize_for_log
 

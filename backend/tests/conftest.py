@@ -310,6 +310,20 @@ async def test_user_token(test_user: User) -> str:
 
 
 @pytest.fixture
+async def ws_token(test_user_token: str) -> str:
+    """
+    Alias for test_user_token for WebSocket tests.
+
+    Args:
+        test_user_token: Valid JWT access token
+
+    Returns:
+        Valid JWT access token for WebSocket authentication
+    """
+    return test_user_token
+
+
+@pytest.fixture
 async def test_user_refresh_token(test_user: User) -> str:
     """
     Create a valid refresh token for the test user.
