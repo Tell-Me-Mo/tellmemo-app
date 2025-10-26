@@ -32,7 +32,7 @@ import '../../../hierarchy/presentation/providers/hierarchy_providers.dart';
 import './content_processing_dialog.dart';
 import '../../../content/presentation/providers/processing_jobs_provider.dart';
 import '../../../../shared/widgets/upload_content_dialog.dart';
-import '../../../../shared/widgets/record_meeting_dialog.dart';
+import '../../../audio_recording/presentation/widgets/recording_panel.dart';
 import '../../../content/presentation/widgets/processing_skeleton_loader.dart';
 import '../../../content/presentation/providers/new_items_provider.dart';
 import '../../../jobs/presentation/providers/job_websocket_provider.dart';
@@ -3792,25 +3792,24 @@ class _SimplifiedProjectDetailsScreenState
   }
 
   void _showRecordingDialog(BuildContext context, Project project) {
-    showDialog(
+    showGeneralDialog(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: IntrinsicHeight(
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: RecordMeetingDialog(
-              project: project,
-              onRecordingComplete: () {
-                // Refresh data if needed
-                ref.invalidate(projectsListProvider);
-                ref.invalidate(meetingsListProvider);
-              },
-            ),
-          ),
-        ),
-      ),
+      barrierColor: Colors.transparent,
+      transitionDuration: Duration.zero,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return RecordingPanel(
+          project: project,
+          onClose: () {
+            Navigator.of(context).pop();
+          },
+          onRecordingComplete: () {
+            // Refresh data if needed
+            ref.invalidate(projectsListProvider);
+            ref.invalidate(meetingsListProvider);
+          },
+        );
+      },
     );
   }
 

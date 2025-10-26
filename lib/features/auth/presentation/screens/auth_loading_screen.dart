@@ -5,7 +5,7 @@ import '../providers/auth_provider.dart';
 import '../../../organizations/presentation/providers/organization_provider.dart';
 
 /// A loading screen that shows while determining authentication and organization status
-/// This prevents the landing page flash for authenticated users
+/// This prevents screen flashing during initial auth check
 class AuthLoadingScreen extends ConsumerStatefulWidget {
   const AuthLoadingScreen({super.key});
 
@@ -97,10 +97,10 @@ class _AuthLoadingScreenState extends ConsumerState<AuthLoadingScreen> {
     // If auth is still loading, wait
     if (authState.isLoading) return;
 
-    // User is not authenticated - go to landing
+    // User is not authenticated - go to sign in
     if (authState.value == null) {
       _hasNavigated = true;
-      context.go('/');
+      context.go('/auth/signin');
       return;
     }
 
