@@ -3,7 +3,6 @@ class AppRoutes {
   AppRoutes._();
 
   // Route paths
-  static const String landing = '/';
   static const String dashboard = '/dashboard';
   static const String projects = '/hierarchy';  // Redirects to hierarchy
   static const String projectDetail = '/hierarchy/project/:id';
@@ -22,7 +21,6 @@ class AppRoutes {
   static const String emailPreferences = '/profile/email-preferences';
 
   // Route names
-  static const String landingName = 'landing';
   static const String dashboardName = 'dashboard';
   static const String projectsName = 'projects';
   static const String projectDetailName = 'project-detail';

@@ -53,7 +53,6 @@ class FirebaseAnalyticsService {
   String _formatScreenName(String routeName) {
     // Handle special cases
     final nameMap = {
-      'landing': 'LandingScreen',
       'signin': 'SignInScreen',
       'signup': 'SignUpScreen',
       'forgot-password': 'ForgotPasswordScreen',

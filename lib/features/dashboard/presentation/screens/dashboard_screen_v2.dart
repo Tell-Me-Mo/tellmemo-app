@@ -10,7 +10,7 @@ import '../../../summaries/presentation/providers/summary_provider.dart';
 import '../../../summaries/presentation/widgets/summary_generation_dialog.dart';
 import '../../../summaries/data/models/summary_model.dart';
 import '../../../../shared/widgets/upload_content_dialog.dart';
-import '../../../../shared/widgets/record_meeting_dialog.dart';
+import '../../../audio_recording/presentation/widgets/recording_panel.dart';
 import '../../../../shared/widgets/error_state_widget.dart';
 import '../../../content/presentation/providers/processing_jobs_provider.dart';
 import '../../../content/presentation/providers/new_items_provider.dart';
@@ -1963,28 +1963,23 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
   }
 
   void _showRecordingDialog(BuildContext context) {
-    showDialog(
+    showGeneralDialog(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: IntrinsicHeight(
-          child: Container(
-            constraints: const BoxConstraints(
-              maxWidth: 600,
-            ),
-            child: RecordMeetingDialog(
-              onRecordingComplete: () {
-                // Refresh data if needed
-                ref.invalidate(projectsListProvider);
-                ref.invalidate(meetingsListProvider);
-              },
-            ),
-          ),
-        ),
-      ),
+      barrierColor: Colors.transparent,
+      transitionDuration: Duration.zero,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return RecordingPanel(
+          onClose: () {
+            Navigator.of(context).pop();
+          },
+          onRecordingComplete: () {
+            // Refresh data if needed
+            ref.invalidate(projectsListProvider);
+            ref.invalidate(meetingsListProvider);
+          },
+        );
+      },
     );
   }
 

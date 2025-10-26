@@ -4,10 +4,6 @@ import 'package:pm_master_v2/app/router/routes.dart';
 void main() {
   group('AppRoutes', () {
     group('Route Paths', () {
-      test('has correct landing path', () {
-        expect(AppRoutes.landing, '/');
-      });
-
       test('has correct dashboard path', () {
         expect(AppRoutes.dashboard, '/dashboard');
       });
@@ -34,10 +30,6 @@ void main() {
     });
 
     group('Route Names', () {
-      test('has correct landing name', () {
-        expect(AppRoutes.landingName, 'landing');
-      });
-
       test('has correct dashboard name', () {
         expect(AppRoutes.dashboardName, 'dashboard');
       });
