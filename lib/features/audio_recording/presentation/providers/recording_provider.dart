@@ -10,6 +10,7 @@ import '../../../../features/meetings/presentation/providers/upload_provider.dar
 import '../../../../features/content/presentation/providers/processing_jobs_provider.dart';
 import '../../../../core/services/firebase_analytics_service.dart';
 import '../../../../core/utils/error_utils.dart';
+import 'recording_preferences_provider.dart';
 
 part 'recording_provider.g.dart';
 
@@ -26,6 +27,7 @@ class RecordingStateModel {
   final String? contentId; // Added to track uploaded content
   final bool isUploading; // Added to track upload status
   final bool showDurationWarning; // Added to track 90-minute warning
+  final bool aiAssistantEnabled; // Added to track AI Assistant toggle state
 
   RecordingStateModel({
     this.state = RecordingState.idle,
@@ -39,6 +41,7 @@ class RecordingStateModel {
     this.contentId,
     this.isUploading = false,
     this.showDurationWarning = false,
+    this.aiAssistantEnabled = false,
   });
 
   RecordingStateModel copyWith({
@@ -53,6 +56,7 @@ class RecordingStateModel {
     String? contentId,
     bool? isUploading,
     bool? showDurationWarning,
+    bool? aiAssistantEnabled,
   }) {
     return RecordingStateModel(
       state: state ?? this.state,
@@ -66,6 +70,7 @@ class RecordingStateModel {
       contentId: contentId ?? this.contentId,
       isUploading: isUploading ?? this.isUploading,
       showDurationWarning: showDurationWarning ?? this.showDurationWarning,
+      aiAssistantEnabled: aiAssistantEnabled ?? this.aiAssistantEnabled,
     );
   }
 }
@@ -104,7 +109,19 @@ class RecordingNotifier extends _$RecordingNotifier {
     // Set up listeners
     _setupListeners();
 
+    // Load AI Assistant preference
+    _loadAiAssistantPreference();
+
     return RecordingStateModel();
+  }
+
+  /// Load AI Assistant enabled preference from SharedPreferences
+  Future<void> _loadAiAssistantPreference() async {
+    final prefsService = ref.read(recordingPreferencesServiceProvider);
+    prefsService.whenData((service) {
+      final enabled = service.getAiAssistantEnabled();
+      state = state.copyWith(aiAssistantEnabled: enabled);
+    });
   }
 
   void _setupListeners() {
@@ -427,6 +444,29 @@ class RecordingNotifier extends _$RecordingNotifier {
   // Get supported languages
   Future<List<String>> getSupportedLanguages() async {
     return await _transcriptionService.getSupportedLanguages();
+  }
+
+  /// Toggle AI Assistant enabled state
+  Future<void> toggleAiAssistant() async {
+    final newValue = !state.aiAssistantEnabled;
+    state = state.copyWith(aiAssistantEnabled: newValue);
+
+    // Persist preference
+    final prefsService = ref.read(recordingPreferencesServiceProvider);
+    prefsService.whenData((service) async {
+      await service.setAiAssistantEnabled(newValue);
+    });
+  }
+
+  /// Set AI Assistant enabled state
+  Future<void> setAiAssistantEnabled(bool enabled) async {
+    state = state.copyWith(aiAssistantEnabled: enabled);
+
+    // Persist preference
+    final prefsService = ref.read(recordingPreferencesServiceProvider);
+    prefsService.whenData((service) async {
+      await service.setAiAssistantEnabled(enabled);
+    });
   }
 
   // Clean up subscriptions

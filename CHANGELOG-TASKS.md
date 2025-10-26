@@ -4,6 +4,62 @@
 
 ### [2025-10-26]
 #### Added
+- **Task 5.1 - Add AI Assistant Toggle to Recording Panel**: Integrated AI Assistant toggle switch with user preference persistence
+  - Implementation: Flutter UI component with state management and persistent storage
+  - Core Components:
+    - **RecordingStateModel Extension:**
+      - Added `aiAssistantEnabled` boolean field with default `false`
+      - Updated `copyWith()` method to support toggle state changes
+    - **RecordingPreferencesService:** SharedPreferences-based persistence service
+      - Key: `recording_prefs_ai_assistant_enabled`
+      - Methods: `setAiAssistantEnabled()`, `getAiAssistantEnabled()`
+      - Factory pattern: `static Future<RecordingPreferencesService> create()`
+    - **Recording Provider Extensions:**
+      - `_loadAiAssistantPreference()`: Load saved preference on provider initialization
+      - `toggleAiAssistant()`: Toggle state and persist to SharedPreferences
+      - `setAiAssistantEnabled(bool)`: Set specific state and persist
+    - **UI Components:**
+      - **Toggle Widget:** Material Switch with icon, title, subtitle
+      - Visual states: Active (primary color) vs inactive (surface color)
+      - Description: "Live transcription, questions & actions"
+      - Icon: `Icons.auto_awesome`
+    - **AI Assistant Content Area:**
+      - AnimatedSize expand/collapse (200ms, easeInOut)
+      - Placeholder widget with "AI Assistant Ready" message
+      - Status-aware text: Shows different messages when idle vs recording
+      - Info card: "Live transcription and AI insights will appear here during recording"
+  - Integration Points:
+    - Recording panel layout: Toggle appears after title field, before recording button
+    - Three-section vertical layout prepared for future tasks:
+      - Section 1: Recording controls (existing)
+      - Section 2: Live transcription (placeholder for Task 5.1.5)
+      - Section 3: Questions & Actions (placeholder for Task 5.4)
+  - User Experience:
+    - ✅ Toggle state persists across app sessions
+    - ✅ Smooth expand/collapse animation (200ms)
+    - ✅ Visual feedback on toggle (color changes, border changes)
+    - ✅ Non-blocking UI - existing recording functionality unchanged
+    - ✅ Empty state guidance for users
+  - Architecture Benefits:
+    - **Clean Separation:** Preferences service isolated from provider logic
+    - **Consistent Pattern:** Follows existing task/risk preferences patterns
+    - **Riverpod Integration:** Provider wrapping for SharedPreferences
+    - **Immutable State:** State model uses copyWith pattern
+  - Files:
+    - Modified: `/lib/features/audio_recording/presentation/widgets/recording_panel.dart` (+140 lines)
+    - Modified: `/lib/features/audio_recording/presentation/providers/recording_provider.dart` (+31 lines)
+    - Created: `/lib/features/audio_recording/domain/services/recording_preferences_service.dart` (31 lines)
+    - Created: `/lib/features/audio_recording/presentation/providers/recording_preferences_provider.dart` (17 lines)
+  - Testing:
+    - Flutter analyze passed: 0 errors
+    - Widget tests: TODO (Task 5.1 acceptance criteria)
+    - Manual testing: Pending user verification
+  - Next Steps:
+    - Task 5.1.5: Implement live transcription display widget
+    - Task 5.4: Implement questions & actions content section
+
+### [2025-10-26]
+#### Added
 - **Task 7.2 - Integrate Orchestrator with Recording Workflow**: Connected StreamingIntelligenceOrchestrator to AssemblyAI transcription pipeline
   - Implementation: Real-time transcription processing with GPT intelligence analysis
   - Integration Points:

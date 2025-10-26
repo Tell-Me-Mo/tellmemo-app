@@ -311,6 +311,22 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
                             ],
                             // Title Field
                             _buildTitleField(),
+                            const SizedBox(height: 24),
+                            // AI Assistant Toggle
+                            _buildAiAssistantToggle(recordingState),
+                            // AI Assistant Content (when enabled)
+                            AnimatedSize(
+                              duration: const Duration(milliseconds: 200),
+                              curve: Curves.easeInOut,
+                              child: recordingState.aiAssistantEnabled
+                                  ? Column(
+                                      children: [
+                                        const SizedBox(height: 16),
+                                        _buildAiAssistantContent(recordingState),
+                                      ],
+                                    )
+                                  : const SizedBox.shrink(),
+                            ),
                             const SizedBox(height: 32),
                             // Recording Button
                             _buildRecordingSection(recordingState),
@@ -596,6 +612,147 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildAiAssistantToggle(RecordingStateModel recordingState) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: recordingState.aiAssistantEnabled
+            ? colorScheme.primaryContainer.withValues(alpha: 0.3)
+            : colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: recordingState.aiAssistantEnabled
+              ? colorScheme.primary.withValues(alpha: 0.5)
+              : colorScheme.outline.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.auto_awesome,
+            size: 20,
+            color: recordingState.aiAssistantEnabled
+                ? colorScheme.primary
+                : colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'AI Assistant',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: recordingState.aiAssistantEnabled
+                        ? colorScheme.primary
+                        : colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Live transcription, questions & actions',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: recordingState.aiAssistantEnabled,
+            onChanged: (_) {
+              ref.read(recordingNotifierProvider.notifier).toggleAiAssistant();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAiAssistantContent(RecordingStateModel recordingState) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    // Placeholder content area for future implementation
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorScheme.outline.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.pending_outlined,
+                size: 48,
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'AI Assistant Ready',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      recordingState.state == RecordingState.idle
+                          ? 'Start recording to see live insights'
+                          : 'Listening for questions and actions...',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHigh.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  size: 16,
+                  color: colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Live transcription and AI insights will appear here during recording',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
