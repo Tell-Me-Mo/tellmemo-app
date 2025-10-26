@@ -4,6 +4,54 @@
 
 ### [2025-10-26]
 #### Added
+- **Task 2.2 - Implement GPT Streaming Interface**: Created OpenAI GPT-5-mini streaming service with NDJSON parsing and comprehensive error handling
+  - Implementation: Dedicated streaming client with async generator pattern for real-time intelligence detection
+  - Core Components:
+    - `GPT5StreamingClient` class: Main streaming client with configurable model, temperature, max_tokens, timeout
+    - `stream_intelligence()` async generator: Streams JSON objects from GPT-5-mini in real-time
+    - NDJSON parser: Buffers chunks and extracts complete JSON objects separated by newlines
+    - Token tracking: Monitors token usage with `stream_options={"include_usage": True}`
+  - OpenAI API Integration:
+    - Endpoint: `https://api.openai.com/v1/chat/completions`
+    - Model: `gpt-5-mini` with temperature=0.3 for consistent structured output
+    - Streaming enabled: `stream=True` for real-time responses
+    - Max tokens: 1000 (sufficient for question/action/answer detection)
+    - Timeout: 30 seconds with configurable override
+  - Error Handling & Recovery:
+    - Rate limit detection (429 errors) with exponential backoff (1s, 2s, 4s, 8s, 16s)
+    - Timeout handling (504 errors) with up to 3 retry attempts
+    - Overload detection (529/503 errors) with immediate failure
+    - Stream interruption recovery with idempotent retry
+    - Malformed JSON handling (logs warning and skips invalid lines)
+  - Context Management:
+    - Formats transcript buffer (~1200 tokens) with recent questions/actions (~500 tokens)
+    - System prompt (~300 tokens) for total request size ~2000 tokens
+    - Includes session_id, speaker attribution, timestamps in user message
+  - Comprehensive Logging:
+    - Request logging: model, temperature, max_tokens, prompt preview (first 100 chars)
+    - Response logging: duration, object count, token usage
+    - Error logging: rate limits, timeouts, malformed JSON with context
+  - MultiLLMClient Extension:
+    - Added `create_message_stream()` abstract method to `BaseProviderClient`
+    - Implemented in `OpenAIProviderClient` (delegates to GPT5StreamingClient)
+    - Stub implementations in `ClaudeProviderClient` and `DeepSeekProviderClient` (raises NotImplementedError)
+    - Added `create_message_stream()` method to `MultiProviderLLMClient` for easy provider-agnostic streaming
+  - Testing: 9 comprehensive unit tests (2 skipped for integration testing)
+    - Successful NDJSON streaming with multiple objects
+    - Malformed JSON handling (skips invalid lines)
+    - Timeout handling with retry attempts
+    - Overload error detection
+    - Empty stream handling
+    - Context formatting with recent questions/actions
+    - Factory function testing
+    - Incomplete buffer at end of stream
+    - Objects without 'type' field (skipped)
+  - Files:
+    - `/backend/services/llm/gpt5_streaming.py` (created - 309 lines)
+    - `/backend/services/llm/multi_llm_client.py` (modified - added streaming support to all provider clients)
+    - `/backend/tests/unit/test_gpt5_streaming.py` (created - 11 tests, 406 lines)
+  - Status: GPT-5 streaming interface ready for integration with Stream Router (Task 2.3) and downstream handlers
+
 - **Task 2.1 - Implement Transcription Buffer Manager**: Created rolling window buffer service for managing real-time transcription context
   - Implementation: Python service with Redis-based distributed storage and automatic time/count-based trimming
   - Service Features:
