@@ -28,7 +28,7 @@ import redis.asyncio as redis
 from config import get_settings
 from db.database import get_db_context
 from utils.logger import get_logger, sanitize_for_log
-from utils.exceptions import ServiceException
+from utils.exceptions import APIException
 
 # Service imports
 from services.transcription.transcription_buffer_service import get_transcription_buffer
@@ -67,9 +67,15 @@ class OrchestratorMetrics:
         return self.total_latency_ms / self.total_chunks_processed
 
 
-class StreamingIntelligenceException(ServiceException):
+class StreamingIntelligenceException(APIException):
     """Exception for streaming intelligence orchestrator errors."""
-    pass
+
+    def __init__(self, message: str):
+        super().__init__(
+            message=message,
+            status_code=500,
+            error_code="STREAMING_INTELLIGENCE_ERROR"
+        )
 
 
 class StreamingIntelligenceOrchestrator:
@@ -347,8 +353,6 @@ class StreamingIntelligenceOrchestrator:
         """
         handler_metrics = {
             "stream_router": self.stream_router.get_metrics(),
-            "question_handler": self.question_handler.get_metrics(),
-            "action_handler": self.action_handler.get_metrics(),
             "answer_handler": self.answer_handler.get_metrics()
         }
 
