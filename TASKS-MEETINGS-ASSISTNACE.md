@@ -104,13 +104,15 @@ Status: COMPLETED - 2025-10-26 09:05
 **Description:** Create Python model classes for live meeting insights with proper relationships and validation.
 
 **Acceptance Criteria:**
-- [ ] Create `LiveMeetingInsight` model class in `/backend/models/live_insight.py`
-- [ ] Define enum for InsightType (QUESTION, ACTION, ANSWER)
-- [ ] Define enum for InsightStatus (SEARCHING, FOUND, MONITORING, ANSWERED, UNANSWERED, TRACKED, COMPLETE)
-- [ ] Add JSONB fields for: question_metadata, action_metadata, answer_sources, tier_results
-- [ ] Add relationships to Recording, Project, Organization models
-- [ ] Add helper methods: update_status(), add_tier_result(), calculate_completeness()
-- [ ] Write unit tests for model operations
+- [x] Create `LiveMeetingInsight` model class in `/backend/models/live_insight.py`
+- [x] Define enum for InsightType (QUESTION, ACTION, ANSWER)
+- [x] Define enum for InsightStatus (SEARCHING, FOUND, MONITORING, ANSWERED, UNANSWERED, TRACKED, COMPLETE)
+- [x] Add JSONB fields for: question_metadata, action_metadata, answer_sources, tier_results
+- [x] Add relationships to Recording, Project, Organization models
+- [x] Add helper methods: update_status(), add_tier_result(), calculate_completeness()
+- [x] Write unit tests for model operations
+
+Status: COMPLETED - 2025-10-26 15:30
 
 **Complexity:** Medium
 **Dependencies:** Task 1.1

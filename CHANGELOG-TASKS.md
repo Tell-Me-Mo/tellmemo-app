@@ -4,6 +4,28 @@
 
 ### [2025-10-26]
 #### Added
+- **Task 1.2 - Create Live Insights SQLAlchemy Model**: Implemented Python ORM model for live meeting insights
+  - Implementation: Created comprehensive model with three enums (InsightType, InsightStatus, AnswerSource)
+  - Model Features:
+    - Three enum classes for type safety: InsightType (QUESTION, ACTION, ANSWER), InsightStatus (7 states), AnswerSource (6 sources for four-tier discovery)
+    - 13 columns: id, session_id, recording_id, project_id, organization_id, insight_type, detected_at, speaker, content, status, answer_source, metadata, created_at, updated_at
+    - Relationships: bidirectional with Recording, Project, and Organization models (with CASCADE delete)
+    - JSONB metadata field for flexible storage of tier_results, completeness_score, confidence
+  - Helper Methods:
+    - `update_status()`: Updates insight status and timestamp
+    - `add_tier_result()`: Adds tier-specific results (RAG, meeting_context, live_conversation, gpt_generated)
+    - `calculate_completeness()`: Calculates action completeness score (0.4 description, 0.3 owner, 0.3 deadline)
+    - `set_answer_source()`: Sets answer source with confidence score
+    - `to_dict()`: Converts model to dictionary for API responses
+  - Testing: 23 comprehensive unit tests covering all enums, methods, and edge cases
+  - Files:
+    - `/backend/models/live_insight.py` (created - 213 lines)
+    - `/backend/models/recording.py` (modified - added live_insights relationship)
+    - `/backend/models/project.py` (modified - added live_insights relationship)
+    - `/backend/models/organization.py` (modified - added live_insights relationship)
+    - `/backend/tests/unit/test_live_insight_model.py` (created - 23 tests, 420 lines)
+  - Status: Model ready for use in streaming intelligence handlers
+
 - **Task 1.1 - Create Live Meeting Insights Table**: Implemented database schema for storing real-time meeting intelligence
   - Implementation: Created Alembic migration with live_meeting_insights table including 14 columns (id, session_id, recording_id, project_id, organization_id, insight_type, detected_at, speaker, content, status, answer_source, metadata, created_at, updated_at)
   - Database Features:

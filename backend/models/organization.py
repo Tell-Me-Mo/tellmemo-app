@@ -45,6 +45,7 @@ class Organization(Base):
     notifications = relationship("Notification", back_populates="organization", cascade="all, delete-orphan")
     support_tickets = relationship("SupportTicket", back_populates="organization", cascade="all, delete-orphan")
     conversations = relationship("Conversation", back_populates="organization", cascade="all, delete-orphan")
+    live_insights = relationship("LiveMeetingInsight", back_populates="organization", cascade="all, delete-orphan")
 
     def to_dict(self):
         """Convert organization to dictionary."""
