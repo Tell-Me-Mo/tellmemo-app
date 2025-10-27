@@ -70,8 +70,8 @@ class LiveMeetingInsight(Base):
         index=True
     )
 
-    # Insight classification
-    insight_type = Column(SQLEnum(InsightType), nullable=False, index=True)
+    # Insight classification (stored as string for flexibility)
+    insight_type = Column(String(50), nullable=False, index=True)
 
     # Temporal information
     detected_at = Column(DateTime(timezone=True), nullable=False, index=True)

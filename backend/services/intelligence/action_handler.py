@@ -125,9 +125,9 @@ class ActionHandler:
             # Create LiveMeetingInsight record
             action_insight = LiveMeetingInsight(
                 session_id=session_id,
-                recording_id=uuid.UUID(recording_id),
-                project_id=uuid.UUID(project_id),
-                organization_id=uuid.UUID(organization_id),
+                recording_id=uuid.UUID(recording_id) if recording_id else None,
+                project_id=uuid.UUID(project_id) if project_id else None,
+                organization_id=uuid.UUID(organization_id) if organization_id else None,
                 insight_type=InsightType.ACTION,
                 detected_at=detected_at,
                 speaker=speaker,
