@@ -376,9 +376,24 @@ class StreamingIntelligenceOrchestrator:
         try:
             # Initialize GPT client if not exists
             if not self._gpt_client:
-                from services.llm.multi_llm_client import get_llm_client
-                openai_client = get_llm_client()
-                self._gpt_client = create_streaming_client(openai_client)
+                from services.llm.multi_llm_client import OpenAIProviderClient
+                from config import get_settings
+
+                settings = get_settings()
+
+                # GPT-5-mini requires OpenAI API key (not primary/fallback provider)
+                if not settings.openai_api_key:
+                    raise RuntimeError(
+                        "GPT-5-mini streaming requires OPENAI_API_KEY to be set in environment. "
+                        "This is used for real-time meeting intelligence regardless of primary LLM provider."
+                    )
+
+                # Create dedicated OpenAI provider for GPT-5-mini streaming
+                openai_provider = OpenAIProviderClient(settings.openai_api_key, settings)
+                if not openai_provider.client:
+                    raise RuntimeError("Failed to initialize OpenAI client for GPT-5-mini streaming")
+
+                self._gpt_client = create_streaming_client(openai_provider.client)
 
             # Build context with active questions/actions
             context = await self._build_context()
