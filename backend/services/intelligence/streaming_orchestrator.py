@@ -17,7 +17,7 @@ Date: 2025-10-26
 
 import asyncio
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
@@ -140,6 +140,10 @@ class StreamingIntelligenceOrchestrator:
         self._streaming_task: Optional[asyncio.Task] = None
         self._stop_streaming = False
 
+        # Track segment detector initialization
+        self._segment_detector_init_task: Optional[asyncio.Task] = None
+        self._segment_detector_ready = False
+
         # Register handlers with router
         self._register_handlers()
 
@@ -149,10 +153,59 @@ class StreamingIntelligenceOrchestrator:
         # Set cross-handler dependencies
         self.answer_handler.set_question_handler(self.question_handler)
 
-        # Initialize segment detector session
-        asyncio.create_task(self.segment_detector.initialize_session(session_id))
+        # Defer segment detector initialization to first use
+        # (cannot create task in __init__ as it's synchronous)
 
         logger.info(f"StreamingIntelligenceOrchestrator initialized for session {sanitize_for_log(session_id)}")
+
+    async def _ensure_segment_detector_initialized(self):
+        """
+        Ensure segment detector is initialized, starting initialization if not already done.
+
+        This is called lazily on first use to avoid creating async tasks in __init__.
+        """
+        # Already initialized
+        if self._segment_detector_ready:
+            return
+
+        # Initialization already in progress
+        if self._segment_detector_init_task and not self._segment_detector_init_task.done():
+            # Wait for initialization to complete
+            try:
+                await self._segment_detector_init_task
+            except Exception:
+                pass  # Error already logged
+            return
+
+        # Start initialization
+        self._segment_detector_init_task = asyncio.create_task(
+            self._initialize_segment_detector(self.session_id)
+        )
+
+        try:
+            await self._segment_detector_init_task
+        except Exception:
+            pass  # Error already logged
+
+    async def _initialize_segment_detector(self, session_id: str):
+        """
+        Initialize segment detector with proper error handling.
+
+        Args:
+            session_id: Session identifier for initialization
+        """
+        try:
+            await self.segment_detector.initialize_session(session_id)
+            self._segment_detector_ready = True
+            logger.info(f"Segment detector initialized successfully for session {sanitize_for_log(session_id)}")
+        except Exception as e:
+            logger.error(
+                f"Failed to initialize segment detector for session {sanitize_for_log(session_id)}: {e}",
+                exc_info=True
+            )
+            self._segment_detector_ready = False
+            # Continue operation without segment detector
+            # Segment boundary detection will be skipped but other functionality remains operational
 
     def _register_handlers(self):
         """Register all handlers with the stream router."""
@@ -224,6 +277,9 @@ class StreamingIntelligenceOrchestrator:
         """
         start_time = datetime.utcnow()
 
+        # Update session activity timestamp
+        _session_last_activity[self.session_id] = start_time
+
         try:
             # Only process final transcripts for GPT analysis (partials are for UI only)
             if not is_final:
@@ -254,28 +310,34 @@ class StreamingIntelligenceOrchestrator:
             async with get_db_context() as session:
                 await self._stream_gpt_intelligence(transcript_context, session)
 
-            # Check for segment boundaries
-            boundary_info = await self.segment_detector.check_boundary(
-                session_id=self.session_id,
-                current_time=timestamp or datetime.utcnow(),
-                recent_text=text
-            )
+            # Ensure segment detector is initialized
+            await self._ensure_segment_detector_initialized()
 
-            # If segment boundary detected, trigger action alerts
-            if boundary_info:
-                async with get_db_context() as session:
-                    # Trigger action completeness alerts
-                    await self.action_handler.generate_segment_alerts(
-                        session_id=self.session_id,
-                        session=session
-                    )
+            # Check for segment boundaries (only if segment detector is ready)
+            if self._segment_detector_ready:
+                boundary_info = await self.segment_detector.check_boundary(
+                    session_id=self.session_id,
+                    current_time=timestamp or datetime.utcnow(),
+                    recent_text=text
+                )
 
-                    # Broadcast segment transition
-                    await self.segment_detector.handle_segment_boundary(
-                        session_id=self.session_id,
-                        boundary_info=boundary_info,
-                        current_time=timestamp or datetime.utcnow()
-                    )
+                # If segment boundary detected, trigger action alerts
+                if boundary_info:
+                    async with get_db_context() as session:
+                        # Trigger action completeness alerts
+                        await self.action_handler.generate_segment_alerts(
+                            session_id=self.session_id,
+                            session=session
+                        )
+
+                        # Broadcast segment transition
+                        await self.segment_detector.handle_segment_boundary(
+                            session_id=self.session_id,
+                            boundary_info=boundary_info,
+                            current_time=timestamp or datetime.utcnow()
+                        )
+            else:
+                logger.debug(f"Skipping segment boundary check - detector not ready for session {self.session_id}")
 
             # Update metrics
             self.metrics.total_chunks_processed += 1
@@ -442,7 +504,8 @@ class StreamingIntelligenceOrchestrator:
             "stream_router": "active",
             "question_handler": "active",
             "action_handler": "active",
-            "answer_handler": "active"
+            "answer_handler": "active",
+            "segment_detector": "ready" if self._segment_detector_ready else "not_ready"
         }
 
         # Overall status
@@ -475,8 +538,17 @@ class StreamingIntelligenceOrchestrator:
                 except asyncio.CancelledError:
                     pass
 
-            # Signal meeting end for final segment
-            await self.segment_detector.signal_meeting_end(self.session_id)
+            # Cancel segment detector initialization if still pending
+            if self._segment_detector_init_task and not self._segment_detector_init_task.done():
+                self._segment_detector_init_task.cancel()
+                try:
+                    await self._segment_detector_init_task
+                except asyncio.CancelledError:
+                    pass
+
+            # Signal meeting end for final segment (only if detector is ready)
+            if self._segment_detector_ready:
+                await self.segment_detector.signal_meeting_end(self.session_id)
 
             # Cleanup handlers (persist to database)
             await self.question_handler.cleanup_session(self.session_id)
@@ -506,6 +578,74 @@ class StreamingIntelligenceOrchestrator:
 # Global orchestrator instances (session-based)
 _orchestrator_instances: Dict[str, StreamingIntelligenceOrchestrator] = {}
 
+# Track last activity time for each session
+_session_last_activity: Dict[str, datetime] = {}
+
+# Session timeout settings
+_SESSION_TIMEOUT_MINUTES = 60  # Cleanup sessions inactive for 60 minutes
+_CLEANUP_CHECK_INTERVAL_SECONDS = 300  # Check every 5 minutes
+
+# Background cleanup task
+_cleanup_task: Optional[asyncio.Task] = None
+
+
+async def _periodic_session_cleanup():
+    """
+    Background task that periodically checks for and cleans up abandoned sessions.
+
+    Sessions are considered abandoned if they have been inactive for longer than
+    _SESSION_TIMEOUT_MINUTES. This prevents memory leaks from clients that disconnect
+    unexpectedly without proper cleanup.
+    """
+    logger.info("Starting periodic session cleanup task")
+
+    while True:
+        try:
+            await asyncio.sleep(_CLEANUP_CHECK_INTERVAL_SECONDS)
+
+            current_time = datetime.utcnow()
+            timeout_delta = timedelta(minutes=_SESSION_TIMEOUT_MINUTES)
+            sessions_to_cleanup = []
+
+            # Identify abandoned sessions
+            for session_id, last_activity in _session_last_activity.items():
+                if current_time - last_activity > timeout_delta:
+                    sessions_to_cleanup.append(session_id)
+
+            # Cleanup abandoned sessions
+            if sessions_to_cleanup:
+                logger.info(f"Found {len(sessions_to_cleanup)} abandoned sessions to cleanup")
+
+                for session_id in sessions_to_cleanup:
+                    try:
+                        logger.warning(
+                            f"Auto-cleaning up abandoned session {sanitize_for_log(session_id)} "
+                            f"(inactive for {(current_time - _session_last_activity[session_id]).total_seconds() / 60:.1f} minutes)"
+                        )
+                        await cleanup_orchestrator(session_id, generate_summary=True)
+                    except Exception as e:
+                        logger.error(f"Error during auto-cleanup of session {sanitize_for_log(session_id)}: {e}", exc_info=True)
+
+            # Log status every hour
+            active_sessions = len(_orchestrator_instances)
+            if active_sessions > 0:
+                logger.debug(f"Session cleanup check: {active_sessions} active sessions")
+
+        except asyncio.CancelledError:
+            logger.info("Periodic session cleanup task cancelled")
+            break
+        except Exception as e:
+            logger.error(f"Error in periodic session cleanup: {e}", exc_info=True)
+
+
+def _ensure_cleanup_task_running():
+    """Ensure the background cleanup task is running."""
+    global _cleanup_task
+
+    if _cleanup_task is None or _cleanup_task.done():
+        _cleanup_task = asyncio.create_task(_periodic_session_cleanup())
+        logger.info("Started background session cleanup task")
+
 
 def get_orchestrator(
     session_id: str,
@@ -521,6 +661,12 @@ def get_orchestrator(
     Returns:
         StreamingIntelligenceOrchestrator instance
     """
+    # Ensure cleanup task is running
+    _ensure_cleanup_task_running()
+
+    # Update last activity timestamp
+    _session_last_activity[session_id] = datetime.utcnow()
+
     if session_id not in _orchestrator_instances:
         _orchestrator_instances[session_id] = StreamingIntelligenceOrchestrator(
             session_id=session_id,
@@ -551,6 +697,10 @@ async def cleanup_orchestrator(session_id: str, generate_summary: bool = True):
                 logger.error(f"Error generating meeting summary for session {sanitize_for_log(session_id)}: {e}", exc_info=True)
 
         del _orchestrator_instances[session_id]
+
+        # Remove from activity tracker
+        if session_id in _session_last_activity:
+            del _session_last_activity[session_id]
 
         # Also cleanup router singleton
         cleanup_stream_router(session_id)

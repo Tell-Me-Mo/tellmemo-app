@@ -163,7 +163,19 @@ class LiveInsightsWebSocketService {
   /// Handle question update events
   void _handleQuestionUpdate(Map<String, dynamic> data) {
     try {
-      final question = LiveQuestion.fromJson(data['question'] as Map<String, dynamic>);
+      // Handle different event structures from backend
+      // Some events have 'question' key, others have 'data' key
+      final Map<String, dynamic> questionData;
+      if (data.containsKey('question')) {
+        questionData = data['question'] as Map<String, dynamic>;
+      } else if (data.containsKey('data')) {
+        questionData = data['data'] as Map<String, dynamic>;
+      } else {
+        debugPrint('[LiveInsightsWebSocket] Question event missing data key: $data');
+        return;
+      }
+
+      final question = LiveQuestion.fromJson(questionData);
       _questionsController.add(question);
       debugPrint(
           '[LiveInsightsWebSocket] Question update: ${question.id} - ${question.status}');
@@ -175,7 +187,19 @@ class LiveInsightsWebSocketService {
   /// Handle action update events
   void _handleActionUpdate(Map<String, dynamic> data) {
     try {
-      final action = LiveAction.fromJson(data['action'] as Map<String, dynamic>);
+      // Handle different event structures from backend
+      // Some events have 'action' key, others have 'data' key
+      final Map<String, dynamic> actionData;
+      if (data.containsKey('action')) {
+        actionData = data['action'] as Map<String, dynamic>;
+      } else if (data.containsKey('data')) {
+        actionData = data['data'] as Map<String, dynamic>;
+      } else {
+        debugPrint('[LiveInsightsWebSocket] Action event missing data key: $data');
+        return;
+      }
+
+      final action = LiveAction.fromJson(actionData);
       _actionsController.add(action);
       debugPrint(
           '[LiveInsightsWebSocket] Action update: ${action.id} - ${action.status}');
@@ -187,8 +211,19 @@ class LiveInsightsWebSocketService {
   /// Handle transcription update events
   void _handleTranscriptionUpdate(Map<String, dynamic> data) {
     try {
-      final transcription = TranscriptSegment.fromJson(
-          data['transcript'] as Map<String, dynamic>);
+      // Handle different event structures from backend
+      // Some events have 'transcript' key, others have 'data' key
+      final Map<String, dynamic> transcriptData;
+      if (data.containsKey('transcript')) {
+        transcriptData = data['transcript'] as Map<String, dynamic>;
+      } else if (data.containsKey('data')) {
+        transcriptData = data['data'] as Map<String, dynamic>;
+      } else {
+        debugPrint('[LiveInsightsWebSocket] Transcription event missing data key: $data');
+        return;
+      }
+
+      final transcription = TranscriptSegment.fromJson(transcriptData);
       _transcriptionsController.add(transcription);
     } catch (e) {
       debugPrint('[LiveInsightsWebSocket] Error parsing transcription: $e');
