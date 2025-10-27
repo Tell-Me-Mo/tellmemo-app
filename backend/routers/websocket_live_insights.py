@@ -28,6 +28,10 @@ logger = get_logger(__name__)
 
 router = APIRouter()
 
+# Session context storage: session_id -> organization_id
+# Used to pass organization context to orchestrator when processing transcriptions
+_session_organization_map: Dict[str, UUID] = {}
+
 
 class LiveInsightsConnectionManager:
     """
@@ -600,7 +604,13 @@ async def handle_transcription_result(session_id: str, result: TranscriptionResu
 
             # Task 7.2: Send final transcription to streaming orchestrator for intelligence processing
             try:
-                orchestrator = get_orchestrator(session_id)
+                # Get organization_id from session context
+                organization_id = _session_organization_map.get(session_id)
+
+                orchestrator = get_orchestrator(
+                    session_id=session_id,
+                    organization_id=organization_id
+                )
                 logger.info(f"Sending final transcript to orchestrator for session {sanitize_for_log(session_id)}")
                 await orchestrator.process_transcription_chunk(
                     text=result.text,
@@ -686,6 +696,10 @@ async def websocket_audio_stream(
         # Accept WebSocket connection
         await websocket.accept()
         logger.info(f"Audio stream connected: session={sanitize_for_log(session_id)}, user={sanitize_for_log(user_id)}")
+
+        # Store organization_id for this session (for orchestrator context)
+        if user.last_active_organization_id:
+            _session_organization_map[session_id] = user.last_active_organization_id
 
         # Send connection confirmation
         await websocket.send_json({

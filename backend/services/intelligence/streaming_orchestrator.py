@@ -108,16 +108,38 @@ class StreamingIntelligenceOrchestrator:
         await orchestrator.cleanup()
     """
 
-    def __init__(self, session_id: str, recording_id: Optional[UUID] = None):
+    def __init__(
+        self,
+        session_id: str,
+        recording_id: Optional[UUID] = None,
+        project_id: Optional[UUID] = None,
+        organization_id: Optional[UUID] = None
+    ):
         """
         Initialize orchestrator for a meeting session.
 
         Args:
-            session_id: Unique session identifier (typically same as recording_id)
+            session_id: Unique session identifier (format: {project_id}_{timestamp})
             recording_id: Optional recording UUID for database linking
+            project_id: Project UUID (parsed from session_id if not provided)
+            organization_id: Organization UUID
         """
         self.session_id = session_id
         self.recording_id = recording_id
+
+        # Parse project_id from session_id if not provided
+        # Session ID format: {project_id}_{timestamp}
+        if project_id is None:
+            try:
+                project_id_str = session_id.split('_')[0]
+                self.project_id = UUID(project_id_str)
+            except (ValueError, IndexError) as e:
+                logger.warning(f"Could not parse project_id from session_id {session_id}: {e}")
+                self.project_id = None
+        else:
+            self.project_id = project_id
+
+        self.organization_id = organization_id
         self.settings = get_settings()
 
         # Metrics
@@ -210,10 +232,54 @@ class StreamingIntelligenceOrchestrator:
 
     def _register_handlers(self):
         """Register all handlers with the stream router."""
-        self.stream_router.register_question_handler(self.question_handler.handle_question)
-        self.stream_router.register_action_handler(self.action_handler.handle_action)
-        self.stream_router.register_action_update_handler(self.action_handler.handle_action_update)
-        self.stream_router.register_answer_handler(self.answer_handler.handle_answer)
+        # Create wrapper functions that provide session context to handlers
+
+        async def question_wrapper(question_data: dict):
+            """Wrapper for question handler with session context."""
+            async with get_db_context() as db_session:
+                await self.question_handler.handle_question(
+                    session_id=self.session_id,
+                    question_data=question_data,
+                    session=db_session,
+                    project_id=str(self.project_id) if self.project_id else None,
+                    organization_id=str(self.organization_id) if self.organization_id else None,
+                    recording_id=str(self.recording_id) if self.recording_id else None
+                )
+
+        async def action_wrapper(action_data: dict):
+            """Wrapper for action handler with session context."""
+            async with get_db_context() as db_session:
+                await self.action_handler.handle_action(
+                    session_id=self.session_id,
+                    action_data=action_data,
+                    session=db_session,
+                    project_id=str(self.project_id) if self.project_id else None,
+                    organization_id=str(self.organization_id) if self.organization_id else None,
+                    recording_id=str(self.recording_id) if self.recording_id else None
+                )
+
+        async def action_update_wrapper(update_data: dict):
+            """Wrapper for action update handler with session context."""
+            async with get_db_context() as db_session:
+                await self.action_handler.handle_action_update(
+                    session_id=self.session_id,
+                    update_data=update_data,
+                    session=db_session
+                )
+
+        async def answer_wrapper(answer_data: dict):
+            """Wrapper for answer handler with session context."""
+            async with get_db_context() as db_session:
+                await self.answer_handler.handle_answer(
+                    session_id=self.session_id,
+                    answer_data=answer_data,
+                    session=db_session
+                )
+
+        self.stream_router.register_question_handler(question_wrapper)
+        self.stream_router.register_action_handler(action_wrapper)
+        self.stream_router.register_action_update_handler(action_update_wrapper)
+        self.stream_router.register_answer_handler(answer_wrapper)
 
         logger.debug(f"Handlers registered for session {self.session_id}")
 
@@ -689,14 +755,18 @@ def _ensure_cleanup_task_running():
 
 def get_orchestrator(
     session_id: str,
-    recording_id: Optional[UUID] = None
+    recording_id: Optional[UUID] = None,
+    project_id: Optional[UUID] = None,
+    organization_id: Optional[UUID] = None
 ) -> StreamingIntelligenceOrchestrator:
     """
     Get or create orchestrator instance for a session.
 
     Args:
-        session_id: Unique session identifier
+        session_id: Unique session identifier (format: {project_id}_{timestamp})
         recording_id: Optional recording UUID
+        project_id: Optional project UUID (parsed from session_id if not provided)
+        organization_id: Optional organization UUID
 
     Returns:
         StreamingIntelligenceOrchestrator instance
@@ -710,7 +780,9 @@ def get_orchestrator(
     if session_id not in _orchestrator_instances:
         _orchestrator_instances[session_id] = StreamingIntelligenceOrchestrator(
             session_id=session_id,
-            recording_id=recording_id
+            recording_id=recording_id,
+            project_id=project_id,
+            organization_id=organization_id
         )
         logger.info(f"Created new orchestrator instance for session {sanitize_for_log(session_id)}")
 
