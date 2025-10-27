@@ -277,6 +277,7 @@ class QuestionHandler:
                             "relevance_score": result.relevance_score,
                             "url": result.url
                         },
+                        "source": "rag",
                         "tier": "rag",
                         "label": "📚 From Documents"
                     })
@@ -299,8 +300,8 @@ class QuestionHandler:
                 return False
 
             # Update database with all collected results
-            from db.database import SessionLocal
-            async with SessionLocal() as db_session:
+            from db.database import get_db_context
+            async with get_db_context() as db_session:
                 result = await db_session.execute(
                     select(LiveMeetingInsight).where(
                         LiveMeetingInsight.id == uuid.UUID(question_id)
@@ -394,8 +395,8 @@ class QuestionHandler:
                 return False
 
             # Update database with meeting context result
-            from db.database import SessionLocal
-            async with SessionLocal() as db_session:
+            from db.database import get_db_context
+            async with get_db_context() as db_session:
                 db_result = await db_session.execute(
                     select(LiveMeetingInsight).where(
                         LiveMeetingInsight.id == uuid.UUID(question_id)
@@ -484,8 +485,8 @@ class QuestionHandler:
             self._answer_events[session_id][question_id] = answer_event
 
             # Update status to MONITORING
-            from db.database import SessionLocal
-            async with SessionLocal() as db_session:
+            from db.database import get_db_context
+            async with get_db_context() as db_session:
                 result = await db_session.execute(
                     select(LiveMeetingInsight).where(
                         LiveMeetingInsight.id == uuid.UUID(question_id)
@@ -596,8 +597,8 @@ class QuestionHandler:
             )
 
             # Get database session for updates
-            from db.database import SessionLocal
-            async with SessionLocal() as db_session:
+            from db.database import get_db_context
+            async with get_db_context() as db_session:
                 # Generate answer
                 success = await generator.generate_answer(
                     session_id=session_id,

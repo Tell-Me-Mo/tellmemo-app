@@ -34,7 +34,7 @@ def upgrade() -> None:
         sa.Column('content', sa.Text(), nullable=False),
         sa.Column('status', sa.String(), nullable=False),
         sa.Column('answer_source', sa.String(), nullable=True),
-        sa.Column('metadata', postgresql.JSONB(), nullable=True),
+        sa.Column('insight_metadata', postgresql.JSONB(), nullable=True),
         sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
         sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ondelete='CASCADE'),
