@@ -226,14 +226,20 @@ class Settings(BaseSettings):
     logstash_port: int = Field(default=8080, env="LOGSTASH_PORT")  # HTTP input port
 
     # Transcription Service Configuration (Defaults - can be overridden by UI integration settings)
-    # Options: "whisper" (local), "salad" (Salad API), "replicate" (Replicate API), or "assemblyai" (AssemblyAI Real-Time)
+
+    # Post-Meeting Transcription (for recorded audio files)
+    # Options: "whisper" (local), "salad" (Salad API), or "replicate" (Replicate API)
     default_transcription_service: str = Field(default="whisper", env="DEFAULT_TRANSCRIPTION_SERVICE")
-    # Salad API credentials (only needed if using Salad as default)
+
+    # Salad API credentials (only needed if using Salad for post-meeting transcription)
     salad_api_key: str = Field(default="", env="SALAD_API_KEY")
     salad_organization_name: str = Field(default="", env="SALAD_ORGANIZATION_NAME")
-    # Replicate API credentials (only needed if using Replicate as default)
+
+    # Replicate API credentials (only needed if using Replicate for post-meeting transcription)
     replicate_api_key: str = Field(default="", env="REPLICATE_API_KEY")
-    # AssemblyAI API credentials (only needed for real-time transcription)
+
+    # AssemblyAI API credentials (required for real-time live meeting transcription)
+    # Used exclusively for live meeting intelligence with speaker diarization
     assemblyai_api_key: str = Field(default="", env="ASSEMBLYAI_API_KEY")
     
     class Config:
