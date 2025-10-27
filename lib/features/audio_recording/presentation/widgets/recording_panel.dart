@@ -6,7 +6,6 @@ import '../../../projects/presentation/providers/projects_provider.dart';
 import '../../../meetings/presentation/providers/upload_provider.dart';
 import '../providers/recording_provider.dart';
 import 'recording_button.dart';
-import 'compact_recording_header.dart';
 import '../../../content/presentation/providers/processing_jobs_provider.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../core/utils/screen_info.dart';
@@ -201,16 +200,19 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     final screenWidth = MediaQuery.of(context).size.width;
 
-    // Responsive panel width based on AI Assistant state
+    // Responsive panel width based on AI Assistant state and recording status
+    final isRecordingActive = recordingState.state == RecordingState.recording ||
+        recordingState.state == RecordingState.paused;
+
     double panelWidth;
     if (screenInfo.isMobile) {
       // Mobile: Always full width
       panelWidth = screenWidth;
-    } else if (recordingState.aiAssistantEnabled) {
-      // Desktop with AI: 80% of screen width for spacious layout
+    } else if (recordingState.aiAssistantEnabled && isRecordingActive) {
+      // Desktop with AI + Recording Active: 80% of screen width for spacious layout
       panelWidth = screenWidth * 0.8;
     } else {
-      // Desktop without AI: Narrow panel (original behavior)
+      // Desktop without AI or not recording: Narrow panel (original behavior)
       panelWidth = screenWidth * 0.45;
       const maxWidth = 600.0;
       if (panelWidth > maxWidth) panelWidth = maxWidth;
@@ -259,106 +261,44 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
                 ),
                 child: Column(
                   children: [
-                    // Header
-                    Container(
-                      padding: EdgeInsets.only(
-                        left: 24,
-                        right: 16,
-                        top: MediaQuery.of(context).padding.top + 16,
-                        bottom: 16,
-                      ),
-                      decoration: BoxDecoration(
-                        color: colorScheme.surface,
-                        border: Border(
-                          bottom: BorderSide(
-                            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-                            width: 1,
-                          ),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: Colors.red.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.mic,
-                              size: 24,
-                              color: Colors.red,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Record Meeting',
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  widget.project != null
-                                      ? widget.project!.name
-                                      : 'Record and transcribe meeting',
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.close),
-                            onPressed: _handleClose,
-                            tooltip: 'Close',
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Content
+                    // Header - Show integrated compact header when AI Assistant is ON and recording
+                    (recordingState.aiAssistantEnabled &&
+                            (recordingState.state == RecordingState.recording ||
+                                recordingState.state == RecordingState.paused))
+                        ? _buildIntegratedCompactHeader(recordingState, theme, colorScheme)
+                        : _buildStandardHeader(theme, colorScheme),
+                    // Content - Conditional based on recording state
                     Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // Project Selection (if not specific project)
-                            if (widget.project == null) ...[
-                              _buildProjectSelection(),
-                              const SizedBox(height: 24),
-                            ],
-                            // Title Field
-                            _buildTitleField(),
-                            const SizedBox(height: 24),
-                            // AI Assistant Toggle
-                            _buildAiAssistantToggle(recordingState),
-                            // AI Assistant Content (when enabled)
-                            AnimatedSize(
-                              duration: const Duration(milliseconds: 200),
-                              curve: Curves.easeInOut,
-                              child: recordingState.aiAssistantEnabled
-                                  ? Column(
-                                      children: [
-                                        const SizedBox(height: 16),
-                                        _buildAiAssistantContent(recordingState),
-                                      ],
-                                    )
-                                  : const SizedBox.shrink(),
+                      child: (recordingState.aiAssistantEnabled &&
+                              (recordingState.state == RecordingState.recording ||
+                                  recordingState.state == RecordingState.paused))
+                          ? // AI Assistant content during recording (non-scrollable, fills space)
+                          Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: _buildAiAssistantContent(recordingState),
+                            )
+                          : // Standard recording setup (scrollable)
+                          SingleChildScrollView(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  // Project Selection (if not specific project)
+                                  if (widget.project == null) ...[
+                                    _buildProjectSelection(),
+                                    const SizedBox(height: 24),
+                                  ],
+                                  // Title Field
+                                  _buildTitleField(),
+                                  const SizedBox(height: 24),
+                                  // AI Assistant Toggle
+                                  _buildAiAssistantToggle(recordingState),
+                                  const SizedBox(height: 32),
+                                  // Recording Button
+                                  _buildRecordingSection(recordingState),
+                                ],
+                              ),
                             ),
-                            const SizedBox(height: 32),
-                            // Recording Button
-                            _buildRecordingSection(recordingState),
-                          ],
-                        ),
-                      ),
                     ),
                   ],
                 ),
@@ -368,6 +308,294 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
         ],
       ),
     );
+  }
+
+  Widget _buildStandardHeader(ThemeData theme, ColorScheme colorScheme) {
+    return Container(
+      padding: EdgeInsets.only(
+        left: 24,
+        right: 16,
+        top: MediaQuery.of(context).padding.top + 16,
+        bottom: 16,
+      ),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.red.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.mic,
+              size: 24,
+              color: Colors.red,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Record Meeting',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  widget.project != null
+                      ? widget.project!.name
+                      : 'Record and transcribe meeting',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: _handleClose,
+            tooltip: 'Close',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIntegratedCompactHeader(
+    RecordingStateModel recordingState,
+    ThemeData theme,
+    ColorScheme colorScheme,
+  ) {
+    final meetingTitle = _titleController.text.isEmpty
+        ? 'Untitled Meeting'
+        : _titleController.text;
+
+    return Container(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 16,
+        top: MediaQuery.of(context).padding.top + 12,
+        bottom: 12,
+      ),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          // Recording indicator dot + Meeting info
+          Row(
+            children: [
+              // Animated recording dot
+              Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: recordingState.state == RecordingState.paused
+                      ? colorScheme.onSurfaceVariant.withValues(alpha: 0.5)
+                      : Colors.red,
+                ),
+                child: recordingState.state == RecordingState.paused
+                    ? null
+                    : AnimatedOpacity(
+                        opacity: recordingState.state == RecordingState.recording ? 1.0 : 0.3,
+                        duration: const Duration(milliseconds: 500),
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ),
+              ),
+              const SizedBox(width: 12),
+              // Meeting title + AI indicator
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    meetingTitle,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.auto_awesome,
+                        size: 12,
+                        color: colorScheme.primary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'AI Assistant',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          const SizedBox(width: 16),
+
+          // Timer
+          Text(
+            _formatDuration(recordingState.duration),
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              fontFeatures: [const FontFeature.tabularFigures()],
+            ),
+          ),
+
+          const SizedBox(width: 16),
+
+          // Amplitude meter (compact)
+          Expanded(
+            child: _buildCompactAmplitudeMeter(recordingState, colorScheme),
+          ),
+
+          const SizedBox(width: 16),
+
+          // Recording controls
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Pause/Resume button
+              IconButton.filled(
+                onPressed: recordingState.state == RecordingState.paused
+                    ? () => ref.read(recordingNotifierProvider.notifier).resumeRecording()
+                    : () => ref.read(recordingNotifierProvider.notifier).pauseRecording(),
+                icon: Icon(
+                  recordingState.state == RecordingState.paused
+                      ? Icons.play_arrow
+                      : Icons.pause,
+                  size: 18,
+                ),
+                tooltip: recordingState.state == RecordingState.paused ? 'Resume' : 'Pause',
+                style: IconButton.styleFrom(
+                  backgroundColor: colorScheme.secondaryContainer,
+                  foregroundColor: colorScheme.onSecondaryContainer,
+                  minimumSize: const Size(32, 32),
+                  padding: EdgeInsets.zero,
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Stop button
+              IconButton.filled(
+                onPressed: () => ref.read(recordingNotifierProvider.notifier).stopRecording(),
+                icon: const Icon(Icons.stop, size: 18),
+                tooltip: 'Stop',
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.red.withValues(alpha: 0.15),
+                  foregroundColor: Colors.red,
+                  minimumSize: const Size(32, 32),
+                  padding: EdgeInsets.zero,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(width: 8),
+
+          // Close button
+          IconButton(
+            icon: const Icon(Icons.close, size: 20),
+            onPressed: _handleClose,
+            tooltip: 'Close',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactAmplitudeMeter(
+    RecordingStateModel recordingState,
+    ColorScheme colorScheme,
+  ) {
+    // Normalize amplitude from dB (typically -60dB to 0dB) to 0.0-1.0 scale
+    // Same formula as used in recording_button.dart:528
+    double normalizedAmplitude = (recordingState.amplitude + 60) / 60;
+    normalizedAmplitude = normalizedAmplitude.clamp(0.0, 1.0);
+
+    return SizedBox(
+      height: 24,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: List.generate(40, (index) {
+          // Create varying bar heights based on amplitude
+          // Add some randomness for visual effect when recording
+          final baseHeight = normalizedAmplitude > 0.05
+              ? (normalizedAmplitude * 0.7) + (0.3 * ((index * 7) % 10) / 10)
+              : 0.1 + (0.05 * ((index * 3) % 5) / 5); // Minimal idle animation
+
+          final barHeight = (baseHeight * 20).clamp(2.0, 20.0);
+
+          return Container(
+            width: 2,
+            height: barHeight,
+            margin: const EdgeInsets.symmetric(horizontal: 1),
+            decoration: BoxDecoration(
+              color: normalizedAmplitude > 0.05
+                  ? _getAmplitudeColor(normalizedAmplitude, colorScheme)
+                  : colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(1),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Color _getAmplitudeColor(double amplitude, ColorScheme colorScheme) {
+    if (amplitude < 0.3) {
+      return colorScheme.primary.withValues(alpha: 0.5);
+    } else if (amplitude < 0.7) {
+      return colorScheme.primary;
+    } else {
+      return Colors.orange;
+    }
+  }
+
+  String _formatDuration(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    final seconds = duration.inSeconds.remainder(60);
+
+    if (hours > 0) {
+      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    }
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
   Widget _buildProjectSelection() {
@@ -711,25 +939,9 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
     final bool isTablet = screenWidth >= 768 && screenWidth < 1024;
     final bool isMobile = screenWidth < 768;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Compact recording header (when recording)
-        if (recordingState.state == RecordingState.recording ||
-            recordingState.state == RecordingState.paused)
-          CompactRecordingHeader(
-            recordingState: recordingState,
-            onPause: () => ref.read(recordingNotifierProvider.notifier).pauseRecording(),
-            onResume: () => ref.read(recordingNotifierProvider.notifier).resumeRecording(),
-            onStop: () => ref.read(recordingNotifierProvider.notifier).stopRecording(),
-            aiAssistantEnabled: recordingState.aiAssistantEnabled,
-          ),
-
-        const SizedBox(height: 16),
-
-        // Main content area with responsive layout
-        Expanded(
-          child: Container(
+    // AI Assistant content (Questions, Actions, Transcript)
+    // Header is now integrated at the top of the panel
+    return Container(
             padding: EdgeInsets.all(isMobile ? 12 : 20),
             decoration: BoxDecoration(
               color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.1),
@@ -753,10 +965,7 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
                 _buildLiveTranscriptSection(colorScheme, isMobile: isMobile),
               ],
             ),
-          ),
-        ),
-      ],
-    );
+          );
   }
 
   Widget _buildTwoColumnLayout(ColorScheme colorScheme, {required bool isMobile}) {

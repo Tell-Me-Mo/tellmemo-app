@@ -154,8 +154,7 @@ class _LiveTranscriptionWidgetState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildHeader(theme, colorScheme),
-          const SizedBox(height: 8),
+          // Header removed - parent widget now handles it
           ...lastTwo.map((transcript) => _buildTranscriptItem(
                 transcript,
                 theme,
@@ -171,8 +170,7 @@ class _LiveTranscriptionWidgetState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildHeader(theme, colorScheme),
-        const SizedBox(height: 12),
+        // Header removed - parent widget now handles it
         Expanded(
           child: Stack(
             children: [
@@ -226,74 +224,31 @@ class _LiveTranscriptionWidgetState
     );
   }
 
-  Widget _buildHeader(ThemeData theme, ColorScheme colorScheme) {
-    return Row(
-      children: [
-        Icon(
-          Icons.transcribe,
-          size: 16,
-          color: colorScheme.primary,
-        ),
-        const SizedBox(width: 8),
-        Text(
-          'Live Transcript',
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: colorScheme.onSurface,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(
-            color: colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Text(
-            '${widget.transcripts.length}',
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: colorScheme.onPrimaryContainer,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        const Spacer(),
-        if (widget.onToggleCollapse != null)
-          IconButton(
-            icon: Icon(
-              widget.isCollapsed ? Icons.expand_more : Icons.expand_less,
-              size: 20,
-            ),
-            onPressed: widget.onToggleCollapse,
-            tooltip: widget.isCollapsed ? 'Expand' : 'Collapse',
-          ),
-      ],
-    );
-  }
-
   Widget _buildEmptyState(ThemeData theme, ColorScheme colorScheme) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             Icons.mic_none,
-            size: 48,
+            size: 32,
             color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
           Text(
             'Waiting for audio...',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Text(
             'Transcription will appear here in real-time',
             style: theme.textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
             ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),

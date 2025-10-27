@@ -1,16 +1,21 @@
 import 'dart:async';
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:http/http.dart' as http;
 import '../../domain/services/audio_recording_service.dart';
 import '../../domain/services/transcription_service.dart';
+import '../../domain/services/live_audio_streaming_service.dart';
+import '../../domain/services/live_audio_websocket_service.dart';
 import '../../../../features/meetings/presentation/providers/upload_provider.dart';
 import '../../../../features/content/presentation/providers/processing_jobs_provider.dart';
 import '../../../../core/services/firebase_analytics_service.dart';
+import '../../../../core/services/auth_service.dart';
+import '../../../../core/config/api_config.dart';
 import '../../../../core/utils/error_utils.dart';
 import 'recording_preferences_provider.dart';
+import '../../../../features/live_insights/presentation/providers/live_insights_provider.dart';
 
 part 'recording_provider.g.dart';
 
@@ -100,6 +105,11 @@ class RecordingNotifier extends _$RecordingNotifier {
   StreamSubscription? _durationSubscription;
   StreamSubscription? _stateSubscription;
   StreamSubscription? _warningSubscription;
+
+  // Live insights services (initialized when AI Assistant is enabled)
+  LiveAudioStreamingService? _liveAudioStreamingService;
+  LiveAudioWebSocketService? _liveAudioWebSocketService;
+  StreamSubscription? _audioChunkSubscription;
 
   @override
   RecordingStateModel build() {
@@ -191,6 +201,69 @@ class RecordingNotifier extends _$RecordingNotifier {
       final sessionId = '${projectId}_${DateTime.now().millisecondsSinceEpoch}';
       state = state.copyWith(sessionId: sessionId);
 
+      // Initialize live insights WebSocket if AI Assistant is enabled
+      if (state.aiAssistantEnabled) {
+        debugPrint('[RecordingProvider] AI Assistant enabled - initializing live insights');
+        try {
+          // 1. Connect to live insights WebSocket (for receiving questions/actions/transcriptions)
+          final liveInsightsService = ref.read(liveInsightsWebSocketServiceProvider);
+          await liveInsightsService.connect(sessionId);
+          debugPrint('[RecordingProvider] Connected to live insights WebSocket');
+
+          // 2. Initialize live audio streaming service
+          _liveAudioStreamingService = LiveAudioStreamingService();
+          debugPrint('[RecordingProvider] Initialized live audio streaming service');
+
+          // 3. Initialize and connect audio WebSocket for streaming audio to backend
+          final authService = AuthService();
+          final token = await authService.getToken();
+          if (token != null) {
+            _liveAudioWebSocketService = LiveAudioWebSocketService(
+              baseUrl: ApiConfig.baseUrl,
+            );
+
+            final audioWsConnected = await _liveAudioWebSocketService!.connect(
+              sessionId: sessionId,
+              token: token,
+              projectId: projectId,
+            );
+
+            if (audioWsConnected) {
+              debugPrint('[RecordingProvider] Connected to audio streaming WebSocket');
+
+              // 4. Start streaming audio chunks
+              final streamingStarted = await _liveAudioStreamingService!.startStreaming();
+              if (streamingStarted) {
+                debugPrint('[RecordingProvider] Started audio streaming');
+
+                // 5. Pipe audio chunks from streaming service to WebSocket
+                _audioChunkSubscription = _liveAudioStreamingService!.audioChunkStream.listen(
+                  (chunk) {
+                    _liveAudioWebSocketService?.sendAudioChunk(chunk);
+                  },
+                  onError: (error) {
+                    debugPrint('[RecordingProvider] Audio chunk stream error: $error');
+                  },
+                );
+                debugPrint('[RecordingProvider] Audio chunk pipeline established');
+              } else {
+                debugPrint('[RecordingProvider] Failed to start audio streaming');
+              }
+            } else {
+              debugPrint('[RecordingProvider] Failed to connect audio WebSocket');
+            }
+          } else {
+            debugPrint('[RecordingProvider] No auth token available for audio streaming');
+          }
+        } catch (e) {
+          debugPrint('[RecordingProvider] Failed to initialize live insights: $e');
+          // Don't fail the recording if live insights connection fails
+          state = state.copyWith(
+            errorMessage: 'AI Assistant initialization failed, but recording continues',
+          );
+        }
+      }
+
       // Log recording started analytics
       try {
         await FirebaseAnalyticsService().logRecordingStarted(
@@ -212,6 +285,16 @@ class RecordingNotifier extends _$RecordingNotifier {
   Future<void> pauseRecording() async {
     await _audioService.pauseRecording();
 
+    // Pause audio streaming if AI Assistant is enabled
+    if (state.aiAssistantEnabled && _liveAudioStreamingService != null) {
+      try {
+        await _liveAudioStreamingService!.stopStreaming();
+        debugPrint('[RecordingProvider] Paused audio streaming');
+      } catch (e) {
+        debugPrint('[RecordingProvider] Error pausing audio streaming: $e');
+      }
+    }
+
     // Log recording paused analytics
     try {
       await FirebaseAnalyticsService().logRecordingPaused(
@@ -225,6 +308,28 @@ class RecordingNotifier extends _$RecordingNotifier {
   // Resume recording
   Future<void> resumeRecording() async {
     await _audioService.resumeRecording();
+
+    // Resume audio streaming if AI Assistant is enabled
+    if (state.aiAssistantEnabled && _liveAudioStreamingService != null) {
+      try {
+        await _liveAudioStreamingService!.startStreaming();
+        debugPrint('[RecordingProvider] Resumed audio streaming');
+
+        // Re-establish audio chunk pipeline
+        _audioChunkSubscription?.cancel();
+        _audioChunkSubscription = _liveAudioStreamingService!.audioChunkStream.listen(
+          (chunk) {
+            _liveAudioWebSocketService?.sendAudioChunk(chunk);
+          },
+          onError: (error) {
+            debugPrint('[RecordingProvider] Audio chunk stream error: $error');
+          },
+        );
+        debugPrint('[RecordingProvider] Re-established audio chunk pipeline');
+      } catch (e) {
+        debugPrint('[RecordingProvider] Error resuming audio streaming: $e');
+      }
+    }
 
     // Log recording resumed analytics
     try {
@@ -241,6 +346,42 @@ class RecordingNotifier extends _$RecordingNotifier {
     String? meetingTitle,
   }) async {
     try {
+      // Cleanup live insights services if AI Assistant was enabled
+      if (state.aiAssistantEnabled) {
+        debugPrint('[RecordingProvider] Cleaning up live insights services');
+        try {
+          // 1. Cancel audio chunk subscription
+          await _audioChunkSubscription?.cancel();
+          _audioChunkSubscription = null;
+          debugPrint('[RecordingProvider] Cancelled audio chunk subscription');
+
+          // 2. Stop audio streaming service
+          if (_liveAudioStreamingService != null) {
+            await _liveAudioStreamingService!.stopStreaming();
+            _liveAudioStreamingService!.dispose();
+            _liveAudioStreamingService = null;
+            debugPrint('[RecordingProvider] Stopped and disposed audio streaming service');
+          }
+
+          // 3. Disconnect audio WebSocket
+          if (_liveAudioWebSocketService != null) {
+            await _liveAudioWebSocketService!.disconnect();
+            _liveAudioWebSocketService = null;
+            debugPrint('[RecordingProvider] Disconnected audio WebSocket');
+          }
+
+          // 4. Disconnect live insights WebSocket
+          final liveInsightsService = ref.read(liveInsightsWebSocketServiceProvider);
+          await liveInsightsService.disconnect();
+          debugPrint('[RecordingProvider] Disconnected live insights WebSocket');
+
+          debugPrint('[RecordingProvider] All live insights services cleaned up');
+        } catch (e) {
+          debugPrint('[RecordingProvider] Error during live insights cleanup: $e');
+          // Continue with recording stop even if cleanup fails
+        }
+      }
+
       // Stop audio recording and get file path
       final filePath = await _audioService.stopRecording();
 
@@ -388,6 +529,37 @@ class RecordingNotifier extends _$RecordingNotifier {
 
   // Cancel recording without saving
   Future<void> cancelRecording() async {
+    // Cleanup live insights services if AI Assistant was enabled
+    if (state.aiAssistantEnabled) {
+      debugPrint('[RecordingProvider] Cancelling recording - cleaning up live insights');
+      try {
+        // Cancel audio chunk subscription
+        await _audioChunkSubscription?.cancel();
+        _audioChunkSubscription = null;
+
+        // Stop and dispose audio streaming service
+        if (_liveAudioStreamingService != null) {
+          await _liveAudioStreamingService!.stopStreaming();
+          _liveAudioStreamingService!.dispose();
+          _liveAudioStreamingService = null;
+        }
+
+        // Disconnect audio WebSocket
+        if (_liveAudioWebSocketService != null) {
+          await _liveAudioWebSocketService!.disconnect();
+          _liveAudioWebSocketService = null;
+        }
+
+        // Disconnect live insights WebSocket
+        final liveInsightsService = ref.read(liveInsightsWebSocketServiceProvider);
+        await liveInsightsService.disconnect();
+
+        debugPrint('[RecordingProvider] Live insights cleanup completed on cancel');
+      } catch (e) {
+        debugPrint('[RecordingProvider] Error during live insights cleanup on cancel: $e');
+      }
+    }
+
     // Cancel recording and delete file
     await _audioService.cancelRecording();
 

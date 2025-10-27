@@ -107,8 +107,9 @@ class CompactRecordingHeader extends StatelessWidget {
   }
 
   Widget _buildAmplitudeMeter(ColorScheme colorScheme) {
-    // Normalize amplitude (0.0 - 1.0)
-    final normalizedAmplitude = (recordingState.amplitude / 160.0).clamp(0.0, 1.0);
+    // Normalize amplitude from dB (typically -60dB to 0dB) to 0.0-1.0 scale
+    double normalizedAmplitude = (recordingState.amplitude + 60) / 60;
+    normalizedAmplitude = normalizedAmplitude.clamp(0.0, 1.0);
     final percentage = (normalizedAmplitude * 100).toInt();
 
     return Row(

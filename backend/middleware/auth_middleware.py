@@ -338,7 +338,7 @@ async def get_current_user_ws(token: str, db: AsyncSession) -> Optional[User]:
             return None
 
         # Verify token with auth service
-        user_data = auth_service.verify_token(token)
+        user_data = auth_service.verify_jwt_token(token)
         if not user_data:
             return None
 

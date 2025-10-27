@@ -375,7 +375,25 @@ class LiveInsightsWebSocketService {
     });
   }
 
-  /// Disconnect and cleanup
+  /// Disconnect from WebSocket (can reconnect later)
+  Future<void> disconnect() async {
+    debugPrint('[LiveInsightsWebSocket] Disconnecting from session');
+
+    _reconnectTimer?.cancel();
+    _pingTimer?.cancel();
+
+    if (_channel != null) {
+      await _channel!.sink.close();
+      _channel = null;
+    }
+
+    _isConnected = false;
+    _connectionStateController.add(false);
+
+    debugPrint('[LiveInsightsWebSocket] Disconnected successfully');
+  }
+
+  /// Disconnect and cleanup (full disposal)
   Future<void> dispose() async {
     debugPrint('[LiveInsightsWebSocket] Disposing service');
 
