@@ -88,17 +88,17 @@ def test_initialization():
     """Test GPTAnswerGenerator initialization."""
     generator = GPTAnswerGenerator(timeout=5.0, confidence_threshold=0.75)
 
-    assert generator._timeout == 5.0
-    assert generator._confidence_threshold == 0.75
-    assert generator._broadcast_callback is None
+    assert generator.timeout == 5.0
+    assert generator.confidence_threshold == 0.75
+    assert generator.broadcast_callback is None
 
 
 def test_initialization_defaults():
     """Test default values."""
     generator = GPTAnswerGenerator()
 
-    assert generator._timeout == 3.0
-    assert generator._confidence_threshold == 0.70
+    assert generator.timeout == 3.0
+    assert generator.confidence_threshold == 0.70
 
 
 # ============================================================================
@@ -113,7 +113,7 @@ async def test_generate_answer_success(
     mock_broadcast_callback
 ):
     """Test successful answer generation with high confidence."""
-    gpt_generator._broadcast_callback = mock_broadcast_callback
+    gpt_generator.broadcast_callback = mock_broadcast_callback
 
     # Mock GPT response with high confidence
     gpt_response = {
@@ -295,7 +295,7 @@ async def test_broadcast_gpt_answer(
     mock_broadcast_callback
 ):
     """Test WebSocket broadcasting of GPT-generated answer."""
-    gpt_generator._broadcast_callback = mock_broadcast_callback
+    gpt_generator.broadcast_callback = mock_broadcast_callback
 
     gpt_response = {
         "answer": "Infrastructure ROI is typically 18-36 months",
@@ -340,7 +340,7 @@ async def test_broadcast_failure_handled_gracefully(
     """Test that broadcast failures don't crash answer generation."""
     # Mock broadcast callback that raises exception
     failing_callback = AsyncMock(side_effect=Exception("Broadcast failed"))
-    gpt_generator._broadcast_callback = failing_callback
+    gpt_generator.broadcast_callback = failing_callback
 
     gpt_response = {
         "answer": "Test answer",

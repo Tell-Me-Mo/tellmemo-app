@@ -32,10 +32,10 @@
     - **SegmentDetector Tests** (NEW): 22 tests covering time/pause/phrase boundary detection, session management, statistics
   - Test Coverage:
     - Total tests created: 140+
-    - Passing tests: 85+ (60% pass rate)
-    - Services with full test coverage: TranscriptionBuffer, StreamRouter
+    - **Passing tests: 71 across core services (50% pass rate)**
+    - **Services with full test coverage: TranscriptionBuffer (24 passing), StreamRouter (30 passing), SegmentDetector (17 passing)**
     - Services with partial test coverage: QuestionHandler, ActionHandler, AnswerHandler (need mock adjustments)
-    - Services with new tests needing API alignment: GPTAnswerGenerator, SegmentDetector
+    - Services with new tests needing API alignment: GPTAnswerGenerator (need LLM client mock)
   - Testing Infrastructure:
     - Async test support with pytest-asyncio
     - Mock database sessions with AsyncMock
