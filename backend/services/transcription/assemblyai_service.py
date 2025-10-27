@@ -248,11 +248,8 @@ class AssemblyAIConnection:
         self.metrics.connection_attempts += 1
 
         try:
-            # Build WebSocket URL with authentication and parameters
+            # Build WebSocket URL with parameters (NO API key in URL for security)
             url = f"{self.ASSEMBLYAI_URL}?sample_rate={self.SAMPLE_RATE}&encoding={self.ENCODING}"
-
-            # Add token parameter for authentication
-            url += f"&token={self.api_key}"
 
             # Enable speaker diarization
             url += "&enable_speaker_labels=true"
@@ -260,6 +257,8 @@ class AssemblyAIConnection:
             logger.info(f"Connecting to AssemblyAI for session {sanitize_for_log(self.session_id)}...")
 
             # Connect with timeout
+            # SECURITY: Use Authorization header instead of URL query parameter
+            # to prevent API key leakage in logs and HTTP referrer headers
             self.websocket = await asyncio.wait_for(
                 websockets.connect(
                     url,
