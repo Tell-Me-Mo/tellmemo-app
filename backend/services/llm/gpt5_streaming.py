@@ -259,9 +259,20 @@ class GPT5StreamingClient:
             logger.error(f"Error parsing NDJSON stream (chunk {chunk_count}): {e}")
             raise
 
-        # Handle incomplete buffer at end (should be rare with NDJSON)
+        # Handle incomplete buffer at end - try to parse it as final JSON object
         if buffer.strip():
-            logger.warning(f"Incomplete JSON at end of stream (discarding): {buffer[:200]}")
+            try:
+                obj = json.loads(buffer.strip())
+
+                # Validate object has required fields
+                if isinstance(obj, dict) and "type" in obj:
+                    logger.info(f"Parsed final JSON object from buffer (no trailing newline): type={obj.get('type')}")
+                    yield obj
+                else:
+                    logger.warning(f"Invalid final object in buffer (no 'type' field): {buffer[:200]}")
+
+            except json.JSONDecodeError as e:
+                logger.warning(f"Incomplete JSON at end of stream (could not parse): {buffer[:200]}, Error: {e}")
 
     def _format_user_message(self, transcript_buffer: str, context: Dict[str, Any]) -> str:
         """

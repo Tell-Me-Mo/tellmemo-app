@@ -440,7 +440,7 @@ class StreamingIntelligenceOrchestrator:
                     self.metrics.answers_detected += 1
 
                 # Route through stream router
-                await self.stream_router.route_object(obj, session, self.session_id)
+                await self.stream_router.route_object(obj)
 
         except Exception as e:
             logger.error(f"GPT streaming failed for session {self.session_id}: {e}", exc_info=True)
