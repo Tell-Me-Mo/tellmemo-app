@@ -6,12 +6,12 @@ import '../../../projects/presentation/providers/projects_provider.dart';
 import '../../../meetings/presentation/providers/upload_provider.dart';
 import '../providers/recording_provider.dart';
 import 'recording_button.dart';
+import 'compact_recording_header.dart';
 import '../../../content/presentation/providers/processing_jobs_provider.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../core/utils/screen_info.dart';
 import '../../../live_insights/presentation/widgets/live_transcription_widget.dart';
 import '../../../live_insights/data/models/transcript_model.dart';
-import '../../../live_insights/presentation/widgets/ai_assistant_content.dart';
 import '../../../live_insights/data/models/live_insight_model.dart';
 
 enum ProjectSelectionMode { automatic, manual, specific }
@@ -199,12 +199,24 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
     final recordingState = ref.watch(recordingNotifierProvider);
     final screenInfo = ScreenInfo.fromContext(context);
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    final screenWidth = MediaQuery.of(context).size.width;
 
-    final panelWidth = screenInfo.isMobile
-        ? MediaQuery.of(context).size.width
-        : MediaQuery.of(context).size.width * 0.45;
-    final maxWidth = 600.0;
-    final actualWidth = panelWidth > maxWidth ? maxWidth : panelWidth;
+    // Responsive panel width based on AI Assistant state
+    double panelWidth;
+    if (screenInfo.isMobile) {
+      // Mobile: Always full width
+      panelWidth = screenWidth;
+    } else if (recordingState.aiAssistantEnabled) {
+      // Desktop with AI: 80% of screen width for spacious layout
+      panelWidth = screenWidth * 0.8;
+    } else {
+      // Desktop without AI: Narrow panel (original behavior)
+      panelWidth = screenWidth * 0.45;
+      const maxWidth = 600.0;
+      if (panelWidth > maxWidth) panelWidth = maxWidth;
+    }
+
+    final actualWidth = panelWidth;
 
     return Material(
       type: MaterialType.transparency,
@@ -224,15 +236,17 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
                   : const SizedBox.shrink();
             },
           ),
-          // Panel
+          // Panel with animated width
           Positioned(
             right: widget.rightOffset,
             top: 0,
             bottom: screenInfo.isMobile ? keyboardHeight : 0,
-            width: actualWidth,
             child: SlideTransition(
               position: _slideAnimation,
-              child: Container(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 400),
+                curve: Curves.easeInOutCubic,
+                width: actualWidth,
                 decoration: BoxDecoration(
                   color: colorScheme.surface,
                   boxShadow: [
@@ -689,89 +703,349 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
   }
 
   Widget _buildAiAssistantContent(RecordingStateModel recordingState) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    final screenWidth = MediaQuery.of(context).size.width;
 
-    // AI Assistant content with three sections:
-    // Section 1: Recording controls (handled separately)
-    // Section 2: Live Transcription Display (this widget)
-    // Section 3: Questions & Actions (placeholder for Task 5.4)
+    // Determine layout based on screen size
+    final bool isDesktop = screenWidth >= 1024;
+    final bool isTablet = screenWidth >= 768 && screenWidth < 1024;
+    final bool isMobile = screenWidth < 768;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Compact recording header (when recording)
+        if (recordingState.state == RecordingState.recording ||
+            recordingState.state == RecordingState.paused)
+          CompactRecordingHeader(
+            recordingState: recordingState,
+            onPause: () => ref.read(recordingNotifierProvider.notifier).pauseRecording(),
+            onResume: () => ref.read(recordingNotifierProvider.notifier).resumeRecording(),
+            onStop: () => ref.read(recordingNotifierProvider.notifier).stopRecording(),
+            aiAssistantEnabled: recordingState.aiAssistantEnabled,
+          ),
+
+        const SizedBox(height: 16),
+
+        // Main content area with responsive layout
+        Expanded(
+          child: Container(
+            padding: EdgeInsets.all(isMobile ? 12 : 20),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // 2-column layout for Questions and Actions (desktop/tablet)
+                // Single column with tabs for mobile
+                Expanded(
+                  flex: 2,
+                  child: (isDesktop || isTablet)
+                      ? _buildTwoColumnLayout(colorScheme, isMobile: isMobile)
+                      : _buildMobileTabLayout(colorScheme),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Live Transcript at bottom (collapsible)
+                _buildLiveTranscriptSection(colorScheme, isMobile: isMobile),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTwoColumnLayout(ColorScheme colorScheme, {required bool isMobile}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Questions column (left)
+        Expanded(
+          child: _buildQuestionsSection(colorScheme, isMobile: isMobile),
+        ),
+
+        const SizedBox(width: 16),
+
+        // Actions column (right)
+        Expanded(
+          child: _buildActionsSection(colorScheme, isMobile: isMobile),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMobileTabLayout(ColorScheme colorScheme) {
+    // Mobile uses tabs to switch between Questions and Actions
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          TabBar(
+            tabs: [
+              Tab(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.help_outline, size: 18),
+                    const SizedBox(width: 8),
+                    Text('Questions (${_questions.length})'),
+                  ],
+                ),
+              ),
+              Tab(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.check_circle_outline, size: 18),
+                    const SizedBox(width: 8),
+                    Text('Actions (${_actions.length})'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _buildQuestionsSection(colorScheme, isMobile: true),
+                _buildActionsSection(colorScheme, isMobile: true),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuestionsSection(ColorScheme colorScheme, {required bool isMobile}) {
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: colorScheme.outline.withValues(alpha: 0.2),
+          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Section 2: Live Transcription Display
-          SizedBox(
-            height: 300,
-            child: LiveTranscriptionWidget(
-              transcripts: _transcripts,
-              isCollapsed: _transcriptionCollapsed,
-              onToggleCollapse: () {
-                setState(() {
-                  _transcriptionCollapsed = !_transcriptionCollapsed;
-                });
-              },
+          // Header
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const Icon(Icons.help_outline, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Questions (${_questions.length})',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ),
+          Divider(height: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
 
-          const SizedBox(height: 16),
-
-          // Section 3: Questions & Actions (AI Assistant Content)
-          SizedBox(
-            height: 400,
-            child: AIAssistantContentSection(
-              questions: _questions,
-              actions: _actions,
-              onQuestionMarkAnswered: (questionId) {
-                // TODO: Implement in Task 5.5 (State Management)
-                debugPrint('Mark question as answered: $questionId');
-              },
-              onQuestionNeedsFollowUp: (questionId) {
-                // TODO: Implement in Task 5.5 (State Management)
-                debugPrint('Question needs follow-up: $questionId');
-              },
-              onQuestionDismiss: (questionId) {
-                // TODO: Implement in Task 5.5 (State Management)
-                setState(() {
-                  _questions.removeWhere((q) => q.id == questionId);
-                });
-              },
-              onActionAssignOwner: (actionId, owner) {
-                // TODO: Implement in Task 5.5 (State Management)
-                debugPrint('Assign owner $owner to action: $actionId');
-              },
-              onActionSetDeadline: (actionId, deadline) {
-                // TODO: Implement in Task 5.5 (State Management)
-                debugPrint('Set deadline $deadline for action: $actionId');
-              },
-              onActionMarkComplete: (actionId) {
-                // TODO: Implement in Task 5.5 (State Management)
-                debugPrint('Mark action as complete: $actionId');
-              },
-              onActionDismiss: (actionId) {
-                // TODO: Implement in Task 5.5 (State Management)
-                setState(() {
-                  _actions.removeWhere((a) => a.id == actionId);
-                });
-              },
-              onDismissAll: () {
-                // TODO: Implement in Task 5.5 (State Management)
-                setState(() {
-                  _questions.clear();
-                  _actions.clear();
-                });
-              },
-            ),
+          // Questions list
+          Expanded(
+            child: _questions.isEmpty
+                ? _buildEmptyState(
+                    icon: Icons.question_answer,
+                    title: 'Listening for questions...',
+                    subtitle: 'Questions detected in the conversation will appear here',
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _questions.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final question = _questions[index];
+                      return Container(
+                        // Question card placeholder - will use LiveQuestionCard widget
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(question.text),
+                      );
+                    },
+                  ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildActionsSection(ColorScheme colorScheme, {required bool isMobile}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle_outline, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Actions (${_actions.length})',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Divider(height: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+
+          // Actions list
+          Expanded(
+            child: _actions.isEmpty
+                ? _buildEmptyState(
+                    icon: Icons.task_alt,
+                    title: 'Tracking actions...',
+                    subtitle: 'Action items mentioned will appear here',
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _actions.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final action = _actions[index];
+                      return Container(
+                        // Action card placeholder - will use LiveActionCard widget
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(action.description),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLiveTranscriptSection(ColorScheme colorScheme, {required bool isMobile}) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      height: _transcriptionCollapsed ? 80 : (isMobile ? 150 : 200),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        children: [
+          // Header with collapse button
+          InkWell(
+            onTap: () {
+              setState(() {
+                _transcriptionCollapsed = !_transcriptionCollapsed;
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const Icon(Icons.mic, size: 20),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Live Transcript',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    _transcriptionCollapsed
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (!_transcriptionCollapsed) ...[
+            Divider(height: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+            Expanded(
+              child: LiveTranscriptionWidget(
+                transcripts: _transcripts,
+                isCollapsed: _transcriptionCollapsed,
+                onToggleCollapse: () {
+                  setState(() {
+                    _transcriptionCollapsed = !_transcriptionCollapsed;
+                  });
+                },
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 48,
+              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 14,
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
