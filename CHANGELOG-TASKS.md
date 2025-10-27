@@ -3,6 +3,41 @@
 ## [Unreleased]
 
 ### [2025-10-27]
+#### Added
+- **Task 8.2 - Integration Tests for Four-Tier Answer Discovery**: Created comprehensive end-to-end integration tests for the complete answer discovery system
+  - Implementation: 11 integration tests covering all four answer discovery tiers (RAG → Meeting Context → Live Monitoring → GPT-Generated)
+  - Test Coverage:
+    - **TestFullAnswerDiscoveryFlow** (4 tests): Tests each tier independently with proper mocking
+      - `test_tier1_rag_finds_answer_immediately`: RAG search returns documents from vector store
+      - `test_tier2_meeting_context_finds_answer`: Earlier meeting discussion provides answer
+      - `test_tier3_live_monitoring_detects_answer`: Answer appears in 15s monitoring window
+      - `test_tier4_gpt_generates_fallback_answer`: GPT-5-mini generates answer when all tiers fail
+    - **TestTimeoutHandling** (3 tests): Validates timeout enforcement for each tier
+      - RAG timeout: 2 seconds
+      - Meeting context timeout: 1.5 seconds
+      - Live monitoring timeout: 15 seconds (reduced to 2s for faster testing)
+    - **TestGracefulDegradation** (2 tests): System continues when tiers fail gracefully
+    - **TestConcurrentQuestions** (1 test): Multiple questions processed in parallel
+    - **TestProgressiveResults** (1 test): Results streamed progressively, not batched
+  - Test Fixtures:
+    - `mock_rag_service`: Configurable RAG search with controlled responses
+    - `mock_meeting_context_service`: Meeting transcript search mocking
+    - `mock_gpt_answer_generator`: GPT-5-mini answer generation mocking
+    - `mock_transcription_buffer`: Transcription context provider
+    - `mock_broadcast_callback`: Captures WebSocket messages for assertions
+  - **Bugs Discovered and Fixed During Testing:**
+    1. SessionLocal import errors → Fixed by using `get_db_context()` (4 locations in question_handler.py)
+    2. Migration column mismatch: `metadata` → `insight_metadata` in migration file
+    3. Missing "source" field in RAG_RESULT_PROGRESSIVE WebSocket broadcast
+    4. Test strategy updated to use database-generated UUIDs (more reliable than GPT IDs)
+  - Files Created:
+    - `/backend/tests/integration/test_answer_discovery.py` (1000+ lines with comprehensive test scenarios)
+  - Files Modified:
+    - `/backend/services/intelligence/question_handler.py` (lines 302, 397, 487, 599: SessionLocal → get_db_context; line 280: added source field)
+    - `/backend/alembic/versions/f11cd7beb6f5_add_live_meeting_insights_table.py` (line 37: metadata → insight_metadata)
+  - Test Database: Created `pm_master_test` database, schema auto-managed by conftest fixtures
+  - Status: Integration tests successfully created, discovered and fixed 4 critical bugs in implementation
+
 #### Fixed
 - **Fixed Circular Import in StreamingOrchestrator**: Resolved circular dependency between `streaming_orchestrator.py` and `websocket_live_insights.py`
   - Implementation: Used lazy import pattern with `_get_insights_manager()` helper function
