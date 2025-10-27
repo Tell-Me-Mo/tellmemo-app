@@ -46,7 +46,7 @@ dependencies:
   # HTTP Client
   dio: ^5.9.0
   dio_retry_plus: ^2.0.8
-  retrofit: ^4.7.3
+  retrofit: ^4.8.0
   http: ^1.5.0
   
   # UI & Design
