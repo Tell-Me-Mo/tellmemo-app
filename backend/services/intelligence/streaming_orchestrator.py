@@ -39,14 +39,20 @@ from services.intelligence.action_handler import ActionHandler
 from services.intelligence.answer_handler import AnswerHandler
 from services.intelligence.segment_detector import get_segment_detector
 
-# WebSocket import
-from routers.websocket_live_insights import insights_manager
+# WebSocket import - use lazy import to avoid circular dependency
+# from routers.websocket_live_insights import insights_manager
 
 # Model imports for summary generation
 from models.recording import Recording, RecordingTranscript
 from models.live_insight import LiveMeetingInsight
 
 logger = get_logger(__name__)
+
+
+def _get_insights_manager():
+    """Lazy import of insights_manager to avoid circular dependency."""
+    from routers.websocket_live_insights import insights_manager
+    return insights_manager
 
 
 @dataclass
@@ -162,7 +168,7 @@ class StreamingIntelligenceOrchestrator:
         async def broadcast_wrapper(session_id: str, event_data: dict):
             """Wrapper for WebSocket broadcasting."""
             try:
-                await insights_manager.broadcast_to_session(session_id, event_data)
+                await _get_insights_manager().broadcast_to_session(session_id, event_data)
             except Exception as e:
                 logger.error(f"WebSocket broadcast failed: {e}")
 
@@ -629,7 +635,7 @@ async def _generate_meeting_summary(session_id: str, recording_id: Optional[UUID
 
             # Broadcast summary to connected clients
             try:
-                await insights_manager.broadcast_to_session(
+                await _get_insights_manager().broadcast_to_session(
                     session_id,
                     {
                         "type": "MEETING_SUMMARY",

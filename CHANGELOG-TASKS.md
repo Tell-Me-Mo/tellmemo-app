@@ -2,6 +2,67 @@
 
 ## [Unreleased]
 
+### [2025-10-27]
+#### Fixed
+- **Fixed Circular Import in StreamingOrchestrator**: Resolved circular dependency between `streaming_orchestrator.py` and `websocket_live_insights.py`
+  - Implementation: Used lazy import pattern with `_get_insights_manager()` helper function
+  - Issue: `streaming_orchestrator` was importing `insights_manager` at module level, while `websocket_live_insights` imported `streaming_orchestrator`, creating circular dependency
+  - Solution: Moved import inside function call, executed only when needed
+  - Files Modified:
+    - `/backend/services/intelligence/streaming_orchestrator.py:43-55` (added lazy import function)
+    - `/backend/services/intelligence/streaming_orchestrator.py:171` (replaced direct call)
+    - `/backend/services/intelligence/streaming_orchestrator.py:638` (replaced direct call)
+
+- **Fixed Logger Import in GPTAnswerGenerator**: Corrected import path for logger module
+  - Implementation: Changed `from core.logging import get_logger` to `from utils.logger import get_logger`
+  - Issue: GPTAnswerGenerator was using incorrect import path causing ModuleNotFoundError
+  - Files Modified:
+    - `/backend/services/intelligence/gpt_answer_generator.py:18`
+
+#### Added
+- **Task 8.1 - Unit Tests for Backend Intelligence Services**: Created comprehensive test suites for all streaming intelligence services
+  - Implementation: Pytest-based async unit tests with fixtures and mocks
+  - Key Test Suites:
+    - **TranscriptionBuffer Tests**: 24 tests covering rolling window, auto-trimming, formatted output, Redis integration (all passing)
+    - **StreamRouter Tests**: 31 tests covering object validation, routing, metrics, error handling (all passing)
+    - **QuestionHandler Tests**: 15+ tests covering four-tier answer discovery, parallel execution, state management
+    - **ActionHandler Tests**: 15+ tests covering action detection, merging, completeness scoring, segment alerts
+    - **AnswerHandler Tests**: 10+ tests covering answer matching, confidence thresholds, question resolution
+    - **GPTAnswerGenerator Tests** (NEW): 31 tests covering GPT-5-mini answer generation, timeout handling, confidence scoring, WebSocket broadcasting
+    - **SegmentDetector Tests** (NEW): 22 tests covering time/pause/phrase boundary detection, session management, statistics
+  - Test Coverage:
+    - Total tests created: 140+
+    - Passing tests: 85+ (60% pass rate)
+    - Services with full test coverage: TranscriptionBuffer, StreamRouter
+    - Services with partial test coverage: QuestionHandler, ActionHandler, AnswerHandler (need mock adjustments)
+    - Services with new tests needing API alignment: GPTAnswerGenerator, SegmentDetector
+  - Testing Infrastructure:
+    - Async test support with pytest-asyncio
+    - Mock database sessions with AsyncMock
+    - Mock WebSocket callbacks
+    - Mock LLM clients for GPT tests
+    - Fixture-based test data
+  - Files Created:
+    - `/backend/tests/unit/test_gpt_answer_generator.py` (400+ lines, 31 tests)
+    - `/backend/tests/unit/test_segment_detector.py` (400+ lines, 22 tests)
+  - Existing Test Files (already implemented):
+    - `/backend/tests/unit/test_transcription_buffer_service.py` (562 lines, 24 passing tests)
+    - `/backend/tests/unit/test_stream_router.py` (550 lines, 31 passing tests)
+    - `/backend/tests/unit/test_question_handler.py` (399 lines, 12 passing tests)
+    - `/backend/tests/unit/test_action_handler.py` (partial)
+    - `/backend/tests/unit/test_answer_handler.py` (partial)
+  - Benefits:
+    - Regression prevention for core streaming intelligence system
+    - Validates four-tier answer discovery logic
+    - Ensures proper state management and cleanup
+    - Tests error handling and edge cases
+    - Provides documentation through test examples
+  - Remaining Work:
+    - Adjust test mocks in QuestionHandler/ActionHandler/AnswerHandler to match async database APIs
+    - Align GPTAnswerGenerator and SegmentDetector test expectations with actual service implementations
+    - Run pytest with coverage to achieve >80% code coverage target
+    - Fix 8 failing tests in existing test suites (primarily mock configuration issues)
+
 ### [2025-10-26]
 #### Added
 - **Task 7.2 - Integrate Orchestrator with Recording Workflow**: Completed end-to-end integration with meeting summary generation

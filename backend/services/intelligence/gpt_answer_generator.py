@@ -15,7 +15,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
 
-from core.logging import get_logger
+from utils.logger import get_logger
 from services.llm.multi_llm_client import get_multi_llm_client
 from models.live_insight import LiveMeetingInsight, AnswerSource, InsightStatus
 
