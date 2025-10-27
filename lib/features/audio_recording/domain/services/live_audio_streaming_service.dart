@@ -34,6 +34,12 @@ class LiveAudioStreamingService {
   final List<double> _recentAmplitudes = [];
   static const int _amplitudeHistorySize = 50; // 5 seconds at 100ms intervals
 
+  // Audio buffering for AssemblyAI (requires 50-1000ms chunks)
+  final List<int> _audioBuffer = [];
+  static const int _minBufferSizeBytes = 1600; // 50ms at 16kHz, 16-bit, mono = 50ms * 16000 * 2 = 1600 bytes
+  static const int _maxBufferSizeBytes = 32000; // 1000ms at 16kHz, 16-bit, mono = 1000ms * 16000 * 2 = 32000 bytes
+  static const int _targetBufferSizeBytes = 3200; // 100ms chunks (good balance)
+
   // Getters
   Stream<Uint8List> get audioChunkStream => _audioChunkController.stream;
   Stream<AudioQualityMetrics> get qualityMetricsStream => _qualityController.stream;
@@ -137,6 +143,14 @@ class LiveAudioStreamingService {
     try {
       print('[LiveAudioStreamingService] Stopping audio stream...');
 
+      // Flush any remaining buffered audio
+      if (_audioBuffer.isNotEmpty) {
+        final bufferedChunk = Uint8List.fromList(_audioBuffer);
+        print('[LiveAudioStreamingService] Flushing final buffered chunk: ${bufferedChunk.length} bytes');
+        _audioChunkController.add(bufferedChunk);
+        _audioBuffer.clear();
+      }
+
       // Cancel subscription first
       await _audioStreamSubscription?.cancel();
       _audioStreamSubscription = null;
@@ -179,16 +193,44 @@ class LiveAudioStreamingService {
 
       // Log chunk info (only first few chunks to avoid spam)
       if (_sequenceNumber <= 5 || _sequenceNumber % 100 == 0) {
-        print('[LiveAudioStreamingService] Audio chunk #$_sequenceNumber: ${chunk.length} bytes, offset: ${offsetMs}ms');
+        final chunkDurationMs = (chunk.length / 32.0).toStringAsFixed(1); // bytes / (16000 * 2 / 1000)
+        print('[LiveAudioStreamingService] Raw chunk #$_sequenceNumber: ${chunk.length} bytes (~${chunkDurationMs}ms), offset: ${offsetMs}ms');
       }
 
       // Calculate audio level for quality monitoring
       _calculateAudioLevel(chunk);
 
-      // Forward chunk to listeners (WebSocket service will send to backend)
-      _audioChunkController.add(chunk);
+      // Buffer chunks to meet AssemblyAI requirements (50-1000ms)
+      _bufferAndForwardChunk(chunk);
     } catch (e) {
       print('[LiveAudioStreamingService] Error processing audio chunk: $e');
+    }
+  }
+
+  /// Buffer small chunks and forward when minimum size is reached
+  ///
+  /// AssemblyAI Universal-Streaming v3 requires audio chunks between 50ms and 1000ms
+  /// (1600 to 32000 bytes at 16kHz, 16-bit, mono)
+  void _bufferAndForwardChunk(Uint8List chunk) {
+    // Add chunk bytes to buffer
+    _audioBuffer.addAll(chunk);
+
+    // Forward buffer when it reaches target size (or max size)
+    if (_audioBuffer.length >= _targetBufferSizeBytes || _audioBuffer.length >= _maxBufferSizeBytes) {
+      // Create buffered chunk
+      final bufferedChunk = Uint8List.fromList(_audioBuffer);
+      final durationMs = (bufferedChunk.length / 32.0).toStringAsFixed(1); // bytes / (16000 * 2 / 1000)
+
+      // Log buffered chunk (throttled)
+      if (_sequenceNumber <= 5 || _sequenceNumber % 100 == 0) {
+        print('[LiveAudioStreamingService] Sending buffered chunk: ${bufferedChunk.length} bytes (~${durationMs}ms)');
+      }
+
+      // Forward to listeners (WebSocket service will send to backend)
+      _audioChunkController.add(bufferedChunk);
+
+      // Clear buffer
+      _audioBuffer.clear();
     }
   }
 

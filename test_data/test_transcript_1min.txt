@@ -1,0 +1,15 @@
+Hello everyone, thanks for joining today's infrastructure planning meeting. I wanted to start by asking - what's our current Q4 budget allocation for cloud infrastructure?
+
+Good question. I believe Sarah sent those numbers in last week's email. Let me pull it up quickly.
+
+I have it here. The Q4 cloud infrastructure budget is $250,000, which includes AWS costs, monitoring tools, and backup systems.
+
+Perfect, thank you Sarah. That's very helpful. Now, regarding the migration timeline - John, can you take ownership of creating the detailed migration plan and have it ready by next Friday?
+
+Absolutely, I'll get that migration plan drafted and circulated by end of week.
+
+Great. One more thing - does anyone know what our average database response time was last quarter? I need that for the performance report.
+
+I'm not sure off the top of my head. That might be in the monitoring dashboard docs. We should check the Datadog reports.
+
+Okay, we'll follow up on that. Let's move to the next agenda item.

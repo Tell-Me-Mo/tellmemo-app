@@ -179,7 +179,11 @@ class _LiveTranscriptionWidgetState
                   ? _buildEmptyState(theme, colorScheme)
                   : ListView.builder(
                       controller: _scrollController,
-                      padding: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.only(
+                        left: 16,
+                        right: 16,
+                        bottom: 8,
+                      ),
                       itemCount: widget.transcripts.length,
                       itemBuilder: (context, index) {
                         return _buildTranscriptItem(
@@ -195,10 +199,11 @@ class _LiveTranscriptionWidgetState
                 Positioned(
                   bottom: 16,
                   right: 16,
-                  child: FloatingActionButton.small(
+                  child: FloatingActionButton.extended(
                     onPressed: _handleResumeAutoScroll,
                     backgroundColor: colorScheme.primaryContainer,
-                    child: Row(
+                    elevation: 2,
+                    label: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
@@ -262,20 +267,17 @@ class _LiveTranscriptionWidgetState
     bool isCompact = false,
   }) {
     final speakerColor = _getSpeakerColor(transcript.speaker);
-    final isOlderThan5Min = DateTime.now().difference(transcript.timestamp).inMinutes > 5;
 
     return Padding(
       padding: EdgeInsets.only(bottom: isCompact ? 4 : 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Timestamp
+          // Timestamp - always show HH:MM format
           SizedBox(
             width: 50,
             child: Text(
-              isOlderThan5Min
-                  ? DateTimeUtils.formatTime(transcript.timestamp)
-                  : DateTimeUtils.formatTimeAgo(transcript.timestamp),
+              DateTimeUtils.formatTime(transcript.timestamp),
               style: theme.textTheme.labelSmall?.copyWith(
                 color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
               ),
@@ -325,61 +327,8 @@ class _LiveTranscriptionWidgetState
                     height: 1.5,
                   ),
                 ),
-                if (!isCompact) ...[
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      // State indicator
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: transcript.isFinal
-                              ? colorScheme.primaryContainer.withValues(alpha: 0.3)
-                              : colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              transcript.isFinal ? Icons.check : Icons.more_horiz,
-                              size: 10,
-                              color: transcript.isFinal
-                                  ? colorScheme.primary
-                                  : colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              transcript.isFinal ? 'FINAL' : 'PARTIAL',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                fontSize: 9,
-                                color: transcript.isFinal
-                                    ? colorScheme.primary
-                                    : colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Confidence indicator (if available)
-                      if (transcript.confidence != null) ...[
-                        const SizedBox(width: 8),
-                        Text(
-                          transcript.confidenceDisplay,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            fontSize: 9,
-                            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
+                // Removed FINAL/PARTIAL badge since we only show finals now
+                // Keep the UI clean and simple
               ],
             ),
           ),

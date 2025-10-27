@@ -336,7 +336,7 @@ class LiveAudioWebSocketService {
       wsBaseUrl = wsBaseUrl.substring(0, wsBaseUrl.length - 1);
     }
 
-    return '$wsBaseUrl/ws/live-insights/$sessionId?token=$token';
+    return '$wsBaseUrl/ws/audio-stream/$sessionId?token=$token';
   }
 
   /// Update state and notify listeners

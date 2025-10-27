@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../projects/domain/entities/project.dart';
@@ -12,6 +13,7 @@ import '../../../../core/utils/screen_info.dart';
 import '../../../live_insights/presentation/widgets/live_transcription_widget.dart';
 import '../../../live_insights/data/models/transcript_model.dart';
 import '../../../live_insights/data/models/live_insight_model.dart';
+import '../../../live_insights/presentation/providers/live_insights_provider.dart';
 
 enum ProjectSelectionMode { automatic, manual, specific }
 
@@ -43,10 +45,13 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
   // Live transcription state
   final List<TranscriptModel> _transcripts = [];
   bool _transcriptionCollapsed = false;
+  StreamSubscription<TranscriptSegment>? _transcriptionSubscription;
 
   // Live insights state (questions and actions)
   final List<LiveQuestion> _questions = [];
   final List<LiveAction> _actions = [];
+  StreamSubscription<LiveQuestion>? _questionsSubscription;
+  StreamSubscription<LiveAction>? _actionsSubscription;
 
   @override
   void initState() {
@@ -78,7 +83,113 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
   void dispose() {
     _animationController.dispose();
     _titleController.dispose();
+    _transcriptionSubscription?.cancel();
+    _questionsSubscription?.cancel();
+    _actionsSubscription?.cancel();
     super.dispose();
+  }
+
+  /// Convert TranscriptSegment from WebSocket to TranscriptModel for UI
+  TranscriptModel _convertSegmentToModel(TranscriptSegment segment) {
+    return TranscriptModel(
+      id: segment.id,
+      text: segment.text,
+      speaker: segment.speaker,
+      timestamp: segment.startTime,
+      state: segment.isFinal ? TranscriptionState.final_ : TranscriptionState.partial,
+      confidence: segment.confidence,
+      startMs: null,
+      endMs: null,
+    );
+  }
+
+  /// Subscribe to live insights streams (transcriptions, questions, actions)
+  void _subscribeToLiveInsights() {
+    final liveInsightsService = ref.read(liveInsightsWebSocketServiceProvider);
+
+    // Subscribe to transcriptions
+    _transcriptionSubscription?.cancel();
+    _transcriptionSubscription = liveInsightsService.transcriptionUpdates.listen(
+      (transcriptSegment) {
+        if (!mounted) return;
+
+        // Only show FINAL transcripts in UI (ignore partial for cleaner display)
+        if (!transcriptSegment.isFinal) {
+          return;
+        }
+
+        setState(() {
+          final transcriptModel = _convertSegmentToModel(transcriptSegment);
+
+          // Check if this transcript already exists (shouldn't happen with finals, but check anyway)
+          final index = _transcripts.indexWhere((t) => t.id == transcriptModel.id);
+          if (index != -1) {
+            // Update existing transcript
+            _transcripts[index] = transcriptModel;
+          } else {
+            // Add new final transcript
+            _transcripts.add(transcriptModel);
+          }
+        });
+      },
+      onError: (error) {
+        debugPrint('[RecordingPanel] Transcription stream error: $error');
+      },
+    );
+
+    // Subscribe to questions
+    _questionsSubscription?.cancel();
+    _questionsSubscription = liveInsightsService.questionUpdates.listen(
+      (question) {
+        if (!mounted) return;
+
+        setState(() {
+          final index = _questions.indexWhere((q) => q.id == question.id);
+          if (index != -1) {
+            _questions[index] = question;
+          } else {
+            _questions.add(question);
+          }
+        });
+      },
+      onError: (error) {
+        debugPrint('[RecordingPanel] Questions stream error: $error');
+      },
+    );
+
+    // Subscribe to actions
+    _actionsSubscription?.cancel();
+    _actionsSubscription = liveInsightsService.actionUpdates.listen(
+      (action) {
+        if (!mounted) return;
+
+        setState(() {
+          final index = _actions.indexWhere((a) => a.id == action.id);
+          if (index != -1) {
+            _actions[index] = action;
+          } else {
+            _actions.add(action);
+          }
+        });
+      },
+      onError: (error) {
+        debugPrint('[RecordingPanel] Actions stream error: $error');
+      },
+    );
+
+    debugPrint('[RecordingPanel] Subscribed to live insights streams');
+  }
+
+  /// Unsubscribe from all live insights streams
+  void _unsubscribeFromLiveInsights() {
+    _transcriptionSubscription?.cancel();
+    _transcriptionSubscription = null;
+    _questionsSubscription?.cancel();
+    _questionsSubscription = null;
+    _actionsSubscription?.cancel();
+    _actionsSubscription = null;
+
+    debugPrint('[RecordingPanel] Unsubscribed from live insights streams');
   }
 
   Future<void> _handleClose() async {
@@ -196,6 +307,35 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final recordingState = ref.watch(recordingNotifierProvider);
+
+    // Listen for recording state changes to subscribe/unsubscribe from live insights
+    ref.listen<RecordingStateModel>(recordingNotifierProvider, (previous, next) {
+      final shouldBeSubscribed = next.aiAssistantEnabled &&
+          (next.state == RecordingState.recording || next.state == RecordingState.paused);
+
+      final wasSubscribed = previous != null &&
+          previous.aiAssistantEnabled &&
+          (previous.state == RecordingState.recording || previous.state == RecordingState.paused);
+
+      // Subscribe when AI Assistant starts with recording
+      if (shouldBeSubscribed && !wasSubscribed) {
+        debugPrint('[RecordingPanel] AI Assistant recording started - subscribing to live insights');
+        _subscribeToLiveInsights();
+      }
+
+      // Unsubscribe when recording stops or AI Assistant is disabled
+      if (!shouldBeSubscribed && wasSubscribed) {
+        debugPrint('[RecordingPanel] AI Assistant recording stopped - unsubscribing from live insights');
+        _unsubscribeFromLiveInsights();
+        // Clear the lists
+        setState(() {
+          _transcripts.clear();
+          _questions.clear();
+          _actions.clear();
+        });
+      }
+    });
+
     final screenInfo = ScreenInfo.fromContext(context);
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     final screenWidth = MediaQuery.of(context).size.width;

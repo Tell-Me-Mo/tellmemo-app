@@ -13,6 +13,7 @@ class LiveInsightsWebSocketService {
   String? _sessionId;
   bool _isConnected = false;
   bool _isConnecting = false;
+  bool _intentionalDisconnect = false; // Track if disconnect was intentional
 
   // Stream controllers for live insights updates
   final _questionsController = StreamController<LiveQuestion>.broadcast();
@@ -48,6 +49,9 @@ class LiveInsightsWebSocketService {
 
   /// Connect to WebSocket server for a specific session
   Future<void> connect(String sessionId) async {
+    // Reset intentional disconnect flag when reconnecting
+    _intentionalDisconnect = false;
+
     // Prevent concurrent connection attempts
     if (_isConnecting) {
       debugPrint(
@@ -296,8 +300,12 @@ class LiveInsightsWebSocketService {
     _connectionStateController.add(false);
     _pingTimer?.cancel();
 
-    // Attempt reconnection
-    _handleError('Connection closed');
+    // Only attempt reconnection if disconnect was NOT intentional
+    if (!_intentionalDisconnect) {
+      _handleError('Connection closed');
+    } else {
+      debugPrint('[LiveInsightsWebSocket] Intentional disconnect - skipping reconnection');
+    }
   }
 
   /// Start ping timer for keepalive
@@ -379,6 +387,9 @@ class LiveInsightsWebSocketService {
   Future<void> disconnect() async {
     debugPrint('[LiveInsightsWebSocket] Disconnecting from session');
 
+    // Mark as intentional disconnect to prevent automatic reconnection
+    _intentionalDisconnect = true;
+
     _reconnectTimer?.cancel();
     _pingTimer?.cancel();
 
@@ -396,6 +407,9 @@ class LiveInsightsWebSocketService {
   /// Disconnect and cleanup (full disposal)
   Future<void> dispose() async {
     debugPrint('[LiveInsightsWebSocket] Disposing service');
+
+    // Mark as intentional disconnect to prevent automatic reconnection
+    _intentionalDisconnect = true;
 
     _reconnectTimer?.cancel();
     _pingTimer?.cancel();

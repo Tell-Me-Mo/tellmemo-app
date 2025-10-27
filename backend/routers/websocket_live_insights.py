@@ -7,7 +7,7 @@ including question detection, answer discovery, and action item tracking.
 
 import asyncio
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Set, Optional
 from uuid import UUID
 
@@ -564,36 +564,57 @@ async def handle_transcription_result(session_id: str, result: TranscriptionResu
         result: Parsed transcription result
     """
     try:
-        # Prepare transcript data for broadcasting
+        # Generate unique ID for this transcript segment
+        import uuid
+        transcript_id = str(uuid.uuid4())
+
+        # Convert audio timestamps (milliseconds) to ISO datetime strings
+        # Use created_at as base timestamp, then add audio offsets
+        base_time = datetime.fromisoformat(result.created_at.replace('Z', '+00:00')) if result.created_at else datetime.utcnow()
+
+        # Calculate start/end times from audio offsets
+        start_time = base_time + timedelta(milliseconds=result.audio_start)
+        end_time = base_time + timedelta(milliseconds=result.audio_end) if result.audio_end > 0 else None
+
+        # Prepare transcript data for broadcasting (Flutter-compatible format)
         transcript_data = {
+            "id": transcript_id,
             "text": result.text,
-            "speaker": result.speaker or "Unknown",
+            "speaker": result.speaker,  # Can be null
+            "startTime": start_time.isoformat(),
+            "endTime": end_time.isoformat() if end_time else None,
+            "isFinal": result.is_final,
             "confidence": result.confidence,
-            "audio_start": result.audio_start,
-            "audio_end": result.audio_end,
-            "created_at": result.created_at,
-            "words": result.words
+            "metadata": {
+                "audio_start": result.audio_start,
+                "audio_end": result.audio_end,
+                "words": result.words
+            }
         }
 
         # Broadcast appropriate event based on transcription type
         if result.is_final:
             await broadcast_transcription_final(session_id, transcript_data)
 
+            logger.info(f"🔵 FINAL transcription received for session {sanitize_for_log(session_id)}: '{result.text[:100]}...'")
+
             # Task 7.2: Send final transcription to streaming orchestrator for intelligence processing
             try:
                 orchestrator = get_orchestrator(session_id)
+                logger.info(f"Sending final transcript to orchestrator for session {sanitize_for_log(session_id)}")
                 await orchestrator.process_transcription_chunk(
                     text=result.text,
                     speaker=result.speaker,
                     timestamp=datetime.fromisoformat(result.created_at.replace('Z', '+00:00')) if result.created_at else datetime.utcnow(),
                     is_final=True
                 )
-                logger.debug(f"Forwarded final transcription to orchestrator for session {sanitize_for_log(session_id)}")
+                logger.info(f"✅ Successfully forwarded final transcription to orchestrator for session {sanitize_for_log(session_id)}")
             except Exception as e:
-                logger.error(f"Failed to process transcription with orchestrator for session {sanitize_for_log(session_id)}: {e}", exc_info=True)
+                logger.error(f"❌ Failed to process transcription with orchestrator for session {sanitize_for_log(session_id)}: {e}", exc_info=True)
                 # Continue execution - don't fail transcription if intelligence processing fails
 
         else:
+            logger.debug(f"⚪ Partial transcription for session {sanitize_for_log(session_id)}: '{result.text[:50]}...'")
             await broadcast_transcription_partial(session_id, transcript_data)
 
     except Exception as e:
@@ -610,15 +631,18 @@ async def handle_assemblyai_error(session_id: str, error: str):
     """
     logger.error(f"AssemblyAI error for session {sanitize_for_log(session_id)}: {error}")
 
-    # Broadcast error to clients
-    await insights_manager.broadcast_to_session(
-        session_id,
-        {
-            "type": "TRANSCRIPTION_ERROR",
-            "error": error,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    )
+    # Broadcast error to clients (if any are connected)
+    try:
+        await insights_manager.broadcast_to_session(
+            session_id,
+            {
+                "type": "TRANSCRIPTION_ERROR",
+                "error": error,
+                "timestamp": datetime.utcnow().isoformat()
+            }
+        )
+    except Exception as e:
+        logger.warning(f"Failed to broadcast AssemblyAI error to session {sanitize_for_log(session_id)}: {e}")
 
 
 # =============================================================================
@@ -741,8 +765,17 @@ async def websocket_audio_stream(
                         logger.error(f"Invalid JSON from audio client: {e}")
 
             except Exception as e:
+                error_msg = str(e)
+
+                # Break loop if WebSocket is disconnected/closed
+                if "disconnect" in error_msg.lower() or "closed" in error_msg.lower() or "receive" in error_msg.lower():
+                    logger.info(f"WebSocket disconnected during message processing for session {sanitize_for_log(session_id)}")
+                    break
+
+                # Log unexpected errors
                 logger.error(f"Error processing audio message: {e}")
-                # Continue processing other messages
+
+                # Continue processing other messages for non-fatal errors
 
     except WebSocketDisconnect:
         logger.info(f"Audio stream disconnected for session {sanitize_for_log(session_id)}")
@@ -979,12 +1012,25 @@ async def websocket_live_insights(
                 })
 
             except Exception as e:
+                error_msg = str(e)
+
+                # Check if this is a disconnect/close error (expected during shutdown)
+                if "disconnect" in error_msg.lower() or "closed" in error_msg.lower() or "NO_STATUS_RCVD" in error_msg:
+                    logger.info(f"WebSocket closed during message processing for session {sanitize_for_log(session_id)}")
+                    break
+
+                # Log unexpected errors
                 logger.error(f"Error processing message: {e}")
-                await websocket.send_json({
-                    "type": "error",
-                    "error": "Internal server error",
-                    "timestamp": datetime.utcnow().isoformat()
-                })
+
+                # Try to send error message only if WebSocket is still connected
+                try:
+                    await websocket.send_json({
+                        "type": "error",
+                        "error": "Internal server error",
+                        "timestamp": datetime.utcnow().isoformat()
+                    })
+                except Exception as send_error:
+                    logger.debug(f"Could not send error message (WebSocket likely closed): {send_error}")
 
     except WebSocketDisconnect:
         logger.info(f"WebSocket disconnected for session {sanitize_for_log(session_id)}")

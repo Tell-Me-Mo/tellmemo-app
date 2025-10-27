@@ -41,7 +41,7 @@ class GPT5StreamingClient:
     def __init__(
         self,
         openai_client: AsyncOpenAI,
-        model: str = "gpt-5-mini",
+        model: str = "gpt-4o-mini",  # Using gpt-4o-mini (no verification required, cheaper, faster)
         temperature: float = 0.3,
         max_tokens: int = 1000,
         timeout: float = 30.0
@@ -159,8 +159,8 @@ class GPT5StreamingClient:
                     messages=messages,
                     stream=True,
                     stream_options={"include_usage": True},
-                    temperature=self.temperature,
-                    max_tokens=self.max_tokens,
+                    temperature=self.temperature,  # gpt-4o-mini supports temperature
+                    max_tokens=self.max_tokens,  # gpt-4o-mini uses max_tokens (not max_completion_tokens)
                     timeout=self.timeout
                 )
 
@@ -310,7 +310,7 @@ class GPT5StreamingClient:
 
 async def create_streaming_client(
     openai_client: AsyncOpenAI,
-    model: str = "gpt-5-mini",
+    model: str = "gpt-4o-mini",  # Using gpt-4o-mini (no verification required, cheaper, faster)
     temperature: float = 0.3,
     max_tokens: int = 1000
 ) -> GPT5StreamingClient:

@@ -4,7 +4,7 @@ Streaming Intelligence Orchestrator
 Main orchestrator service that coordinates all streaming intelligence components
 for real-time meeting analysis. Integrates:
 - Transcription Buffer Management
-- GPT-5-mini Streaming Interface
+- GPT-4o-mini Streaming Interface
 - Stream Router (routing to handlers)
 - Question Handler (four-tier answer discovery)
 - Action Handler (tracking and completeness)
@@ -31,13 +31,14 @@ from utils.logger import get_logger, sanitize_for_log
 from utils.exceptions import APIException
 
 # Service imports
-from services.transcription.transcription_buffer_service import get_transcription_buffer
+from services.transcription.transcription_buffer_service import get_transcription_buffer, TranscriptionSentence
 from services.llm.gpt5_streaming import create_streaming_client, GPT5StreamingClient
 from services.intelligence.stream_router import StreamRouter, get_stream_router, cleanup_stream_router
 from services.intelligence.question_handler import QuestionHandler
 from services.intelligence.action_handler import ActionHandler
 from services.intelligence.answer_handler import AnswerHandler
 from services.intelligence.segment_detector import get_segment_detector
+from services.prompts.live_insights_prompts import get_streaming_intelligence_system_prompt
 
 # WebSocket import - use lazy import to avoid circular dependency
 # from routers.websocket_live_insights import insights_manager
@@ -96,7 +97,7 @@ class StreamingIntelligenceOrchestrator:
     Coordinates all streaming components:
     - Receives transcription chunks
     - Maintains rolling transcript buffer
-    - Streams context to GPT-5-mini
+    - Streams context to GPT-4o-mini
     - Routes GPT outputs to handlers
     - Manages parallel answer discovery
     - Broadcasts updates via WebSocket
@@ -286,13 +287,28 @@ class StreamingIntelligenceOrchestrator:
                 logger.debug(f"Skipping partial transcript for session {self.session_id}")
                 return {"status": "skipped", "reason": "partial_transcript"}
 
-            # Add to transcript buffer
-            await self.buffer_service.add_sentence(
-                session_id=self.session_id,
+            # Create TranscriptionSentence object
+            import uuid
+            import time
+            # Use current Unix timestamp directly to avoid timezone issues
+            # We ignore the passed timestamp parameter since it may have timezone conversion issues
+            current_timestamp = time.time()
+            sentence = TranscriptionSentence(
+                sentence_id=str(uuid.uuid4()),
                 text=text,
-                speaker=speaker,
-                timestamp=timestamp or datetime.utcnow()
+                speaker=speaker or "Unknown",
+                timestamp=current_timestamp,
+                start_time=current_timestamp,
+                end_time=current_timestamp,
+                confidence=1.0
             )
+
+            # Add to transcript buffer
+            added = await self.buffer_service.add_sentence(
+                session_id=self.session_id,
+                sentence=sentence
+            )
+            logger.info(f"Buffer add result for session {self.session_id}: {added}, text='{text[:100]}'")
 
             # Get formatted context for GPT
             transcript_context = await self.buffer_service.get_formatted_context(
@@ -301,6 +317,7 @@ class StreamingIntelligenceOrchestrator:
                 include_speakers=True,
                 max_age_seconds=60  # Last 60 seconds
             )
+            logger.info(f"Retrieved transcript context for session {self.session_id}: length={len(transcript_context)} chars")
 
             if not transcript_context:
                 logger.warning(f"Empty transcript context for session {self.session_id}")
@@ -367,7 +384,7 @@ class StreamingIntelligenceOrchestrator:
         session: AsyncSession
     ):
         """
-        Stream intelligence analysis from GPT-5-mini.
+        Stream intelligence analysis from GPT-4o-mini.
 
         Args:
             transcript_context: Formatted transcript buffer
@@ -381,32 +398,40 @@ class StreamingIntelligenceOrchestrator:
 
                 settings = get_settings()
 
-                # GPT-5-mini requires OpenAI API key (not primary/fallback provider)
+                # GPT-4o-mini requires OpenAI API key (not primary/fallback provider)
                 if not settings.openai_api_key:
                     raise RuntimeError(
-                        "GPT-5-mini streaming requires OPENAI_API_KEY to be set in environment. "
+                        "GPT-4o-mini streaming requires OPENAI_API_KEY to be set in environment. "
                         "This is used for real-time meeting intelligence regardless of primary LLM provider."
                     )
 
-                # Create dedicated OpenAI provider for GPT-5-mini streaming
+                # Create dedicated OpenAI provider for GPT-4o-mini streaming
                 openai_provider = OpenAIProviderClient(settings.openai_api_key, settings)
                 if not openai_provider.client:
-                    raise RuntimeError("Failed to initialize OpenAI client for GPT-5-mini streaming")
+                    raise RuntimeError("Failed to initialize OpenAI client for GPT-4o-mini streaming")
 
-                self._gpt_client = create_streaming_client(openai_provider.client)
+                self._gpt_client = await create_streaming_client(openai_provider.client)
 
             # Build context with active questions/actions
             context = await self._build_context()
 
+            # Get system prompt for streaming intelligence
+            system_prompt = get_streaming_intelligence_system_prompt()
+
+            logger.info(f"Starting GPT streaming for session {self.session_id} - transcript length: {len(transcript_context)} chars")
+
             # Stream objects from GPT
             async for obj in self._gpt_client.stream_intelligence(
                 transcript_buffer=transcript_context,
-                context=context
+                context=context,
+                system_prompt=system_prompt
             ):
                 self.metrics.objects_routed += 1
 
                 # Track object types
                 obj_type = obj.get("type")
+                logger.info(f"GPT detected object type: {obj_type} - {obj}")
+
                 if obj_type == "question":
                     self.metrics.questions_detected += 1
                 elif obj_type == "action":

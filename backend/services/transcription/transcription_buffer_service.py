@@ -1,7 +1,7 @@
 """
 Transcription Buffer Service
 
-Manages a rolling 60-second window of transcription sentences with Redis storage.
+Manages a rolling 60-second window of transcription sentences with in-memory storage.
 Provides formatted output for GPT consumption and automatic trimming of old content.
 
 Task 2.1: Implement Transcription Buffer Manager
@@ -11,9 +11,8 @@ import json
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 from dataclasses import dataclass, field, asdict
-
-import redis.asyncio as redis
-from redis.asyncio import Redis
+from collections import deque
+import asyncio
 
 from config import get_settings
 from utils.logger import get_logger
@@ -47,65 +46,35 @@ class TranscriptionSentence:
 
 class TranscriptionBufferService:
     """
-    Manages a rolling window of transcription sentences with Redis storage.
+    Manages a rolling window of transcription sentences with in-memory storage.
 
     Features:
     - Automatic time-based trimming (60-second window)
     - Size-based limiting (max 100 sentences)
     - Formatted output for GPT consumption
-    - Distributed state management via Redis
-    - Graceful degradation if Redis is unavailable
+    - Fast in-memory operations
+    - Per-session buffer isolation
     """
 
     def __init__(self):
         """Initialize TranscriptionBuffer service."""
-        self._client: Optional[Redis] = None
-        self._is_available = False
+        self._buffers: Dict[str, deque] = {}  # session_id -> deque of TranscriptionSentence
+        self._lock = asyncio.Lock()
         self.window_seconds = settings.transcription_buffer_window_seconds
         self.max_sentences = settings.transcription_buffer_max_sentences
-        self.ttl_hours = settings.transcription_buffer_ttl_hours
 
-    async def _get_client(self) -> Optional[Redis]:
-        """Get or create Redis client with lazy initialization."""
-        if self._client:
-            return self._client
-
-        try:
-            # Build Redis URL with authentication if password is provided
-            if settings.redis_password:
-                redis_url = f"redis://:{settings.redis_password}@{settings.redis_host}:{settings.redis_port}/{settings.redis_db}"
-            else:
-                redis_url = f"redis://{settings.redis_host}:{settings.redis_port}/{settings.redis_db}"
-
-            self._client = redis.from_url(
-                redis_url,
-                encoding="utf-8",
-                decode_responses=True,
-                socket_connect_timeout=2,
-                socket_timeout=2
-            )
-
-            await self._client.ping()
-            self._is_available = True
-            logger.info("TranscriptionBuffer connected to Redis")
-            return self._client
-
-        except Exception as e:
-            logger.error(f"Redis connection failed: {e}")
-            self._is_available = False
-            return None
+    def _get_or_create_buffer(self, session_id: str) -> deque:
+        """Get or create buffer for session."""
+        if session_id not in self._buffers:
+            self._buffers[session_id] = deque(maxlen=self.max_sentences)
+            logger.debug(f"Created new buffer for session {session_id}")
+        return self._buffers[session_id]
 
     async def close(self):
-        """Close Redis connection."""
-        if self._client:
-            await self._client.aclose()
-            self._client = None
-            self._is_available = False
-            logger.info("TranscriptionBuffer Redis connection closed")
-
-    def _get_buffer_key(self, session_id: str) -> str:
-        """Generate Redis key for session buffer."""
-        return f"transcription_buffer:{session_id}"
+        """Close and cleanup buffers."""
+        async with self._lock:
+            self._buffers.clear()
+            logger.info("TranscriptionBuffer cleaned up all session buffers")
 
     async def add_sentence(
         self,
@@ -122,29 +91,16 @@ class TranscriptionBufferService:
         Returns:
             True if added successfully, False otherwise
         """
-        client = await self._get_client()
-        if not client:
-            logger.warning(f"Redis not available, sentence not buffered for session {session_id}")
-            return False
-
         try:
-            key = self._get_buffer_key(session_id)
+            async with self._lock:
+                buffer = self._get_or_create_buffer(session_id)
+                buffer.append(sentence)
 
-            # Use Redis Sorted Set (ZADD) with timestamp as score for automatic ordering
-            sentence_json = json.dumps(sentence.to_dict())
-            await client.zadd(
-                key,
-                {sentence_json: sentence.timestamp}
-            )
+                # Auto-trim old sentences based on time window
+                await self._trim_buffer(session_id)
 
-            # Set expiration on the key (auto-cleanup if session ends)
-            await client.expire(key, timedelta(hours=self.ttl_hours))
-
-            # Auto-trim old sentences
-            await self._trim_buffer(session_id)
-
-            logger.debug(f"Added sentence to buffer for session {session_id}: {sentence.sentence_id}")
-            return True
+                logger.info(f"✅ Added sentence to buffer for session {session_id}: {sentence.sentence_id}, text='{sentence.text[:50]}', buffer_size={len(buffer)}")
+                return True
 
         except Exception as e:
             logger.error(f"Failed to add sentence to buffer for session {session_id}: {e}")
@@ -152,33 +108,33 @@ class TranscriptionBufferService:
 
     async def _trim_buffer(self, session_id: str):
         """
-        Remove sentences older than window_seconds and enforce max_sentences limit.
+        Remove sentences older than window_seconds.
 
         Args:
             session_id: Session identifier to trim
         """
-        client = await self._get_client()
-        if not client:
+        if session_id not in self._buffers:
             return
 
         try:
-            key = self._get_buffer_key(session_id)
+            buffer = self._buffers[session_id]
             current_time = datetime.now().timestamp()
             cutoff_time = current_time - self.window_seconds
 
-            # Remove entries with score (timestamp) < cutoff_time
-            removed_count = await client.zremrangebyscore(key, '-inf', cutoff_time)
+            logger.info(f"_trim_buffer: session={session_id}, buffer_len={len(buffer)}, current_time={current_time}, cutoff_time={cutoff_time}, window={self.window_seconds}s")
+
+            if buffer:
+                logger.info(f"First sentence timestamp: {buffer[0].timestamp}, is_old={buffer[0].timestamp < cutoff_time}")
+
+            # Remove sentences older than cutoff time (from left side)
+            removed_count = 0
+            while buffer and buffer[0].timestamp < cutoff_time:
+                removed_sentence = buffer.popleft()
+                removed_count += 1
+                logger.warning(f"TRIMMED sentence: timestamp={removed_sentence.timestamp}, age={(current_time - removed_sentence.timestamp)}s")
 
             if removed_count > 0:
-                logger.debug(f"Trimmed {removed_count} old sentences from buffer for session {session_id}")
-
-            # Enforce max_sentences limit (keep only latest N sentences)
-            count = await client.zcard(key)
-            if count > self.max_sentences:
-                # Remove oldest entries beyond max_sentences
-                to_remove = count - self.max_sentences
-                await client.zremrangebyrank(key, 0, to_remove - 1)
-                logger.debug(f"Removed {to_remove} excess sentences to enforce max limit for session {session_id}")
+                logger.warning(f"Trimmed {removed_count} sentences from buffer for session {session_id}, remaining={len(buffer)}")
 
         except Exception as e:
             logger.error(f"Failed to trim buffer for session {session_id}: {e}")
@@ -198,37 +154,25 @@ class TranscriptionBufferService:
         Returns:
             List of TranscriptionSentence objects in chronological order
         """
-        client = await self._get_client()
-        if not client:
-            logger.warning(f"Redis not available, returning empty buffer for session {session_id}")
-            return []
-
         try:
-            key = self._get_buffer_key(session_id)
+            async with self._lock:
+                if session_id not in self._buffers:
+                    logger.debug(f"No buffer exists for session {session_id}")
+                    return []
 
-            # Get sentences within time window
-            if max_age_seconds:
-                current_time = datetime.now().timestamp()
-                cutoff_time = current_time - max_age_seconds
-                raw_sentences = await client.zrangebyscore(
-                    key, cutoff_time, '+inf'
-                )
-            else:
-                # Get all sentences (already time-trimmed)
-                raw_sentences = await client.zrange(key, 0, -1)
+                buffer = self._buffers[session_id]
 
-            # Deserialize sentences
-            sentences = []
-            for raw in raw_sentences:
-                try:
-                    data = json.loads(raw)
-                    sentences.append(TranscriptionSentence.from_dict(data))
-                except json.JSONDecodeError as e:
-                    logger.warning(f"Malformed sentence JSON in buffer: {e}")
-                    continue
+                # Filter by time window if specified
+                if max_age_seconds:
+                    current_time = datetime.now().timestamp()
+                    cutoff_time = current_time - max_age_seconds
+                    sentences = [s for s in buffer if s.timestamp >= cutoff_time]
+                    logger.info(f"Retrieved {len(sentences)}/{len(buffer)} sentences for session {session_id} (within {max_age_seconds}s)")
+                else:
+                    sentences = list(buffer)
+                    logger.info(f"Retrieved {len(sentences)} sentences from buffer for session {session_id}")
 
-            logger.debug(f"Retrieved {len(sentences)} sentences from buffer for session {session_id}")
-            return sentences
+                return sentences
 
         except Exception as e:
             logger.error(f"Failed to get buffer for session {session_id}: {e}")
@@ -255,7 +199,10 @@ class TranscriptionBufferService:
         """
         sentences = await self.get_buffer(session_id, max_age_seconds)
 
+        logger.info(f"get_formatted_context for session {session_id}: found {len(sentences)} sentences")
+
         if not sentences:
+            logger.warning(f"⚠️ No sentences in buffer for session {session_id}")
             return "No recent transcription available."
 
         lines = []
@@ -287,55 +234,42 @@ class TranscriptionBufferService:
         Returns:
             Dictionary with buffer statistics
         """
-        client = await self._get_client()
-        if not client:
-            return {
-                "session_id": session_id,
-                "sentence_count": 0,
-                "redis_available": False,
-                "error": "Redis not available"
-            }
-
         try:
-            key = self._get_buffer_key(session_id)
+            async with self._lock:
+                if session_id not in self._buffers:
+                    return {
+                        "session_id": session_id,
+                        "sentence_count": 0,
+                        "window_seconds": self.window_seconds,
+                        "max_sentences": self.max_sentences
+                    }
 
-            # Get sentence count
-            count = await client.zcard(key)
+                buffer = self._buffers[session_id]
+                count = len(buffer)
 
-            # Get time range
-            if count > 0:
-                oldest_raw = await client.zrange(key, 0, 0, withscores=True)
-                newest_raw = await client.zrange(key, -1, -1, withscores=True)
+                if count > 0:
+                    oldest_timestamp = buffer[0].timestamp
+                    newest_timestamp = buffer[-1].timestamp
+                    time_span_seconds = newest_timestamp - oldest_timestamp
+                else:
+                    oldest_timestamp = None
+                    newest_timestamp = None
+                    time_span_seconds = 0
 
-                oldest_timestamp = oldest_raw[0][1] if oldest_raw else None
-                newest_timestamp = newest_raw[0][1] if newest_raw else None
-
-                time_span_seconds = newest_timestamp - oldest_timestamp if (oldest_timestamp and newest_timestamp) else 0
-            else:
-                oldest_timestamp = None
-                newest_timestamp = None
-                time_span_seconds = 0
-
-            # Get TTL
-            ttl = await client.ttl(key)
-
-            return {
-                "session_id": session_id,
-                "sentence_count": count,
-                "oldest_timestamp": oldest_timestamp,
-                "newest_timestamp": newest_timestamp,
-                "time_span_seconds": time_span_seconds,
-                "ttl_seconds": ttl,
-                "redis_available": True,
-                "window_seconds": self.window_seconds,
-                "max_sentences": self.max_sentences
-            }
+                return {
+                    "session_id": session_id,
+                    "sentence_count": count,
+                    "oldest_timestamp": oldest_timestamp,
+                    "newest_timestamp": newest_timestamp,
+                    "time_span_seconds": time_span_seconds,
+                    "window_seconds": self.window_seconds,
+                    "max_sentences": self.max_sentences
+                }
 
         except Exception as e:
             logger.error(f"Failed to get buffer stats for session {session_id}: {e}")
             return {
                 "session_id": session_id,
-                "redis_available": True,
                 "error": str(e)
             }
 
@@ -349,16 +283,12 @@ class TranscriptionBufferService:
         Returns:
             True if cleared successfully, False otherwise
         """
-        client = await self._get_client()
-        if not client:
-            logger.warning(f"Redis not available, cannot clear buffer for session {session_id}")
-            return False
-
         try:
-            key = self._get_buffer_key(session_id)
-            await client.delete(key)
-            logger.info(f"Cleared buffer for session {session_id}")
-            return True
+            async with self._lock:
+                if session_id in self._buffers:
+                    del self._buffers[session_id]
+                    logger.info(f"Cleared buffer for session {session_id}")
+                return True
         except Exception as e:
             logger.error(f"Failed to clear buffer for session {session_id}: {e}")
             return False

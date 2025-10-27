@@ -52,7 +52,7 @@ class LiveMeetingInsight(Base):
     recording_id = Column(
         UUID(as_uuid=True),
         ForeignKey("recordings.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
         index=True
     )
 
