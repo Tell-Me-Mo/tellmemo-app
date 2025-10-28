@@ -197,7 +197,7 @@ class MeetingContextSearchService:
         try:
             response = await self.llm_client.create_message(
                 prompt=user_prompt,
-                system_prompt=system_prompt,
+                system=system_prompt,  # Use 'system' not 'system_prompt' for Claude API
                 session=None,
                 organization_id=organization_id,
                 temperature=0.3,  # Low temperature for precise search
@@ -287,7 +287,25 @@ Search the transcript above and determine if this question was already answered 
             MeetingContextResult with parsed data
         """
         try:
-            data = json.loads(response)
+            # Extract text content from Message object (Claude/OpenAI response)
+            if hasattr(response, 'content') and isinstance(response.content, list):
+                # Claude/OpenAI Message object with content array
+                response_text = response.content[0].text if response.content else ""
+                logger.debug(f"Extracted text from Message object: {response_text[:200] if response_text else 'EMPTY'}")
+            elif isinstance(response, str):
+                # Already a string
+                response_text = response
+                logger.debug(f"Response already string: {response_text[:200] if response_text else 'EMPTY'}")
+            else:
+                # Fallback - convert to string
+                response_text = str(response)
+                logger.debug(f"Converted response to string: {response_text[:200]}")
+
+            if not response_text or response_text.strip() == "":
+                logger.warning("Response text is empty after extraction")
+                return MeetingContextResult(found_answer=False)
+
+            data = json.loads(response_text)
 
             found_answer = data.get("found_answer", False)
             confidence = float(data.get("confidence", 0.0))
@@ -324,7 +342,7 @@ Search the transcript above and determine if this question was already answered 
         except json.JSONDecodeError as e:
             logger.error(
                 f"Failed to parse GPT response as JSON: {str(e)}, "
-                f"response='{response[:200]}...'"
+                f"response_text='{response_text[:200] if response_text else 'EMPTY'}...'"
             )
             return MeetingContextResult(found_answer=False)
 

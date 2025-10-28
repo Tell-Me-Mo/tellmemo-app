@@ -179,7 +179,7 @@ class GPTAnswerGenerator:
             # Call GPT (non-streaming)
             response = await llm_client.create_message(
                 prompt=user_prompt,
-                system_prompt=system_prompt,
+                system=system_prompt,  # Use 'system' not 'system_prompt'
                 session=None,  # No session for background task
                 organization_id=None,
                 temperature=0.7,  # Balanced creativity and consistency
@@ -187,12 +187,28 @@ class GPTAnswerGenerator:
                 response_format={"type": "json_object"}
             )
 
-            # Parse response
-            if not response or not response.get("content"):
+            # Parse response - extract text from Message object
+            if not response:
                 logger.warning("GPT returned empty response")
                 return None
 
-            content = response["content"]
+            # Extract text content from Message object (Claude/OpenAI response)
+            if hasattr(response, 'content') and isinstance(response.content, list):
+                # Claude/OpenAI Message object with content array
+                content = response.content[0].text if response.content else ""
+            elif isinstance(response, dict):
+                # Dictionary response (legacy format)
+                content = response.get("content", "")
+            elif isinstance(response, str):
+                # Already a string
+                content = response
+            else:
+                logger.warning(f"Unexpected response type: {type(response)}")
+                return None
+
+            if not content:
+                logger.warning("GPT response has no content")
+                return None
 
             # Try to parse as JSON
             try:

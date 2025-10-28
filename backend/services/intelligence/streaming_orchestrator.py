@@ -290,9 +290,12 @@ class StreamingIntelligenceOrchestrator:
         async def broadcast_wrapper(session_id: str, event_data: dict):
             """Wrapper for WebSocket broadcasting."""
             try:
+                event_type = event_data.get("type", "UNKNOWN")
+                logger.info(f"📡 broadcast_wrapper called: session={session_id}, event_type={event_type}")
                 await _get_insights_manager().broadcast_to_session(session_id, event_data)
+                logger.info(f"✅ broadcast_to_session completed for {event_type}")
             except Exception as e:
-                logger.error(f"WebSocket broadcast failed: {e}")
+                logger.error(f"❌ WebSocket broadcast failed: {e}", exc_info=True)
 
         self.question_handler.set_websocket_callback(broadcast_wrapper)
         self.action_handler.set_websocket_callback(broadcast_wrapper)

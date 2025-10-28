@@ -139,7 +139,13 @@ class ClaudeProviderClient(BaseProviderClient):
         if system:
             api_params["system"] = system
 
-        api_params.update(kwargs)
+        # Filter out OpenAI-specific parameters that Claude doesn't support
+        # Also filter out common naming mistakes (e.g., system_prompt instead of system)
+        claude_incompatible_params = {
+            "response_format", "stream", "n", "logprobs", "top_logprobs", "system_prompt"
+        }
+        filtered_kwargs = {k: v for k, v in kwargs.items() if k not in claude_incompatible_params}
+        api_params.update(filtered_kwargs)
 
         response = await self.client.messages.create(**api_params)
 
@@ -158,12 +164,19 @@ class ClaudeProviderClient(BaseProviderClient):
         if not self.client:
             return None
 
+        # Filter out OpenAI-specific parameters that Claude doesn't support
+        # Also filter out common naming mistakes (e.g., system_prompt instead of system)
+        claude_incompatible_params = {
+            "response_format", "stream", "n", "logprobs", "top_logprobs", "system_prompt"
+        }
+        filtered_kwargs = {k: v for k, v in kwargs.items() if k not in claude_incompatible_params}
+
         api_params = {
             "model": model,
             "max_tokens": max_tokens,
             "temperature": temperature,
             "messages": messages,
-            **kwargs
+            **filtered_kwargs
         }
 
         response = await self.client.messages.create(**api_params)

@@ -121,10 +121,14 @@ class QuestionHandler:
             db_question_id = str(question_insight.id)
 
             # Broadcast QUESTION_DETECTED event
+            question_dict = question_insight.to_dict()
+            logger.info(f"🔊 Broadcasting QUESTION_DETECTED for session {session_id}: question_id={db_question_id}, text='{question_text[:50]}'")
             await self._broadcast_event(session_id, {
                 "type": "QUESTION_DETECTED",
-                "question": question_insight.to_dict()
+                "data": question_dict,  # Use 'data' key for consistency with frontend
+                "timestamp": datetime.utcnow().isoformat()
             })
+            logger.info(f"✅ Broadcast completed for question {db_question_id}")
 
             # Start parallel answer discovery (Tiers 1, 2, and 3)
             # Note: Tier 4 (GPT-generated) will be triggered only if other tiers fail
