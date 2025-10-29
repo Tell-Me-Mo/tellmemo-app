@@ -80,6 +80,13 @@ class ActionHandler:
             confidence = action_data.get("confidence", 0.0)
             completeness = action_data.get("completeness", 0.0)
 
+            # Clean up placeholder values - treat them as None
+            PLACEHOLDER_VALUES = {'unknown', 'unassigned', 'tbd', 'to be determined', 'none', 'n/a'}
+            if owner and owner.strip().lower() in PLACEHOLDER_VALUES:
+                owner = None
+            if deadline and deadline.strip().lower() in PLACEHOLDER_VALUES:
+                deadline = None
+
             # Filter out low-confidence actions
             if confidence < self.min_confidence_threshold:
                 logger.debug(
@@ -203,6 +210,13 @@ class ActionHandler:
             new_deadline = update_data.get("deadline")
             new_completeness = update_data.get("completeness")
             confidence = update_data.get("confidence", 0.0)
+
+            # Clean up placeholder values - treat them as None
+            PLACEHOLDER_VALUES = {'unknown', 'unassigned', 'tbd', 'to be determined', 'none', 'n/a'}
+            if new_owner and new_owner.strip().lower() in PLACEHOLDER_VALUES:
+                new_owner = None
+            if new_deadline and new_deadline.strip().lower() in PLACEHOLDER_VALUES:
+                new_deadline = None
 
             if not action_gpt_id:
                 logger.warning("action_update event missing 'id' field")
@@ -382,16 +396,21 @@ class ActionHandler:
         """
         score = 0.0
 
+        # Placeholder values that indicate missing information
+        PLACEHOLDER_VALUES = {'unknown', 'unassigned', 'tbd', 'to be determined', 'none', 'n/a'}
+
         # Description clarity (40%)
         if description and len(description.strip()) >= 10:
             score += 0.4
 
         # Owner assignment (30%)
-        if owner:
+        # Only count as valid if owner exists and is not a placeholder value
+        if owner and owner.strip().lower() not in PLACEHOLDER_VALUES:
             score += 0.3
 
         # Deadline specified (30%)
-        if deadline:
+        # Only count as valid if deadline exists and is not a placeholder value
+        if deadline and deadline.strip().lower() not in PLACEHOLDER_VALUES:
             score += 0.3
 
         return round(score, 2)
@@ -486,13 +505,23 @@ class ActionHandler:
 
             metadata = action.insight_metadata or {}
 
+            # Clean up placeholder values in new data
+            PLACEHOLDER_VALUES = {'unknown', 'unassigned', 'tbd', 'to be determined', 'none', 'n/a'}
+            new_owner = new_data.get("owner")
+            new_deadline = new_data.get("deadline")
+
+            if new_owner and new_owner.strip().lower() in PLACEHOLDER_VALUES:
+                new_owner = None
+            if new_deadline and new_deadline.strip().lower() in PLACEHOLDER_VALUES:
+                new_deadline = None
+
             # Update owner if new one provided and old one missing
-            if new_data.get("owner") and not metadata.get("owner"):
-                metadata["owner"] = new_data["owner"]
+            if new_owner and not metadata.get("owner"):
+                metadata["owner"] = new_owner
 
             # Update deadline if new one provided and old one missing
-            if new_data.get("deadline") and not metadata.get("deadline"):
-                metadata["deadline"] = new_data["deadline"]
+            if new_deadline and not metadata.get("deadline"):
+                metadata["deadline"] = new_deadline
 
             # Track merge
             if "related_ids" not in metadata:

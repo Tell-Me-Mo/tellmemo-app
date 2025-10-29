@@ -89,7 +89,8 @@ class _LiveActionCardState extends State<LiveActionCard>
 
   Color _getDeadlineColor(ColorScheme colorScheme) {
     if (!widget.action.hasDeadline) {
-      return colorScheme.onSurfaceVariant.withValues(alpha: 0.5);
+      // Missing deadline - more visible orange/amber to indicate it needs attention
+      return Colors.orange.shade400;
     }
 
     final deadline = widget.action.deadline!;
@@ -98,10 +99,10 @@ class _LiveActionCardState extends State<LiveActionCard>
 
     if (deadline.isBefore(now)) {
       // Overdue - bright red
-      return Colors.red.shade700;
+      return Colors.red.shade600;
     } else if (daysUntil <= 3) {
       // Due soon - orange
-      return Colors.orange.shade700;
+      return Colors.orange.shade600;
     } else {
       // Future deadline - normal color
       return colorScheme.onSurface;
@@ -501,41 +502,6 @@ class _LiveActionCardState extends State<LiveActionCard>
                         color: Colors.red.shade900,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-
-          // Show missing information
-          if (widget.action.missingInformation.isNotEmpty) ...[
-            const SizedBox(height: LayoutConstants.spacingMd),
-            Container(
-              padding: const EdgeInsets.all(LayoutConstants.spacingSm),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade50.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: Colors.orange.shade300.withValues(alpha: 0.5),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    size: 16,
-                    color: Colors.orange.shade700,
-                  ),
-                  const SizedBox(width: LayoutConstants.spacingSm),
-                  Expanded(
-                    child: Text(
-                      'Missing: ${widget.action.missingInformation.join(', ')}',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.orange.shade900,
-                        fontSize: 12,
                       ),
                     ),
                   ),
