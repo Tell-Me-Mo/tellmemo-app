@@ -30,7 +30,7 @@ final liveInsightsWebSocketServiceProvider =
 typedef LiveInsightsWebSocketServiceRef =
     ProviderRef<LiveInsightsWebSocketService>;
 String _$liveQuestionsTrackerHash() =>
-    r'69c2516021a561fce3ea304cf2b075324b33e1eb';
+    r'7e91dba96a1378be475a5c6fb69aad1392de5e3b';
 
 /// Provider for tracking live questions during a meeting
 /// Maintains a map of questions by ID for efficient updates
@@ -53,7 +53,7 @@ final liveQuestionsTrackerProvider =
 
 typedef _$LiveQuestionsTracker = AutoDisposeAsyncNotifier<List<LiveQuestion>>;
 String _$liveActionsTrackerHash() =>
-    r'020dfefe0158e5e9c5f87a9d819c6413ec8d906a';
+    r'2531c98fb08f5e20ccfdfbf1b86880b1b7f88769';
 
 /// Provider for tracking live actions during a meeting
 /// Maintains a map of actions by ID for efficient updates
@@ -76,7 +76,7 @@ final liveActionsTrackerProvider =
 
 typedef _$LiveActionsTracker = AutoDisposeAsyncNotifier<List<LiveAction>>;
 String _$liveTranscriptionsTrackerHash() =>
-    r'2e8cc97e48c292ec9824ee9cc6d7d9c91169b950';
+    r'6cc85f20b255712d820ae4831a724291ee1e2537';
 
 /// Provider for tracking live transcriptions during a meeting
 ///

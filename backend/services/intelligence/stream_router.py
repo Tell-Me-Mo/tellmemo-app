@@ -387,36 +387,51 @@ class StreamRouter:
         Route action object to ActionHandler.
 
         Generates a backend UUID and tracks by description for action_update matching.
-        Includes deduplication with fuzzy matching to prevent duplicate action processing.
+        If duplicate action detected, treats it as an action update to merge new information.
         """
         action_description = obj["description"]
         normalized_description = self._normalize_text(action_description)
 
         # Check if we've already seen this action (using normalized text)
-        for existing_desc, existing_id in self.action_text_to_id.items():
+        existing_id = None
+        for existing_desc, desc_id in self.action_text_to_id.items():
             if self._normalize_text(existing_desc) == normalized_description:
+                existing_id = desc_id
                 logger.info(
-                    f"Duplicate action detected in stream router, skipping: "
+                    f"Duplicate action detected in stream router - treating as update: "
                     f"'{action_description[:50]}...' (existing ID: {existing_id})"
                 )
-                return
+                break
 
-        # Generate backend UUID
-        backend_id = str(uuid.uuid4())
-        obj["id"] = backend_id  # Add ID to object
+        if existing_id:
+            # Treat as action update - route through action_update_handler
+            # The ActionHandler.handle_action_update() will merge the new information (owner, deadline)
+            obj["id"] = existing_id
 
-        # Track action by ORIGINAL description and ID (for action_update matching)
-        self.action_text_to_id[action_description] = backend_id
-        self.action_ids.add(backend_id)
-
-        logger.debug(f"Generated UUID for action: {backend_id}, description='{action_description[:50]}...'")
-
-        # Route to handler
-        if self._action_handler:
-            await self._action_handler(obj)
-            self.metrics.actions_routed += 1
+            # Route to action_update_handler for proper update handling
+            if self._action_update_handler:
+                await self._action_update_handler(obj)
+                self.metrics.action_updates_routed += 1
+                logger.debug(f"Routed duplicate action as update to action_update_handler (ID: {existing_id})")
+            else:
+                logger.warning("ActionUpdateHandler not registered - update not processed")
         else:
-            logger.warning("ActionHandler not registered - action not processed")
+            # Generate backend UUID for new action
+            backend_id = str(uuid.uuid4())
+            obj["id"] = backend_id  # Add ID to object
+
+            # Track action by ORIGINAL description and ID (for action_update matching)
+            self.action_text_to_id[action_description] = backend_id
+            self.action_ids.add(backend_id)
+
+            logger.debug(f"Generated UUID for action: {backend_id}, description='{action_description[:50]}...'")
+
+            # Route to action_handler for new action creation
+            if self._action_handler:
+                await self._action_handler(obj)
+                self.metrics.actions_routed += 1
+            else:
+                logger.warning("ActionHandler not registered - action not processed")
 
     async def _route_action_update(self, obj: Dict[str, Any]) -> None:
         """

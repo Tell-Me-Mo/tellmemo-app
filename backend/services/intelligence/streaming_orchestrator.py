@@ -113,7 +113,8 @@ class StreamingIntelligenceOrchestrator:
         session_id: str,
         recording_id: Optional[UUID] = None,
         project_id: Optional[UUID] = None,
-        organization_id: Optional[UUID] = None
+        organization_id: Optional[UUID] = None,
+        enabled_tiers: Optional[List[str]] = None
     ):
         """
         Initialize orchestrator for a meeting session.
@@ -123,6 +124,9 @@ class StreamingIntelligenceOrchestrator:
             recording_id: Optional recording UUID for database linking
             project_id: Project UUID (parsed from session_id if not provided)
             organization_id: Organization UUID
+            enabled_tiers: List of enabled tier names for answer discovery.
+                         Valid values: 'rag', 'meeting_context', 'live_conversation', 'gpt_generated'
+                         Defaults to all tiers enabled if not specified.
         """
         self.session_id = session_id
         self.recording_id = recording_id
@@ -154,9 +158,9 @@ class StreamingIntelligenceOrchestrator:
         # Component services
         self.buffer_service = get_transcription_buffer()
         self.stream_router = get_stream_router(session_id)
-        self.question_handler = QuestionHandler()
+        self.question_handler = QuestionHandler(enabled_tiers=enabled_tiers)
         self.action_handler = ActionHandler()
-        self.answer_handler = AnswerHandler()
+        self.answer_handler = AnswerHandler(tier_config=self.question_handler.tier_config)
         self.segment_detector = get_segment_detector()
 
         # Active streaming task
@@ -761,7 +765,8 @@ def get_orchestrator(
     session_id: str,
     recording_id: Optional[UUID] = None,
     project_id: Optional[UUID] = None,
-    organization_id: Optional[UUID] = None
+    organization_id: Optional[UUID] = None,
+    enabled_tiers: Optional[List[str]] = None
 ) -> StreamingIntelligenceOrchestrator:
     """
     Get or create orchestrator instance for a session.
@@ -771,6 +776,7 @@ def get_orchestrator(
         recording_id: Optional recording UUID
         project_id: Optional project UUID (parsed from session_id if not provided)
         organization_id: Optional organization UUID
+        enabled_tiers: List of enabled tier names for answer discovery
 
     Returns:
         StreamingIntelligenceOrchestrator instance
@@ -786,9 +792,10 @@ def get_orchestrator(
             session_id=session_id,
             recording_id=recording_id,
             project_id=project_id,
-            organization_id=organization_id
+            organization_id=organization_id,
+            enabled_tiers=enabled_tiers
         )
-        logger.info(f"Created new orchestrator instance for session {sanitize_for_log(session_id)}")
+        logger.info(f"Created new orchestrator instance for session {sanitize_for_log(session_id)} with enabled_tiers={enabled_tiers}")
 
     return _orchestrator_instances[session_id]
 

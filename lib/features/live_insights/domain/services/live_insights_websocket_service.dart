@@ -48,7 +48,7 @@ class LiveInsightsWebSocketService {
   }
 
   /// Connect to WebSocket server for a specific session
-  Future<void> connect(String sessionId) async {
+  Future<void> connect(String sessionId, {List<String>? enabledTiers}) async {
     // Reset intentional disconnect flag when reconnecting
     _intentionalDisconnect = false;
 
@@ -103,6 +103,15 @@ class LiveInsightsWebSocketService {
       _isConnected = true;
       _reconnectAttempts = 0;
       _connectionStateController.add(true);
+
+      // Send tier configuration if provided
+      if (enabledTiers != null && enabledTiers.isNotEmpty) {
+        _sendMessage({
+          'type': 'SET_TIER_CONFIG',
+          'enabled_tiers': enabledTiers,
+        });
+        debugPrint('[LiveInsightsWebSocket] Sent tier configuration: $enabledTiers');
+      }
 
       // Start ping timer for keepalive
       _startPingTimer();

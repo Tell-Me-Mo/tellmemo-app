@@ -28,18 +28,37 @@ logger = get_logger(__name__)
 class QuestionHandler:
     """Handler for question detection and four-tier answer discovery."""
 
-    def __init__(self):
-        """Initialize the question handler."""
+    def __init__(self, enabled_tiers: Optional[List[str]] = None):
+        """Initialize the question handler.
+
+        Args:
+            enabled_tiers: List of enabled tier names. Defaults to all tiers enabled.
+                         Valid values: 'rag', 'meeting_context', 'live_conversation', 'gpt_generated'
+        """
         # Question lifecycle configuration
-        self.monitoring_timeout_seconds = 15  # Tier 3: Live monitoring timeout
+        self.monitoring_timeout_seconds = 15  # Tier 4: Live monitoring timeout
         self.rag_search_timeout = 2.0  # Tier 1: RAG search timeout
         self.meeting_context_timeout = 1.5  # Tier 2: Meeting context timeout
-        self.gpt_generation_timeout = 3.0  # Tier 4: GPT answer generation timeout
+        self.gpt_generation_timeout = 3.0  # Tier 3: GPT answer generation timeout
+
+        # Tier configuration (which tiers are enabled)
+        if enabled_tiers is None:
+            # Default: all tiers enabled
+            enabled_tiers = ['rag', 'meeting_context', 'live_conversation', 'gpt_generated']
+
+        self.tier_config = {
+            'rag': 'rag' in enabled_tiers,
+            'meeting_context': 'meeting_context' in enabled_tiers,
+            'live_conversation': 'live_conversation' in enabled_tiers,
+            'gpt_generated': 'gpt_generated' in enabled_tiers,
+        }
+
+        logger.info(f"QuestionHandler initialized with tier config: {self.tier_config}")
 
         # Active questions being monitored (session_id -> {question_id -> task})
         self._active_monitoring: Dict[str, Dict[str, asyncio.Task]] = {}
 
-        # Answer detection events for Tier 3 live monitoring (session_id -> {question_id -> Event})
+        # Answer detection events for Tier 4 live monitoring (session_id -> {question_id -> Event})
         self._answer_events: Dict[str, Dict[str, asyncio.Event]] = {}
 
         # WebSocket broadcast callback (set by orchestrator)
@@ -149,8 +168,8 @@ class QuestionHandler:
             })
             logger.info(f"✅ Broadcast completed for question {db_question_id}")
 
-            # Start parallel answer discovery (Tiers 1, 2, and 3)
-            # Note: Tier 4 (GPT-generated) will be triggered only if other tiers fail
+            # Start parallel answer discovery (Tiers 1, 2, and 4)
+            # Note: Tier 3 (GPT-generated) will be triggered only if other tiers fail
             asyncio.create_task(
                 self._parallel_answer_discovery(
                     session_id=session_id,
@@ -189,8 +208,8 @@ class QuestionHandler:
         Tiers execute in parallel:
         - Tier 1: RAG Search (2s timeout)
         - Tier 2: Meeting Context Search (1.5s timeout)
-        - Tier 3: Live Conversation Monitoring (15s window)
-        - Tier 4: GPT-Generated Answer (triggered only if all others fail, 3s timeout)
+        - Tier 3: GPT-Generated Answer (triggered only if all others fail, 3s timeout)
+        - Tier 4: Live Conversation Monitoring (15s window)
 
         Args:
             session_id: Meeting session ID
@@ -201,43 +220,72 @@ class QuestionHandler:
             speaker: Speaker who asked the question (optional)
         """
         try:
-            # Execute Tier 1 and Tier 2 in parallel
-            tier1_task = asyncio.create_task(
-                self._tier1_rag_search(session_id, question_id, question_text, project_id, organization_id)
-            )
-            tier2_task = asyncio.create_task(
-                self._tier2_meeting_context_search(
-                    session_id, question_id, question_text, speaker, organization_id
+            # Execute enabled tiers in parallel
+            tasks = []
+            tier1_found = tier2_found = tier4_found = False
+
+            # Tier 1: RAG Search
+            if self.tier_config['rag']:
+                tier1_task = asyncio.create_task(
+                    self._tier1_rag_search(session_id, question_id, question_text, project_id, organization_id)
                 )
-            )
+                tasks.append(('tier1', tier1_task))
+            else:
+                logger.info(f"Tier 1 (RAG) disabled for question {question_id}")
 
-            # Start Tier 3: Live monitoring (15s window)
-            tier3_task = asyncio.create_task(
-                self._tier3_live_monitoring(session_id, question_id, question_text)
-            )
+            # Tier 2: Meeting Context
+            if self.tier_config['meeting_context']:
+                tier2_task = asyncio.create_task(
+                    self._tier2_meeting_context_search(
+                        session_id, question_id, question_text, speaker, organization_id
+                    )
+                )
+                tasks.append(('tier2', tier2_task))
+            else:
+                logger.info(f"Tier 2 (Meeting Context) disabled for question {question_id}")
 
-            # Store monitoring task for potential cancellation
-            if session_id not in self._active_monitoring:
-                self._active_monitoring[session_id] = {}
-            self._active_monitoring[session_id][question_id] = tier3_task
+            # Tier 4: Live Monitoring
+            tier4_task = None
+            if self.tier_config['live_conversation']:
+                tier4_task = asyncio.create_task(
+                    self._tier4_live_monitoring(session_id, question_id, question_text)
+                )
+                tasks.append(('tier4', tier4_task))
 
-            # Wait for Tier 1 and Tier 2 to complete
-            tier1_found, tier2_found = await asyncio.gather(tier1_task, tier2_task)
+                # Store monitoring task for potential cancellation
+                if session_id not in self._active_monitoring:
+                    self._active_monitoring[session_id] = {}
+                self._active_monitoring[session_id][question_id] = tier4_task
+            else:
+                logger.info(f"Tier 4 (Live Conversation) disabled for question {question_id}")
 
-            # Wait for Tier 3 to complete (or timeout)
-            tier3_found = await tier3_task
+            # Wait for all enabled tiers to complete
+            if tasks:
+                results = await asyncio.gather(*[task for _, task in tasks])
+                # Map results back to tier names
+                for (tier_name, _), result in zip(tasks, results):
+                    if tier_name == 'tier1':
+                        tier1_found = result
+                    elif tier_name == 'tier2':
+                        tier2_found = result
+                    elif tier_name == 'tier4':
+                        tier4_found = result
 
-            # Clean up monitoring task
-            if session_id in self._active_monitoring:
+            # Clean up monitoring task if it was created
+            if tier4_task and session_id in self._active_monitoring:
                 self._active_monitoring[session_id].pop(question_id, None)
 
             # Check if any tier found an answer
-            answer_found = tier1_found or tier2_found or tier3_found
+            answer_found = tier1_found or tier2_found or tier4_found
 
-            if not answer_found:
-                # Tier 4: GPT-generated answer (fallback)
-                logger.info(f"No answer found in Tiers 1-3 for question {question_id}, triggering Tier 4")
-                await self._tier4_gpt_generated_answer(session_id, question_id, question_text, speaker)
+            if not answer_found and self.tier_config['gpt_generated']:
+                # Tier 3: GPT-generated answer (fallback)
+                logger.info(f"No answer found in Tiers 1-2, 4 for question {question_id}, triggering Tier 3")
+                await self._tier3_gpt_generated_answer(session_id, question_id, question_text, speaker)
+            elif not answer_found:
+                logger.info(f"No answer found for question {question_id} (Tier 4 disabled)")
+                # Mark question as unanswered
+                await self._mark_question_unanswered(question_id)
 
         except Exception as e:
             logger.error(
@@ -480,13 +528,13 @@ class QuestionHandler:
             )
             return False
 
-    async def _tier3_live_monitoring(
+    async def _tier4_live_monitoring(
         self,
         session_id: str,
         question_id: str,
         question_text: str
     ) -> bool:
-        """Tier 3: Monitor live conversation for answers (15 second window).
+        """Tier 4: Monitor live conversation for answers (15 second window).
 
         This method waits for up to 15 seconds for AnswerHandler to detect and signal
         an answer in the live conversation. The AnswerHandler processes answer events
@@ -503,7 +551,7 @@ class QuestionHandler:
         """
         try:
             logger.debug(
-                f"Tier 3: Starting live monitoring for question {question_id} "
+                f"Tier 4: Starting live monitoring for question {question_id} "
                 f"({self.monitoring_timeout_seconds}s window)"
             )
 
@@ -547,7 +595,7 @@ class QuestionHandler:
 
                 # Answer was detected!
                 logger.info(
-                    f"Tier 3: Answer detected in live conversation for question {question_id}"
+                    f"Tier 4: Answer detected in live conversation for question {question_id}"
                 )
 
                 # Clean up event
@@ -559,7 +607,7 @@ class QuestionHandler:
             except asyncio.TimeoutError:
                 # Timeout - no answer detected in 15 seconds
                 logger.debug(
-                    f"Tier 3: Live monitoring timeout for question {question_id} "
+                    f"Tier 4: Live monitoring timeout for question {question_id} "
                     f"(no answer in {self.monitoring_timeout_seconds}s)"
                 )
 
@@ -572,7 +620,7 @@ class QuestionHandler:
         except asyncio.CancelledError:
             # Monitoring was cancelled (likely because answer found in Tier 1 or 2)
             logger.debug(
-                f"Tier 3: Live monitoring cancelled for question {question_id} "
+                f"Tier 4: Live monitoring cancelled for question {question_id} "
                 "(answer found in earlier tier)"
             )
 
@@ -584,7 +632,7 @@ class QuestionHandler:
 
         except Exception as e:
             logger.error(
-                f"Tier 3: Live monitoring failed for question {question_id}: {e}",
+                f"Tier 4: Live monitoring failed for question {question_id}: {e}",
                 exc_info=True
             )
 
@@ -594,14 +642,14 @@ class QuestionHandler:
 
             return False
 
-    async def _tier4_gpt_generated_answer(
+    async def _tier3_gpt_generated_answer(
         self,
         session_id: str,
         question_id: str,
         question_text: str,
         speaker: Optional[str] = None
     ) -> bool:
-        """Tier 4: Generate answer using GPT-5-mini (fallback when all tiers fail).
+        """Tier 3: Generate answer using GPT-5-mini (fallback when all tiers fail).
 
         Args:
             session_id: Meeting session ID
@@ -613,7 +661,7 @@ class QuestionHandler:
             True if GPT generated a confident answer, False otherwise
         """
         try:
-            logger.info(f"Tier 4: Requesting GPT-generated answer for question {question_id}")
+            logger.info(f"Tier 3: Requesting GPT-generated answer for question {question_id}")
 
             # Import GPT Answer Generator
             from services.intelligence.gpt_answer_generator import GPTAnswerGenerator
@@ -640,13 +688,13 @@ class QuestionHandler:
 
                 if success:
                     logger.info(
-                        f"Tier 4: Successfully generated GPT answer for question {question_id}"
+                        f"Tier 3: Successfully generated GPT answer for question {question_id}"
                     )
                     return True
 
                 # If GPT generation failed or confidence too low, mark as unanswered
                 logger.info(
-                    f"Tier 4: GPT could not confidently answer question {question_id}, "
+                    f"Tier 3: GPT could not confidently answer question {question_id}, "
                     "marking as unanswered"
                 )
 
@@ -674,7 +722,7 @@ class QuestionHandler:
 
         except Exception as e:
             logger.error(
-                f"Tier 4: GPT answer generation failed for question {question_id}: {e}",
+                f"Tier 3: GPT answer generation failed for question {question_id}: {e}",
                 exc_info=True
             )
             return False
@@ -683,7 +731,7 @@ class QuestionHandler:
         """Signal that an answer was detected for a monitored question.
 
         This method is called by AnswerHandler when it detects an answer in the
-        live conversation that matches a question being monitored by Tier 3.
+        live conversation that matches a question being monitored by Tier 4.
 
         Args:
             session_id: Meeting session ID

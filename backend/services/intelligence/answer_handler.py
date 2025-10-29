@@ -42,7 +42,8 @@ class AnswerHandler:
     def __init__(
         self,
         question_handler: Optional[Any] = None,
-        confidence_threshold: float = 0.85
+        confidence_threshold: float = 0.85,
+        tier_config: Optional[Dict[str, bool]] = None
     ):
         """
         Initialize AnswerHandler.
@@ -50,18 +51,29 @@ class AnswerHandler:
         Args:
             question_handler: QuestionHandler instance for monitoring cancellation
             confidence_threshold: Minimum confidence to mark as answered (default: 0.85)
+            tier_config: Dictionary of tier enablement status (e.g., {'live_conversation': True})
         """
         self._question_handler = question_handler
         self._confidence_threshold = confidence_threshold
         self._ws_broadcast_callback: Optional[Callable] = None
 
+        # Tier configuration (default all enabled if not provided)
+        self._tier_config = tier_config or {
+            'rag': True,
+            'meeting_context': True,
+            'live_conversation': True,
+            'gpt_generated': True
+        }
+
         # Metrics
         self.answers_processed = 0
         self.questions_resolved = 0
         self.low_confidence_answers = 0
+        self.skipped_disabled_tier_answers = 0
 
         logger.info(
-            f"AnswerHandler initialized with confidence threshold: {confidence_threshold}"
+            f"AnswerHandler initialized with confidence threshold: {confidence_threshold}, "
+            f"tier_config: {self._tier_config}"
         )
 
     def set_websocket_callback(self, callback: Callable) -> None:
@@ -114,6 +126,15 @@ class AnswerHandler:
                 )
                 return None
 
+            # Check if live conversation tier is enabled
+            # (answers from GPT stream are from live conversation monitoring)
+            if not self._tier_config.get('live_conversation', True):
+                self.skipped_disabled_tier_answers += 1
+                logger.info(
+                    f"Skipping answer from live conversation (Tier 4 disabled) for question {question_gpt_id}"
+                )
+                return None
+
             # Parse timestamp
             try:
                 timestamp = datetime.fromisoformat(
@@ -154,7 +175,7 @@ class AnswerHandler:
                 )
                 return None
 
-            # Signal Tier 3 live monitoring that answer was detected
+            # Signal Tier 4 live monitoring that answer was detected
             if self._question_handler:
                 try:
                     # Signal the monitoring task (this will set the asyncio.Event)
@@ -342,5 +363,6 @@ class AnswerHandler:
         return {
             "answers_processed": self.answers_processed,
             "questions_resolved": self.questions_resolved,
-            "low_confidence_answers": self.low_confidence_answers
+            "low_confidence_answers": self.low_confidence_answers,
+            "skipped_disabled_tier_answers": self.skipped_disabled_tier_answers
         }

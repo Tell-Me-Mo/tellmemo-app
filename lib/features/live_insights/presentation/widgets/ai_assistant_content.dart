@@ -37,6 +37,12 @@ class AIAssistantContentSection extends StatefulWidget {
   /// Callback when dismiss all is triggered
   final VoidCallback? onDismissAll;
 
+  /// Whether to show the questions section
+  final bool showQuestionsSection;
+
+  /// Whether to show the actions section
+  final bool showActionsSection;
+
   const AIAssistantContentSection({
     super.key,
     required this.questions,
@@ -49,6 +55,8 @@ class AIAssistantContentSection extends StatefulWidget {
     this.onActionMarkComplete,
     this.onActionDismiss,
     this.onDismissAll,
+    this.showQuestionsSection = true,
+    this.showActionsSection = true,
   });
 
   @override
@@ -71,8 +79,8 @@ class _AIAssistantContentSectionState
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final hasQuestions = widget.questions.isNotEmpty;
-    final hasActions = widget.actions.isNotEmpty;
+    final hasQuestions = widget.showQuestionsSection && widget.questions.isNotEmpty;
+    final hasActions = widget.showActionsSection && widget.actions.isNotEmpty;
     final hasAnyItems = hasQuestions || hasActions;
 
     return Column(
@@ -126,14 +134,17 @@ class _AIAssistantContentSectionState
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Questions section
-                _buildQuestionsSection(context),
+                if (widget.showQuestionsSection)
+                  _buildQuestionsSection(context),
 
                 // Spacing between sections
-                if (hasQuestions && hasActions)
+                if (widget.showQuestionsSection && widget.showActionsSection &&
+                    widget.questions.isNotEmpty && widget.actions.isNotEmpty)
                   const SizedBox(height: LayoutConstants.spacingMd),
 
                 // Actions section
-                _buildActionsSection(context),
+                if (widget.showActionsSection)
+                  _buildActionsSection(context),
               ],
             ),
           ),

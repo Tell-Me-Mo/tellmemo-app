@@ -16,6 +16,8 @@ import '../../../../core/config/api_config.dart';
 import '../../../../core/utils/error_utils.dart';
 import 'recording_preferences_provider.dart';
 import '../../../../features/live_insights/presentation/providers/live_insights_provider.dart';
+import '../../../../features/live_insights/presentation/providers/tier_settings_provider.dart';
+import '../../../../features/live_insights/domain/models/tier_settings.dart';
 
 part 'recording_provider.g.dart';
 
@@ -205,9 +207,14 @@ class RecordingNotifier extends _$RecordingNotifier {
       if (state.aiAssistantEnabled) {
         debugPrint('[RecordingProvider] AI Assistant enabled - initializing live insights');
         try {
-          // 1. Connect to live insights WebSocket (for receiving questions/actions/transcriptions)
+          // 1. Get tier settings
+          final tierSettings = await ref.read(tierSettingsNotifierProvider.future);
+          final enabledTiers = tierSettings.enabledTiers;
+          debugPrint('[RecordingProvider] Using tier configuration: $enabledTiers');
+
+          // 2. Connect to live insights WebSocket (for receiving questions/actions/transcriptions)
           final liveInsightsService = ref.read(liveInsightsWebSocketServiceProvider);
-          await liveInsightsService.connect(sessionId);
+          await liveInsightsService.connect(sessionId, enabledTiers: enabledTiers);
           debugPrint('[RecordingProvider] Connected to live insights WebSocket');
 
           // 2. Initialize live audio streaming service

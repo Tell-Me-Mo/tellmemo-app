@@ -82,6 +82,8 @@ class _LiveQuestionCardState extends State<LiveQuestionCard>
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: widget.onTap ?? _toggleExpand,
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
           child: Padding(
             padding: const EdgeInsets.all(LayoutConstants.spacingMd),
             child: Column(
@@ -93,8 +95,6 @@ class _LiveQuestionCardState extends State<LiveQuestionCard>
                 if (_isExpanded) ...[
                   const SizedBox(height: LayoutConstants.spacingMd),
                   _buildTierResults(context),
-                  const SizedBox(height: LayoutConstants.spacingMd),
-                  _buildActionButtons(context),
                 ] else ...[
                   const SizedBox(height: LayoutConstants.spacingSm),
                   _buildCompactTierStatus(context),
@@ -145,6 +145,20 @@ class _LiveQuestionCardState extends State<LiveQuestionCard>
 
         // Status badge
         _buildStatusBadge(context),
+
+        const SizedBox(width: LayoutConstants.spacingSm),
+
+        // Dismiss button
+        if (widget.onDismiss != null)
+          IconButton(
+            onPressed: widget.onDismiss,
+            icon: const Icon(Icons.close),
+            iconSize: 18,
+            color: colorScheme.onSurfaceVariant,
+            tooltip: 'Dismiss',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          ),
 
         const SizedBox(width: LayoutConstants.spacingSm),
 
@@ -551,58 +565,6 @@ class _LiveQuestionCardState extends State<LiveQuestionCard>
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildActionButtons(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Row(
-      children: [
-        // Mark as Answered
-        if (widget.onMarkAnswered != null && !widget.question.isAnswered)
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: widget.onMarkAnswered,
-              icon: const Icon(Icons.check_circle_outline, size: 16),
-              label: const Text('Mark Answered'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.green.shade700,
-                side: BorderSide(color: Colors.green.shade300),
-              ),
-            ),
-          ),
-
-        if (widget.onMarkAnswered != null && !widget.question.isAnswered)
-          const SizedBox(width: LayoutConstants.spacingSm),
-
-        // Needs Follow-up
-        if (widget.onNeedsFollowUp != null)
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: widget.onNeedsFollowUp,
-              icon: const Icon(Icons.flag_outlined, size: 16),
-              label: const Text('Follow-up'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.orange.shade700,
-                side: BorderSide(color: Colors.orange.shade300),
-              ),
-            ),
-          ),
-
-        if (widget.onNeedsFollowUp != null)
-          const SizedBox(width: LayoutConstants.spacingSm),
-
-        // Dismiss
-        if (widget.onDismiss != null)
-          IconButton(
-            onPressed: widget.onDismiss,
-            icon: const Icon(Icons.close),
-            iconSize: 20,
-            color: colorScheme.onSurfaceVariant,
-            tooltip: 'Dismiss',
-          ),
-      ],
     );
   }
 

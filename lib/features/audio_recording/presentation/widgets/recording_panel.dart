@@ -13,9 +13,11 @@ import '../../../../core/utils/screen_info.dart';
 import '../../../live_insights/presentation/widgets/live_transcription_widget.dart';
 import '../../../live_insights/presentation/widgets/live_question_card.dart';
 import '../../../live_insights/presentation/widgets/live_action_card.dart';
+import '../../../live_insights/presentation/widgets/tier_settings_dialog.dart';
 import '../../../live_insights/data/models/transcript_model.dart';
 import '../../../live_insights/data/models/live_insight_model.dart';
 import '../../../live_insights/presentation/providers/live_insights_provider.dart';
+import '../../../live_insights/presentation/providers/tier_settings_provider.dart';
 
 enum ProjectSelectionMode { automatic, manual, specific }
 
@@ -46,7 +48,7 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
 
   // Live transcription state
   final List<TranscriptModel> _transcripts = [];
-  bool _transcriptionCollapsed = false;
+  bool _transcriptionCollapsed = true; // Start collapsed by default
   StreamSubscription<TranscriptSegment>? _transcriptionSubscription;
 
   // Live insights state (questions and actions)
@@ -508,6 +510,17 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
               ],
             ),
           ),
+          // Settings button for tier configuration
+          IconButton(
+            icon: const Icon(Icons.tune),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => const TierSettingsDialog(),
+              );
+            },
+            tooltip: 'Answer Discovery Settings',
+          ),
           IconButton(
             icon: const Icon(Icons.close),
             onPressed: _handleClose,
@@ -526,6 +539,7 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
     final meetingTitle = _titleController.text.isEmpty
         ? 'Untitled Meeting'
         : _titleController.text;
+    final screenInfo = ScreenInfo.fromContext(context);
 
     return Container(
       padding: EdgeInsets.only(
@@ -619,19 +633,37 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
             ),
           ),
 
-          const SizedBox(width: 16),
-
-          // Amplitude meter (compact)
-          Expanded(
-            child: _buildCompactAmplitudeMeter(recordingState, colorScheme),
-          ),
-
-          const SizedBox(width: 16),
+          // Amplitude meter (compact) - only show on desktop/tablet
+          if (!screenInfo.isMobile) ...[
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildCompactAmplitudeMeter(recordingState, colorScheme),
+            ),
+            const SizedBox(width: 16),
+          ] else
+            const Spacer(),
 
           // Recording controls
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Settings button (only visible when AI Assistant is enabled)
+              IconButton(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => const TierSettingsDialog(),
+                  );
+                },
+                icon: const Icon(Icons.tune, size: 18),
+                tooltip: 'Answer Discovery Settings',
+                style: IconButton.styleFrom(
+                  foregroundColor: colorScheme.onSurfaceVariant,
+                  minimumSize: const Size(32, 32),
+                  padding: EdgeInsets.zero,
+                ),
+              ),
+              const SizedBox(width: 8),
               // Pause/Resume button
               IconButton.filled(
                 onPressed: recordingState.state == RecordingState.paused
@@ -1111,6 +1143,28 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
   }
 
   Widget _buildTwoColumnLayout(ColorScheme colorScheme, {required bool isMobile}) {
+    final tierSettings = ref.watch(tierSettingsNotifierProvider).value;
+    final showQuestions = tierSettings?.showQuestionsSection ?? true;
+    final showActions = tierSettings?.showActionsSection ?? true;
+
+    // If both sections are hidden, show empty state
+    if (!showQuestions && !showActions) {
+      return _buildEmptyState(
+        icon: Icons.settings,
+        title: 'All sections hidden',
+        subtitle: 'Enable sections in settings to see live insights',
+      );
+    }
+
+    // If only one section is visible, show it full width
+    if (!showQuestions) {
+      return _buildActionsSection(colorScheme, isMobile: isMobile);
+    }
+    if (!showActions) {
+      return _buildQuestionsSection(colorScheme, isMobile: isMobile);
+    }
+
+    // Both sections visible - show two columns
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1130,7 +1184,28 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
   }
 
   Widget _buildMobileTabLayout(ColorScheme colorScheme) {
-    // Mobile uses tabs to switch between Questions and Actions
+    final tierSettings = ref.watch(tierSettingsNotifierProvider).value;
+    final showQuestions = tierSettings?.showQuestionsSection ?? true;
+    final showActions = tierSettings?.showActionsSection ?? true;
+
+    // If both sections are hidden, show empty state
+    if (!showQuestions && !showActions) {
+      return _buildEmptyState(
+        icon: Icons.settings,
+        title: 'All sections hidden',
+        subtitle: 'Enable sections in settings to see live insights',
+      );
+    }
+
+    // If only one section is visible, show it without tabs
+    if (!showQuestions) {
+      return _buildActionsSection(colorScheme, isMobile: true);
+    }
+    if (!showActions) {
+      return _buildQuestionsSection(colorScheme, isMobile: true);
+    }
+
+    // Both sections visible - show tabs
     return DefaultTabController(
       length: 2,
       child: Column(
@@ -1222,8 +1297,30 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
 
                       return LiveQuestionCard(
                         question: question,
-                        onMarkAnswered: () => liveInsightsService.markQuestionAsAnswered(question.id),
-                        onNeedsFollowUp: () => liveInsightsService.markQuestionNeedsFollowUp(question.id),
+                        onMarkAnswered: () {
+                          liveInsightsService.markQuestionAsAnswered(question.id);
+                          // Update local state
+                          setState(() {
+                            final index = _questions.indexWhere((q) => q.id == question.id);
+                            if (index != -1) {
+                              _questions[index] = question.copyWith(
+                                status: InsightStatus.answered,
+                              );
+                            }
+                          });
+                        },
+                        onNeedsFollowUp: () {
+                          liveInsightsService.markQuestionNeedsFollowUp(question.id);
+                          // Update local state
+                          setState(() {
+                            final index = _questions.indexWhere((q) => q.id == question.id);
+                            if (index != -1) {
+                              _questions[index] = question.copyWith(
+                                status: InsightStatus.monitoring,
+                              );
+                            }
+                          });
+                        },
                         onDismiss: () async {
                           await liveInsightsService.dismissQuestion(question.id);
                           // Remove from local state
@@ -1350,7 +1447,7 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
   Widget _buildLiveTranscriptSection(ColorScheme colorScheme, {required bool isMobile}) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      height: _transcriptionCollapsed ? 80 : (isMobile ? 150 : 200),
+      height: _transcriptionCollapsed ? 56 : (isMobile ? 150 : 200),
       decoration: BoxDecoration(
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
@@ -1368,7 +1465,7 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
               });
             },
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
                   const Icon(Icons.mic, size: 20),

@@ -29,11 +29,8 @@ class LiveActionCard extends StatefulWidget {
 class _LiveActionCardState extends State<LiveActionCard>
     with SingleTickerProviderStateMixin {
   bool _isExpanded = false;
-  bool _isEditingOwner = false;
-  bool _isEditingDeadline = false;
   late AnimationController _animationController;
   late Animation<double> _rotationAnimation;
-  final TextEditingController _ownerController = TextEditingController();
 
   @override
   void initState() {
@@ -49,13 +46,11 @@ class _LiveActionCardState extends State<LiveActionCard>
       parent: _animationController,
       curve: Curves.easeInOut,
     ));
-    _ownerController.text = widget.action.owner ?? '';
   }
 
   @override
   void dispose() {
     _animationController.dispose();
-    _ownerController.dispose();
     super.dispose();
   }
 
@@ -68,43 +63,6 @@ class _LiveActionCardState extends State<LiveActionCard>
         _animationController.reverse();
       }
     });
-  }
-
-  void _toggleEditOwner() {
-    setState(() {
-      _isEditingOwner = !_isEditingOwner;
-      if (_isEditingOwner) {
-        _ownerController.text = widget.action.owner ?? '';
-      }
-    });
-  }
-
-  void _saveOwner() {
-    final newOwner = _ownerController.text.trim();
-    if (newOwner.isNotEmpty && widget.onAssignOwner != null) {
-      widget.onAssignOwner!(newOwner);
-    }
-    setState(() {
-      _isEditingOwner = false;
-    });
-  }
-
-  Future<void> _showDeadlinePicker() async {
-    final now = DateTime.now();
-    final initialDate = widget.action.deadline ?? now;
-    final firstDate = now.subtract(const Duration(days: 1));
-    final lastDate = now.add(const Duration(days: 365));
-
-    final pickedDate = await showDatePicker(
-      context: context,
-      initialDate: initialDate,
-      firstDate: firstDate,
-      lastDate: lastDate,
-    );
-
-    if (pickedDate != null && widget.onSetDeadline != null) {
-      widget.onSetDeadline!(pickedDate);
-    }
   }
 
   Color _getCompletenessColor(ColorScheme colorScheme) {
@@ -129,6 +87,27 @@ class _LiveActionCardState extends State<LiveActionCard>
     }
   }
 
+  Color _getDeadlineColor(ColorScheme colorScheme) {
+    if (!widget.action.hasDeadline) {
+      return colorScheme.onSurfaceVariant.withValues(alpha: 0.5);
+    }
+
+    final deadline = widget.action.deadline!;
+    final now = DateTime.now();
+    final daysUntil = deadline.difference(now).inDays;
+
+    if (deadline.isBefore(now)) {
+      // Overdue - bright red
+      return Colors.red.shade700;
+    } else if (daysUntil <= 3) {
+      // Due soon - orange
+      return Colors.orange.shade700;
+    } else {
+      // Future deadline - normal color
+      return colorScheme.onSurface;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -148,6 +127,8 @@ class _LiveActionCardState extends State<LiveActionCard>
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: widget.onTap ?? _toggleExpand,
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
           child: Padding(
             padding: const EdgeInsets.all(LayoutConstants.spacingMd),
             child: Column(
@@ -160,11 +141,7 @@ class _LiveActionCardState extends State<LiveActionCard>
                 _buildCompletenessProgressBar(context),
                 if (_isExpanded) ...[
                   const SizedBox(height: LayoutConstants.spacingMd),
-                  _buildMetadata(context),
-                  const SizedBox(height: LayoutConstants.spacingMd),
-                  _buildMissingInformationPrompt(context),
-                  const SizedBox(height: LayoutConstants.spacingMd),
-                  _buildActionButtons(context),
+                  _buildExpandedMetadata(context),
                 ] else ...[
                   const SizedBox(height: LayoutConstants.spacingSm),
                   _buildCompactMetadata(context),
@@ -186,46 +163,60 @@ class _LiveActionCardState extends State<LiveActionCard>
         // Status icon
         Icon(
           widget.action.isComplete ? Icons.check_circle : Icons.track_changes,
-          size: 18,
+          size: LayoutConstants.iconSizeSm,
           color: _getStatusBorderColor(colorScheme),
         ),
         const SizedBox(width: LayoutConstants.spacingSm),
 
-        // Speaker
+        // Speaker and timestamp
         Expanded(
-          child: Text(
-            widget.action.displaySpeaker,
-            style: theme.textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.w500,
-              color: colorScheme.onSurface.withValues(alpha: 0.7),
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.action.displaySpeaker,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              Text(
+                DateTimeUtils.formatTimeAgo(widget.action.timestamp),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
           ),
         ),
-
-        // Timestamp
-        Text(
-          DateTimeUtils.formatTimeAgo(widget.action.timestamp),
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: colorScheme.onSurface.withValues(alpha: 0.5),
-          ),
-        ),
-
-        const SizedBox(width: LayoutConstants.spacingSm),
 
         // Completeness badge
         _buildCompletenessBadge(context),
 
         const SizedBox(width: LayoutConstants.spacingSm),
 
-        // Expand/collapse icon
-        RotationTransition(
-          turns: _rotationAnimation,
+        // Dismiss button
+        if (widget.onDismiss != null)
+          IconButton(
+            onPressed: widget.onDismiss,
+            icon: const Icon(Icons.close),
+            iconSize: 18,
+            color: colorScheme.onSurfaceVariant,
+            tooltip: 'Dismiss',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          ),
+
+        const SizedBox(width: LayoutConstants.spacingSm),
+
+        // Expand/collapse chevron
+        AnimatedRotation(
+          turns: _rotationAnimation.value,
+          duration: const Duration(milliseconds: 200),
           child: Icon(
             Icons.chevron_right,
-            size: 20,
-            color: colorScheme.onSurface.withValues(alpha: 0.5),
+            size: LayoutConstants.iconSizeMd,
+            color: colorScheme.onSurfaceVariant,
           ),
         ),
       ],
@@ -354,286 +345,206 @@ class _LiveActionCardState extends State<LiveActionCard>
 
     return Row(
       children: [
-        if (widget.action.hasOwner) ...[
-          Icon(
-            Icons.person_outline,
-            size: 14,
-            color: colorScheme.onSurface.withValues(alpha: 0.5),
+        // Owner
+        Icon(
+          Icons.person_outline,
+          size: 14,
+          color: colorScheme.onSurfaceVariant,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          widget.action.owner ?? 'No owner',
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: widget.action.hasOwner
+                ? colorScheme.onSurface
+                : colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+            fontWeight: widget.action.hasOwner ? FontWeight.w500 : FontWeight.w400,
           ),
-          const SizedBox(width: 4),
-          Text(
-            widget.action.owner!,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurface.withValues(alpha: 0.7),
-              fontSize: 12,
-            ),
+        ),
+
+        const SizedBox(width: LayoutConstants.spacingMd),
+
+        // Deadline with color coding
+        Icon(
+          widget.action.deadline != null && widget.action.deadline!.isBefore(DateTime.now())
+              ? Icons.warning_amber_rounded
+              : Icons.schedule,
+          size: 14,
+          color: _getDeadlineColor(colorScheme),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          widget.action.deadlineDisplay,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: _getDeadlineColor(colorScheme),
+            fontWeight: widget.action.hasDeadline ? FontWeight.w500 : FontWeight.w400,
           ),
-          const SizedBox(width: LayoutConstants.spacingMd),
-        ],
-        if (widget.action.hasDeadline) ...[
-          Icon(
-            Icons.schedule,
-            size: 14,
-            color: colorScheme.onSurface.withValues(alpha: 0.5),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            widget.action.deadlineDisplay,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurface.withValues(alpha: 0.7),
-              fontSize: 12,
-            ),
-          ),
-        ],
-        if (!widget.action.hasOwner && !widget.action.hasDeadline)
-          Text(
-            'No owner or deadline assigned',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurface.withValues(alpha: 0.4),
-              fontStyle: FontStyle.italic,
-              fontSize: 12,
-            ),
-          ),
+        ),
       ],
     );
   }
 
-  Widget _buildMetadata(BuildContext context) {
+  Widget _buildExpandedMetadata(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Owner field
-        Row(
-          children: [
-            Icon(
-              Icons.person_outline,
-              size: 18,
-              color: colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
-            const SizedBox(width: LayoutConstants.spacingSm),
-            Expanded(
-              child: _isEditingOwner
-                  ? TextField(
-                      controller: _ownerController,
-                      decoration: InputDecoration(
-                        hintText: 'Enter owner name',
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 8,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(4),
-                        ),
+    return Container(
+      padding: const EdgeInsets.all(LayoutConstants.spacingMd),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Owner and Deadline in one row
+          Row(
+            children: [
+              // Owner
+              Icon(
+                Icons.person_outline,
+                size: 18,
+                color: colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: LayoutConstants.spacingSm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Owner',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
                       ),
-                      style: theme.textTheme.bodyMedium,
-                      autofocus: true,
-                      onSubmitted: (_) => _saveOwner(),
-                    )
-                  : Text(
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
                       widget.action.owner ?? 'No owner assigned',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: widget.action.hasOwner
                             ? colorScheme.onSurface
-                            : colorScheme.onSurface.withValues(alpha: 0.4),
-                        fontStyle: widget.action.hasOwner
-                            ? FontStyle.normal
-                            : FontStyle.italic,
+                            : colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                        fontWeight: widget.action.hasOwner ? FontWeight.w500 : FontWeight.w400,
+                        fontStyle: widget.action.hasOwner ? FontStyle.normal : FontStyle.italic,
                       ),
                     ),
-            ),
-            const SizedBox(width: LayoutConstants.spacingSm),
-            if (_isEditingOwner)
-              Row(
-                mainAxisSize: MainAxisSize.min,
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: LayoutConstants.spacingLg),
+
+              // Deadline
+              Icon(
+                widget.action.deadline != null && widget.action.deadline!.isBefore(DateTime.now())
+                    ? Icons.warning_amber_rounded
+                    : Icons.schedule,
+                size: 18,
+                color: _getDeadlineColor(colorScheme),
+              ),
+              const SizedBox(width: LayoutConstants.spacingSm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Deadline',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.action.deadlineDisplay,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: _getDeadlineColor(colorScheme),
+                        fontWeight: widget.action.hasDeadline ? FontWeight.w600 : FontWeight.w400,
+                        fontStyle: widget.action.hasDeadline ? FontStyle.normal : FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          // Show overdue warning if deadline is past
+          if (widget.action.deadline != null && widget.action.deadline!.isBefore(DateTime.now())) ...[
+            const SizedBox(height: LayoutConstants.spacingMd),
+            Container(
+              padding: const EdgeInsets.all(LayoutConstants.spacingSm),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.red.shade300.withValues(alpha: 0.5),
+                  width: 1,
+                ),
+              ),
+              child: Row(
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.check, size: 18),
-                    onPressed: _saveOwner,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    color: Colors.green.shade600,
+                  Icon(
+                    Icons.warning_amber_rounded,
+                    size: 16,
+                    color: Colors.red.shade700,
                   ),
-                  const SizedBox(width: 4),
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 18),
-                    onPressed: () => setState(() => _isEditingOwner = false),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    color: Colors.red.shade600,
+                  const SizedBox(width: LayoutConstants.spacingSm),
+                  Expanded(
+                    child: Text(
+                      'Overdue',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.red.shade900,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ],
-              )
-            else
-              IconButton(
-                icon: const Icon(Icons.edit, size: 16),
-                onPressed: _toggleEditOwner,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                color: colorScheme.primary,
               ),
-          ],
-        ),
-
-        const SizedBox(height: LayoutConstants.spacingSm),
-
-        // Deadline field
-        Row(
-          children: [
-            Icon(
-              Icons.schedule,
-              size: 18,
-              color: colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
-            const SizedBox(width: LayoutConstants.spacingSm),
-            Expanded(
-              child: Text(
-                widget.action.deadlineDisplay,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: widget.action.hasDeadline
-                      ? colorScheme.onSurface
-                      : colorScheme.onSurface.withValues(alpha: 0.4),
-                  fontStyle: widget.action.hasDeadline
-                      ? FontStyle.normal
-                      : FontStyle.italic,
-                ),
-              ),
-            ),
-            const SizedBox(width: LayoutConstants.spacingSm),
-            IconButton(
-              icon: const Icon(Icons.calendar_today, size: 16),
-              onPressed: _showDeadlinePicker,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              color: colorScheme.primary,
             ),
           ],
-        ),
-      ],
-    );
-  }
 
-  Widget _buildMissingInformationPrompt(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final missing = widget.action.missingInformation;
-
-    if (missing.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(LayoutConstants.spacingSm),
-      decoration: BoxDecoration(
-        color: Colors.orange.shade50.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: Colors.orange.shade300.withValues(alpha: 0.5),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.info_outline,
-            size: 16,
-            color: Colors.orange.shade700,
-          ),
-          const SizedBox(width: LayoutConstants.spacingSm),
-          Expanded(
-            child: Text(
-              'Missing: ${missing.join(', ')}',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: Colors.orange.shade900,
-                fontSize: 12,
+          // Show missing information
+          if (widget.action.missingInformation.isNotEmpty) ...[
+            const SizedBox(height: LayoutConstants.spacingMd),
+            Container(
+              padding: const EdgeInsets.all(LayoutConstants.spacingSm),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.orange.shade300.withValues(alpha: 0.5),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: Colors.orange.shade700,
+                  ),
+                  const SizedBox(width: LayoutConstants.spacingSm),
+                  Expanded(
+                    child: Text(
+                      'Missing: ${widget.action.missingInformation.join(', ')}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.orange.shade900,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
+          ],
         ],
       ),
-    );
-  }
-
-  Widget _buildActionButtons(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Row(
-      children: [
-        // Assign button
-        if (!widget.action.hasOwner && widget.onAssignOwner != null)
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: _toggleEditOwner,
-              icon: const Icon(Icons.person_add, size: 16),
-              label: const Text('Assign'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.blue.shade600,
-                side: BorderSide(color: Colors.blue.shade600),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-              ),
-            ),
-          ),
-
-        // Set Deadline button
-        if (!widget.action.hasDeadline && widget.onSetDeadline != null) ...[
-          if (!widget.action.hasOwner) const SizedBox(width: 8),
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: _showDeadlinePicker,
-              icon: const Icon(Icons.calendar_today, size: 16),
-              label: const Text('Deadline'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.purple.shade600,
-                side: BorderSide(color: Colors.purple.shade600),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-              ),
-            ),
-          ),
-        ],
-
-        // Mark Complete button
-        if (!widget.action.isComplete && widget.onMarkComplete != null) ...[
-          if (widget.action.hasOwner || widget.action.hasDeadline)
-            const SizedBox(width: 8),
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: widget.onMarkComplete,
-              icon: const Icon(Icons.check_circle_outline, size: 16),
-              label: const Text('Complete'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.green.shade600,
-                side: BorderSide(color: Colors.green.shade600),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-              ),
-            ),
-          ),
-        ],
-
-        // Dismiss button
-        if (widget.onDismiss != null) ...[
-          const SizedBox(width: 8),
-          IconButton(
-            onPressed: widget.onDismiss,
-            icon: const Icon(Icons.close, size: 18),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-            color: colorScheme.onSurface.withValues(alpha: 0.5),
-          ),
-        ],
-      ],
     );
   }
 }

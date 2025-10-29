@@ -32,6 +32,10 @@ router = APIRouter()
 # Used to pass organization context to orchestrator when processing transcriptions
 _session_organization_map: Dict[str, UUID] = {}
 
+# Session tier configuration storage: session_id -> List[enabled_tiers]
+# Used to pass tier configuration when creating orchestrator
+_session_tier_config: Dict[str, list] = {}
+
 
 class LiveInsightsConnectionManager:
     """
@@ -607,9 +611,13 @@ async def handle_transcription_result(session_id: str, result: TranscriptionResu
                 # Get organization_id from session context
                 organization_id = _session_organization_map.get(session_id)
 
+                # Get tier configuration from session context (if set by client)
+                enabled_tiers = _session_tier_config.get(session_id)
+
                 orchestrator = get_orchestrator(
                     session_id=session_id,
-                    organization_id=organization_id
+                    organization_id=organization_id,
+                    enabled_tiers=enabled_tiers
                 )
                 logger.info(f"Sending final transcript to orchestrator for session {sanitize_for_log(session_id)}")
                 await orchestrator.process_transcription_chunk(
@@ -810,6 +818,11 @@ async def websocket_audio_stream(
         except Exception as e:
             logger.error(f"Error cleaning up orchestrator in finally block: {e}")
 
+        # Clean up tier configuration
+        if session_id in _session_tier_config:
+            del _session_tier_config[session_id]
+            logger.debug(f"Tier configuration cleaned up for session {sanitize_for_log(session_id)}")
+
         logger.info(f"Audio stream cleanup for session {sanitize_for_log(session_id)}")
 
 
@@ -890,6 +903,20 @@ async def websocket_live_insights(
                     # Heartbeat response
                     await websocket.send_json({
                         "type": "pong",
+                        "timestamp": datetime.utcnow().isoformat()
+                    })
+
+                elif message_type == "SET_TIER_CONFIG":
+                    # Client is setting tier configuration for answer discovery
+                    enabled_tiers = data.get("enabled_tiers", [])
+                    _session_tier_config[session_id] = enabled_tiers
+                    logger.info(
+                        f"User {sanitize_for_log(user_id)} set tier configuration for session "
+                        f"{sanitize_for_log(session_id)}: {enabled_tiers}"
+                    )
+                    await websocket.send_json({
+                        "type": "tier_config_received",
+                        "enabled_tiers": enabled_tiers,
                         "timestamp": datetime.utcnow().isoformat()
                     })
 
