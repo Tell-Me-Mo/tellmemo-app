@@ -56,7 +56,18 @@ class LiveQuestionsTracker extends _$LiveQuestionsTracker {
   /// Handle question update from WebSocket
   void _handleQuestionUpdate(LiveQuestion question) {
     debugPrint(
-        '[LiveQuestionsTracker] Received question update: ${question.id} - ${question.status}');
+        '[LiveQuestionsTracker] Received question update: ${question.id} - ${question.status} - tierResults count: ${question.tierResults.length}');
+
+    // DEBUG: Log tier results details
+    if (question.tierResults.isNotEmpty) {
+      debugPrint('[LiveQuestionsTracker] Tier results details:');
+      for (var i = 0; i < question.tierResults.length; i++) {
+        final tr = question.tierResults[i];
+        debugPrint('  [$i] tierType=${tr.tierType}, content="${tr.content.substring(0, tr.content.length > 50 ? 50 : tr.content.length)}...", confidence=${tr.confidence}');
+      }
+    } else {
+      debugPrint('[LiveQuestionsTracker] WARNING: No tier results in question update!');
+    }
 
     // Check if question was dismissed by user (skip if dismissed)
     final dismissedState = ref.read(dismissedInsightsProvider);
@@ -67,8 +78,35 @@ class LiveQuestionsTracker extends _$LiveQuestionsTracker {
         return;
       }
 
-      // Update or add question to map
-      _questions[question.id] = question;
+      // Merge with existing question to accumulate tier results
+      final existingQuestion = _questions[question.id];
+      if (existingQuestion != null) {
+        // Merge tier results (avoid duplicates based on tierType and content)
+        final mergedTierResults = <TierResult>[...existingQuestion.tierResults];
+
+        for (final newResult in question.tierResults) {
+          // Check if this tier result already exists
+          final isDuplicate = mergedTierResults.any((existing) =>
+              existing.tierType == newResult.tierType &&
+              existing.content == newResult.content);
+
+          if (!isDuplicate) {
+            mergedTierResults.add(newResult);
+            debugPrint('[LiveQuestionsTracker] Adding new tier result: ${newResult.tierType}');
+          }
+        }
+
+        // Create merged question with accumulated tier results
+        _questions[question.id] = question.copyWith(
+          tierResults: mergedTierResults,
+        );
+
+        debugPrint('[LiveQuestionsTracker] Merged question ${question.id}: total tierResults = ${mergedTierResults.length}');
+      } else {
+        // First time seeing this question - add as is
+        _questions[question.id] = question;
+        debugPrint('[LiveQuestionsTracker] New question ${question.id}: tierResults = ${question.tierResults.length}');
+      }
 
       // Update state with new list
       _updateState();
@@ -76,7 +114,27 @@ class LiveQuestionsTracker extends _$LiveQuestionsTracker {
 
     // If state not loaded yet, add question anyway (will be filtered later)
     if (!dismissedState.hasValue) {
-      _questions[question.id] = question;
+      final existingQuestion = _questions[question.id];
+      if (existingQuestion != null) {
+        // Merge tier results
+        final mergedTierResults = <TierResult>[...existingQuestion.tierResults];
+
+        for (final newResult in question.tierResults) {
+          final isDuplicate = mergedTierResults.any((existing) =>
+              existing.tierType == newResult.tierType &&
+              existing.content == newResult.content);
+
+          if (!isDuplicate) {
+            mergedTierResults.add(newResult);
+          }
+        }
+
+        _questions[question.id] = question.copyWith(
+          tierResults: mergedTierResults,
+        );
+      } else {
+        _questions[question.id] = question;
+      }
       _updateState();
     }
   }

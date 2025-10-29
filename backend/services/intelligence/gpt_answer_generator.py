@@ -121,15 +121,13 @@ class GPTAnswerGenerator:
                     disclaimer=disclaimer
                 )
 
-            # Broadcast to WebSocket clients
-            if self.broadcast_callback:
-                await self._broadcast_gpt_answer(
-                    session_id=session_id,
-                    question_id=question_id,
-                    answer=answer,
-                    confidence=confidence,
-                    disclaimer=disclaimer
-                )
+                # Broadcast complete question object to WebSocket clients
+                if self.broadcast_callback:
+                    await self._broadcast_gpt_answer(
+                        session_id=session_id,
+                        question_id=question_id,
+                        db_session=db_session
+                    )
 
             return True
 
@@ -210,7 +208,7 @@ class GPTAnswerGenerator:
                 logger.warning("GPT response has no content")
                 return None
 
-            # Try to parse as JSON
+            # Try to parse as JSON (should be clean JSON due to response_format or prompt instructions)
             try:
                 result = json.loads(content)
 
@@ -254,6 +252,8 @@ Generate concise, helpful answers to questions that couldn't be answered from:
 
 Provide answers based on general knowledge when appropriate. Be honest about
 limitations and suggest verification when needed.
+
+CRITICAL: Output ONLY raw JSON. Do NOT wrap in markdown code blocks. Do NOT include ```json or ``` markers.
 
 Respond in JSON format with:
 - "answer": Your concise answer (2-3 sentences max)
@@ -327,9 +327,12 @@ IMPORTANT:
             disclaimer: Disclaimer text
         """
         try:
-            question = db_session.query(LiveMeetingInsight).filter_by(
-                id=question_id
-            ).first()
+            # Use async API - execute select statement
+            from sqlalchemy import select
+            result = await db_session.execute(
+                select(LiveMeetingInsight).where(LiveMeetingInsight.id == question_id)
+            )
+            question = result.scalar_one_or_none()
 
             if not question:
                 logger.warning(f"Question {question_id} not found in database")
@@ -356,7 +359,7 @@ IMPORTANT:
                 }
             )
 
-            db_session.commit()
+            await db_session.commit()
 
             logger.info(
                 f"Updated question {question_id} with GPT-generated answer "
@@ -368,41 +371,43 @@ IMPORTANT:
                 f"Error updating question {question_id} with GPT answer: {e}",
                 exc_info=True
             )
-            db_session.rollback()
+            await db_session.rollback()
 
     async def _broadcast_gpt_answer(
         self,
         session_id: str,
         question_id: str,
-        answer: str,
-        confidence: float,
-        disclaimer: str
+        db_session: Session
     ):
         """
-        Broadcast GPT-generated answer via WebSocket.
+        Broadcast complete question object with GPT-generated answer via WebSocket.
 
         Args:
             session_id: Meeting session ID
             question_id: Question ID
-            answer: Generated answer
-            confidence: Confidence score
-            disclaimer: Disclaimer text
+            db_session: Database session to fetch complete question
         """
         if not self.broadcast_callback:
             logger.debug("No broadcast callback configured, skipping")
             return
 
         try:
+            # Fetch complete question with tier results from database
+            from sqlalchemy import select
+            result = await db_session.execute(
+                select(LiveMeetingInsight).where(LiveMeetingInsight.id == question_id)
+            )
+            question = result.scalar_one_or_none()
+
+            if not question:
+                logger.warning(f"Question {question_id} not found for broadcast")
+                return
+
+            # Broadcast complete question object
+            question_dict = question.to_dict()
             event_data = {
                 "type": "GPT_GENERATED_ANSWER",
-                "question_id": question_id,
-                "data": {
-                    "answer": answer,
-                    "confidence": confidence,
-                    "disclaimer": disclaimer,
-                    "source": "gpt_generated",
-                    "model": "gpt-5-mini"
-                },
+                "data": question_dict,
                 "timestamp": datetime.utcnow().isoformat()
             }
 

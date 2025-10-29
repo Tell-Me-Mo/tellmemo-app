@@ -132,6 +132,10 @@ class LiveMeetingInsight(Base):
         self.insight_metadata["tier_results"][tier_type] = result_data
         self.updated_at = datetime.utcnow()
 
+        # Mark the JSONB field as modified so SQLAlchemy detects the change
+        from sqlalchemy.orm import attributes
+        attributes.flag_modified(self, "insight_metadata")
+
     def calculate_completeness(self) -> float:
         """Calculate action item completeness score.
 
@@ -186,21 +190,79 @@ class LiveMeetingInsight(Base):
         """Convert to dictionary representation.
 
         Returns:
-            Dictionary representation of the insight
+            Dictionary representation of the insight (Flutter-compatible format)
         """
-        return {
+        # Flutter expects different field names - map backend fields to Flutter model
+        result = {
             "id": str(self.id),
             "session_id": self.session_id,
-            "recording_id": str(self.recording_id),
+            "recording_id": str(self.recording_id) if self.recording_id else None,
             "project_id": str(self.project_id),
             "organization_id": str(self.organization_id),
-            "insight_type": self.insight_type.value if self.insight_type else None,
-            "detected_at": self.detected_at.isoformat() if self.detected_at else None,
+            "insight_type": self.insight_type if isinstance(self.insight_type, str) else self.insight_type.value,
+            "timestamp": self.detected_at.isoformat() if self.detected_at else None,  # Flutter expects 'timestamp'
             "speaker": self.speaker,
-            "content": self.content,
+            "text": self.content,  # Flutter expects 'text' not 'content'
+            "description": self.content,  # For actions, Flutter expects 'description'
             "status": self.status,
             "answer_source": self.answer_source,
             "metadata": self.insight_metadata or {},
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+
+        # Add Flutter-specific fields with sensible defaults
+        metadata = self.insight_metadata or {}
+
+        # For questions: add category and confidence
+        if self.insight_type == "question" or (hasattr(self.insight_type, 'value') and self.insight_type.value == "question"):
+            result["category"] = metadata.get("category", "factual")
+            result["confidence"] = metadata.get("confidence", 0.85)  # Default question detection confidence
+
+            # Convert tier_results dict to list format expected by Flutter
+            tier_results_dict = metadata.get("tier_results", {})
+            tier_results_list = []
+
+            # DEBUG: Log raw tier_results from metadata
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"[to_dict] Question {self.id}: tier_results_dict type={type(tier_results_dict)}, value={tier_results_dict}")
+
+            if isinstance(tier_results_dict, dict):
+                # Convert dict to proper TierResult format with all required fields
+                for tier_type, tier_data in tier_results_dict.items():
+                    logger.info(f"[to_dict] Processing tier_type={tier_type}, tier_data={tier_data}")
+                    # Extract answer text from tier data
+                    if isinstance(tier_data, dict):
+                        content = tier_data.get("answer", tier_data.get("content", ""))
+                        tier_confidence = tier_data.get("confidence", 0.85)
+                        source = tier_data.get("source", tier_type)
+                        timestamp = tier_data.get("timestamp", datetime.utcnow().isoformat())
+
+                        tier_result = {
+                            "tierType": tier_type,
+                            "content": content,
+                            "confidence": tier_confidence,
+                            "source": source,
+                            "foundAt": timestamp,
+                            "metadata": tier_data
+                        }
+                        tier_results_list.append(tier_result)
+                        logger.info(f"[to_dict] Added tier_result: {tier_result}")
+            elif isinstance(tier_results_dict, list):
+                tier_results_list = tier_results_dict
+                logger.info(f"[to_dict] tier_results_dict is already a list: {tier_results_list}")
+
+            result["tierResults"] = tier_results_list
+            logger.info(f"[to_dict] Final tierResults count: {len(tier_results_list)}")
+            result["answeredAt"] = None  # To be populated when answered
+
+        # For actions: add completeness score and deadline
+        elif self.insight_type == "action" or (hasattr(self.insight_type, 'value') and self.insight_type.value == "action"):
+            result["completenessScore"] = metadata.get("completeness_score", 0.4)
+            result["confidence"] = metadata.get("confidence", 0.8)  # Default action detection confidence
+            result["owner"] = metadata.get("owner")
+            result["deadline"] = metadata.get("deadline")
+            result["completedAt"] = None  # To be populated when completed
+
+        return result

@@ -96,6 +96,25 @@ class QuestionHandler:
                 f"{sanitize_for_log(question_text[:100])}"
             )
 
+            # Check for duplicate question (deduplication by text similarity)
+            existing_question = await session.execute(
+                select(LiveMeetingInsight).where(
+                    and_(
+                        LiveMeetingInsight.session_id == session_id,
+                        LiveMeetingInsight.insight_type == InsightType.QUESTION,
+                        LiveMeetingInsight.content == question_text  # Exact match for now
+                    )
+                )
+            )
+            existing = existing_question.scalars().first()
+
+            if existing:
+                logger.info(
+                    f"Duplicate question detected for session {session_id}, skipping: "
+                    f"'{question_text[:50]}...' (existing ID: {existing.id})"
+                )
+                return existing
+
             # Create LiveMeetingInsight record
             question_insight = LiveMeetingInsight(
                 session_id=session_id,
@@ -272,18 +291,21 @@ class QuestionHandler:
                     collected_sources.append(result.to_dict())
 
                     # Broadcast progressive RAG result to clients (streaming UI update)
+                    # Use 'data' wrapper for consistency with other events
                     await self._broadcast_event(session_id, {
                         "type": "RAG_RESULT_PROGRESSIVE",
-                        "question_id": question_id,
-                        "document": {
-                            "title": result.title,
-                            "content": result.content[:500],  # First 500 chars
-                            "relevance_score": result.relevance_score,
-                            "url": result.url
-                        },
-                        "source": "rag",
-                        "tier": "rag",
-                        "label": "📚 From Documents"
+                        "data": {
+                            "question_id": question_id,
+                            "document": {
+                                "title": result.title,
+                                "content": result.content[:500],  # First 500 chars
+                                "relevance_score": result.relevance_score,
+                                "url": result.url
+                            },
+                            "source": "rag",
+                            "tier": "rag",
+                            "label": "📚 From Documents"
+                        }
                     })
 
                     logger.debug(
@@ -331,14 +353,16 @@ class QuestionHandler:
 
                     await db_session.commit()
 
-                    # Broadcast final RAG completion event
+                    # Broadcast final RAG completion event (use 'data' wrapper for consistency)
                     await self._broadcast_event(session_id, {
                         "type": "RAG_RESULT_COMPLETE",
-                        "question_id": question_id,
-                        "num_sources": len(collected_sources),
-                        "confidence": avg_confidence,
-                        "tier": "rag",
-                        "label": "📚 From Documents"
+                        "data": {
+                            "question_id": question_id,
+                            "num_sources": len(collected_sources),
+                            "confidence": avg_confidence,
+                            "tier": "rag",
+                            "label": "📚 From Documents"
+                        }
                     })
 
                     logger.info(
@@ -427,15 +451,17 @@ class QuestionHandler:
 
                     await db_session.commit()
 
-                    # Broadcast ANSWER_FROM_MEETING event
+                    # Broadcast ANSWER_FROM_MEETING event (use 'data' wrapper for consistency)
                     await self._broadcast_event(session_id, {
                         "type": "ANSWER_FROM_MEETING",
-                        "question_id": question_id,
-                        "answer_text": result.answer_text,
-                        "quotes": result.quotes,
-                        "confidence": result.confidence,
-                        "tier": "meeting_context",
-                        "label": "💬 Earlier in Meeting"
+                        "data": {
+                            "question_id": question_id,
+                            "answer_text": result.answer_text,
+                            "quotes": result.quotes,
+                            "confidence": result.confidence,
+                            "tier": "meeting_context",
+                            "label": "💬 Earlier in Meeting"
+                        }
                     })
 
                     logger.info(
@@ -504,13 +530,12 @@ class QuestionHandler:
                         question.update_status(InsightStatus.MONITORING.value)
                         await db_session.commit()
 
-                        # Broadcast MONITORING status to clients
+                        # Broadcast complete question object with updated status
+                        question_dict = question.to_dict()
                         await self._broadcast_event(session_id, {
                             "type": "QUESTION_MONITORING",
-                            "question_id": question_id,
-                            "tier": "live_conversation",
-                            "label": "👂 Listening...",
-                            "duration_seconds": self.monitoring_timeout_seconds
+                            "data": question_dict,
+                            "timestamp": datetime.utcnow().isoformat()
                         })
 
             # Wait for either answer detection or timeout
@@ -637,10 +662,11 @@ class QuestionHandler:
                     question.set_answer_source(AnswerSource.UNANSWERED.value)
                     await db_session.commit()
 
-                    # Broadcast unanswered event
+                    # Broadcast complete question object with updated status
+                    question_dict = question.to_dict()
                     await self._broadcast_event(session_id, {
                         "type": "QUESTION_UNANSWERED",
-                        "question_id": question_id,
+                        "data": question_dict,
                         "timestamp": datetime.utcnow().isoformat()
                     })
 

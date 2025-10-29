@@ -264,8 +264,17 @@ class _LiveQuestionCardState extends State<LiveQuestionCard>
   }
 
   Widget _buildTierResults(BuildContext context) {
-    if (widget.question.tierResults.isEmpty) {
+    // Show search state only if still searching and no results yet
+    final isStillSearching = widget.question.status == InsightStatus.searching ||
+        widget.question.status == InsightStatus.monitoring;
+
+    if (widget.question.tierResults.isEmpty && isStillSearching) {
       return _buildSearchingState(context);
+    }
+
+    // If status is answered/found but no tier results, show placeholder
+    if (widget.question.tierResults.isEmpty) {
+      return _buildNoDetailsState(context);
     }
 
     return Column(
@@ -322,6 +331,37 @@ class _LiveQuestionCardState extends State<LiveQuestionCard>
             'Searching for answers...',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoDetailsState(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(LayoutConstants.spacingMd),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.info_outline,
+            size: 16,
+            color: colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: LayoutConstants.spacingMd),
+          Expanded(
+            child: Text(
+              'Answer details not available yet. Please refresh or check back shortly.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
         ],

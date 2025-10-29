@@ -56,7 +56,7 @@ class MeetingContextSearchService:
 
     def __init__(
         self,
-        timeout: float = 1.5,
+        timeout: float = 10.0,
         confidence_threshold: float = 0.75,
         max_quotes: int = 3
     ):
@@ -226,6 +226,8 @@ TASK:
 3. If yes, extract the answer with exact quotes, speaker attribution, and timestamps
 4. If no, return found_answer=false
 
+CRITICAL: Output ONLY raw JSON. Do NOT wrap in markdown code blocks. Do NOT include ```json or ``` markers.
+
 OUTPUT FORMAT (JSON):
 {
   "found_answer": true/false,
@@ -305,6 +307,7 @@ Search the transcript above and determine if this question was already answered 
                 logger.warning("Response text is empty after extraction")
                 return MeetingContextResult(found_answer=False)
 
+            # Parse JSON (should be clean JSON due to response_format or prompt instructions)
             data = json.loads(response_text)
 
             found_answer = data.get("found_answer", False)

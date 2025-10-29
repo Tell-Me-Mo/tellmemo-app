@@ -128,10 +128,14 @@ class LiveInsightsWebSocketService {
       switch (type) {
         case 'QUESTION_DETECTED':
         case 'RAG_RESULT':
+        case 'RAG_RESULT_PROGRESSIVE':
+        case 'RAG_RESULT_COMPLETE':
         case 'ANSWER_FROM_MEETING':
         case 'QUESTION_ANSWERED_LIVE':
         case 'GPT_GENERATED_ANSWER':
         case 'QUESTION_UNANSWERED':
+        case 'QUESTION_MONITORING':
+        case 'ANSWER_DETECTED':
           _handleQuestionUpdate(data);
           break;
 
@@ -148,6 +152,11 @@ class LiveInsightsWebSocketService {
 
         case 'SYNC_STATE':
           _handleSyncState(data);
+          break;
+
+        case 'SEGMENT_TRANSITION':
+          // Segment transition events for meeting phase detection
+          debugPrint('[LiveInsightsWebSocket] Segment transition: $data');
           break;
 
         case 'pong':
@@ -167,6 +176,12 @@ class LiveInsightsWebSocketService {
   /// Handle question update events
   void _handleQuestionUpdate(Map<String, dynamic> data) {
     try {
+      final String? type = data['type'] as String?;
+
+      // Handle tier result events - these contain updates to existing questions
+      // Parse the data and let the provider merge it with existing question state
+      debugPrint('[LiveInsightsWebSocket] Processing tier result event: $type');
+
       // Handle different event structures from backend
       // Some events have 'question' key, others have 'data' key
       final Map<String, dynamic> questionData;
@@ -178,6 +193,10 @@ class LiveInsightsWebSocketService {
         debugPrint('[LiveInsightsWebSocket] Question event missing data key: $data');
         return;
       }
+
+      // DEBUG: Log raw tierResults from JSON
+      final rawTierResults = questionData['tierResults'];
+      debugPrint('[LiveInsightsWebSocket] Raw tierResults from backend: type=${rawTierResults.runtimeType}, value=$rawTierResults');
 
       final question = LiveQuestion.fromJson(questionData);
       _questionsController.add(question);

@@ -281,7 +281,7 @@ class AnswerHandler:
         confidence: float
     ) -> None:
         """
-        Broadcast answer detected event to WebSocket clients.
+        Broadcast complete question object with answer detected event to WebSocket clients.
 
         Args:
             session_id: Meeting session identifier
@@ -290,26 +290,42 @@ class AnswerHandler:
             speaker: Speaker who provided the answer
             confidence: Confidence score
         """
-        event_data = {
-            "type": "ANSWER_DETECTED",
-            "question_id": question_id,
-            "answer": answer_text,
-            "speaker": speaker,
-            "confidence": confidence,
-            "source": "live_conversation",
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        }
+        if not self._ws_broadcast_callback:
+            logger.debug("No WebSocket callback configured, skipping broadcast")
+            return
 
-        if self._ws_broadcast_callback:
-            try:
+        try:
+            # Fetch complete question with tier results from database
+            from db.database import get_db_context
+            from sqlalchemy import select
+
+            async with get_db_context() as db_session:
+                result = await db_session.execute(
+                    select(LiveMeetingInsight).where(
+                        LiveMeetingInsight.id == UUID(question_id)
+                    )
+                )
+                question = result.scalar_one_or_none()
+
+                if not question:
+                    logger.warning(f"Question {question_id} not found for broadcast")
+                    return
+
+                # Broadcast complete question object
+                question_dict = question.to_dict()
+                event_data = {
+                    "type": "ANSWER_DETECTED",
+                    "data": question_dict,
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                }
+
                 await self._ws_broadcast_callback(session_id, event_data)
                 logger.debug(
                     f"Broadcasted ANSWER_DETECTED event for question {question_id}"
                 )
-            except Exception as e:
-                logger.error(f"Failed to broadcast answer event: {e}")
-        else:
-            logger.debug("No WebSocket callback configured, skipping broadcast")
+
+        except Exception as e:
+            logger.error(f"Failed to broadcast answer event: {e}", exc_info=True)
 
     async def cleanup_session(self, session_id: str) -> None:
         """

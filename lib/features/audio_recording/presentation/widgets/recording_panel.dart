@@ -11,6 +11,8 @@ import '../../../content/presentation/providers/processing_jobs_provider.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../core/utils/screen_info.dart';
 import '../../../live_insights/presentation/widgets/live_transcription_widget.dart';
+import '../../../live_insights/presentation/widgets/live_question_card.dart';
+import '../../../live_insights/presentation/widgets/live_action_card.dart';
 import '../../../live_insights/data/models/transcript_model.dart';
 import '../../../live_insights/data/models/live_insight_model.dart';
 import '../../../live_insights/presentation/providers/live_insights_provider.dart';
@@ -1216,14 +1218,19 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
                     separatorBuilder: (_, _) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
                       final question = _questions[index];
-                      return Container(
-                        // Question card placeholder - will use LiveQuestionCard widget
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(question.text),
+                      final liveInsightsService = ref.read(liveInsightsWebSocketServiceProvider);
+
+                      return LiveQuestionCard(
+                        question: question,
+                        onMarkAnswered: () => liveInsightsService.markQuestionAsAnswered(question.id),
+                        onNeedsFollowUp: () => liveInsightsService.markQuestionNeedsFollowUp(question.id),
+                        onDismiss: () async {
+                          await liveInsightsService.dismissQuestion(question.id);
+                          // Remove from local state
+                          setState(() {
+                            _questions.removeWhere((q) => q.id == question.id);
+                          });
+                        },
                       );
                     },
                   ),
@@ -1278,14 +1285,59 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
                     separatorBuilder: (_, _) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
                       final action = _actions[index];
-                      return Container(
-                        // Action card placeholder - will use LiveActionCard widget
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(action.description),
+                      final liveInsightsService = ref.read(liveInsightsWebSocketServiceProvider);
+
+                      return LiveActionCard(
+                        action: action,
+                        onAssignOwner: (owner) {
+                          // Call assignAction with current deadline (if any)
+                          liveInsightsService.assignAction(
+                            action.id,
+                            owner,
+                            action.deadline,
+                          );
+                          // Update local state
+                          setState(() {
+                            final index = _actions.indexWhere((a) => a.id == action.id);
+                            if (index != -1) {
+                              _actions[index] = action.copyWith(owner: owner);
+                            }
+                          });
+                        },
+                        onSetDeadline: (deadline) {
+                          // Call assignAction with owner and new deadline
+                          liveInsightsService.assignAction(
+                            action.id,
+                            action.owner ?? '',
+                            deadline,
+                          );
+                          // Update local state
+                          setState(() {
+                            final index = _actions.indexWhere((a) => a.id == action.id);
+                            if (index != -1) {
+                              _actions[index] = action.copyWith(deadline: deadline);
+                            }
+                          });
+                        },
+                        onMarkComplete: () {
+                          liveInsightsService.markActionComplete(action.id);
+                          // Update local state
+                          setState(() {
+                            final index = _actions.indexWhere((a) => a.id == action.id);
+                            if (index != -1) {
+                              _actions[index] = action.copyWith(
+                                status: InsightStatus.complete,
+                              );
+                            }
+                          });
+                        },
+                        onDismiss: () async {
+                          await liveInsightsService.dismissAction(action.id);
+                          // Remove from local state
+                          setState(() {
+                            _actions.removeWhere((a) => a.id == action.id);
+                          });
+                        },
                       );
                     },
                   ),

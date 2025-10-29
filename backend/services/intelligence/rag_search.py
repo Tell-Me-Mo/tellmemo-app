@@ -116,17 +116,24 @@ class RAGSearchService:
                 f"{sanitize_for_log(question[:100])}"
             )
 
-            # Execute search with timeout
-            search_task = asyncio.create_task(
-                self._execute_search(question, project_id, organization_id, streaming)
-            )
+            # Execute search with timeout using asyncio.wait_for on the entire generator iteration
+            start_time = asyncio.get_event_loop().time()
 
             try:
-                async for result in asyncio.wait_for(search_task, timeout=self.timeout):
+                async for result in self._execute_search(question, project_id, organization_id, streaming):
+                    # Check if we've exceeded timeout
+                    elapsed = asyncio.get_event_loop().time() - start_time
+                    if elapsed > self.timeout:
+                        logger.warning(
+                            f"RAG search timeout ({self.timeout}s) for project {project_id} "
+                            f"after {elapsed:.2f}s"
+                        )
+                        return
+
                     yield result
+
             except asyncio.TimeoutError:
                 logger.warning(f"RAG search timeout ({self.timeout}s) for project {project_id}")
-                search_task.cancel()
                 return
 
         except Exception as e:
@@ -161,7 +168,7 @@ class RAGSearchService:
                 project_id=project_id,
                 question=question,
                 strategy=RAGStrategy.BASIC,  # Use BASIC for speed (2s constraint)
-                conversation_id=None
+                organization_id=organization_id
             )
 
             # Extract sources from RAG result
@@ -368,15 +375,30 @@ class RAGSearchService:
         """
         try:
             # Check if vector store client is initialized
-            if not hasattr(multi_tenant_vector_store, 'client'):
+            if not hasattr(multi_tenant_vector_store, '_client'):
+                logger.debug("Vector store client not initialized")
+                return False
+
+            # Verify client is not None
+            if multi_tenant_vector_store._client is None:
+                logger.debug("Vector store client is None")
                 return False
 
             # Check if embedding service is available
-            if not hasattr(embedding_service, 'model'):
+            # EmbeddingService uses _model (private attribute) not model
+            if not hasattr(embedding_service, '_model'):
+                logger.debug("Embedding service model not initialized")
                 return False
 
+            # Verify model is not None
+            if embedding_service._model is None:
+                logger.debug("Embedding service model is None")
+                return False
+
+            logger.debug("RAG service is available")
             return True
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Error checking RAG availability: {e}")
             return False
 
 

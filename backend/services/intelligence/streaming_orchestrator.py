@@ -273,9 +273,8 @@ class StreamingIntelligenceOrchestrator:
             """Wrapper for answer handler with session context."""
             async with get_db_context() as db_session:
                 await self.answer_handler.handle_answer(
-                    session_id=self.session_id,
-                    answer_data=answer_data,
-                    session=db_session
+                    answer_obj=answer_data,
+                    session_id=self.session_id
                 )
 
         self.stream_router.register_question_handler(question_wrapper)

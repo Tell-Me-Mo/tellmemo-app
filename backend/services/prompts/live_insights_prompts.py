@@ -41,25 +41,29 @@ RIGHT (single-line):
 DETECTION TYPES:
 
 1. QUESTION (single-line format):
-{"type":"question","id":"q_{uuid}","text":"The exact question as spoken","speaker":"Speaker A","timestamp":"2025-10-26T10:30:05Z","category":"factual","confidence":0.95}
+{"type":"question","text":"The exact question as spoken","speaker":"Speaker A","timestamp":"2025-10-26T10:30:05Z","category":"factual","confidence":0.95}
 
 2. ACTION (single-line format):
-{"type":"action","id":"a_{uuid}","description":"Clear action description","owner":"John","deadline":"2025-10-30","speaker":"Speaker B","timestamp":"2025-10-26T10:31:00Z","completeness":0.7,"confidence":0.92}
+{"type":"action","description":"Clear action description","owner":"John","deadline":"2025-10-30","speaker":"Speaker B","timestamp":"2025-10-26T10:31:00Z","completeness":0.7,"confidence":0.92}
 
 3. ACTION_UPDATE (single-line format):
-{"type":"action_update","id":"a_{uuid}","owner":"Sarah","deadline":"2025-11-05","completeness":1.0,"confidence":0.88}
+{"type":"action_update","action_text":"Clear action description to match","owner":"Sarah","deadline":"2025-11-05","completeness":1.0,"confidence":0.88}
 
 4. ANSWER (single-line format):
-{"type":"answer","question_id":"q_{uuid}","answer_text":"The answer as spoken","speaker":"Speaker C","timestamp":"2025-10-26T10:32:15Z","confidence":0.90}
+{"type":"answer","question_text":"The original question being answered","answer_text":"The answer as spoken","speaker":"Speaker C","timestamp":"2025-10-26T10:32:15Z","confidence":0.90}
 
 DETECTION RULES:
 
 Questions:
+- ONLY detect genuine questions that require an answer
 - Detect explicit questions (ending with "?")
 - Detect implicit questions ("I'm wondering about...", "Does anyone know...")
-- Ignore rhetorical questions
+- DO NOT detect greetings ("hello", "hi everyone", "good morning") - these are NOT questions
+- DO NOT detect acknowledgments ("thank you", "got it", "perfect")
+- DO NOT detect rhetorical questions or questions not seeking information
 - Ignore questions already answered in the same transcript
 - Include speaker attribution if available
+- Confidence threshold: Only output questions with confidence >0.80
 
 Actions:
 - Detect commitments ("I will...", "We should...", "Let's...")
@@ -73,20 +77,28 @@ Actions:
 
 Answers:
 - Detect when a question is answered in subsequent conversation
-- Match semantically (not just keyword matching)
+- Match answers to questions using the EXACT question text
 - Confidence >0.85 required to mark as answered
-- Include the actual answer text, not just a flag
+- Include both the original question text AND the answer text for matching
+
+Action Updates:
+- When more details emerge about an action, output an action_update
+- Include the original action description text to match it to the existing action
+- Update owner, deadline, or completeness as new information appears
 
 IMPORTANT OUTPUT RULES:
-- Generate UUIDs for IDs (e.g., "q_3f8a9b2c-1d4e-4f9a-b8c3-2a1b4c5d6e7f")
+- DO NOT generate IDs - the backend will assign unique IDs
+- For answers: include "question_text" to match to the original question
+- For action_updates: include "action_text" to match to the original action
 - CRITICAL: Each JSON object MUST be on EXACTLY ONE LINE with NO internal line breaks
 - Use compact JSON format with no spaces after colons or commas
 - Each object ends with a newline character (\\n)
 - Do NOT output explanations, commentary, markdown, or code blocks
 - If no detections in a transcript chunk, output nothing (empty response)
 - Example correct output format:
-{"type":"question","id":"q_abc123","text":"What is the budget?","speaker":"John","timestamp":"2025-10-26T10:30:05Z","category":"factual","confidence":0.95}
-{"type":"action","id":"a_def456","description":"Update spreadsheet","owner":"Sarah","deadline":"2025-10-30","speaker":"John","timestamp":"2025-10-26T10:31:00Z","completeness":1.0,"confidence":0.92}"""
+{"type":"question","text":"What is the budget?","speaker":"John","timestamp":"2025-10-26T10:30:05Z","category":"factual","confidence":0.95}
+{"type":"action","description":"Update spreadsheet","owner":"Sarah","deadline":"2025-10-30","speaker":"John","timestamp":"2025-10-26T10:31:00Z","completeness":1.0,"confidence":0.92}
+{"type":"answer","question_text":"What is the budget?","answer_text":"The budget is $250,000","speaker":"Mike","timestamp":"2025-10-26T10:31:15Z","confidence":0.95}"""
 
 
 def get_streaming_intelligence_user_prompt(
@@ -284,10 +296,10 @@ EXAMPLE_TRANSCRIPT = """[10:15:30] Speaker A: "Hello everyone, thanks for joinin
 [10:17:35] Speaker D (John): "Sure, I'll update it by end of week."
 """
 
-# Expected NDJSON output for the example
-EXAMPLE_NDJSON_OUTPUT = """{"type":"question","id":"q_a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d","text":"Does anyone have the latest numbers?","speaker":"Speaker A","timestamp":"2025-10-26T10:15:30Z","category":"factual","confidence":0.98}
-{"type":"action","id":"a_f1e2d3c4-b5a6-4978-8c9d-0a1b2c3d4e5f","description":"Update the spreadsheet with infrastructure budget numbers","owner":"John","deadline":"2025-10-30","speaker":"Speaker A","timestamp":"2025-10-26T10:17:20Z","completeness":1.0,"confidence":0.95}
-{"type":"answer","question_id":"q_a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d","answer_text":"The budget is $250,000 for infrastructure, including cloud costs and new servers.","speaker":"Speaker C","timestamp":"2025-10-26T10:16:45Z","confidence":0.97}"""
+# Expected NDJSON output for the example (IDs are generated by backend, not in GPT output)
+EXAMPLE_NDJSON_OUTPUT = """{"type":"question","text":"Does anyone have the latest numbers?","speaker":"Speaker A","timestamp":"2025-10-26T10:15:30Z","category":"factual","confidence":0.98}
+{"type":"action","description":"Update the spreadsheet with infrastructure budget numbers","owner":"John","deadline":"2025-10-30","speaker":"Speaker A","timestamp":"2025-10-26T10:17:20Z","completeness":1.0,"confidence":0.95}
+{"type":"answer","question_text":"Does anyone have the latest numbers?","answer_text":"The budget is $250,000 for infrastructure, including cloud costs and new servers.","speaker":"Speaker C","timestamp":"2025-10-26T10:16:45Z","confidence":0.97}"""
 
 # Example GPT-generated answer
 EXAMPLE_GPT_ANSWER = {
