@@ -191,11 +191,7 @@ class LiveAudioStreamingService {
           ? timestamp.difference(_streamStartTime!).inMilliseconds
           : 0;
 
-      // Log chunk info (only first few chunks to avoid spam)
-      if (_sequenceNumber <= 5 || _sequenceNumber % 100 == 0) {
-        final chunkDurationMs = (chunk.length / 32.0).toStringAsFixed(1); // bytes / (16000 * 2 / 1000)
-        print('[LiveAudioStreamingService] Raw chunk #$_sequenceNumber: ${chunk.length} bytes (~${chunkDurationMs}ms), offset: ${offsetMs}ms');
-      }
+      // Note: Chunk logging disabled to reduce console spam
 
       // Calculate audio level for quality monitoring
       _calculateAudioLevel(chunk);
@@ -221,10 +217,7 @@ class LiveAudioStreamingService {
       final bufferedChunk = Uint8List.fromList(_audioBuffer);
       final durationMs = (bufferedChunk.length / 32.0).toStringAsFixed(1); // bytes / (16000 * 2 / 1000)
 
-      // Log buffered chunk (throttled)
-      if (_sequenceNumber <= 5 || _sequenceNumber % 100 == 0) {
-        print('[LiveAudioStreamingService] Sending buffered chunk: ${bufferedChunk.length} bytes (~${durationMs}ms)');
-      }
+      // Note: Buffered chunk logging disabled to reduce console spam
 
       // Forward to listeners (WebSocket service will send to backend)
       _audioChunkController.add(bufferedChunk);
@@ -318,15 +311,8 @@ class LiveAudioStreamingService {
           // Emit metrics
           _qualityController.add(metrics);
 
-          // Log warnings (throttled)
-          if (_sequenceNumber % 20 == 0) {
-            if (isSilent) {
-              print('[LiveAudioStreamingService] WARNING: Silent audio detected (avg: ${(avgAmplitude * 100).toStringAsFixed(1)}%)');
-            }
-            if (isClipping) {
-              print('[LiveAudioStreamingService] WARNING: Audio clipping detected (current: ${(currentAmplitude * 100).toStringAsFixed(1)}%)');
-            }
-          }
+          // Note: Quality warnings disabled to reduce console spam
+          // (quality metrics still available via qualityMetricsStream)
         } catch (e) {
           print('[LiveAudioStreamingService] Error in quality monitoring: $e');
         }

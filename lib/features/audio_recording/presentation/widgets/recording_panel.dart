@@ -57,6 +57,12 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
   StreamSubscription<LiveQuestion>? _questionsSubscription;
   StreamSubscription<LiveAction>? _actionsSubscription;
 
+  // Scroll controller for auto-scrolling to new questions
+  final ScrollController _questionsScrollController = ScrollController();
+
+  // Track if user has manually scrolled up (to avoid auto-scroll interruption)
+  bool _isUserScrolledUp = false;
+
   @override
   void initState() {
     super.initState();
@@ -81,12 +87,27 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
     ));
 
     _animationController.forward();
+
+    // Listen to scroll position to detect manual scrolling
+    _questionsScrollController.addListener(_handleScroll);
+  }
+
+  void _handleScroll() {
+    if (!_questionsScrollController.hasClients) return;
+
+    final position = _questionsScrollController.position;
+    final isAtBottom = position.pixels >= position.maxScrollExtent - 50; // 50px threshold
+
+    setState(() {
+      _isUserScrolledUp = !isAtBottom;
+    });
   }
 
   @override
   void dispose() {
     _animationController.dispose();
     _titleController.dispose();
+    _questionsScrollController.dispose();
     _transcriptionSubscription?.cancel();
     _questionsSubscription?.cancel();
     _actionsSubscription?.cancel();
@@ -149,10 +170,48 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
 
         setState(() {
           final index = _questions.indexWhere((q) => q.id == question.id);
+
           if (index != -1) {
-            _questions[index] = question;
+            // Update existing question - preserve text, speaker, and timestamp if incoming is empty/null/changed
+            final existingQuestion = _questions[index];
+            final preservedText = question.text.isEmpty ? existingQuestion.text : question.text;
+            final preservedSpeaker = question.speaker ?? existingQuestion.speaker;
+            final preservedTimestamp = existingQuestion.timestamp; // Always keep original timestamp
+
+            _questions[index] = question.copyWith(
+              text: preservedText,
+              speaker: preservedSpeaker,
+              timestamp: preservedTimestamp, // Preserve original question time
+            );
+
+            debugPrint('[RecordingPanel] Updated question ${question.id}: preserved speaker="$preservedSpeaker", timestamp=${preservedTimestamp}');
           } else {
             _questions.add(question);
+            debugPrint('[RecordingPanel] Added new question ${question.id}');
+          }
+
+          // Chat-like auto-scroll: only scroll if user is at bottom (hasn't scrolled up)
+          // This applies to both new questions AND updates to existing questions
+          final shouldAutoScroll = !_isUserScrolledUp;
+
+          if (shouldAutoScroll) {
+            // Schedule scroll after setState completes and ListView rebuilds
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              // Add a microtask to ensure the frame is fully complete
+              Future.microtask(() {
+                if (mounted && _questionsScrollController.hasClients) {
+                  try {
+                    _questionsScrollController.animateTo(
+                      _questionsScrollController.position.maxScrollExtent,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                    );
+                  } catch (e) {
+                    debugPrint('[RecordingPanel] Error scrolling to bottom: $e');
+                  }
+                }
+              });
+            });
           }
         });
       },
@@ -1288,6 +1347,7 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
                     subtitle: 'Questions detected in the conversation will appear here',
                   )
                 : ListView.separated(
+                    controller: _questionsScrollController,
                     padding: const EdgeInsets.all(12),
                     itemCount: _questions.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 8),

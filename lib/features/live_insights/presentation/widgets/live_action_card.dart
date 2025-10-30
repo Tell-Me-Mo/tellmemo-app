@@ -125,30 +125,17 @@ class _LiveActionCardState extends State<LiveActionCard>
             width: 1,
           ),
         ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: widget.onTap ?? _toggleExpand,
-          splashColor: Colors.transparent,
-          highlightColor: Colors.transparent,
-          child: Padding(
-            padding: const EdgeInsets.all(LayoutConstants.spacingMd),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(context),
-                const SizedBox(height: LayoutConstants.spacingMd),
-                _buildActionDescription(context),
-                const SizedBox(height: LayoutConstants.spacingSm),
-                _buildCompletenessProgressBar(context),
-                if (_isExpanded) ...[
-                  const SizedBox(height: LayoutConstants.spacingMd),
-                  _buildExpandedMetadata(context),
-                ] else ...[
-                  const SizedBox(height: LayoutConstants.spacingSm),
-                  _buildCompactMetadata(context),
-                ],
-              ],
-            ),
+        child: Padding(
+          padding: const EdgeInsets.all(LayoutConstants.spacingMd),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(context),
+              const SizedBox(height: LayoutConstants.spacingMd),
+              _buildActionDescription(context),
+              const SizedBox(height: LayoutConstants.spacingSm),
+              _buildCompactMetadata(context),
+            ],
           ),
         ),
       ),
@@ -207,19 +194,6 @@ class _LiveActionCardState extends State<LiveActionCard>
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),
-
-        const SizedBox(width: LayoutConstants.spacingSm),
-
-        // Expand/collapse chevron
-        AnimatedRotation(
-          turns: _rotationAnimation.value,
-          duration: const Duration(milliseconds: 200),
-          child: Icon(
-            Icons.chevron_right,
-            size: LayoutConstants.iconSizeMd,
-            color: colorScheme.onSurfaceVariant,
-          ),
-        ),
       ],
     );
   }
@@ -398,117 +372,91 @@ class _LiveActionCardState extends State<LiveActionCard>
           color: colorScheme.outlineVariant.withValues(alpha: 0.2),
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          // Owner and Deadline in one row
-          Row(
-            children: [
-              // Owner
-              Icon(
-                Icons.person_outline,
-                size: 18,
-                color: colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: LayoutConstants.spacingSm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Owner',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      widget.action.owner ?? 'No owner assigned',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: widget.action.hasOwner
-                            ? colorScheme.onSurface
-                            : colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                        fontWeight: widget.action.hasOwner ? FontWeight.w500 : FontWeight.w400,
-                        fontStyle: widget.action.hasOwner ? FontStyle.normal : FontStyle.italic,
-                      ),
-                    ),
-                  ],
+          // Owner
+          Expanded(
+            child: Row(
+              children: [
+                Icon(
+                  Icons.person_outline,
+                  size: 16,
+                  color: colorScheme.onSurfaceVariant,
                 ),
-              ),
-
-              const SizedBox(width: LayoutConstants.spacingLg),
-
-              // Deadline
-              Icon(
-                widget.action.deadline != null && widget.action.deadline!.isBefore(DateTime.now())
-                    ? Icons.warning_amber_rounded
-                    : Icons.schedule,
-                size: 18,
-                color: _getDeadlineColor(colorScheme),
-              ),
-              const SizedBox(width: LayoutConstants.spacingSm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Deadline',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w600,
+                const SizedBox(width: LayoutConstants.spacingSm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Owner',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      widget.action.deadlineDisplay,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: _getDeadlineColor(colorScheme),
-                        fontWeight: widget.action.hasDeadline ? FontWeight.w600 : FontWeight.w400,
-                        fontStyle: widget.action.hasDeadline ? FontStyle.normal : FontStyle.italic,
+                      const SizedBox(height: 2),
+                      Text(
+                        widget.action.owner ?? 'No owner',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: widget.action.hasOwner
+                              ? colorScheme.onSurface
+                              : colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
 
-          // Show overdue warning if deadline is past
-          if (widget.action.deadline != null && widget.action.deadline!.isBefore(DateTime.now())) ...[
-            const SizedBox(height: LayoutConstants.spacingMd),
-            Container(
-              padding: const EdgeInsets.all(LayoutConstants.spacingSm),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: Colors.red.shade300.withValues(alpha: 0.5),
-                  width: 1,
+          const SizedBox(width: LayoutConstants.spacingLg),
+
+          // Deadline
+          Expanded(
+            child: Row(
+              children: [
+                Icon(
+                  widget.action.deadline != null && widget.action.deadline!.isBefore(DateTime.now())
+                      ? Icons.warning_amber_rounded
+                      : Icons.schedule,
+                  size: 16,
+                  color: _getDeadlineColor(colorScheme),
                 ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.warning_amber_rounded,
-                    size: 16,
-                    color: Colors.red.shade700,
-                  ),
-                  const SizedBox(width: LayoutConstants.spacingSm),
-                  Expanded(
-                    child: Text(
-                      'Overdue',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.red.shade900,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                const SizedBox(width: LayoutConstants.spacingSm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Deadline',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 2),
+                      Text(
+                        widget.action.deadlineDisplay,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: _getDeadlineColor(colorScheme),
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ],
       ),
     );

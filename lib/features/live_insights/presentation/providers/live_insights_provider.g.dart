@@ -30,7 +30,7 @@ final liveInsightsWebSocketServiceProvider =
 typedef LiveInsightsWebSocketServiceRef =
     ProviderRef<LiveInsightsWebSocketService>;
 String _$liveQuestionsTrackerHash() =>
-    r'7e91dba96a1378be475a5c6fb69aad1392de5e3b';
+    r'3a8ec246474c4a0891803668e5aee9765b1487e6';
 
 /// Provider for tracking live questions during a meeting
 /// Maintains a map of questions by ID for efficient updates

@@ -329,6 +329,140 @@ class TestParallelAnswerDiscovery:
             # Tier 3 (GPT) should NOT be called since Tier 1 succeeded
             mock_tier3.assert_not_called()
 
+    async def test_unanswered_broadcast_after_all_tiers_fail(self, question_handler):
+        """Test QUESTION_UNANSWERED is broadcast only after ALL 4 tiers complete without answer."""
+        question_handler.monitoring_timeout_seconds = 0.1
+        session_id = "test_session"
+        question_id = str(uuid.uuid4())
+
+        # Mock WebSocket broadcast
+        ws_callback = AsyncMock()
+        question_handler.set_websocket_callback(ws_callback)
+
+        # Mock all tiers failing
+        with patch.object(question_handler, '_tier1_rag_search', AsyncMock(return_value=False)), \
+             patch.object(question_handler, '_tier2_meeting_context_search', AsyncMock(return_value=False)), \
+             patch.object(question_handler, '_tier4_live_monitoring', AsyncMock(return_value=False)), \
+             patch.object(question_handler, '_tier3_gpt_generated_answer', AsyncMock(return_value=False)), \
+             patch('db.database.get_db_context') as mock_db:
+
+            # Mock database context for UNANSWERED verification and persistence
+            mock_db_session = AsyncMock()
+            mock_question = MagicMock()
+            mock_question.status = InsightStatus.SEARCHING.value  # Not answered yet
+            mock_question.update_status = MagicMock()
+            mock_question.set_answer_source = MagicMock()
+
+            mock_db_result = AsyncMock()
+            mock_db_result.scalar_one_or_none = MagicMock(return_value=mock_question)
+            mock_db_session.execute = AsyncMock(return_value=mock_db_result)
+
+            # Create async context manager
+            async def async_context_manager():
+                return mock_db_session
+
+            mock_db.return_value.__aenter__ = AsyncMock(side_effect=async_context_manager)
+            mock_db.return_value.__aexit__ = AsyncMock(return_value=None)
+
+            await question_handler._parallel_answer_discovery(
+                session_id=session_id,
+                question_id=question_id,
+                question_text="What is the budget?",
+                project_id=str(uuid.uuid4()),
+                organization_id=str(uuid.uuid4())
+            )
+
+            # Verify QUESTION_UNANSWERED was broadcast
+            unanswered_calls = [
+                call for call in ws_callback.call_args_list
+                if call[0][1].get('type') == 'QUESTION_UNANSWERED'
+            ]
+            assert len(unanswered_calls) == 1, "QUESTION_UNANSWERED should be broadcast once"
+
+            # Verify the broadcast contains correct data
+            unanswered_event = unanswered_calls[0][0][1]
+            assert unanswered_event['data']['question_id'] == question_id
+            assert unanswered_event['data']['status'] == 'unanswered'
+
+    async def test_no_unanswered_broadcast_when_tier4_succeeds(self, question_handler):
+        """Test QUESTION_UNANSWERED is NOT broadcast when Tier 4 finds an answer."""
+        question_handler.monitoring_timeout_seconds = 0.1
+        session_id = "test_session"
+        question_id = str(uuid.uuid4())
+
+        # Mock WebSocket broadcast
+        ws_callback = AsyncMock()
+        question_handler.set_websocket_callback(ws_callback)
+
+        # Mock Tiers 1-3 failing, but Tier 4 succeeding
+        with patch.object(question_handler, '_tier1_rag_search', AsyncMock(return_value=False)), \
+             patch.object(question_handler, '_tier2_meeting_context_search', AsyncMock(return_value=False)), \
+             patch.object(question_handler, '_tier4_live_monitoring', AsyncMock(return_value=True)), \
+             patch.object(question_handler, '_tier3_gpt_generated_answer', AsyncMock(return_value=False)):
+
+            await question_handler._parallel_answer_discovery(
+                session_id=session_id,
+                question_id=question_id,
+                question_text="What is the budget?",
+                project_id=str(uuid.uuid4()),
+                organization_id=str(uuid.uuid4())
+            )
+
+            # Verify QUESTION_UNANSWERED was NOT broadcast
+            unanswered_calls = [
+                call for call in ws_callback.call_args_list
+                if call[0][1].get('type') == 'QUESTION_UNANSWERED'
+            ]
+            assert len(unanswered_calls) == 0, "QUESTION_UNANSWERED should NOT be broadcast when Tier 4 succeeds"
+
+    async def test_no_unanswered_broadcast_when_answered_after_timeout(self, question_handler):
+        """Test QUESTION_UNANSWERED is NOT broadcast when answer detected after Tier 4 timeout."""
+        question_handler.monitoring_timeout_seconds = 0.1
+        session_id = "test_session"
+        question_id = str(uuid.uuid4())
+
+        # Mock WebSocket broadcast
+        ws_callback = AsyncMock()
+        question_handler.set_websocket_callback(ws_callback)
+
+        # Mock all tiers failing (Tier 4 times out)
+        with patch.object(question_handler, '_tier1_rag_search', AsyncMock(return_value=False)), \
+             patch.object(question_handler, '_tier2_meeting_context_search', AsyncMock(return_value=False)), \
+             patch.object(question_handler, '_tier4_live_monitoring', AsyncMock(return_value=False)), \
+             patch.object(question_handler, '_tier3_gpt_generated_answer', AsyncMock(return_value=False)), \
+             patch('db.database.get_db_context') as mock_db:
+
+            # Mock database showing question was ANSWERED (by AnswerHandler after timeout)
+            mock_db_session = AsyncMock()
+            mock_question = MagicMock()
+            mock_question.status = InsightStatus.ANSWERED.value  # Already answered!
+
+            mock_db_result = AsyncMock()
+            mock_db_result.scalar_one_or_none = MagicMock(return_value=mock_question)
+            mock_db_session.execute = AsyncMock(return_value=mock_db_result)
+
+            # Create async context manager
+            async def async_context_manager():
+                return mock_db_session
+
+            mock_db.return_value.__aenter__ = AsyncMock(side_effect=async_context_manager)
+            mock_db.return_value.__aexit__ = AsyncMock(return_value=None)
+
+            await question_handler._parallel_answer_discovery(
+                session_id=session_id,
+                question_id=question_id,
+                question_text="What is the budget?",
+                project_id=str(uuid.uuid4()),
+                organization_id=str(uuid.uuid4())
+            )
+
+            # Verify QUESTION_UNANSWERED was NOT broadcast (race condition prevented)
+            unanswered_calls = [
+                call for call in ws_callback.call_args_list
+                if call[0][1].get('type') == 'QUESTION_UNANSWERED'
+            ]
+            assert len(unanswered_calls) == 0, "QUESTION_UNANSWERED should NOT be broadcast when question was answered after timeout"
+
 
 @pytest.mark.asyncio
 class TestResourceCleanup:

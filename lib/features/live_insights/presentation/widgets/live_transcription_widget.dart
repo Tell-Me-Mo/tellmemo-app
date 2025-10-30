@@ -182,6 +182,7 @@ class _LiveTranscriptionWidgetState
                       padding: const EdgeInsets.only(
                         left: 16,
                         right: 16,
+                        top: 12,
                         bottom: 8,
                       ),
                       itemCount: widget.transcripts.length,

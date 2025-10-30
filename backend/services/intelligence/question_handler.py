@@ -36,7 +36,7 @@ class QuestionHandler:
                          Valid values: 'rag', 'meeting_context', 'live_conversation', 'gpt_generated'
         """
         # Question lifecycle configuration
-        self.monitoring_timeout_seconds = 15  # Tier 4: Live monitoring timeout
+        self.monitoring_timeout_seconds = 60  # Tier 4: Live monitoring timeout
         self.rag_search_timeout = 2.0  # Tier 1: RAG search timeout
         self.meeting_context_timeout = 1.5  # Tier 2: Meeting context timeout
         self.gpt_generation_timeout = 3.0  # Tier 3: GPT answer generation timeout
@@ -257,11 +257,17 @@ class QuestionHandler:
     ) -> None:
         """Execute parallel answer discovery across four tiers.
 
-        Tiers execute in parallel:
+        Execution strategy:
+        - Tier 1 (RAG) and Tier 2 (Meeting Context) run in parallel (fast tiers)
+        - Tier 4 (Live Monitoring) runs in parallel from start (background, 15s window)
+        - Tier 3 (GPT) triggers if Tiers 1-2 fail, WITHOUT waiting for Tier 4
+        - Tier 4 continues monitoring and can provide answer even after Tier 3
+
+        Tiers:
         - Tier 1: RAG Search (2s timeout)
         - Tier 2: Meeting Context Search (1.5s timeout)
-        - Tier 3: GPT-Generated Answer (triggered only if all others fail, 3s timeout)
-        - Tier 4: Live Conversation Monitoring (15s window)
+        - Tier 3: GPT-Generated Answer (triggered if T1-2 fail, 3s timeout)
+        - Tier 4: Live Conversation Monitoring (15s window, runs in background)
 
         Args:
             session_id: Meeting session ID
@@ -272,16 +278,17 @@ class QuestionHandler:
             speaker: Speaker who asked the question (optional)
         """
         try:
-            # Execute enabled tiers in parallel
-            tasks = []
-            tier1_found = tier2_found = tier4_found = False
+            # Start fast tiers (Tier 1 and Tier 2) in parallel
+            fast_tasks = []
+            tier1_task = None
+            tier2_task = None
 
             # Tier 1: RAG Search
             if self.tier_config['rag']:
                 tier1_task = asyncio.create_task(
                     self._tier1_rag_search(session_id, question_id, question_text, project_id, organization_id)
                 )
-                tasks.append(('tier1', tier1_task))
+                fast_tasks.append(('tier1', tier1_task))
             else:
                 logger.info(f"Tier 1 (RAG) disabled for question {question_id}")
 
@@ -292,17 +299,16 @@ class QuestionHandler:
                         session_id, question_id, question_text, speaker, organization_id
                     )
                 )
-                tasks.append(('tier2', tier2_task))
+                fast_tasks.append(('tier2', tier2_task))
             else:
                 logger.info(f"Tier 2 (Meeting Context) disabled for question {question_id}")
 
-            # Tier 4: Live Monitoring
+            # Tier 4: Live Monitoring (runs in background, does NOT block Tier 3)
             tier4_task = None
             if self.tier_config['live_conversation']:
                 tier4_task = asyncio.create_task(
                     self._tier4_live_monitoring(session_id, question_id, question_text)
                 )
-                tasks.append(('tier4', tier4_task))
 
                 # Store monitoring task for potential cancellation
                 if session_id not in self._active_monitoring:
@@ -311,33 +317,117 @@ class QuestionHandler:
             else:
                 logger.info(f"Tier 4 (Live Conversation) disabled for question {question_id}")
 
-            # Wait for all enabled tiers to complete
-            if tasks:
-                results = await asyncio.gather(*[task for _, task in tasks])
+            # Wait ONLY for fast tiers (Tier 1 and 2), NOT Tier 4
+            tier1_found = tier2_found = False
+            if fast_tasks:
+                results = await asyncio.gather(*[task for _, task in fast_tasks])
                 # Map results back to tier names
-                for (tier_name, _), result in zip(tasks, results):
+                for (tier_name, _), result in zip(fast_tasks, results):
                     if tier_name == 'tier1':
                         tier1_found = result
                     elif tier_name == 'tier2':
                         tier2_found = result
-                    elif tier_name == 'tier4':
-                        tier4_found = result
 
-            # Clean up monitoring task if it was created
-            if tier4_task and session_id in self._active_monitoring:
-                self._active_monitoring[session_id].pop(question_id, None)
+            # Check if fast tiers found an answer
+            fast_tiers_found = tier1_found or tier2_found
 
-            # Check if any tier found an answer
-            answer_found = tier1_found or tier2_found or tier4_found
+            # Tier 3: Trigger GPT if fast tiers failed (don't wait for Tier 4)
+            tier3_found = False
+            if not fast_tiers_found and self.tier_config['gpt_generated']:
+                logger.info(
+                    f"No answer found in Tiers 1-2 for question {question_id}, "
+                    f"triggering Tier 3 (GPT). Tier 4 continues monitoring in background."
+                )
+                tier3_found = await self._tier3_gpt_generated_answer(session_id, question_id, question_text, speaker)
 
-            if not answer_found and self.tier_config['gpt_generated']:
-                # Tier 3: GPT-generated answer (fallback)
-                logger.info(f"No answer found in Tiers 1-2, 4 for question {question_id}, triggering Tier 3")
-                await self._tier3_gpt_generated_answer(session_id, question_id, question_text, speaker)
-            elif not answer_found:
-                logger.info(f"No answer found for question {question_id} (Tier 4 disabled)")
-                # Mark question as unanswered
-                await self._mark_question_unanswered(question_id)
+            # Wait for Tier 4 to complete (if it's running) before marking as unanswered
+            tier4_found = False
+            if tier4_task:
+                try:
+                    tier4_found = await tier4_task
+                    logger.debug(
+                        f"Tier 4 completed for question {question_id}: "
+                        f"answer_found={tier4_found}"
+                    )
+                except Exception as e:
+                    logger.error(
+                        f"Tier 4 monitoring failed for question {question_id}: {e}",
+                        exc_info=True
+                    )
+
+            # Check if ANY tier found an answer
+            any_tier_found = tier1_found or tier2_found or tier3_found or tier4_found
+
+            # If NO tier found an answer, verify question is still unanswered before broadcasting
+            if not any_tier_found:
+                # ========================================================================
+                # IMPORTANT: Check database status before broadcasting UNANSWERED
+                # ========================================================================
+                # This prevents race condition where AnswerHandler detects an answer
+                # AFTER Tier 4 timeout but BEFORE we broadcast UNANSWERED
+                try:
+                    from db.database import get_db_context
+
+                    async with get_db_context() as db_session:
+                        result = await db_session.execute(
+                            select(LiveMeetingInsight).where(
+                                LiveMeetingInsight.id == uuid.UUID(question_id)
+                            )
+                        )
+                        question = result.scalar_one_or_none()
+
+                        if not question:
+                            logger.warning(
+                                f"Question {question_id} not found in database - "
+                                f"cannot verify status before marking unanswered"
+                            )
+                            return
+
+                        # Check if question was answered by AnswerHandler during monitoring
+                        if question.status == InsightStatus.ANSWERED.value:
+                            logger.info(
+                                f"Question {question_id} was answered by live conversation "
+                                f"after Tier 4 timeout - skipping UNANSWERED broadcast"
+                            )
+                            return
+
+                        # Question is still not answered - proceed with UNANSWERED broadcast
+                        logger.info(
+                            f"All 4 tiers exhausted for question {question_id} without finding answer. "
+                            f"Marking as UNANSWERED."
+                        )
+
+                        # Update status to UNANSWERED
+                        question.update_status(InsightStatus.UNANSWERED.value)
+                        question.set_answer_source(AnswerSource.UNANSWERED.value)
+
+                        logger.debug(
+                            f"Persisted UNANSWERED status to database "
+                            f"for question {question_id}"
+                        )
+
+                        # Broadcast UNANSWERED event
+                        await self._broadcast_event(session_id, {
+                            "type": "QUESTION_UNANSWERED",
+                            "data": {
+                                "question_id": question_id,
+                                "status": "unanswered",
+                                "answer_source": "none",
+                                "timestamp": datetime.utcnow().isoformat()
+                            },
+                            "timestamp": datetime.utcnow().isoformat()
+                        })
+
+                        logger.info(
+                            f"Broadcast UNANSWERED status for question {question_id} "
+                            f"after all tiers completed"
+                        )
+
+                except Exception as e:
+                    logger.error(
+                        f"Failed to handle UNANSWERED status for question {question_id}: {e}",
+                        exc_info=True
+                    )
 
         except Exception as e:
             logger.error(
@@ -610,6 +700,26 @@ class QuestionHandler:
                             f"Tier 2: Persisted meeting context result to database "
                             f"for question {question_id}"
                         )
+
+                        # ====================================================================
+                        # PHASE 3: Broadcast enriched event with full question object
+                        # ====================================================================
+                        # After DB persistence, send the complete question data to frontend
+                        # This includes tier results, status, answer_source, etc.
+                        await db_session.refresh(question)
+                        question_dict = question.to_dict()
+
+                        enriched_event = {
+                            "type": "ANSWER_DETECTED_ENRICHED",
+                            "data": question_dict,
+                            "timestamp": datetime.utcnow().isoformat() + "Z"
+                        }
+
+                        await self._broadcast_event(session_id, enriched_event)
+                        logger.debug(
+                            f"Tier 2: Broadcasted enriched event with full question data "
+                            f"for question {question_id}"
+                        )
                     else:
                         logger.error(
                             f"Tier 2: Question {question_id} not found in database - "
@@ -844,65 +954,15 @@ class QuestionHandler:
                     )
                     return True
 
-                # If GPT generation failed or confidence too low, mark as unanswered
+                # If GPT generation failed or confidence too low
                 logger.info(
-                    f"Tier 3: GPT could not confidently answer question {question_id}, "
-                    "marking as unanswered"
+                    f"Tier 3: GPT could not confidently answer question {question_id}. "
+                    f"Tier 4 (live monitoring) will continue in background."
                 )
 
-                # ========================================================================
-                # PHASE 1: Notify user immediately (fast UX feedback)
-                # ========================================================================
-                # Broadcast unanswered status immediately without waiting for DB
-                await self._broadcast_event(session_id, {
-                    "type": "QUESTION_UNANSWERED",
-                    "data": {
-                        "question_id": question_id,
-                        "status": "unanswered",
-                        "answer_source": "none",
-                        "timestamp": datetime.utcnow().isoformat()
-                    },
-                    "timestamp": datetime.utcnow().isoformat()
-                })
-
-                logger.info(
-                    f"Tier 3: Broadcast UNANSWERED status for question {question_id}"
-                )
-
-                # ========================================================================
-                # PHASE 2: Persist status to database (background operation)
-                # ========================================================================
-                try:
-                    result = await db_session.execute(
-                        select(LiveMeetingInsight).where(
-                            LiveMeetingInsight.id == uuid.UUID(question_id)
-                        )
-                    )
-                    question = result.scalar_one_or_none()
-
-                    if question:
-                        question.update_status(InsightStatus.UNANSWERED.value)
-                        question.set_answer_source(AnswerSource.UNANSWERED.value)
-                        await db_session.commit()
-
-                        logger.debug(
-                            f"Tier 3: Persisted UNANSWERED status to database "
-                            f"for question {question_id}"
-                        )
-                    else:
-                        logger.error(
-                            f"Tier 3: Question {question_id} not found in database - "
-                            f"cannot persist UNANSWERED status"
-                        )
-
-                except Exception as persistence_error:
-                    # Log persistence errors but don't fail the tier
-                    # User already got notification via broadcast
-                    logger.error(
-                        f"Tier 3: Failed to persist UNANSWERED status for question {question_id}: "
-                        f"{persistence_error}",
-                        exc_info=True
-                    )
+                # DO NOT mark as unanswered yet - Tier 4 is still running!
+                # The _parallel_answer_discovery method will handle broadcasting
+                # QUESTION_UNANSWERED after Tier 4 completes without finding answer.
 
                 return False
 

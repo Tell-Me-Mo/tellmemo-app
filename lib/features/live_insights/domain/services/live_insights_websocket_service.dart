@@ -139,12 +139,31 @@ class LiveInsightsWebSocketService {
         case 'RAG_RESULT':
         case 'RAG_RESULT_PROGRESSIVE':
         case 'RAG_RESULT_COMPLETE':
-        case 'ANSWER_FROM_MEETING':
-        case 'QUESTION_ANSWERED_LIVE':
         case 'GPT_GENERATED_ANSWER':
-        case 'QUESTION_UNANSWERED':
+          _handleQuestionUpdate(data);
+          break;
+
         case 'QUESTION_MONITORING':
+          _handleQuestionMonitoring(data);
+          break;
+
+        case 'QUESTION_UNANSWERED':
+          _handleQuestionUnanswered(data);
+          break;
+
         case 'ANSWER_DETECTED':
+          _handleAnswerDetected(data);
+          break;
+
+        case 'ANSWER_FROM_MEETING':
+          _handleAnswerFromMeeting(data);
+          break;
+
+        case 'QUESTION_ANSWERED_LIVE':
+          _handleQuestionAnsweredLive(data);
+          break;
+
+        case 'ANSWER_DETECTED_ENRICHED':
           _handleQuestionUpdate(data);
           break;
 
@@ -182,11 +201,181 @@ class LiveInsightsWebSocketService {
     }
   }
 
+  /// Handle QUESTION_MONITORING event (just metadata, not full question)
+  /// This is a lightweight notification that Tier 3 (live conversation monitoring) has started.
+  /// The full question object with tier results will come via ANSWER_DETECTED_ENRICHED.
+  void _handleQuestionMonitoring(Map<String, dynamic> data) {
+    debugPrint('[LiveInsightsWebSocket] ✅ ENTERED _handleQuestionMonitoring handler');
+    try {
+      final monitoringData = data['data'] as Map<String, dynamic>;
+      final questionId = monitoringData['question_id'] as String;
+      final monitoringTimeout = monitoringData['monitoring_timeout'] as int?;
+
+      debugPrint(
+        '[LiveInsightsWebSocket] Question $questionId is being monitored for live answers '
+        '(timeout: ${monitoringTimeout}s)'
+      );
+
+      // Note: This is an informational event only. The backend will send
+      // ANSWER_DETECTED_ENRICHED when an answer is found, which contains
+      // the full question object with tier results. We don't need to emit
+      // anything here since the question was already created via QUESTION_DETECTED.
+    } catch (e) {
+      debugPrint('[LiveInsightsWebSocket] Error handling question monitoring: $e');
+    }
+  }
+
+  /// Handle ANSWER_DETECTED event (lightweight answer notification)
+  /// This is Phase 1 of the two-phase answer broadcast pattern for fast UX feedback.
+  /// Phase 2 (ANSWER_DETECTED_ENRICHED) will contain the full enriched question object.
+  void _handleAnswerDetected(Map<String, dynamic> data) {
+    debugPrint('[LiveInsightsWebSocket] ✅ ENTERED _handleAnswerDetected handler');
+    try {
+      final answerData = data['data'] as Map<String, dynamic>;
+      final questionId = answerData['id'] as String;
+      final answerText = answerData['answerText'] as String?;
+      final answerSpeaker = answerData['answerSpeaker'] as String?;
+      final answerConfidence = (answerData['answerConfidence'] as num?)?.toDouble();
+
+      debugPrint(
+        '[LiveInsightsWebSocket] Answer detected for question $questionId: '
+        '${answerText?.substring(0, answerText.length > 50 ? 50 : answerText.length)}... '
+        '(speaker: $answerSpeaker, confidence: $answerConfidence)'
+      );
+
+      // Note: This is a lightweight notification for fast UX. The full enriched
+      // question object with complete tier results will arrive shortly via
+      // ANSWER_DETECTED_ENRICHED event. We don't emit this to the stream
+      // to avoid partial updates - the provider will get the complete data.
+    } catch (e) {
+      debugPrint('[LiveInsightsWebSocket] Error handling answer detected: $e');
+    }
+  }
+
+  /// Handle QUESTION_UNANSWERED event (lightweight notification)
+  /// Sent when all tiers have been exhausted without finding an answer.
+  /// Updates the question status to 'unanswered' in the UI.
+  void _handleQuestionUnanswered(Map<String, dynamic> data) {
+    debugPrint('[LiveInsightsWebSocket] ✅ ENTERED _handleQuestionUnanswered handler');
+    try {
+      // Backend sends: { type: QUESTION_UNANSWERED, data: { question_id: xxx, status: unanswered, ... }, timestamp: xxx }
+      final unansweredData = data['data'] as Map<String, dynamic>;
+      final questionId = unansweredData['question_id'] as String;
+      final status = unansweredData['status'] as String?;
+      final timestamp = unansweredData['timestamp'] as String?;
+
+      debugPrint(
+        '[LiveInsightsWebSocket] Question $questionId remained unanswered '
+        'after all tiers exhausted (status: $status, timestamp: $timestamp)'
+      );
+
+      // With 60-second monitoring timeout, we don't need a grace period
+      // The extended monitoring window gives sufficient time for answers to arrive
+      // Create status-only update that preserves existing question text and tier results
+      // The provider's merge logic will preserve all existing data except status
+      final minimalUpdate = LiveQuestion(
+        id: questionId,
+        text: '', // Will be preserved from existing question during merge
+        speaker: null,
+        timestamp: DateTime.tryParse(timestamp ?? '') ?? DateTime.now(),
+        status: InsightStatus.unanswered,
+        answerSource: AnswerSource.unanswered,
+        tierResults: [], // Will be preserved from existing question during merge
+      );
+
+      _questionsController.add(minimalUpdate);
+      debugPrint(
+        '[LiveInsightsWebSocket] Emitted UNANSWERED status update for question $questionId'
+      );
+    } catch (e) {
+      debugPrint('[LiveInsightsWebSocket] Error handling question unanswered: $e');
+    }
+  }
+
+  /// Handle ANSWER_FROM_MEETING event (lightweight answer notification from Tier 2)
+  /// This is Phase 1 of the two-phase answer broadcast pattern for meeting context search.
+  /// Phase 2 (enriched event with full question object) will be sent after DB persistence.
+  void _handleAnswerFromMeeting(Map<String, dynamic> data) {
+    debugPrint('[LiveInsightsWebSocket] ✅ ENTERED _handleAnswerFromMeeting handler');
+    try {
+      // Backend sends: { type: ANSWER_FROM_MEETING, data: { question_id: xxx, answer_text: ..., ... } }
+      // Note: question_id is INSIDE the 'data' object, not at top level
+      final answerData = data['data'] as Map<String, dynamic>;
+
+      final questionId = answerData['question_id'] as String;
+      final answerText = answerData['answer_text'] as String?;
+      final confidence = (answerData['confidence'] as num?)?.toDouble();
+      final tier = answerData['tier'] as String?;
+      final quotes = answerData['quotes'] as List<dynamic>?;
+
+      debugPrint(
+        '[LiveInsightsWebSocket] Answer from meeting context found for question $questionId: '
+        '${answerText?.substring(0, answerText.length > 50 ? 50 : answerText.length)}... '
+        '(confidence: $confidence, tier: $tier, quotes: ${quotes?.length ?? 0})'
+      );
+
+      // Note: This is a lightweight notification (Phase 1) for fast UX feedback.
+      // The full enriched question object with complete tier results will arrive
+      // shortly via a subsequent enriched event after database persistence.
+      // We don't emit this to the stream to avoid partial updates - the provider
+      // will get the complete data from the enriched event.
+    } catch (e) {
+      debugPrint('[LiveInsightsWebSocket] Error handling answer from meeting: $e');
+    }
+  }
+
+  /// Handle QUESTION_ANSWERED_LIVE event (Tier 4 - live conversation monitoring)
+  /// Can receive either lightweight notification (Phase 1) or full question object (Phase 2).
+  /// This is distinct from ANSWER_FROM_MEETING (Tier 2 - meeting context search).
+  void _handleQuestionAnsweredLive(Map<String, dynamic> data) {
+    debugPrint('[LiveInsightsWebSocket] ✅ ENTERED _handleQuestionAnsweredLive handler');
+    try {
+      final dataField = data['data'];
+
+      // Check if this is Phase 1 (lightweight) or Phase 2 (full question object)
+      // Phase 1: { type: QUESTION_ANSWERED_LIVE, question_id: xxx, data: { answer_text, speaker, ... } }
+      // Phase 2: { type: QUESTION_ANSWERED_LIVE, data: { id, text, tierResults, ... } } (full question)
+
+      if (dataField is Map<String, dynamic>) {
+        // Check if it's a full question object (has 'id', 'text', 'tierResults')
+        final hasQuestionStructure = dataField.containsKey('id') &&
+                                     dataField.containsKey('text') &&
+                                     dataField.containsKey('tierResults');
+
+        if (hasQuestionStructure) {
+          // Phase 2: Full question object - route to question update handler
+          debugPrint('[LiveInsightsWebSocket] QUESTION_ANSWERED_LIVE Phase 2 (enriched) - routing to question update');
+          _handleQuestionUpdate(data);
+        } else {
+          // Phase 1: Lightweight notification
+          final questionId = data['question_id'] as String?;
+          final answerText = dataField['answer_text'] as String?;
+          final speaker = dataField['speaker'] as String?;
+          final confidence = (dataField['confidence'] as num?)?.toDouble();
+          final tier = dataField['tier'] as String?;
+
+          debugPrint(
+            '[LiveInsightsWebSocket] Live conversation answer detected for question $questionId: '
+            '${answerText != null ? answerText.substring(0, answerText.length > 50 ? 50 : answerText.length) : 'N/A'}... '
+            '(speaker: $speaker, confidence: $confidence, tier: $tier) 👂'
+          );
+
+          // Note: This is Phase 1 lightweight notification for fast UX.
+          // Phase 2 with full question object will arrive shortly.
+          // We don't emit to stream to avoid partial updates.
+        }
+      }
+    } catch (e) {
+      debugPrint('[LiveInsightsWebSocket] Error handling question answered live: $e');
+    }
+  }
+
   /// Handle question update events
   void _handleQuestionUpdate(Map<String, dynamic> data) {
-    try {
-      final String? type = data['type'] as String?;
+    final String? type = data['type'] as String?;
+    debugPrint('[LiveInsightsWebSocket] ✅ ENTERED _handleQuestionUpdate handler for type: $type');
 
+    try {
       // Handle tier result events - these contain updates to existing questions
       // Parse the data and let the provider merge it with existing question state
       debugPrint('[LiveInsightsWebSocket] Processing tier result event: $type');
@@ -207,10 +396,14 @@ class LiveInsightsWebSocketService {
       final rawTierResults = questionData['tierResults'];
       debugPrint('[LiveInsightsWebSocket] Raw tierResults from backend: type=${rawTierResults.runtimeType}, value=$rawTierResults');
 
+      // DEBUG: Log answerSource from JSON
+      final rawAnswerSource = questionData['answer_source'];
+      debugPrint('[LiveInsightsWebSocket] Raw answer_source from backend: $rawAnswerSource');
+
       final question = LiveQuestion.fromJson(questionData);
       _questionsController.add(question);
       debugPrint(
-          '[LiveInsightsWebSocket] Question update: ${question.id} - ${question.status}');
+          '[LiveInsightsWebSocket] Question update: ${question.id} - ${question.status} - answerSource: ${question.answerSource}');
     } catch (e) {
       debugPrint('[LiveInsightsWebSocket] Error parsing question: $e');
     }

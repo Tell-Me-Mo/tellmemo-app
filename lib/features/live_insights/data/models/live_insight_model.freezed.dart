@@ -358,6 +358,7 @@ mixin _$LiveQuestion {
   List<TierResult> get tierResults => throw _privateConstructorUsedError;
 
   /// Primary answer source (if answered)
+  @JsonKey(name: 'answer_source')
   AnswerSource? get answerSource => throw _privateConstructorUsedError;
 
   /// Question category
@@ -397,7 +398,7 @@ abstract class $LiveQuestionCopyWith<$Res> {
     @DateTimeConverter() DateTime timestamp,
     InsightStatus status,
     List<TierResult> tierResults,
-    AnswerSource? answerSource,
+    @JsonKey(name: 'answer_source') AnswerSource? answerSource,
     String category,
     double confidence,
     Map<String, dynamic> metadata,
@@ -500,7 +501,7 @@ abstract class _$$LiveQuestionImplCopyWith<$Res>
     @DateTimeConverter() DateTime timestamp,
     InsightStatus status,
     List<TierResult> tierResults,
-    AnswerSource? answerSource,
+    @JsonKey(name: 'answer_source') AnswerSource? answerSource,
     String category,
     double confidence,
     Map<String, dynamic> metadata,
@@ -595,7 +596,7 @@ class _$LiveQuestionImpl extends _LiveQuestion {
     @DateTimeConverter() required this.timestamp,
     required this.status,
     final List<TierResult> tierResults = const [],
-    this.answerSource,
+    @JsonKey(name: 'answer_source') this.answerSource,
     this.category = 'factual',
     this.confidence = 0.0,
     final Map<String, dynamic> metadata = const {},
@@ -642,6 +643,7 @@ class _$LiveQuestionImpl extends _LiveQuestion {
 
   /// Primary answer source (if answered)
   @override
+  @JsonKey(name: 'answer_source')
   final AnswerSource? answerSource;
 
   /// Question category
@@ -741,7 +743,7 @@ abstract class _LiveQuestion extends LiveQuestion {
     @DateTimeConverter() required final DateTime timestamp,
     required final InsightStatus status,
     final List<TierResult> tierResults,
-    final AnswerSource? answerSource,
+    @JsonKey(name: 'answer_source') final AnswerSource? answerSource,
     final String category,
     final double confidence,
     final Map<String, dynamic> metadata,
@@ -779,6 +781,7 @@ abstract class _LiveQuestion extends LiveQuestion {
 
   /// Primary answer source (if answered)
   @override
+  @JsonKey(name: 'answer_source')
   AnswerSource? get answerSource;
 
   /// Question category

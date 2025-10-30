@@ -32,7 +32,7 @@ class GPTAnswerGenerator:
         self,
         broadcast_callback: Optional[callable] = None,
         timeout: float = 3.0,
-        confidence_threshold: float = 0.70
+        confidence_threshold: float = 0.75
     ):
         """
         Initialize GPT Answer Generator.
@@ -40,7 +40,7 @@ class GPTAnswerGenerator:
         Args:
             broadcast_callback: Async function to broadcast events via WebSocket
             timeout: Timeout for GPT generation in seconds (default: 3.0)
-            confidence_threshold: Minimum confidence to return answer (default: 0.70)
+            confidence_threshold: Minimum confidence to return answer (default: 0.75)
         """
         self.broadcast_callback = broadcast_callback
         self.timeout = timeout
@@ -257,7 +257,7 @@ CRITICAL: Output ONLY raw JSON. Do NOT wrap in markdown code blocks. Do NOT incl
 
 Respond in JSON format with:
 - "answer": Your concise answer (2-3 sentences max)
-- "confidence": Confidence score 0-100 (only answer if >70)
+- "confidence": Confidence score 0-100 (only answer if ≥75)
 - "disclaimer": Acknowledgment that this is AI-generated
 
 IMPORTANT:

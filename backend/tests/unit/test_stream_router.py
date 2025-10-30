@@ -12,8 +12,10 @@ Tests cover:
 
 import pytest
 import uuid
+import numpy as np
 from datetime import datetime
 from typing import Dict, Any, List
+from unittest.mock import AsyncMock, patch
 
 from services.intelligence.stream_router import (
     StreamRouter,
@@ -31,8 +33,27 @@ def session_id() -> str:
 
 
 @pytest.fixture
-def router(session_id: str) -> StreamRouter:
-    """Create stream router instance."""
+def mock_embedding_service():
+    """Mock embedding service to return deterministic embeddings."""
+    with patch('services.intelligence.stream_router.embedding_service') as mock:
+        # Return unique embeddings for different texts
+        async def generate_embedding(text: str, normalize: bool = True):
+            # Generate deterministic embedding based on text hash
+            np.random.seed(hash(text) % (2**32))
+            embedding = np.random.rand(768).tolist()
+            if normalize:
+                # Normalize to unit vector
+                norm = np.linalg.norm(embedding)
+                embedding = (np.array(embedding) / norm).tolist()
+            return embedding
+
+        mock.generate_embedding = AsyncMock(side_effect=generate_embedding)
+        yield mock
+
+
+@pytest.fixture
+def router(session_id: str, mock_embedding_service) -> StreamRouter:
+    """Create stream router instance with mocked embedding service."""
     return StreamRouter(session_id)
 
 

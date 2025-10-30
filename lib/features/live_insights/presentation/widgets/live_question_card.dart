@@ -52,6 +52,23 @@ class _LiveQuestionCardState extends State<LiveQuestionCard>
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(LiveQuestionCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // Auto-expand when answer is found (tier results become available)
+    final hadNoResults = oldWidget.question.tierResults.isEmpty;
+    final nowHasResults = widget.question.tierResults.isNotEmpty;
+
+    if (hadNoResults && nowHasResults && !_isExpanded) {
+      // Automatically expand to show the answer
+      setState(() {
+        _isExpanded = true;
+        _animationController.forward();
+      });
+    }
+  }
+
   void _toggleExpand() {
     setState(() {
       _isExpanded = !_isExpanded;
@@ -95,9 +112,6 @@ class _LiveQuestionCardState extends State<LiveQuestionCard>
                 if (_isExpanded) ...[
                   const SizedBox(height: LayoutConstants.spacingMd),
                   _buildTierResults(context),
-                ] else ...[
-                  const SizedBox(height: LayoutConstants.spacingSm),
-                  _buildCompactTierStatus(context),
                 ],
               ],
             ),
@@ -181,6 +195,47 @@ class _LiveQuestionCardState extends State<LiveQuestionCard>
     final colorScheme = theme.colorScheme;
     final statusColor = _getStatusColor(colorScheme);
 
+    // Get display label and icon based on answer source (for answered/found questions)
+    String displayLabel;
+    String displayIcon;
+
+    // Show answer source for questions that have been answered or found
+    if (widget.question.answerSource != null &&
+        widget.question.answerSource != AnswerSource.unanswered) {
+      // Show specific answer source instead of generic status
+      switch (widget.question.answerSource!) {
+        case AnswerSource.rag:
+          displayLabel = 'FROM DOCS';
+          displayIcon = '📄';
+          break;
+        case AnswerSource.meetingContext:
+          displayLabel = 'FROM MEETING';
+          displayIcon = '💬';
+          break;
+        case AnswerSource.liveConversation:
+          displayLabel = 'ANSWERED LIVE';
+          displayIcon = '👂';
+          break;
+        case AnswerSource.gptGenerated:
+          displayLabel = 'AI ANSWER';
+          displayIcon = '🤖';
+          break;
+        case AnswerSource.userProvided:
+          displayLabel = 'ANSWERED';
+          displayIcon = '✓';
+          break;
+        case AnswerSource.unanswered:
+          // Shouldn't reach here due to the condition above, but handle it
+          displayLabel = 'UNANSWERED';
+          displayIcon = '❓';
+          break;
+      }
+    } else {
+      // Use default status label for non-answered states (searching, monitoring, unanswered)
+      displayLabel = widget.question.status.displayLabel.toUpperCase();
+      displayIcon = widget.question.status.icon;
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: 6,
@@ -197,12 +252,12 @@ class _LiveQuestionCardState extends State<LiveQuestionCard>
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            widget.question.status.icon,
+            displayIcon,
             style: const TextStyle(fontSize: 10),
           ),
           const SizedBox(width: 4),
           Text(
-            widget.question.status.displayLabel.toUpperCase(),
+            displayLabel,
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w600,
@@ -227,56 +282,6 @@ class _LiveQuestionCardState extends State<LiveQuestionCard>
     );
   }
 
-  Widget _buildCompactTierStatus(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Row(
-      children: [
-        _buildTierIcon(TierType.rag, colorScheme),
-        const SizedBox(width: LayoutConstants.spacingSm),
-        _buildTierIcon(TierType.meetingContext, colorScheme),
-        const SizedBox(width: LayoutConstants.spacingSm),
-        _buildTierIcon(TierType.liveConversation, colorScheme),
-        const SizedBox(width: LayoutConstants.spacingSm),
-        _buildTierIcon(TierType.gptGenerated, colorScheme),
-        const Spacer(),
-        if (widget.question.tierResults.isNotEmpty)
-          Text(
-            '${widget.question.tierResults.length} result${widget.question.tierResults.length == 1 ? '' : 's'}',
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildTierIcon(TierType tierType, ColorScheme colorScheme) {
-    final hasResults = widget.question.hasTierResults(tierType);
-    final tierColor = _getTierColor(tierType, colorScheme);
-
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: hasResults
-            ? tierColor.withValues(alpha: 0.15)
-            : colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(4),
-        border: hasResults
-            ? Border.all(color: tierColor.withValues(alpha: 0.3))
-            : null,
-      ),
-      child: Text(
-        tierType.icon,
-        style: TextStyle(
-          fontSize: 12,
-          color: hasResults ? tierColor : colorScheme.onSurfaceVariant,
-        ),
-      ),
-    );
-  }
-
   Widget _buildTierResults(BuildContext context) {
     // Show search state only if still searching and no results yet
     final isStillSearching = widget.question.status == InsightStatus.searching ||
@@ -284,6 +289,11 @@ class _LiveQuestionCardState extends State<LiveQuestionCard>
 
     if (widget.question.tierResults.isEmpty && isStillSearching) {
       return _buildSearchingState(context);
+    }
+
+    // If unanswered and no results, show unanswered message
+    if (widget.question.tierResults.isEmpty && widget.question.status == InsightStatus.unanswered) {
+      return _buildUnansweredState(context);
     }
 
     // If status is answered/found but no tier results, show placeholder
@@ -352,12 +362,43 @@ class _LiveQuestionCardState extends State<LiveQuestionCard>
     );
   }
 
+  Widget _buildUnansweredState(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(LayoutConstants.spacingSm),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.help_outline,
+            size: 16,
+            color: colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: LayoutConstants.spacingSm),
+          Expanded(
+            child: Text(
+              'No answer found',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildNoDetailsState(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
     return Container(
-      padding: const EdgeInsets.all(LayoutConstants.spacingMd),
+      padding: const EdgeInsets.all(LayoutConstants.spacingSm),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(8),
@@ -369,10 +410,10 @@ class _LiveQuestionCardState extends State<LiveQuestionCard>
             size: 16,
             color: colorScheme.onSurfaceVariant,
           ),
-          const SizedBox(width: LayoutConstants.spacingMd),
+          const SizedBox(width: LayoutConstants.spacingSm),
           Expanded(
             child: Text(
-              'Answer details not available yet. Please refresh or check back shortly.',
+              'Answer details loading...',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
@@ -396,7 +437,7 @@ class _LiveQuestionCardState extends State<LiveQuestionCard>
 
     return Container(
       margin: const EdgeInsets.only(bottom: LayoutConstants.spacingSm),
-      padding: const EdgeInsets.all(LayoutConstants.spacingMd),
+      padding: const EdgeInsets.all(LayoutConstants.spacingSm),
       decoration: BoxDecoration(
         color: tierColor.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(8),
@@ -407,56 +448,12 @@ class _LiveQuestionCardState extends State<LiveQuestionCard>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Tier header
-          Row(
-            children: [
-              Text(
-                tierType.icon,
-                style: const TextStyle(fontSize: 16),
-              ),
-              const SizedBox(width: LayoutConstants.spacingSm),
-              Expanded(
-                child: Text(
-                  tierType.displayLabel,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: tierColor,
-                  ),
-                ),
-              ),
-              if (results.length > 1)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: tierColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${results.length}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: tierColor,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: LayoutConstants.spacingSm),
-
-          // Results
+          // Results only, no header
           ...results.map((result) => _buildTierResultItem(
                 context,
                 result,
                 tierType,
               )),
-
-          // GPT-generated disclaimer
-          if (tierType == TierType.gptGenerated)
-            _buildGPTDisclaimer(context),
         ],
       ),
     );
@@ -527,41 +524,6 @@ class _LiveQuestionCardState extends State<LiveQuestionCard>
                 ),
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGPTDisclaimer(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Container(
-      margin: const EdgeInsets.only(top: LayoutConstants.spacingSm),
-      padding: const EdgeInsets.all(LayoutConstants.spacingSm),
-      decoration: BoxDecoration(
-        color: Colors.orange.shade50,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: Colors.orange.shade200,
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.warning_amber_rounded,
-            size: 16,
-            color: Colors.orange.shade700,
-          ),
-          const SizedBox(width: LayoutConstants.spacingSm),
-          Expanded(
-            child: Text(
-              'AI-generated answer. Please verify accuracy.',
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: Colors.orange.shade900,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
           ),
         ],
       ),

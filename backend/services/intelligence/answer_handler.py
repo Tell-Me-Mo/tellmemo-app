@@ -323,17 +323,19 @@ class AnswerHandler:
             # ========================================================================
             # PHASE 1: Immediate broadcast with answer data (fast user feedback)
             # ========================================================================
-            # Create lightweight event with answer information
-            # We'll try to fetch full question object later, but don't block on it
+            # Broadcast QUESTION_ANSWERED_LIVE (Tier 4 - live conversation monitoring)
+            # This is distinct from ANSWER_FROM_MEETING (Tier 2) and provides clear
+            # indication that the answer was found through live conversation monitoring
             event_data = {
-                "type": "ANSWER_DETECTED",
+                "type": "QUESTION_ANSWERED_LIVE",
+                "question_id": question_id,
                 "data": {
-                    "id": question_id,
-                    "answerText": answer_text,
-                    "answerSpeaker": speaker,
-                    "answerConfidence": confidence,
-                    "answerSource": "live_conversation",
-                    "status": "answered",
+                    "answer_text": answer_text,
+                    "speaker": speaker,
+                    "confidence": confidence,
+                    "source": "live_conversation",
+                    "tier": "live_conversation",
+                    "label": "👂 Answered Live",
                     "timestamp": datetime.now(timezone.utc).isoformat()
                 },
                 "timestamp": datetime.now(timezone.utc).isoformat()
@@ -341,7 +343,7 @@ class AnswerHandler:
 
             await self._ws_broadcast_callback(session_id, event_data)
             logger.debug(
-                f"Broadcasted ANSWER_DETECTED event for question {question_id}"
+                f"Broadcasted QUESTION_ANSWERED_LIVE event for question {question_id}"
             )
 
             # ========================================================================
@@ -365,13 +367,13 @@ class AnswerHandler:
                         # Broadcast complete question object as follow-up enrichment
                         question_dict = question.to_dict()
                         enriched_event = {
-                            "type": "ANSWER_DETECTED_ENRICHED",
+                            "type": "QUESTION_ANSWERED_LIVE",
                             "data": question_dict,
                             "timestamp": datetime.now(timezone.utc).isoformat()
                         }
                         await self._ws_broadcast_callback(session_id, enriched_event)
                         logger.debug(
-                            f"Broadcasted enriched ANSWER_DETECTED data for question {question_id}"
+                            f"Broadcasted enriched QUESTION_ANSWERED_LIVE data for question {question_id}"
                         )
                     else:
                         logger.debug(

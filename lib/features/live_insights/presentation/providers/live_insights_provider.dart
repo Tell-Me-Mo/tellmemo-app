@@ -96,8 +96,20 @@ class LiveQuestionsTracker extends _$LiveQuestionsTracker {
           }
         }
 
-        // Create merged question with accumulated tier results
+        // Create merged question, preserving existing fields if new ones are empty
+        // This handles minimal updates (like status-only updates for QUESTION_UNANSWERED)
+        final preservedText = question.text.isEmpty ? existingQuestion.text : question.text;
+        final preservedSpeaker = question.speaker ?? existingQuestion.speaker;
+
+        debugPrint('[LiveQuestionsTracker] Merging question ${question.id}:');
+        debugPrint('  - Incoming text: "${question.text}" (isEmpty: ${question.text.isEmpty})');
+        debugPrint('  - Existing text: "${existingQuestion.text}"');
+        debugPrint('  - Preserved text: "$preservedText"');
+        debugPrint('  - Preserved speaker: "$preservedSpeaker"');
+
         _questions[question.id] = question.copyWith(
+          text: preservedText,
+          speaker: preservedSpeaker,
           tierResults: mergedTierResults,
         );
 
@@ -129,7 +141,19 @@ class LiveQuestionsTracker extends _$LiveQuestionsTracker {
           }
         }
 
+        // Create merged question, preserving existing fields if new ones are empty
+        final preservedText = question.text.isEmpty ? existingQuestion.text : question.text;
+        final preservedSpeaker = question.speaker ?? existingQuestion.speaker;
+
+        debugPrint('[LiveQuestionsTracker] Merging question ${question.id} (no dismissed state):');
+        debugPrint('  - Incoming text: "${question.text}" (isEmpty: ${question.text.isEmpty})');
+        debugPrint('  - Existing text: "${existingQuestion.text}"');
+        debugPrint('  - Preserved text: "$preservedText"');
+        debugPrint('  - Preserved speaker: "$preservedSpeaker"');
+
         _questions[question.id] = question.copyWith(
+          text: preservedText,
+          speaker: preservedSpeaker,
           tierResults: mergedTierResults,
         );
       } else {

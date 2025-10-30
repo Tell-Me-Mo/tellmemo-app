@@ -47,7 +47,7 @@ _$LiveQuestionImpl _$$LiveQuestionImplFromJson(Map<String, dynamic> json) =>
           const [],
       answerSource: $enumDecodeNullable(
         _$AnswerSourceEnumMap,
-        json['answerSource'],
+        json['answer_source'],
       ),
       category: json['category'] as String? ?? 'factual',
       confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
@@ -66,7 +66,7 @@ Map<String, dynamic> _$$LiveQuestionImplToJson(
   'timestamp': const DateTimeConverter().toJson(instance.timestamp),
   'status': _$InsightStatusEnumMap[instance.status]!,
   'tierResults': instance.tierResults,
-  'answerSource': _$AnswerSourceEnumMap[instance.answerSource],
+  'answer_source': _$AnswerSourceEnumMap[instance.answerSource],
   'category': instance.category,
   'confidence': instance.confidence,
   'metadata': instance.metadata,
