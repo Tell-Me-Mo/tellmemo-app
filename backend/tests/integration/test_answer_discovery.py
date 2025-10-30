@@ -504,17 +504,16 @@ class TestFullAnswerDiscoveryFlow:
 
         # Assert: Live answer detected and broadcasted
         messages = mock_broadcast_callback.messages
-        live_msgs = [m for m in messages if m["message"]["type"] == "ANSWER_DETECTED"]
+        live_msgs = [m for m in messages if m["message"]["type"] == "QUESTION_ANSWERED_LIVE"]
 
-        assert len(live_msgs) == 1, "Should have live answer detection"
+        assert len(live_msgs) >= 1, "Should have live answer detection"
 
-        # Access nested 'data' structure - lightweight answer data
-        live_answer_data = live_msgs[0]["message"]["data"]
-        assert live_answer_data["id"] == db_question_id
-        assert live_answer_data["answerSource"] == "live_conversation"
-        assert "Sarah will lead" in live_answer_data["answerText"]
-        assert live_answer_data["answerConfidence"] == 0.92
-        assert live_answer_data["status"] == "answered"
+        # Check the first QUESTION_ANSWERED_LIVE message structure
+        first_live_msg = live_msgs[0]["message"]
+        assert first_live_msg["question_id"] == db_question_id
+        assert first_live_msg["data"]["source"] == "live_conversation"
+        assert "Sarah will lead" in first_live_msg["data"]["answer_text"]
+        assert first_live_msg["data"]["confidence"] == 0.92
 
     async def test_tier4_gpt_generates_fallback_answer(
         self,

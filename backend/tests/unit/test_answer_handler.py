@@ -158,14 +158,14 @@ async def test_handle_answer_success(
         # Verify WebSocket broadcast
         # Note: The implementation calls broadcast at least once (potentially twice with enrichment)
         assert mock_ws_callback.called
-        # Check the first call which is the immediate ANSWER_DETECTED broadcast
+        # Check the first call which is the immediate QUESTION_ANSWERED_LIVE broadcast
         first_call_args = mock_ws_callback.call_args_list[0]
         assert first_call_args[0][0] == session_id
         event_data = first_call_args[0][1]
-        assert event_data["type"] == "ANSWER_DETECTED"
-        assert event_data["data"]["id"] == str(sample_question_record.id)
-        assert event_data["data"]["answerText"] == sample_answer_obj["answer_text"]
-        assert event_data["data"]["answerSource"] == "live_conversation"
+        assert event_data["type"] == "QUESTION_ANSWERED_LIVE"
+        assert event_data["question_id"] == str(sample_question_record.id)
+        assert event_data["data"]["answer_text"] == sample_answer_obj["answer_text"]
+        assert event_data["data"]["source"] == "live_conversation"
 
 
 @pytest.mark.asyncio

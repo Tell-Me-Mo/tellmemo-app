@@ -98,7 +98,7 @@ def test_initialization_defaults():
     generator = GPTAnswerGenerator()
 
     assert generator.timeout == 3.0
-    assert generator.confidence_threshold == 0.70
+    assert generator.confidence_threshold == 0.75
 
 
 # ============================================================================

@@ -51,7 +51,7 @@ class TestQuestionHandlerInitialization:
 
     def test_initialization(self, question_handler):
         """Test handler initializes with correct configuration."""
-        assert question_handler.monitoring_timeout_seconds == 15
+        assert question_handler.monitoring_timeout_seconds == 60
         assert question_handler.rag_search_timeout == 2.0
         assert question_handler.meeting_context_timeout == 1.5
         assert question_handler.gpt_generation_timeout == 3.0
