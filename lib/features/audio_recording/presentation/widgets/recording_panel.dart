@@ -397,6 +397,12 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
           _actions.clear();
         });
       }
+
+      // Auto-close panel when recording completes successfully
+      if (previous?.state == RecordingState.processing && next.state == RecordingState.idle) {
+        debugPrint('[RecordingPanel] Recording completed successfully - closing panel');
+        _handleClose();
+      }
     });
 
     final screenInfo = ScreenInfo.fromContext(context);
