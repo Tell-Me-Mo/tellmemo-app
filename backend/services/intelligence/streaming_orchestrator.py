@@ -239,17 +239,20 @@ class StreamingIntelligenceOrchestrator:
         # Create wrapper functions that provide session context to handlers
 
         async def question_wrapper(question_data: dict):
-            """Wrapper for question handler with session context."""
-            async with get_db_context() as db_session:
-                # Convert UUIDs to strings, but keep None as None (not "None")
-                await self.question_handler.handle_question(
-                    session_id=self.session_id,
-                    question_data=question_data,
-                    session=db_session,
-                    project_id=str(self.project_id) if self.project_id is not None else None,
-                    organization_id=str(self.organization_id) if self.organization_id is not None else None,
-                    recording_id=str(self.recording_id) if self.recording_id is not None else None
-                )
+            """Wrapper for question handler.
+
+            Note: handle_question now manages its own database session for clean
+            transaction boundaries, ensuring committed data is visible to all
+            background tasks and queries.
+            """
+            # Convert UUIDs to strings, but keep None as None (not "None")
+            await self.question_handler.handle_question(
+                session_id=self.session_id,
+                question_data=question_data,
+                project_id=str(self.project_id) if self.project_id is not None else None,
+                organization_id=str(self.organization_id) if self.organization_id is not None else None,
+                recording_id=str(self.recording_id) if self.recording_id is not None else None
+            )
 
         async def action_wrapper(action_data: dict):
             """Wrapper for action handler with session context."""

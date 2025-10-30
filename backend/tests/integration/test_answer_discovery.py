@@ -59,8 +59,58 @@ def question_id():
 
 
 @pytest.fixture
-async def test_recording(db_session: AsyncSession, test_project: Project) -> Recording:
-    """Create test recording."""
+async def test_organization() -> Organization:
+    """Create test organization with independent session for true database commit."""
+    from db.database import get_db_context
+
+    # Use unique slug per test to avoid conflicts
+    unique_slug = f"test-org-ad-{uuid.uuid4().hex[:8]}"
+
+    organization = Organization(
+        name="Test Organization for Answer Discovery",
+        slug=unique_slug,
+        is_active=True
+    )
+
+    async with get_db_context() as session:
+        session.add(organization)
+        await session.commit()
+        await session.refresh(organization)
+
+    return organization
+
+
+@pytest.fixture
+async def test_project(test_organization: Organization) -> Project:
+    """Create test project with independent session for true database commit."""
+    from db.database import get_db_context
+
+    project = Project(
+        name="Test Project for Answer Discovery",
+        description="Test project for answer discovery integration tests",
+        organization_id=test_organization.id,
+        status="active",
+        created_by=str(test_organization.created_by)
+    )
+
+    async with get_db_context() as session:
+        session.add(project)
+        await session.commit()
+        await session.refresh(project)
+
+    return project
+
+
+@pytest.fixture
+async def test_recording(test_project: Project) -> Recording:
+    """Create test recording with independent session for true database commit.
+
+    This fixture uses its own database session to ensure the recording is truly
+    committed and visible to other sessions, which is necessary for testing code
+    that creates its own database contexts.
+    """
+    from db.database import get_db_context
+
     now = datetime.utcnow()
     recording = Recording(
         id=uuid.uuid4(),
@@ -75,9 +125,12 @@ async def test_recording(db_session: AsyncSession, test_project: Project) -> Rec
         transcription_status="pending",
         created_at=now
     )
-    db_session.add(recording)
-    await db_session.commit()
-    await db_session.refresh(recording)
+
+    async with get_db_context() as session:
+        session.add(recording)
+        await session.commit()
+        await session.refresh(recording)
+
     return recording
 
 
@@ -94,6 +147,7 @@ def mock_rag_service():
 
     service.search = mock_search
     service.timeout = 2.0
+    service.is_available = Mock(return_value=True)  # RAG service is available by default
     return service
 
 
@@ -245,14 +299,14 @@ class TestFullAnswerDiscoveryFlow:
                 result = await question_handler.handle_question(
                     session_id=session_id,
                     question_data=question_data,
-                    session=db_session,
                     project_id=str(test_project.id),
                     organization_id=str(test_organization.id),
                     recording_id=str(test_recording.id)
                 )
 
-                # Wait a bit for async tier processing
-                await asyncio.sleep(0.5)
+                # Wait longer for async tier processing and DB updates
+                # Background tasks may take time to complete, including DB writes
+                await asyncio.sleep(3.0)
 
         # Assert: Question created in database
         assert result is not None
@@ -267,10 +321,11 @@ class TestFullAnswerDiscoveryFlow:
         messages = mock_broadcast_callback.messages
         rag_messages = [m for m in messages if m["message"]["type"] == "RAG_RESULT_PROGRESSIVE"]
 
-        assert len(rag_messages) >= 2, "Should have 2 RAG result messages"
+        assert len(rag_messages) >= 2, f"Should have 2 RAG result messages, got {len(rag_messages)}"
 
         # Verify first RAG result (use database ID, not GPT ID)
-        first_rag = rag_messages[0]["message"]
+        # Messages now have nested 'data' structure
+        first_rag = rag_messages[0]["message"]["data"]
         assert first_rag["question_id"] == db_question_id
         assert first_rag["document"]["title"] == "Q4 Infrastructure Budget Plan"
         assert first_rag["document"]["relevance_score"] == 0.92
@@ -280,8 +335,8 @@ class TestFullAnswerDiscoveryFlow:
         # Assert: Final RAG completion message
         rag_complete = [m for m in messages if m["message"]["type"] == "RAG_RESULT_COMPLETE"]
         assert len(rag_complete) == 1
-        assert rag_complete[0]["message"]["total_sources"] == 2
-        assert rag_complete[0]["message"]["average_confidence"] > 0.85
+        assert rag_complete[0]["message"]["data"]["num_sources"] == 2
+        assert rag_complete[0]["message"]["data"]["confidence"] > 0.85
 
     async def test_tier2_meeting_context_finds_answer(
         self,
@@ -342,7 +397,6 @@ class TestFullAnswerDiscoveryFlow:
                 result = await question_handler.handle_question(
                     session_id=session_id,
                     question_data=question_data,
-                    session=db_session,
                     project_id=str(test_project.id),
                     organization_id=str(test_organization.id),
                     recording_id=str(test_recording.id)
@@ -360,12 +414,13 @@ class TestFullAnswerDiscoveryFlow:
 
         assert len(meeting_msgs) == 1, "Should have meeting context answer"
 
-        meeting_answer = meeting_msgs[0]["message"]
+        # Access nested 'data' structure
+        meeting_answer = meeting_msgs[0]["message"]["data"]
         assert meeting_answer["question_id"] == db_question_id
-        assert meeting_answer["answer"]["text"] == "The budget is $250,000 for infrastructure."
-        assert meeting_answer["answer"]["confidence"] == 0.88
-        assert meeting_answer["source"] == "meeting_context"
-        assert len(meeting_answer["answer"]["quotes"]) == 1
+        assert meeting_answer["answer_text"] == "The budget is $250,000 for infrastructure."
+        assert meeting_answer["confidence"] == 0.88
+        assert "meeting_context" in meeting_answer.get("tier", "")
+        assert len(meeting_answer["quotes"]) == 1
 
     async def test_tier3_live_monitoring_detects_answer(
         self,
@@ -415,7 +470,6 @@ class TestFullAnswerDiscoveryFlow:
                 result = await question_handler.handle_question(
                     session_id=session_id,
                     question_data=question_data,
-                    session=db_session,
                     project_id=str(test_project.id),
                     organization_id=str(test_organization.id),
                     recording_id=str(test_recording.id)
@@ -432,7 +486,7 @@ class TestFullAnswerDiscoveryFlow:
 
                 answer_data = {
                     "type": "answer",
-                    "question_id": db_question_id,  # Use database ID, not GPT ID
+                    "question_id": question_id,  # Use GPT ID (from metadata), not database UUID
                     "answer_text": "Sarah will lead the new infrastructure project.",
                     "speaker": "Speaker B",
                     "timestamp": datetime.utcnow().isoformat(),
@@ -442,24 +496,25 @@ class TestFullAnswerDiscoveryFlow:
                 # Answer handler processes the answer
                 answer_handler._question_handler = question_handler
                 await answer_handler.handle_answer(
-                    session_id=session_id,
-                    answer_data=answer_data,
-                    session=db_session
+                    answer_obj=answer_data,  # Correct parameter name
+                    session_id=session_id
                 )
 
                 await asyncio.sleep(0.2)
 
         # Assert: Live answer detected and broadcasted
         messages = mock_broadcast_callback.messages
-        live_msgs = [m for m in messages if m["message"]["type"] == "QUESTION_ANSWERED_LIVE"]
+        live_msgs = [m for m in messages if m["message"]["type"] == "ANSWER_DETECTED"]
 
         assert len(live_msgs) == 1, "Should have live answer detection"
 
-        live_answer = live_msgs[0]["message"]
-        assert live_answer["question_id"] == db_question_id
-        assert "Sarah will lead" in live_answer["answer"]["text"]
-        assert live_answer["source"] == "live_conversation"
-        assert live_answer["answer"]["confidence"] == 0.92
+        # Access nested 'data' structure - lightweight answer data
+        live_answer_data = live_msgs[0]["message"]["data"]
+        assert live_answer_data["id"] == db_question_id
+        assert live_answer_data["answerSource"] == "live_conversation"
+        assert "Sarah will lead" in live_answer_data["answerText"]
+        assert live_answer_data["answerConfidence"] == 0.92
+        assert live_answer_data["status"] == "answered"
 
     async def test_tier4_gpt_generates_fallback_answer(
         self,
@@ -528,7 +583,6 @@ class TestFullAnswerDiscoveryFlow:
                 result = await question_handler.handle_question(
                     session_id=session_id,
                     question_data=question_data,
-                    session=db_session,
                     project_id=str(test_project.id),
                     organization_id=str(test_organization.id),
                     recording_id=str(test_recording.id)
@@ -614,7 +668,6 @@ class TestTimeoutHandling:
             result = await question_handler.handle_question(
                 session_id=session_id,
                 question_data=question_data,
-                session=db_session,
                 project_id=str(test_project.id),
                 organization_id=str(test_organization.id),
                 recording_id=str(test_recording.id)
@@ -676,7 +729,6 @@ class TestTimeoutHandling:
             result = await question_handler.handle_question(
                 session_id=session_id,
                 question_data=question_data,
-                session=db_session,
                 project_id=str(test_project.id),
                 organization_id=str(test_organization.id),
                 recording_id=str(test_recording.id)
@@ -734,7 +786,6 @@ class TestTimeoutHandling:
                 result = await question_handler.handle_question(
                     session_id=session_id,
                     question_data=question_data,
-                    session=db_session,
                     project_id=str(test_project.id),
                     organization_id=str(test_organization.id),
                     recording_id=str(test_recording.id)
@@ -810,7 +861,6 @@ class TestGracefulDegradation:
                 result = await question_handler.handle_question(
                     session_id=session_id,
                     question_data=question_data,
-                    session=db_session,
                     project_id=str(test_project.id),
                     organization_id=str(test_organization.id),
                     recording_id=str(test_recording.id)
@@ -827,7 +877,7 @@ class TestGracefulDegradation:
         meeting_msgs = [m for m in messages if m["message"]["type"] == "ANSWER_FROM_MEETING"]
 
         assert len(meeting_msgs) == 1, "Meeting context should still work despite RAG failure"
-        assert meeting_msgs[0]["message"]["answer"]["text"] == "Found in earlier discussion"
+        assert meeting_msgs[0]["message"]["data"]["answer_text"] == "Found in earlier discussion"
 
     async def test_vector_db_unavailable_skips_rag(
         self,
@@ -863,7 +913,6 @@ class TestGracefulDegradation:
             result = await question_handler.handle_question(
                 session_id=session_id,
                 question_data=question_data,
-                session=db_session,
                 project_id=str(test_project.id),
                 organization_id=str(test_organization.id),
                 recording_id=str(test_recording.id)
@@ -936,7 +985,6 @@ class TestConcurrentQuestions:
                 question_handler.handle_question(
                     session_id=session_id,
                     question_data=q,
-                    session=db_session,
                     project_id=str(test_project.id),
                     organization_id=str(test_organization.id),
                     recording_id=str(test_recording.id)
@@ -958,11 +1006,13 @@ class TestConcurrentQuestions:
 
         # Assert: Results for all 3 questions broadcasted
         messages = mock_broadcast_callback.messages
-        question_ids = [q["id"] for q in questions]
+        # Get database question IDs from results
+        db_question_ids = [str(r.id) for r in results]
 
-        for q_id in question_ids:
-            q_messages = [m for m in messages if m["message"].get("question_id") == q_id]
-            assert len(q_messages) > 0, f"Should have messages for question {q_id}"
+        for db_q_id in db_question_ids:
+            # Check in nested 'data' structure
+            q_messages = [m for m in messages if m["message"].get("data", {}).get("question_id") == db_q_id]
+            assert len(q_messages) > 0, f"Should have messages for question {db_q_id}"
 
 
 # ============================================================================
@@ -1012,7 +1062,6 @@ class TestProgressiveResults:
             result = await question_handler.handle_question(
                 session_id=session_id,
                 question_data=question_data,
-                session=db_session,
                 project_id=str(test_project.id),
                 organization_id=str(test_organization.id),
                 recording_id=str(test_recording.id)
@@ -1029,7 +1078,8 @@ class TestProgressiveResults:
 
         # Assert: Messages sent in order with increasing result numbers
         for i, msg in enumerate(rag_progressive, 1):
-            assert f"Document {i}" in msg["message"]["document"]["title"]
+            # Access nested 'data' structure
+            assert f"Document {i}" in msg["message"]["data"]["document"]["title"]
 
         # Assert: Final completion message sent
         rag_complete = [m for m in messages if m["message"]["type"] == "RAG_RESULT_COMPLETE"]

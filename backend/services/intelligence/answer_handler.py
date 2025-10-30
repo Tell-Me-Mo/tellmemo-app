@@ -302,7 +302,11 @@ class AnswerHandler:
         confidence: float
     ) -> None:
         """
-        Broadcast complete question object with answer detected event to WebSocket clients.
+        Broadcast answer detected event immediately, then fetch complete data.
+
+        This uses a two-phase approach for better UX responsiveness:
+        1. Immediate broadcast with essential answer data
+        2. Optional DB fetch for complete question object (best-effort)
 
         Args:
             session_id: Meeting session identifier
@@ -316,33 +320,70 @@ class AnswerHandler:
             return
 
         try:
-            # Fetch complete question with tier results from database
-            from db.database import get_db_context
-            from sqlalchemy import select
-
-            async with get_db_context() as db_session:
-                result = await db_session.execute(
-                    select(LiveMeetingInsight).where(
-                        LiveMeetingInsight.id == UUID(question_id)
-                    )
-                )
-                question = result.scalar_one_or_none()
-
-                if not question:
-                    logger.warning(f"Question {question_id} not found for broadcast")
-                    return
-
-                # Broadcast complete question object
-                question_dict = question.to_dict()
-                event_data = {
-                    "type": "ANSWER_DETECTED",
-                    "data": question_dict,
+            # ========================================================================
+            # PHASE 1: Immediate broadcast with answer data (fast user feedback)
+            # ========================================================================
+            # Create lightweight event with answer information
+            # We'll try to fetch full question object later, but don't block on it
+            event_data = {
+                "type": "ANSWER_DETECTED",
+                "data": {
+                    "id": question_id,
+                    "answerText": answer_text,
+                    "answerSpeaker": speaker,
+                    "answerConfidence": confidence,
+                    "answerSource": "live_conversation",
+                    "status": "answered",
                     "timestamp": datetime.now(timezone.utc).isoformat()
-                }
+                },
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
 
-                await self._ws_broadcast_callback(session_id, event_data)
+            await self._ws_broadcast_callback(session_id, event_data)
+            logger.debug(
+                f"Broadcasted ANSWER_DETECTED event for question {question_id}"
+            )
+
+            # ========================================================================
+            # PHASE 2: Fetch complete question object (best-effort enrichment)
+            # ========================================================================
+            # Try to fetch full question data from database for richer client display
+            # If this fails, user still got the essential answer information above
+            try:
+                from db.database import get_db_context
+                from sqlalchemy import select
+
+                async with get_db_context() as db_session:
+                    result = await db_session.execute(
+                        select(LiveMeetingInsight).where(
+                            LiveMeetingInsight.id == UUID(question_id)
+                        )
+                    )
+                    question = result.scalar_one_or_none()
+
+                    if question:
+                        # Broadcast complete question object as follow-up enrichment
+                        question_dict = question.to_dict()
+                        enriched_event = {
+                            "type": "ANSWER_DETECTED_ENRICHED",
+                            "data": question_dict,
+                            "timestamp": datetime.now(timezone.utc).isoformat()
+                        }
+                        await self._ws_broadcast_callback(session_id, enriched_event)
+                        logger.debug(
+                            f"Broadcasted enriched ANSWER_DETECTED data for question {question_id}"
+                        )
+                    else:
+                        logger.debug(
+                            f"Question {question_id} not yet available in DB for enrichment - "
+                            f"client received essential answer data"
+                        )
+
+            except Exception as enrichment_error:
+                # Enrichment is optional - log but don't fail
                 logger.debug(
-                    f"Broadcasted ANSWER_DETECTED event for question {question_id}"
+                    f"Could not fetch enriched data for question {question_id}: "
+                    f"{enrichment_error}"
                 )
 
         except Exception as e:

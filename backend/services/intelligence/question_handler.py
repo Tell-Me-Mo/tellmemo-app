@@ -76,17 +76,69 @@ class QuestionHandler:
         self,
         session_id: str,
         question_data: dict,
+        project_id: str,
+        organization_id: str,
+        recording_id: str,
+        session: Optional[AsyncSession] = None
+    ) -> Optional[LiveMeetingInsight]:
+        """Process question detection event and trigger parallel answer discovery.
+
+        This method manages its own database session by default for clean transaction
+        boundaries. An optional session parameter is provided for legacy compatibility.
+
+        Args:
+            session_id: The meeting session ID
+            question_data: Question data from GPT stream {id, text, speaker, timestamp, ...}
+            project_id: Project UUID
+            organization_id: Organization UUID
+            recording_id: Recording UUID
+            session: Optional database session (will create own if not provided)
+
+        Returns:
+            Created LiveMeetingInsight instance or None if failed
+        """
+        # ========================================================================
+        # Database Session Management
+        # ========================================================================
+        # Create own session for clean transaction boundaries
+        # This ensures committed data is visible to background tasks
+        if session is None:
+            from db.database import get_db_context
+            async with get_db_context() as db_session:
+                return await self._handle_question_impl(
+                    session_id=session_id,
+                    question_data=question_data,
+                    session=db_session,
+                    project_id=project_id,
+                    organization_id=organization_id,
+                    recording_id=recording_id
+                )
+        else:
+            # Use provided session (legacy compatibility)
+            return await self._handle_question_impl(
+                session_id=session_id,
+                question_data=question_data,
+                session=session,
+                project_id=project_id,
+                organization_id=organization_id,
+                recording_id=recording_id
+            )
+
+    async def _handle_question_impl(
+        self,
+        session_id: str,
+        question_data: dict,
         session: AsyncSession,
         project_id: str,
         organization_id: str,
         recording_id: str
     ) -> Optional[LiveMeetingInsight]:
-        """Process question detection event and trigger parallel answer discovery.
+        """Internal implementation of question handling.
 
         Args:
             session_id: The meeting session ID
-            question_data: Question data from GPT stream {id, text, speaker, timestamp, ...}
-            session: Database session
+            question_data: Question data from GPT stream
+            session: Database session (always provided)
             project_id: Project UUID
             organization_id: Organization UUID
             recording_id: Recording UUID
@@ -373,53 +425,81 @@ class QuestionHandler:
                 logger.debug(f"Tier 1: No RAG results for question {question_id}")
                 return False
 
-            # Update database with all collected results
-            from db.database import get_db_context
-            async with get_db_context() as db_session:
-                result = await db_session.execute(
-                    select(LiveMeetingInsight).where(
-                        LiveMeetingInsight.id == uuid.UUID(question_id)
+            # ========================================================================
+            # PHASE 1: Notify user that search is complete (immediate feedback)
+            # ========================================================================
+            # Calculate average confidence from relevance scores
+            avg_confidence = sum(s["relevance_score"] for s in collected_sources) / len(collected_sources)
+            num_sources = len(collected_sources)
+
+            # Broadcast final RAG completion event immediately after search completes
+            # This provides instant feedback to the user without waiting for DB persistence
+            await self._broadcast_event(session_id, {
+                "type": "RAG_RESULT_COMPLETE",
+                "data": {
+                    "question_id": question_id,
+                    "num_sources": num_sources,
+                    "confidence": avg_confidence,
+                    "tier": "rag",
+                    "label": "📚 From Documents"
+                }
+            })
+
+            logger.info(
+                f"Tier 1: RAG search complete for question {question_id} - "
+                f"found {num_sources} sources (confidence: {avg_confidence:.3f})"
+            )
+
+            # ========================================================================
+            # PHASE 2: Persist results to database (background data operation)
+            # ========================================================================
+            # This happens after user notification for better UX responsiveness
+            try:
+                from db.database import get_db_context
+                async with get_db_context() as db_session:
+                    result = await db_session.execute(
+                        select(LiveMeetingInsight).where(
+                            LiveMeetingInsight.id == uuid.UUID(question_id)
+                        )
                     )
-                )
-                question = result.scalar_one_or_none()
+                    question = result.scalar_one_or_none()
 
-                if question:
-                    # Calculate average confidence from relevance scores
-                    avg_confidence = sum(s["relevance_score"] for s in collected_sources) / len(collected_sources)
-
-                    # Add RAG tier result with all sources
-                    question.add_tier_result("rag", {
-                        "sources": collected_sources,
-                        "num_sources": len(collected_sources),
-                        "confidence": avg_confidence,
-                        "timestamp": datetime.utcnow().isoformat()
-                    })
-
-                    # Update status
-                    question.update_status(InsightStatus.FOUND.value)
-                    question.set_answer_source(AnswerSource.RAG.value, avg_confidence)
-
-                    await db_session.commit()
-
-                    # Broadcast final RAG completion event (use 'data' wrapper for consistency)
-                    await self._broadcast_event(session_id, {
-                        "type": "RAG_RESULT_COMPLETE",
-                        "data": {
-                            "question_id": question_id,
-                            "num_sources": len(collected_sources),
+                    if question:
+                        # Store RAG tier result with all sources
+                        question.add_tier_result("rag", {
+                            "sources": collected_sources,
+                            "num_sources": num_sources,
                             "confidence": avg_confidence,
-                            "tier": "rag",
-                            "label": "📚 From Documents"
-                        }
-                    })
+                            "timestamp": datetime.utcnow().isoformat()
+                        })
 
-                    logger.info(
-                        f"Tier 1: Found {len(collected_sources)} RAG sources for question {question_id} "
-                        f"(confidence: {avg_confidence:.3f})"
-                    )
-                    return True
+                        # Update question status
+                        question.update_status(InsightStatus.FOUND.value)
+                        question.set_answer_source(AnswerSource.RAG.value, avg_confidence)
 
-            return False
+                        await db_session.commit()
+
+                        logger.debug(
+                            f"Tier 1: Persisted {num_sources} RAG results to database "
+                            f"for question {question_id}"
+                        )
+                    else:
+                        logger.error(
+                            f"Tier 1: Question {question_id} not found in database - "
+                            f"cannot persist RAG results"
+                        )
+
+            except Exception as persistence_error:
+                # Log persistence errors but don't fail the tier
+                # User already got their results via the completion broadcast
+                logger.error(
+                    f"Tier 1: Failed to persist RAG results for question {question_id}: "
+                    f"{persistence_error}",
+                    exc_info=True
+                )
+                # Still return True because search succeeded and user was notified
+
+            return True
 
         except Exception as e:
             logger.error(f"Tier 1: RAG search failed for question {question_id}: {e}", exc_info=True)
@@ -470,56 +550,83 @@ class QuestionHandler:
                 )
                 return False
 
-            # Update database with meeting context result
-            from db.database import get_db_context
-            async with get_db_context() as db_session:
-                db_result = await db_session.execute(
-                    select(LiveMeetingInsight).where(
-                        LiveMeetingInsight.id == uuid.UUID(question_id)
+            # ========================================================================
+            # PHASE 1: Notify user that answer was found (immediate feedback)
+            # ========================================================================
+            # Broadcast ANSWER_FROM_MEETING event immediately after search completes
+            # This provides instant feedback to the user without waiting for DB persistence
+            await self._broadcast_event(session_id, {
+                "type": "ANSWER_FROM_MEETING",
+                "data": {
+                    "question_id": question_id,
+                    "answer_text": result.answer_text,
+                    "quotes": result.quotes,
+                    "confidence": result.confidence,
+                    "tier": "meeting_context",
+                    "label": "💬 Earlier in Meeting"
+                }
+            })
+
+            logger.info(
+                f"Tier 2: Meeting context search complete for question {question_id} - "
+                f"found answer (confidence: {result.confidence:.3f}, quotes: {len(result.quotes)}, "
+                f"duration: {result.search_duration_ms}ms)"
+            )
+
+            # ========================================================================
+            # PHASE 2: Persist results to database (background data operation)
+            # ========================================================================
+            # This happens after user notification for better UX responsiveness
+            try:
+                from db.database import get_db_context
+                async with get_db_context() as db_session:
+                    db_result = await db_session.execute(
+                        select(LiveMeetingInsight).where(
+                            LiveMeetingInsight.id == uuid.UUID(question_id)
+                        )
                     )
-                )
-                question = db_result.scalar_one_or_none()
+                    question = db_result.scalar_one_or_none()
 
-                if question:
-                    # Add meeting context tier result
-                    question.add_tier_result("meeting_context", {
-                        "answer_text": result.answer_text,
-                        "quotes": result.quotes,
-                        "confidence": result.confidence,
-                        "search_duration_ms": result.search_duration_ms,
-                        "timestamp": datetime.utcnow().isoformat()
-                    })
-
-                    # Update status and answer source
-                    question.update_status(InsightStatus.FOUND.value)
-                    question.set_answer_source(
-                        AnswerSource.MEETING_CONTEXT.value,
-                        result.confidence
-                    )
-
-                    await db_session.commit()
-
-                    # Broadcast ANSWER_FROM_MEETING event (use 'data' wrapper for consistency)
-                    await self._broadcast_event(session_id, {
-                        "type": "ANSWER_FROM_MEETING",
-                        "data": {
-                            "question_id": question_id,
+                    if question:
+                        # Store meeting context tier result
+                        question.add_tier_result("meeting_context", {
                             "answer_text": result.answer_text,
                             "quotes": result.quotes,
                             "confidence": result.confidence,
-                            "tier": "meeting_context",
-                            "label": "💬 Earlier in Meeting"
-                        }
-                    })
+                            "search_duration_ms": result.search_duration_ms,
+                            "timestamp": datetime.utcnow().isoformat()
+                        })
 
-                    logger.info(
-                        f"Tier 2: Found answer in meeting context for question {question_id} "
-                        f"(confidence: {result.confidence:.3f}, quotes: {len(result.quotes)}, "
-                        f"duration: {result.search_duration_ms}ms)"
-                    )
-                    return True
+                        # Update question status
+                        question.update_status(InsightStatus.FOUND.value)
+                        question.set_answer_source(
+                            AnswerSource.MEETING_CONTEXT.value,
+                            result.confidence
+                        )
 
-            return False
+                        await db_session.commit()
+
+                        logger.debug(
+                            f"Tier 2: Persisted meeting context result to database "
+                            f"for question {question_id}"
+                        )
+                    else:
+                        logger.error(
+                            f"Tier 2: Question {question_id} not found in database - "
+                            f"cannot persist meeting context result"
+                        )
+
+            except Exception as persistence_error:
+                # Log persistence errors but don't fail the tier
+                # User already got their answer via the completion broadcast
+                logger.error(
+                    f"Tier 2: Failed to persist meeting context result for question {question_id}: "
+                    f"{persistence_error}",
+                    exc_info=True
+                )
+                # Still return True because search succeeded and user was notified
+
+            return True
 
         except Exception as e:
             logger.error(
@@ -562,8 +669,13 @@ class QuestionHandler:
             answer_event = asyncio.Event()
             self._answer_events[session_id][question_id] = answer_event
 
-            # Update status to MONITORING
+            # ========================================================================
+            # Check current status and broadcast MONITORING if appropriate
+            # ========================================================================
             from db.database import get_db_context
+
+            # First, check if we should enter monitoring (query only, no updates yet)
+            should_monitor = False
             async with get_db_context() as db_session:
                 result = await db_session.execute(
                     select(LiveMeetingInsight).where(
@@ -573,18 +685,58 @@ class QuestionHandler:
                 question = result.scalar_one_or_none()
 
                 if question:
-                    # Only update to monitoring if not already answered by Tier 1 or 2
+                    # Only monitor if not already answered by Tier 1 or 2
                     if question.status in [InsightStatus.SEARCHING.value, InsightStatus.FOUND.value]:
-                        question.update_status(InsightStatus.MONITORING.value)
-                        await db_session.commit()
+                        should_monitor = True
 
-                        # Broadcast complete question object with updated status
-                        question_dict = question.to_dict()
-                        await self._broadcast_event(session_id, {
-                            "type": "QUESTION_MONITORING",
-                            "data": question_dict,
-                            "timestamp": datetime.utcnow().isoformat()
-                        })
+            if should_monitor:
+                # ====================================================================
+                # PHASE 1: Notify user immediately (fast UX feedback)
+                # ====================================================================
+                await self._broadcast_event(session_id, {
+                    "type": "QUESTION_MONITORING",
+                    "data": {
+                        "question_id": question_id,
+                        "status": "monitoring",
+                        "monitoring_timeout": self.monitoring_timeout_seconds,
+                        "timestamp": datetime.utcnow().isoformat()
+                    },
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+
+                logger.debug(
+                    f"Tier 4: Broadcast MONITORING status for question {question_id}"
+                )
+
+                # ====================================================================
+                # PHASE 2: Persist status to database (background operation)
+                # ====================================================================
+                try:
+                    async with get_db_context() as db_session:
+                        result = await db_session.execute(
+                            select(LiveMeetingInsight).where(
+                                LiveMeetingInsight.id == uuid.UUID(question_id)
+                            )
+                        )
+                        question = result.scalar_one_or_none()
+
+                        if question and question.status in [InsightStatus.SEARCHING.value, InsightStatus.FOUND.value]:
+                            question.update_status(InsightStatus.MONITORING.value)
+                            await db_session.commit()
+
+                            logger.debug(
+                                f"Tier 4: Persisted MONITORING status to database "
+                                f"for question {question_id}"
+                            )
+
+                except Exception as persistence_error:
+                    # Log persistence errors but don't fail the monitoring
+                    # User already got notification via broadcast
+                    logger.error(
+                        f"Tier 4: Failed to persist MONITORING status for question {question_id}: "
+                        f"{persistence_error}",
+                        exc_info=True
+                    )
 
             # Wait for either answer detection or timeout
             try:
@@ -698,25 +850,59 @@ class QuestionHandler:
                     "marking as unanswered"
                 )
 
-                result = await db_session.execute(
-                    select(LiveMeetingInsight).where(
-                        LiveMeetingInsight.id == uuid.UUID(question_id)
-                    )
-                )
-                question = result.scalar_one_or_none()
-
-                if question:
-                    question.update_status(InsightStatus.UNANSWERED.value)
-                    question.set_answer_source(AnswerSource.UNANSWERED.value)
-                    await db_session.commit()
-
-                    # Broadcast complete question object with updated status
-                    question_dict = question.to_dict()
-                    await self._broadcast_event(session_id, {
-                        "type": "QUESTION_UNANSWERED",
-                        "data": question_dict,
+                # ========================================================================
+                # PHASE 1: Notify user immediately (fast UX feedback)
+                # ========================================================================
+                # Broadcast unanswered status immediately without waiting for DB
+                await self._broadcast_event(session_id, {
+                    "type": "QUESTION_UNANSWERED",
+                    "data": {
+                        "question_id": question_id,
+                        "status": "unanswered",
+                        "answer_source": "none",
                         "timestamp": datetime.utcnow().isoformat()
-                    })
+                    },
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+
+                logger.info(
+                    f"Tier 3: Broadcast UNANSWERED status for question {question_id}"
+                )
+
+                # ========================================================================
+                # PHASE 2: Persist status to database (background operation)
+                # ========================================================================
+                try:
+                    result = await db_session.execute(
+                        select(LiveMeetingInsight).where(
+                            LiveMeetingInsight.id == uuid.UUID(question_id)
+                        )
+                    )
+                    question = result.scalar_one_or_none()
+
+                    if question:
+                        question.update_status(InsightStatus.UNANSWERED.value)
+                        question.set_answer_source(AnswerSource.UNANSWERED.value)
+                        await db_session.commit()
+
+                        logger.debug(
+                            f"Tier 3: Persisted UNANSWERED status to database "
+                            f"for question {question_id}"
+                        )
+                    else:
+                        logger.error(
+                            f"Tier 3: Question {question_id} not found in database - "
+                            f"cannot persist UNANSWERED status"
+                        )
+
+                except Exception as persistence_error:
+                    # Log persistence errors but don't fail the tier
+                    # User already got notification via broadcast
+                    logger.error(
+                        f"Tier 3: Failed to persist UNANSWERED status for question {question_id}: "
+                        f"{persistence_error}",
+                        exc_info=True
+                    )
 
                 return False
 
