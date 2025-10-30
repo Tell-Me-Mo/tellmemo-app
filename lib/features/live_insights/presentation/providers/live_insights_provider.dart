@@ -414,23 +414,31 @@ class LiveTranscriptionsTracker extends _$LiveTranscriptionsTracker {
 
   /// Handle transcription update from WebSocket
   void _handleTranscriptionUpdate(TranscriptSegment transcription) {
+    debugPrint('[LiveTranscriptionsTracker] Received transcription: isFinal=${transcription.isFinal}, text="${transcription.text.substring(0, transcription.text.length > 50 ? 50 : transcription.text.length)}..."');
+
     // If partial, check if we already have a partial with same ID and update it
     if (!transcription.isFinal) {
       final index = _transcriptions.indexWhere((t) => t.id == transcription.id);
       if (index != -1) {
+        debugPrint('[LiveTranscriptionsTracker] Updating existing partial transcript at index $index');
         _transcriptions[index] = transcription;
       } else {
+        debugPrint('[LiveTranscriptionsTracker] Adding new partial transcript');
         _transcriptions.add(transcription);
       }
     } else {
       // Final transcript: replace partial if exists, otherwise add
       final index = _transcriptions.indexWhere((t) => t.id == transcription.id);
       if (index != -1) {
+        debugPrint('[LiveTranscriptionsTracker] Replacing partial with final transcript at index $index');
         _transcriptions[index] = transcription;
       } else {
+        debugPrint('[LiveTranscriptionsTracker] Adding new final transcript');
         _transcriptions.add(transcription);
       }
     }
+
+    debugPrint('[LiveTranscriptionsTracker] Total transcriptions now: ${_transcriptions.length}, final: ${_transcriptions.where((t) => t.isFinal).length}');
 
     // Trim old transcriptions (keep last 100)
     if (_transcriptions.length > _maxTranscriptions) {
@@ -443,6 +451,51 @@ class LiveTranscriptionsTracker extends _$LiveTranscriptionsTracker {
   /// Update provider state
   void _updateState() {
     state = AsyncValue.data(List.from(_transcriptions));
+  }
+
+  /// Get full transcription text assembled from all segments
+  String getFullTranscription() {
+    debugPrint('[LiveTranscriptionsTracker] getFullTranscription called - total segments: ${_transcriptions.length}');
+
+    // Sort by start time to ensure chronological order
+    final sortedTranscriptions = List<TranscriptSegment>.from(_transcriptions)
+      ..sort((a, b) => a.startTime.compareTo(b.startTime));
+
+    debugPrint('[LiveTranscriptionsTracker] After sorting: ${sortedTranscriptions.length} segments');
+
+    // Only include final transcripts for accuracy
+    final finalTranscripts = sortedTranscriptions.where((t) => t.isFinal).toList();
+
+    debugPrint('[LiveTranscriptionsTracker] Final transcripts only: ${finalTranscripts.length} segments');
+
+    if (finalTranscripts.isEmpty && sortedTranscriptions.isNotEmpty) {
+      debugPrint('[LiveTranscriptionsTracker] ⚠️ No final transcripts, but ${sortedTranscriptions.length} partial transcripts available');
+      debugPrint('[LiveTranscriptionsTracker] Sample partial transcript: ${sortedTranscriptions.first.text.substring(0, sortedTranscriptions.first.text.length > 50 ? 50 : sortedTranscriptions.first.text.length)}...');
+    }
+
+    // Concatenate all text segments
+    return finalTranscripts.map((t) => t.text.trim()).where((text) => text.isNotEmpty).join(' ');
+  }
+
+  /// Get transcription segments with timing information
+  List<Map<String, dynamic>> getTranscriptionSegments() {
+    // Sort by start time
+    final sortedTranscriptions = List<TranscriptSegment>.from(_transcriptions)
+      ..sort((a, b) => a.startTime.compareTo(b.startTime));
+
+    // Only include final transcripts
+    final finalTranscripts = sortedTranscriptions.where((t) => t.isFinal).toList();
+
+    // Convert to format expected by backend
+    return finalTranscripts.map((t) {
+      return {
+        'start': t.startTime.millisecondsSinceEpoch / 1000.0, // Convert to seconds
+        'end': t.endTime != null ? t.endTime!.millisecondsSinceEpoch / 1000.0 : null,
+        'text': t.text,
+        'speaker': t.speaker,
+        'confidence': t.confidence,
+      };
+    }).toList();
   }
 
   /// Clear all transcriptions

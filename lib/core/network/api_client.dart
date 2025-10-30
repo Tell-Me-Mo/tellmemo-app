@@ -130,6 +130,8 @@ class ApiClient {
     required String meetingTitle,
     String language = 'en',
     bool useAiMatching = false,
+    String? transcriptionText,
+    String? transcriptionSegments,
   }) async {
     final formData = FormData.fromMap({
       'audio_file': audioFile,
@@ -137,6 +139,8 @@ class ApiClient {
       'meeting_title': meetingTitle,
       'language': language,
       'use_ai_matching': useAiMatching,
+      if (transcriptionText != null) 'transcription_text': transcriptionText,
+      if (transcriptionSegments != null) 'transcription_segments': transcriptionSegments,
     });
     final response = await _dio.post('/api/v1/transcribe', data: formData);
     return response.data;

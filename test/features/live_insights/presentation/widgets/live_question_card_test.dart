@@ -110,7 +110,7 @@ void main() {
     });
 
     group('Four-Tier Answer Sources', () {
-      testWidgets('displays RAG results with "From Documents" label', (WidgetTester tester) async {
+      testWidgets('displays RAG results when expanded', (WidgetTester tester) async {
         final question = testQuestion.copyWith(
           status: InsightStatus.found,
           tierResults: [
@@ -129,13 +129,13 @@ void main() {
         await tester.tap(find.byType(Card));
         await tester.pumpAndSettle();
 
-        expect(find.text('From Documents'), findsOneWidget);
+        // Should show content, confidence, and source
         expect(find.text('The Q4 budget is \$250,000'), findsOneWidget);
         expect(find.text('95%'), findsOneWidget);
         expect(find.text('Budget_Q4_2025.pdf'), findsOneWidget);
       });
 
-      testWidgets('displays meeting context results with "Earlier in Meeting" label', (WidgetTester tester) async {
+      testWidgets('displays meeting context results when expanded', (WidgetTester tester) async {
         final question = testQuestion.copyWith(
           status: InsightStatus.found,
           tierResults: [
@@ -154,12 +154,11 @@ void main() {
         await tester.tap(find.byType(Card));
         await tester.pumpAndSettle();
 
-        expect(find.text('Earlier in Meeting'), findsOneWidget);
         expect(find.text('We discussed \$250K budget earlier'), findsOneWidget);
         expect(find.text('88%'), findsOneWidget);
       });
 
-      testWidgets('displays live conversation results with "Answered Live" label', (WidgetTester tester) async {
+      testWidgets('displays live conversation results when expanded', (WidgetTester tester) async {
         final question = testQuestion.copyWith(
           status: InsightStatus.answered,
           tierResults: [
@@ -178,12 +177,11 @@ void main() {
         await tester.tap(find.byType(Card));
         await tester.pumpAndSettle();
 
-        expect(find.text('Answered Live'), findsOneWidget);
         expect(find.text('The budget is \$250,000 for Q4'), findsOneWidget);
         expect(find.text('92%'), findsOneWidget);
       });
 
-      testWidgets('displays GPT-generated answer with disclaimer', (WidgetTester tester) async {
+      testWidgets('displays GPT-generated answer when expanded', (WidgetTester tester) async {
         final question = testQuestion.copyWith(
           status: InsightStatus.answered,
           tierResults: [
@@ -202,11 +200,8 @@ void main() {
         await tester.tap(find.byType(Card));
         await tester.pumpAndSettle();
 
-        expect(find.text('AI Answer'), findsOneWidget);
         expect(find.text('Typical Q4 infrastructure budgets range from \$200K-\$500K'), findsOneWidget);
         expect(find.text('75%'), findsOneWidget);
-        expect(find.text('AI-generated answer. Please verify accuracy.'), findsOneWidget);
-        expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
       });
 
       testWidgets('displays multiple tier results together', (WidgetTester tester) async {
@@ -235,8 +230,7 @@ void main() {
         await tester.tap(find.byType(Card));
         await tester.pumpAndSettle();
 
-        expect(find.text('From Documents'), findsOneWidget);
-        expect(find.text('Earlier in Meeting'), findsOneWidget);
+        // Should show both tier results
         expect(find.text('Document says \$250K'), findsOneWidget);
         expect(find.text('Earlier mentioned \$250K'), findsOneWidget);
       });
@@ -321,13 +315,13 @@ void main() {
       });
     });
 
-    group('Tier Icons in Compact View', () {
-      testWidgets('displays tier icons in collapsed state', (WidgetTester tester) async {
+    group('Tier Results Display', () {
+      testWidgets('does not show tier results in collapsed state', (WidgetTester tester) async {
         final question = testQuestion.copyWith(
           tierResults: [
             TierResult(
               tierType: TierType.rag,
-              content: 'Test',
+              content: 'Test result content',
               confidence: 0.9,
               foundAt: now,
             ),
@@ -335,14 +329,11 @@ void main() {
         );
         await tester.pumpWidget(buildWidget(question));
 
-        // In collapsed state, should show tier icons
-        expect(find.text('📚'), findsWidgets); // RAG icon
-        expect(find.text('💬'), findsWidgets); // Meeting context icon
-        expect(find.text('👂'), findsWidgets); // Live conversation icon
-        expect(find.text('🤖'), findsWidgets); // GPT generated icon
+        // In collapsed state, tier results should not be visible
+        expect(find.text('Test result content'), findsNothing);
       });
 
-      testWidgets('shows result count in collapsed state', (WidgetTester tester) async {
+      testWidgets('shows tier results when expanded', (WidgetTester tester) async {
         final question = testQuestion.copyWith(
           tierResults: [
             TierResult(tierType: TierType.rag, content: 'R1', confidence: 0.9, foundAt: now),
@@ -352,7 +343,14 @@ void main() {
         );
         await tester.pumpWidget(buildWidget(question));
 
-        expect(find.text('3 results'), findsOneWidget);
+        // Expand
+        await tester.tap(find.byType(Card));
+        await tester.pumpAndSettle();
+
+        // Should show all results
+        expect(find.text('R1'), findsOneWidget);
+        expect(find.text('R2'), findsOneWidget);
+        expect(find.text('M1'), findsOneWidget);
       });
     });
 

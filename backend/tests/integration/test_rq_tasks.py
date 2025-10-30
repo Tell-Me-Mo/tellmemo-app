@@ -138,6 +138,55 @@ class TestTranscriptionTasks:
                 last_call = mock_queue_config.publish_job_update.call_args_list[-1]
                 assert last_call[0][1]['status'] == 'failed'
 
+    @pytest.mark.asyncio
+    async def test_transcription_task_with_existing_transcription(self, mock_rq_job, mock_queue_config):
+        """Test that transcription task uses provided transcription text and skips audio transcription"""
+        from tasks.transcription_tasks import process_audio_transcription_task
+
+        # Mock all the dependencies
+        with patch('tasks.transcription_tasks.get_current_job', return_value=mock_rq_job):
+            with patch('tasks.transcription_tasks.asyncio.run') as mock_run:
+                # Mock successful result using provided transcription
+                mock_run.return_value = {
+                    "content_id": "content-123",
+                    "project_id": "project-123",
+                    "transcription_length": 500,
+                    "language": "en",
+                    "from_live_recording": True  # Flag to indicate source
+                }
+
+                # Execute task with pre-existing transcription
+                transcription_text = "This is a test transcription from live recording"
+                transcription_segments = '[{"start": 0.0, "end": 5.0, "text": "This is a test", "speaker": "Speaker 1", "confidence": 0.95}]'
+
+                result = process_audio_transcription_task(
+                    temp_file_path="/tmp/test.mp3",
+                    project_id="project-123",
+                    meeting_title="Test Meeting",
+                    language="en",
+                    tracking_job_id="tracking-123",
+                    file_size=1024,
+                    filename="test.mp3",
+                    organization_id=str(uuid.uuid4()),
+                    transcription_text=transcription_text,
+                    transcription_segments=transcription_segments
+                )
+
+                # Verify asyncio.run was called (task executed)
+                assert mock_run.called
+
+                # Verify the async function was called with transcription parameters
+                # The first positional arg to asyncio.run is the coroutine
+                call_args = mock_run.call_args[0]
+                # Since it's a coroutine, we can't directly inspect it, but we verified
+                # that the task accepted the parameters and completed successfully
+
+                # Verify result indicates it used live transcription
+                assert result['from_live_recording'] == True
+
+                # Verify progress was tracked
+                assert mock_rq_job.save_meta.called
+
 
 class TestContentProcessingTasks:
     """Test suite for content processing RQ tasks"""

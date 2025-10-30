@@ -70,7 +70,7 @@ void main() {
     });
 
     group('Completeness Display', () {
-      testWidgets('shows description-only completeness (40%)', (WidgetTester tester) async {
+      testWidgets('shows description-only completeness badge', (WidgetTester tester) async {
         final action = testAction.copyWith(
           description: 'Test task',
           owner: null,
@@ -79,15 +79,12 @@ void main() {
         );
         await tester.pumpWidget(buildWidget(action));
 
-        // Expand to see details
-        await tester.tap(find.byType(Card));
-        await tester.pumpAndSettle();
-
-        // Should show low completeness indicator
-        expect(find.text('40%'), findsOneWidget);
+        // Should show "Tracking" badge for description-only
+        expect(find.text('Tracking'), findsOneWidget);
+        expect(action.completenessLevel, ActionCompleteness.descriptionOnly);
       });
 
-      testWidgets('shows partial completeness with owner (70%)', (WidgetTester tester) async {
+      testWidgets('shows partial completeness with owner', (WidgetTester tester) async {
         final action = testAction.copyWith(
           description: 'Test task',
           owner: 'John Doe',
@@ -96,15 +93,12 @@ void main() {
         );
         await tester.pumpWidget(buildWidget(action));
 
-        // Expand to see details
-        await tester.tap(find.byType(Card));
-        await tester.pumpAndSettle();
-
         expect(find.text('John Doe'), findsOneWidget);
-        expect(find.text('70%'), findsOneWidget);
+        expect(find.text('Partial'), findsOneWidget);
+        expect(action.completenessLevel, ActionCompleteness.partial);
       });
 
-      testWidgets('shows partial completeness with deadline (70%)', (WidgetTester tester) async {
+      testWidgets('shows partial completeness with deadline', (WidgetTester tester) async {
         final tomorrow = now.add(const Duration(days: 1));
         final action = testAction.copyWith(
           description: 'Test task',
@@ -114,15 +108,11 @@ void main() {
         );
         await tester.pumpWidget(buildWidget(action));
 
-        // Expand to see details
-        await tester.tap(find.byType(Card));
-        await tester.pumpAndSettle();
-
-        expect(find.text('70%'), findsOneWidget);
-        expect(find.byIcon(Icons.schedule), findsWidgets); // Icon appears in compact and expanded view
+        expect(find.text('Partial'), findsOneWidget);
+        expect(find.byIcon(Icons.schedule), findsOneWidget);
       });
 
-      testWidgets('shows complete status with all details (100%)', (WidgetTester tester) async {
+      testWidgets('shows complete status with all details', (WidgetTester tester) async {
         final tomorrow = now.add(const Duration(days: 1));
         final action = testAction.copyWith(
           description: 'Complete task',
@@ -132,13 +122,9 @@ void main() {
         );
         await tester.pumpWidget(buildWidget(action));
 
-        // Expand to see details
-        await tester.tap(find.byType(Card));
-        await tester.pumpAndSettle();
-
         expect(find.text('Jane Smith'), findsOneWidget);
-        expect(find.text('100%'), findsOneWidget);
-        expect(find.byIcon(Icons.schedule), findsWidgets); // Icon appears in compact and expanded view
+        expect(find.text('Complete'), findsOneWidget);
+        expect(find.byIcon(Icons.schedule), findsOneWidget);
       });
     });
 
@@ -184,103 +170,44 @@ void main() {
       });
     });
 
-    group('Expand/Collapse Behavior', () {
-      testWidgets('expands and collapses on tap', (WidgetTester tester) async {
-        await tester.pumpWidget(buildWidget(testAction));
+    group('Compact Metadata Display', () {
+      testWidgets('displays owner in compact view', (WidgetTester tester) async {
+        final action = testAction.copyWith(owner: 'John Doe');
+        await tester.pumpWidget(buildWidget(action));
 
-        // Initially collapsed - expanded metadata should not be visible
-        expect(find.text('Owner'), findsNothing);
-
-        // Tap to expand
-        await tester.tap(find.byType(Card));
-        await tester.pumpAndSettle();
-
-        // Now expanded - metadata should be visible
-        expect(find.text('Owner'), findsOneWidget);
-        expect(find.text('Deadline'), findsOneWidget);
-
-        // Tap again to collapse
-        await tester.tap(find.byType(Card));
-        await tester.pumpAndSettle();
-
-        // Collapsed again
-        expect(find.text('Owner'), findsNothing);
+        // Owner should be visible in compact view
+        expect(find.text('John Doe'), findsOneWidget);
+        expect(find.byIcon(Icons.person_outline), findsOneWidget);
       });
 
-      testWidgets('animates chevron icon on expand/collapse', (WidgetTester tester) async {
+      testWidgets('shows no owner when owner is null', (WidgetTester tester) async {
         await tester.pumpWidget(buildWidget(testAction));
 
-        final chevronFinder = find.byIcon(Icons.chevron_right);
-        expect(chevronFinder, findsOneWidget);
-
-        // Expand
-        await tester.tap(find.byType(Card));
-        await tester.pump(); // Start animation
-        await tester.pump(const Duration(milliseconds: 100)); // Mid animation
-        await tester.pumpAndSettle(); // Complete animation
-
-        // Chevron should still exist (just rotated)
-        expect(chevronFinder, findsOneWidget);
+        // Should show "No owner" text
+        expect(find.text('No owner'), findsOneWidget);
+        expect(find.byIcon(Icons.person_outline), findsOneWidget);
       });
     });
 
     group('Overdue Detection', () {
-      testWidgets('displays OVERDUE badge for past deadlines', (WidgetTester tester) async {
+      testWidgets('displays warning icon for past deadlines', (WidgetTester tester) async {
         final yesterday = now.subtract(const Duration(days: 1));
         final action = testAction.copyWith(deadline: yesterday);
         await tester.pumpWidget(buildWidget(action));
 
-        // Expand to see deadline
-        await tester.tap(find.byType(Card));
-        await tester.pumpAndSettle();
-
-        // "Overdue" appears in both the deadline display and warning banner
-        // Warning icon also appears in both places
-        expect(find.text('Overdue'), findsWidgets);
-        expect(find.byIcon(Icons.warning_amber_rounded), findsWidgets);
+        // Warning icon should appear for overdue items
+        expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
+        // "Overdue" text appears in deadline display
+        expect(find.text('Overdue'), findsOneWidget);
       });
 
-      testWidgets('does not show OVERDUE for future deadlines', (WidgetTester tester) async {
+      testWidgets('does not show warning icon for future deadlines', (WidgetTester tester) async {
         final tomorrow = now.add(const Duration(days: 1));
         final action = testAction.copyWith(deadline: tomorrow);
         await tester.pumpWidget(buildWidget(action));
 
-        // Expand to see deadline
-        await tester.tap(find.byType(Card));
-        await tester.pumpAndSettle();
-
+        expect(find.byIcon(Icons.warning_amber_rounded), findsNothing);
         expect(find.text('Overdue'), findsNothing);
-      });
-    });
-
-    group('Progress Indicator', () {
-      testWidgets('displays completeness progress bar', (WidgetTester tester) async {
-        await tester.pumpWidget(buildWidget(testAction));
-
-        // Expand
-        await tester.tap(find.byType(Card));
-        await tester.pumpAndSettle();
-
-        // Should show progress indicator (LinearProgressIndicator)
-        expect(find.byType(LinearProgressIndicator), findsOneWidget);
-      });
-
-      testWidgets('shows correct progress value', (WidgetTester tester) async {
-        final action = testAction.copyWith(
-          owner: 'John',
-          deadline: null,
-          completenessScore: 0.7,
-        );
-        await tester.pumpWidget(buildWidget(action));
-
-        // Expand
-        await tester.tap(find.byType(Card));
-        await tester.pumpAndSettle();
-
-        final progressIndicator = tester.widget<LinearProgressIndicator>(
-          find.byType(LinearProgressIndicator),
-        );
-        expect(progressIndicator.value, 0.7);
       });
     });
 
@@ -292,13 +219,9 @@ void main() {
         );
         await tester.pumpWidget(buildWidget(action));
 
-        // Expand
-        await tester.tap(find.byType(Card));
-        await tester.pumpAndSettle();
-
-        // Should indicate missing owner
+        // Should indicate missing owner in compact view
         expect(action.hasOwner, false);
-        expect(find.text('No owner assigned'), findsOneWidget);
+        expect(find.text('No owner'), findsOneWidget);
       });
 
       testWidgets('shows missing deadline indicator', (WidgetTester tester) async {
@@ -308,11 +231,7 @@ void main() {
         );
         await tester.pumpWidget(buildWidget(action));
 
-        // Expand
-        await tester.tap(find.byType(Card));
-        await tester.pumpAndSettle();
-
-        // Should indicate missing deadline
+        // Should indicate missing deadline in compact view
         expect(action.hasDeadline, false);
         expect(find.text('No deadline'), findsOneWidget);
       });

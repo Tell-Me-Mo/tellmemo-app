@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -433,6 +434,49 @@ class RecordingNotifier extends _$RecordingNotifier {
           fileName = filePath.split('/').last;
         }
 
+        // Get live transcription if AI Assistant was enabled
+        String? transcriptionText;
+        String? transcriptionSegments;
+
+        if (state.aiAssistantEnabled) {
+          debugPrint('[RecordingProvider] AI Assistant was enabled - fetching live transcription for upload');
+          try {
+            // Ensure provider is ready
+            await ref.read(liveTranscriptionsTrackerProvider.future);
+
+            // Get full transcription text
+            final fullTranscription = ref.read(liveTranscriptionsTrackerProvider.notifier).getFullTranscription();
+            debugPrint('[RecordingProvider] Full transcription length: ${fullTranscription.length} characters');
+
+            if (fullTranscription.isNotEmpty) {
+              transcriptionText = fullTranscription;
+              debugPrint('[RecordingProvider] ✓ Will send live transcription: ${transcriptionText.substring(0, transcriptionText.length > 100 ? 100 : transcriptionText.length)}...');
+
+              // Get segments with timing information
+              final segments = ref.read(liveTranscriptionsTrackerProvider.notifier).getTranscriptionSegments();
+              debugPrint('[RecordingProvider] Transcription segments count: ${segments.length}');
+
+              if (segments.isNotEmpty) {
+                // Convert to JSON string
+                transcriptionSegments = json.encode(segments);
+                debugPrint('[RecordingProvider] ✓ Will send ${segments.length} transcription segments');
+              } else {
+                debugPrint('[RecordingProvider] ⚠ No transcription segments available');
+              }
+            } else {
+              debugPrint('[RecordingProvider] ⚠ No live transcription text available - backend will transcribe audio');
+            }
+          } catch (e, stackTrace) {
+            debugPrint('[RecordingProvider] ✗ Error fetching live transcription: $e');
+            debugPrint('[RecordingProvider] Stack trace: $stackTrace');
+            // Continue without transcription - backend will transcribe audio file
+          }
+        } else {
+          debugPrint('[RecordingProvider] AI Assistant was NOT enabled - will transcribe audio file');
+        }
+
+        debugPrint('[RecordingProvider] Final transcription parameters - text: ${transcriptionText != null ? "YES (${transcriptionText.length} chars)" : "NO"}, segments: ${transcriptionSegments != null ? "YES" : "NO"}');
+
         // Use the uploadAudioFile method - exact same as file upload
         // Check if we should use AI matching (when projectId is 'auto')
         final useAiMatching = projectId == 'auto';
@@ -447,6 +491,8 @@ class RecordingNotifier extends _$RecordingNotifier {
           fileBytes: fileBytes,
           fileName: fileName,
           useAiMatching: useAiMatching,
+          transcriptionText: transcriptionText,
+          transcriptionSegments: transcriptionSegments,
         );
 
         print('[RecordingProvider] Upload response: $response');
