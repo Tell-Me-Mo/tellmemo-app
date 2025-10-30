@@ -291,6 +291,10 @@ IMPORTANT:
             prompt_parts.append(f"Asked by: {speaker}")
 
         if meeting_context:
+            # Truncate long context to max 1500 chars
+            max_context_length = 1500
+            if len(meeting_context) > max_context_length:
+                meeting_context = meeting_context[:max_context_length] + "..."
             prompt_parts.append(f"Meeting context: {meeting_context}")
 
         prompt_parts.extend([

@@ -37,7 +37,7 @@ def answer_handler():
 def mock_question_handler():
     """Create mock QuestionHandler."""
     handler = MagicMock()
-    handler.cancel_monitoring = AsyncMock()
+    handler.signal_answer_detected = MagicMock()
     return handler
 
 
@@ -149,21 +149,23 @@ async def test_handle_answer_success(
         assert sample_question_record.status == InsightStatus.ANSWERED.value
         assert sample_question_record.answer_source == AnswerSource.LIVE_CONVERSATION.value
 
-        # Verify monitoring cancellation
-        mock_question_handler.cancel_monitoring.assert_called_once_with(
+        # Verify answer detection signal
+        mock_question_handler.signal_answer_detected.assert_called_once_with(
             session_id,
             str(sample_question_record.id)
         )
 
         # Verify WebSocket broadcast
-        mock_ws_callback.assert_called_once()
-        broadcast_args = mock_ws_callback.call_args
-        assert broadcast_args[0][0] == session_id
-        event_data = broadcast_args[0][1]
+        # Note: The implementation calls broadcast at least once (potentially twice with enrichment)
+        assert mock_ws_callback.called
+        # Check the first call which is the immediate ANSWER_DETECTED broadcast
+        first_call_args = mock_ws_callback.call_args_list[0]
+        assert first_call_args[0][0] == session_id
+        event_data = first_call_args[0][1]
         assert event_data["type"] == "ANSWER_DETECTED"
-        assert event_data["question_id"] == str(sample_question_record.id)
-        assert event_data["answer"] == sample_answer_obj["answer_text"]
-        assert event_data["source"] == "live_conversation"
+        assert event_data["data"]["id"] == str(sample_question_record.id)
+        assert event_data["data"]["answerText"] == sample_answer_obj["answer_text"]
+        assert event_data["data"]["answerSource"] == "live_conversation"
 
 
 @pytest.mark.asyncio
@@ -293,7 +295,7 @@ async def test_cancel_monitoring_on_answer(
     sample_answer_obj,
     sample_question_record
 ):
-    """Test that Tier 3 monitoring is cancelled when answer is detected."""
+    """Test that answer detection is signaled to question handler when answer is detected."""
     answer_handler.set_question_handler(mock_question_handler)
     session_id = "test-session-123"
 
@@ -308,8 +310,8 @@ async def test_cancel_monitoring_on_answer(
         # Execute
         await answer_handler.handle_answer(sample_answer_obj, session_id)
 
-        # Verify monitoring was cancelled
-        mock_question_handler.cancel_monitoring.assert_called_once_with(
+        # Verify answer detection was signaled
+        mock_question_handler.signal_answer_detected.assert_called_once_with(
             session_id,
             str(sample_question_record.id)
         )
@@ -347,12 +349,12 @@ async def test_cancel_monitoring_failure_is_handled(
     sample_answer_obj,
     sample_question_record
 ):
-    """Test that monitoring cancellation failure doesn't break answer processing."""
+    """Test that signal failure doesn't break answer processing."""
     answer_handler.set_question_handler(mock_question_handler)
     session_id = "test-session-123"
 
-    # Make cancel_monitoring raise exception
-    mock_question_handler.cancel_monitoring.side_effect = Exception("Cancel failed")
+    # Make signal_answer_detected raise exception
+    mock_question_handler.signal_answer_detected.side_effect = Exception("Signal failed")
 
     with patch('services.intelligence.answer_handler.get_db_context') as mock_db:
         mock_session = AsyncMock()

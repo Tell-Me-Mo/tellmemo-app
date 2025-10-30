@@ -998,6 +998,32 @@ class QuestionHandler:
         else:
             logger.debug("No WebSocket callback configured, skipping broadcast")
 
+    async def _mark_question_unanswered(self, question_id: str) -> None:
+        """Mark a question as unanswered when all tiers fail.
+
+        Args:
+            question_id: Question database ID
+        """
+        try:
+            from db.database import get_db_context
+            async with get_db_context() as db_session:
+                result = await db_session.execute(
+                    select(LiveMeetingInsight).where(
+                        LiveMeetingInsight.id == uuid.UUID(question_id)
+                    )
+                )
+                question = result.scalar_one_or_none()
+
+                if question:
+                    question.update_status(InsightStatus.UNANSWERED.value)
+                    question.set_answer_source(AnswerSource.UNANSWERED.value)
+                    await db_session.commit()
+                    logger.info(f"Marked question {question_id} as unanswered")
+                else:
+                    logger.warning(f"Question {question_id} not found when marking as unanswered")
+        except Exception as e:
+            logger.error(f"Failed to mark question {question_id} as unanswered: {e}", exc_info=True)
+
 
 # Global service instance
 question_handler = QuestionHandler()

@@ -84,6 +84,11 @@ class TestHandleQuestion:
         # Mock database operations
         mock_session.add = MagicMock()
 
+        # Mock the select query for duplicate check
+        mock_existing_result = AsyncMock()
+        mock_existing_result.scalars = MagicMock(return_value=MagicMock(first=MagicMock(return_value=None)))
+        mock_session.execute = AsyncMock(return_value=mock_existing_result)
+
         # Mock WebSocket broadcast
         ws_callback = AsyncMock()
         question_handler.set_websocket_callback(ws_callback)
@@ -135,6 +140,12 @@ class TestHandleQuestion:
             "speaker": "John"
         }
 
+        # Mock the select query for duplicate check
+        mock_existing_result = AsyncMock()
+        mock_existing_result.scalars = MagicMock(return_value=MagicMock(first=MagicMock(return_value=None)))
+        mock_session.execute = AsyncMock(return_value=mock_existing_result)
+        mock_session.add = MagicMock()
+
         with patch.object(asyncio, 'create_task', return_value=None):
             result = await question_handler.handle_question(
                 session_id="test_session",
@@ -177,8 +188,15 @@ class TestTier1RAGSearch:
 
     async def test_rag_search_no_results(self, question_handler):
         """Test RAG search with no results."""
-        with patch('services.intelligence.question_handler.enhanced_rag_service') as mock_rag:
-            mock_rag.query_project = AsyncMock(return_value={"answer": "", "sources": []})
+        with patch('services.intelligence.question_handler.rag_search_service') as mock_rag:
+            mock_rag.is_available = MagicMock(return_value=True)
+
+            # Mock async generator that yields no results
+            async def empty_generator():
+                return
+                yield  # This makes it a generator
+
+            mock_rag.search = MagicMock(return_value=empty_generator())
 
             result = await question_handler._tier1_rag_search(
                 session_id="test_session",
@@ -192,13 +210,19 @@ class TestTier1RAGSearch:
 
     async def test_rag_search_timeout(self, question_handler):
         """Test RAG search timeout handling."""
-        with patch('services.intelligence.question_handler.enhanced_rag_service') as mock_rag:
-            # Simulate slow RAG search
-            async def slow_search(*args, **kwargs):
-                await asyncio.sleep(10)
-                return {"answer": "test", "sources": []}
+        with patch('services.intelligence.question_handler.rag_search_service') as mock_rag:
+            mock_rag.is_available = MagicMock(return_value=True)
 
-            mock_rag.query_project = slow_search
+            # Simulate slow RAG search
+            async def slow_generator():
+                await asyncio.sleep(10)
+                yield MagicMock()
+
+            mock_rag.search = MagicMock(return_value=slow_generator())
+
+            # Set a very short timeout for testing
+            original_timeout = question_handler.rag_search_timeout
+            question_handler.rag_search_timeout = 0.1
 
             result = await question_handler._tier1_rag_search(
                 session_id="test_session",
@@ -208,12 +232,22 @@ class TestTier1RAGSearch:
                 organization_id=str(uuid.uuid4())
             )
 
+            # Restore original timeout
+            question_handler.rag_search_timeout = original_timeout
+
         assert result is False
 
     async def test_rag_search_exception(self, question_handler):
         """Test RAG search exception handling."""
-        with patch('services.intelligence.question_handler.enhanced_rag_service') as mock_rag:
-            mock_rag.query_project = AsyncMock(side_effect=Exception("RAG error"))
+        with patch('services.intelligence.question_handler.rag_search_service') as mock_rag:
+            mock_rag.is_available = MagicMock(return_value=True)
+
+            # Mock async generator that raises exception
+            async def error_generator():
+                raise Exception("RAG error")
+                yield  # Makes it a generator
+
+            mock_rag.search = MagicMock(return_value=error_generator())
 
             result = await question_handler._tier1_rag_search(
                 session_id="test_session",
@@ -249,8 +283,8 @@ class TestParallelAnswerDiscovery:
         # Mock all tier methods
         with patch.object(question_handler, '_tier1_rag_search', AsyncMock(return_value=False)) as mock_tier1, \
              patch.object(question_handler, '_tier2_meeting_context_search', AsyncMock(return_value=False)) as mock_tier2, \
-             patch.object(question_handler, '_tier3_live_monitoring', AsyncMock(return_value=False)) as mock_tier3, \
-             patch.object(question_handler, '_tier4_gpt_generated_answer', AsyncMock(return_value=False)) as mock_tier4:
+             patch.object(question_handler, '_tier4_live_monitoring', AsyncMock(return_value=False)) as mock_tier4, \
+             patch.object(question_handler, '_tier3_gpt_generated_answer', AsyncMock(return_value=False)) as mock_tier3:
 
             start_time = asyncio.get_event_loop().time()
 
@@ -264,24 +298,25 @@ class TestParallelAnswerDiscovery:
 
             elapsed_time = asyncio.get_event_loop().time() - start_time
 
-            # Verify all tiers were called
+            # Verify tiers 1, 2, and 4 were called in parallel
             mock_tier1.assert_called_once()
             mock_tier2.assert_called_once()
-            mock_tier3.assert_called_once()
             mock_tier4.assert_called_once()
+            # Tier 3 (GPT) should be called since all others failed
+            mock_tier3.assert_called_once()
 
             # Verify parallel execution (should take ~0.1s, not 0.3s sequential)
             assert elapsed_time < 0.5
 
     async def test_tier4_triggered_only_when_others_fail(self, question_handler):
-        """Test Tier 4 is only triggered when Tiers 1-3 all fail."""
+        """Test Tier 3 (GPT) is only triggered when Tiers 1, 2, and 4 all fail."""
         question_handler.monitoring_timeout_seconds = 0.1
 
         # Mock Tier 1 success
         with patch.object(question_handler, '_tier1_rag_search', AsyncMock(return_value=True)), \
              patch.object(question_handler, '_tier2_meeting_context_search', AsyncMock(return_value=False)), \
-             patch.object(question_handler, '_tier3_live_monitoring', AsyncMock(return_value=False)), \
-             patch.object(question_handler, '_tier4_gpt_generated_answer', AsyncMock(return_value=False)) as mock_tier4:
+             patch.object(question_handler, '_tier4_live_monitoring', AsyncMock(return_value=False)), \
+             patch.object(question_handler, '_tier3_gpt_generated_answer', AsyncMock(return_value=False)) as mock_tier3:
 
             await question_handler._parallel_answer_discovery(
                 session_id="test_session",
@@ -291,8 +326,8 @@ class TestParallelAnswerDiscovery:
                 organization_id=str(uuid.uuid4())
             )
 
-            # Tier 4 should NOT be called since Tier 1 succeeded
-            mock_tier4.assert_not_called()
+            # Tier 3 (GPT) should NOT be called since Tier 1 succeeded
+            mock_tier3.assert_not_called()
 
 
 @pytest.mark.asyncio

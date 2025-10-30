@@ -111,51 +111,12 @@ def test_transcription_sentence_from_dict(sample_sentence):
 @pytest.mark.asyncio
 async def test_service_initialization(buffer_service):
     """Test TranscriptionBufferService initialization."""
-    assert buffer_service._client is None
-    assert buffer_service._is_available is False
+    assert buffer_service._buffers == {}
     assert buffer_service.window_seconds == 60
     assert buffer_service.max_sentences == 100
 
 
-@pytest.mark.asyncio
-async def test_redis_connection_success(buffer_service):
-    """Test successful Redis connection."""
-    client = await buffer_service._get_client()
-
-    # If Redis is available, client should be set
-    if client:
-        assert buffer_service._is_available is True
-        assert buffer_service._client is not None
-    else:
-        # If Redis is not available, should handle gracefully
-        assert buffer_service._is_available is False
-
-
-@pytest.mark.asyncio
-async def test_redis_connection_failure():
-    """Test graceful handling of Redis connection failure."""
-    service = TranscriptionBufferService()
-
-    # Mock Redis connection to fail
-    with patch('services.transcription.transcription_buffer_service.redis.from_url') as mock_redis:
-        mock_redis.side_effect = Exception("Connection refused")
-
-        client = await service._get_client()
-
-        assert client is None
-        assert service._is_available is False
-
-    await service.close()
-
-
-# Test: Buffer Key Generation
-
-def test_buffer_key_generation(buffer_service):
-    """Test Redis key generation for session buffers."""
-    session_id = "test_session_123"
-    key = buffer_service._get_buffer_key(session_id)
-
-    assert key == "transcription_buffer:test_session_123"
+# Removed Redis connection tests - service now uses in-memory storage
 
 
 # Test: Add Sentence
@@ -165,11 +126,13 @@ async def test_add_sentence_success(buffer_service, session_id, sample_sentence)
     """Test adding a sentence to the buffer."""
     success = await buffer_service.add_sentence(session_id, sample_sentence)
 
-    # Result depends on Redis availability
-    if await buffer_service._get_client():
-        assert success is True
-    else:
-        assert success is False
+    # Should always succeed with in-memory storage
+    assert success is True
+
+    # Verify sentence was added
+    buffer = await buffer_service.get_buffer(session_id)
+    assert len(buffer) == 1
+    assert buffer[0].sentence_id == sample_sentence.sentence_id
 
     # Clean up
     await buffer_service.clear_buffer(session_id)
@@ -180,14 +143,11 @@ async def test_add_multiple_sentences(buffer_service, session_id, sample_sentenc
     """Test adding multiple sentences to the buffer."""
     for sentence in sample_sentences:
         success = await buffer_service.add_sentence(session_id, sentence)
-
-        if await buffer_service._get_client():
-            assert success is True
+        assert success is True
 
     # Verify count
     buffer = await buffer_service.get_buffer(session_id)
-    if await buffer_service._get_client():
-        assert len(buffer) == len(sample_sentences)
+    assert len(buffer) == len(sample_sentences)
 
     # Clean up
     await buffer_service.clear_buffer(session_id)
@@ -214,12 +174,11 @@ async def test_get_buffer_with_sentences(buffer_service, session_id, sample_sent
     # Get buffer
     buffer = await buffer_service.get_buffer(session_id)
 
-    if await buffer_service._get_client():
-        assert len(buffer) == len(sample_sentences)
+    assert len(buffer) == len(sample_sentences)
 
-        # Verify chronological order
-        for i in range(len(buffer) - 1):
-            assert buffer[i].timestamp <= buffer[i + 1].timestamp
+    # Verify chronological order
+    for i in range(len(buffer) - 1):
+        assert buffer[i].timestamp <= buffer[i + 1].timestamp
 
     # Clean up
     await buffer_service.clear_buffer(session_id)
@@ -257,10 +216,9 @@ async def test_get_buffer_with_max_age(buffer_service, session_id):
     # Get buffer with 30-second window
     buffer = await buffer_service.get_buffer(session_id, max_age_seconds=30)
 
-    if await buffer_service._get_client():
-        # Should only contain recent sentence
-        assert len(buffer) == 1
-        assert buffer[0].sentence_id == "recent"
+    # Should only contain recent sentence
+    assert len(buffer) == 1
+    assert buffer[0].sentence_id == "recent"
 
     # Clean up
     await buffer_service.clear_buffer(session_id)
@@ -301,10 +259,9 @@ async def test_auto_trim_by_time(buffer_service, session_id):
     # Get buffer (auto-trim should have removed old sentence)
     buffer = await buffer_service.get_buffer(session_id)
 
-    if await buffer_service._get_client():
-        # Only recent sentence should remain
-        assert len(buffer) == 1
-        assert buffer[0].sentence_id == "recent"
+    # Only recent sentence should remain
+    assert len(buffer) == 1
+    assert buffer[0].sentence_id == "recent"
 
     # Clean up
     await buffer_service.clear_buffer(session_id)
@@ -335,15 +292,14 @@ async def test_auto_trim_by_count(buffer_service, session_id):
     # Get buffer
     buffer = await buffer_service.get_buffer(session_id)
 
-    if await buffer_service._get_client():
-        # Should only have 3 sentences (oldest 2 removed)
-        assert len(buffer) <= 3
+    # Should only have 3 sentences (oldest 2 removed by deque maxlen)
+    assert len(buffer) <= 3
 
-        # Should be the latest 3 sentences
-        if len(buffer) == 3:
-            assert buffer[0].sentence_id == "sent_2"
-            assert buffer[1].sentence_id == "sent_3"
-            assert buffer[2].sentence_id == "sent_4"
+    # Should be the latest 3 sentences
+    if len(buffer) == 3:
+        assert buffer[0].sentence_id == "sent_2"
+        assert buffer[1].sentence_id == "sent_3"
+        assert buffer[2].sentence_id == "sent_4"
 
     # Restore original max
     buffer_service.max_sentences = original_max
@@ -376,16 +332,15 @@ async def test_get_formatted_context_with_timestamps_and_speakers(buffer_service
         include_speakers=True
     )
 
-    if await buffer_service._get_client():
-        # Verify format: "[HH:MM:SS] Speaker X: Text"
-        lines = context.split("\n")
-        assert len(lines) == len(sample_sentences)
+    # Verify format: "[HH:MM:SS] Speaker X: Text"
+    lines = context.split("\n")
+    assert len(lines) == len(sample_sentences)
 
-        for line in lines:
-            assert line.startswith("[")
-            assert "]" in line
-            assert "Speaker" in line
-            assert ":" in line
+    for line in lines:
+        assert line.startswith("[")
+        assert "]" in line
+        assert "Speaker" in line
+        assert ":" in line
 
     # Clean up
     await buffer_service.clear_buffer(session_id)
@@ -405,12 +360,11 @@ async def test_get_formatted_context_without_timestamps(buffer_service, session_
         include_speakers=True
     )
 
-    if await buffer_service._get_client():
-        lines = context.split("\n")
+    lines = context.split("\n")
 
-        for line in lines:
-            assert not line.startswith("[")
-            assert "Speaker" in line
+    for line in lines:
+        assert not line.startswith("[")
+        assert "Speaker" in line
 
     # Clean up
     await buffer_service.clear_buffer(session_id)
@@ -430,13 +384,12 @@ async def test_get_formatted_context_without_speakers(buffer_service, session_id
         include_speakers=False
     )
 
-    if await buffer_service._get_client():
-        lines = context.split("\n")
+    lines = context.split("\n")
 
-        for line in lines:
-            assert line.startswith("[")
-            # Should not have "Speaker X:" pattern
-            assert "This is sentence" in line
+    for line in lines:
+        assert line.startswith("[")
+        # Should not have "Speaker X:" pattern
+        assert "This is sentence" in line
 
     # Clean up
     await buffer_service.clear_buffer(session_id)
@@ -450,8 +403,9 @@ async def test_get_buffer_stats_empty(buffer_service, session_id):
     stats = await buffer_service.get_buffer_stats(session_id)
 
     assert stats["session_id"] == session_id
-    assert "sentence_count" in stats
-    assert "redis_available" in stats
+    assert stats["sentence_count"] == 0
+    assert "window_seconds" in stats
+    assert "max_sentences" in stats
 
 
 @pytest.mark.asyncio
@@ -464,13 +418,10 @@ async def test_get_buffer_stats_with_sentences(buffer_service, session_id, sampl
     # Get stats
     stats = await buffer_service.get_buffer_stats(session_id)
 
-    if await buffer_service._get_client():
-        assert stats["sentence_count"] == len(sample_sentences)
-        assert stats["redis_available"] is True
-        assert "time_span_seconds" in stats
-        assert "ttl_seconds" in stats
-        assert stats["window_seconds"] == buffer_service.window_seconds
-        assert stats["max_sentences"] == buffer_service.max_sentences
+    assert stats["sentence_count"] == len(sample_sentences)
+    assert "time_span_seconds" in stats
+    assert stats["window_seconds"] == buffer_service.window_seconds
+    assert stats["max_sentences"] == buffer_service.max_sentences
 
     # Clean up
     await buffer_service.clear_buffer(session_id)
@@ -487,15 +438,11 @@ async def test_clear_buffer(buffer_service, session_id, sample_sentences):
 
     # Verify buffer has content
     buffer_before = await buffer_service.get_buffer(session_id)
-
-    if await buffer_service._get_client():
-        assert len(buffer_before) > 0
+    assert len(buffer_before) > 0
 
     # Clear buffer
     success = await buffer_service.clear_buffer(session_id)
-
-    if await buffer_service._get_client():
-        assert success is True
+    assert success is True
 
     # Verify buffer is empty
     buffer_after = await buffer_service.get_buffer(session_id)
@@ -514,48 +461,30 @@ def test_singleton_pattern():
 
 # Test: Graceful Degradation
 
-@pytest.mark.asyncio
-async def test_graceful_degradation_on_redis_unavailable():
-    """Test that service handles Redis unavailability gracefully."""
-    service = TranscriptionBufferService()
-
-    # Mock Redis to be unavailable
-    with patch.object(service, '_get_client', return_value=None):
-        sample = TranscriptionSentence(
-            sentence_id="test",
-            text="Test",
-            speaker="A",
-            timestamp=datetime.now().timestamp(),
-            start_time=datetime.now().timestamp(),
-            end_time=datetime.now().timestamp() + 1,
-            confidence=0.9
-        )
-
-        # Should not crash, just return False
-        success = await service.add_sentence("test_session", sample)
-        assert success is False
-
-        # Get buffer should return empty list
-        buffer = await service.get_buffer("test_session")
-        assert buffer == []
-
-        # Get formatted context should return fallback message
-        context = await service.get_formatted_context("test_session")
-        assert context == "No recent transcription available."
-
-    await service.close()
-
+# Removed Redis graceful degradation test - service now uses in-memory storage
 
 # Test: Close Connection
 
 @pytest.mark.asyncio
 async def test_close_connection(buffer_service):
-    """Test closing Redis connection."""
-    # Initialize connection
-    await buffer_service._get_client()
+    """Test closing and cleaning up buffers."""
+    # Add a sentence
+    sample = TranscriptionSentence(
+        sentence_id="test",
+        text="Test",
+        speaker="A",
+        timestamp=datetime.now().timestamp(),
+        start_time=datetime.now().timestamp(),
+        end_time=datetime.now().timestamp() + 1,
+        confidence=0.9
+    )
+    await buffer_service.add_sentence("test_session", sample)
+
+    # Verify buffer exists
+    assert "test_session" in buffer_service._buffers
 
     # Close connection
     await buffer_service.close()
 
-    assert buffer_service._client is None
-    assert buffer_service._is_available is False
+    # Verify buffers are cleared
+    assert len(buffer_service._buffers) == 0

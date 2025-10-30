@@ -102,7 +102,8 @@ class TestStreamRouterInitialization:
         assert router.session_id == session_id
         assert len(router.question_ids) == 0
         assert len(router.action_ids) == 0
-        assert len(router.id_to_session) == 0
+        assert len(router.question_text_to_id) == 0
+        assert len(router.action_text_to_id) == 0
         assert router.metrics.total_objects_processed == 0
 
     def test_singleton_factory(self, session_id: str):
@@ -164,10 +165,19 @@ class TestObjectValidation:
         # Should not raise
         router._validate_object(sample_action)
 
-    def test_validate_answer_success(self, router: StreamRouter, sample_answer: Dict[str, Any]):
+    def test_validate_answer_success(self, router: StreamRouter, sample_question: Dict[str, Any]):
         """Test validation of valid answer object."""
+        # Create answer with question_text instead of question_id
+        answer = {
+            "type": "answer",
+            "question_text": sample_question["text"],  # Use text instead of ID
+            "answer_text": "The Q4 budget is $250,000",
+            "speaker": "Mike",
+            "timestamp": "2025-10-26T10:17:00Z",
+            "confidence": 0.90
+        }
         # Should not raise
-        router._validate_object(sample_answer)
+        router._validate_object(answer)
 
     def test_validate_missing_type_field(self, router: StreamRouter):
         """Test validation fails when 'type' field is missing."""
@@ -302,26 +312,42 @@ class TestRouting:
         assert router.metrics.total_objects_processed == 1
 
     @pytest.mark.asyncio
-    async def test_route_action_update(self, router: StreamRouter, sample_action_update: Dict[str, Any]):
+    async def test_route_action_update(self, router: StreamRouter, sample_action: Dict[str, Any]):
         """Test routing action_update object to handler."""
         called = []
 
         async def handler(obj: Dict[str, Any]):
             called.append(obj)
 
+        # First create the action so update can match to it
+        router.register_action_handler(handler)
+        await router.route_object(sample_action)
+
+        # Reset called list
+        called.clear()
+
+        # Now send action_update with matching action_text
+        action_update = {
+            "type": "action_update",
+            "action_text": sample_action["description"],  # Must match original action description
+            "owner": "Mike",
+            "deadline": "2025-11-05",
+            "completeness": 1.0,
+            "confidence": 0.88
+        }
+
         router.register_action_update_handler(handler)
-        await router.route_object(sample_action_update)
+        await router.route_object(action_update)
 
         assert len(called) == 1
-        assert called[0] == sample_action_update
+        assert called[0]["action_text"] == sample_action["description"]
         assert router.metrics.action_updates_routed == 1
 
     @pytest.mark.asyncio
     async def test_route_answer(
         self,
         router: StreamRouter,
-        sample_question: Dict[str, Any],
-        sample_answer: Dict[str, Any]
+        sample_question: Dict[str, Any]
     ):
         """Test routing answer object to handler."""
         called = []
@@ -336,12 +362,22 @@ class TestRouting:
         router.register_question_handler(dummy_handler)
         await router.route_object(sample_question)
 
+        # Create answer with question_text to match
+        answer = {
+            "type": "answer",
+            "question_text": sample_question["text"],  # Match by text, not ID
+            "answer_text": "The Q4 budget is $250,000",
+            "speaker": "Mike",
+            "timestamp": "2025-10-26T10:17:00Z",
+            "confidence": 0.90
+        }
+
         # Then route answer
         router.register_answer_handler(handler)
-        await router.route_object(sample_answer)
+        await router.route_object(answer)
 
         assert len(called) == 1
-        assert called[0] == sample_answer
+        assert called[0]["question_text"] == sample_question["text"]
         assert router.metrics.answers_routed == 1
 
     @pytest.mark.asyncio
@@ -447,7 +483,7 @@ class TestStateManagement:
         sample_question: Dict[str, Any],
         sample_action: Dict[str, Any]
     ):
-        """Test question and action IDs are tracked."""
+        """Test question and action text mappings are tracked."""
         async def dummy_handler(obj: Dict[str, Any]):
             pass
 
@@ -457,22 +493,27 @@ class TestStateManagement:
         await router.route_object(sample_question)
         await router.route_object(sample_action)
 
-        assert sample_question["id"] in router.question_ids
-        assert sample_action["id"] in router.action_ids
-        assert len(router.id_to_session) == 2
+        # Check that text mappings exist
+        assert sample_question["text"] in router.question_text_to_id
+        assert sample_action["description"] in router.action_text_to_id
+        # Check that IDs are tracked
+        assert len(router.question_ids) == 1
+        assert len(router.action_ids) == 1
 
     def test_clear_state(self, router: StreamRouter):
         """Test state clearing."""
         # Add some state
         router.question_ids.add("q_123")
         router.action_ids.add("a_456")
-        router.id_to_session["q_123"] = router.session_id
+        router.question_text_to_id["What is the budget?"] = "q_123"
+        router.action_text_to_id["Update the report"] = "a_456"
 
         router.clear_state()
 
         assert len(router.question_ids) == 0
         assert len(router.action_ids) == 0
-        assert len(router.id_to_session) == 0
+        assert len(router.question_text_to_id) == 0
+        assert len(router.action_text_to_id) == 0
 
 
 class TestCleanup:
@@ -516,10 +557,8 @@ class TestIntegration:
         router.register_answer_handler(answer_handler)
 
         # Question
-        question_id = f"q_{uuid.uuid4()}"
         question = {
             "type": "question",
-            "id": question_id,
             "text": "What's the deadline?",
             "timestamp": "2025-10-26T10:00:00Z"
         }
@@ -528,16 +567,15 @@ class TestIntegration:
         # Action
         action = {
             "type": "action",
-            "id": f"a_{uuid.uuid4()}",
             "description": "Complete the report",
             "timestamp": "2025-10-26T10:01:00Z"
         }
         await router.route_object(action)
 
-        # Answer
+        # Answer (must reference question by text)
         answer = {
             "type": "answer",
-            "question_id": question_id,
+            "question_text": question["text"],  # Match by text
             "answer_text": "The deadline is Friday",
             "timestamp": "2025-10-26T10:02:00Z"
         }

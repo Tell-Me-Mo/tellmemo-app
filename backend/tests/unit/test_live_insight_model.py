@@ -323,7 +323,8 @@ def test_to_dict_method():
     assert result["organization_id"] == str(organization_id)
     assert result["insight_type"] == "question"
     assert result["speaker"] == "Alice"
-    assert result["content"] == "What is the timeline?"
+    # Flutter expects 'text' key, not 'content'
+    assert result["text"] == "What is the timeline?"
     assert result["status"] == "answered"
     assert result["answer_source"] == "meeting_context"
     assert result["metadata"]["confidence"] == 0.95

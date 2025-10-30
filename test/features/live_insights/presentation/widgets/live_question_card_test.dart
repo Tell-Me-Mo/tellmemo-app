@@ -254,18 +254,18 @@ void main() {
             ),
           ],
         );
-        await tester.pumpWidget(buildWidget(question, onMarkAnswered: () {}));
+        await tester.pumpWidget(buildWidget(question));
 
-        // Initially collapsed - action buttons should not be visible
-        expect(find.text('Mark Answered'), findsNothing);
+        // Initially collapsed - tier results should not be visible
+        expect(find.text('Test result'), findsNothing);
 
         // Tap to expand
         await tester.tap(find.byType(Card));
         await tester.pump(const Duration(milliseconds: 300)); // Allow animation
         await tester.pump(); // Complete
 
-        // Now expanded - action buttons should be visible
-        expect(find.text('Mark Answered'), findsOneWidget);
+        // Now expanded - tier results should be visible
+        expect(find.text('Test result'), findsOneWidget);
 
         // Tap again to collapse
         await tester.tap(find.byType(Card));
@@ -273,7 +273,7 @@ void main() {
         await tester.pump(); // Complete
 
         // Collapsed again
-        expect(find.text('Mark Answered'), findsNothing);
+        expect(find.text('Test result'), findsNothing);
       });
 
       testWidgets('animates chevron icon on expand/collapse', (WidgetTester tester) async {
@@ -300,127 +300,6 @@ void main() {
 
         // Chevron should still exist (just rotated)
         expect(chevronFinder, findsOneWidget);
-      });
-    });
-
-    group('Action Buttons', () {
-      testWidgets('displays Mark Answered button when callback provided and not answered', (WidgetTester tester) async {
-        bool markAnsweredCalled = false;
-        final question = testQuestion.copyWith(
-          status: InsightStatus.monitoring,
-          tierResults: [
-            TierResult(
-              tierType: TierType.rag,
-              content: 'Test',
-              confidence: 0.9,
-              foundAt: now,
-            ),
-          ],
-        );
-
-        await tester.pumpWidget(buildWidget(
-          question,
-          onMarkAnswered: () => markAnsweredCalled = true,
-        ));
-
-        // Expand
-        await tester.tap(find.byType(Card));
-        await tester.pumpAndSettle();
-
-        expect(find.text('Mark Answered'), findsOneWidget);
-
-        // Tap button
-        await tester.tap(find.text('Mark Answered'));
-        await tester.pump();
-
-        expect(markAnsweredCalled, true);
-      });
-
-      testWidgets('hides Mark Answered button when already answered', (WidgetTester tester) async {
-        final question = testQuestion.copyWith(
-          status: InsightStatus.answered,
-          tierResults: [
-            TierResult(
-              tierType: TierType.rag,
-              content: 'Test',
-              confidence: 0.9,
-              foundAt: now,
-            ),
-          ],
-        );
-
-        await tester.pumpWidget(buildWidget(
-          question,
-          onMarkAnswered: () {},
-        ));
-
-        // Expand
-        await tester.tap(find.byType(Card));
-        await tester.pumpAndSettle();
-
-        expect(find.text('Mark Answered'), findsNothing);
-      });
-
-      testWidgets('displays Follow-up button when callback provided', (WidgetTester tester) async {
-        bool followUpCalled = false;
-        final question = testQuestion.copyWith(
-          tierResults: [
-            TierResult(
-              tierType: TierType.rag,
-              content: 'Test',
-              confidence: 0.9,
-              foundAt: now,
-            ),
-          ],
-        );
-
-        await tester.pumpWidget(buildWidget(
-          question,
-          onNeedsFollowUp: () => followUpCalled = true,
-        ));
-
-        // Expand
-        await tester.tap(find.byType(Card));
-        await tester.pumpAndSettle();
-
-        expect(find.text('Follow-up'), findsOneWidget);
-
-        // Tap button
-        await tester.tap(find.text('Follow-up'));
-        await tester.pump();
-
-        expect(followUpCalled, true);
-      });
-
-      testWidgets('displays Dismiss button when callback provided', (WidgetTester tester) async {
-        bool dismissCalled = false;
-        final question = testQuestion.copyWith(
-          tierResults: [
-            TierResult(
-              tierType: TierType.rag,
-              content: 'Test',
-              confidence: 0.9,
-              foundAt: now,
-            ),
-          ],
-        );
-
-        await tester.pumpWidget(buildWidget(
-          question,
-          onDismiss: () => dismissCalled = true,
-        ));
-
-        // Expand
-        await tester.tap(find.byType(Card));
-        await tester.pumpAndSettle();
-
-        expect(find.byIcon(Icons.close), findsOneWidget);
-
-        // Tap dismiss button
-        await tester.tap(find.byIcon(Icons.close));
-        await tester.pump();
-
-        expect(dismissCalled, true);
       });
     });
 

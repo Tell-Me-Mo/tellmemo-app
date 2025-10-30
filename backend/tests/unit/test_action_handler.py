@@ -250,11 +250,12 @@ class TestHandleActionUpdate:
             "confidence": 0.95
         }
         existing_action.update_status = MagicMock()
+        existing_action.to_dict = MagicMock(return_value={"id": str(existing_action.id), "content": "Update the budget spreadsheet"})
 
         # Mock database query
-        mock_result = AsyncMock()
+        mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = existing_action
-        mock_session.execute.return_value = mock_result
+        mock_session.execute = AsyncMock(return_value=mock_result)
 
         # Mock WebSocket broadcast
         ws_callback = AsyncMock()
@@ -295,9 +296,9 @@ class TestHandleActionUpdate:
         session_id = "test_session_123"
 
         # Mock database query returning None
-        mock_result = AsyncMock()
+        mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = None
-        mock_session.execute.return_value = mock_result
+        mock_session.execute = AsyncMock(return_value=mock_result)
 
         result = await action_handler.handle_action_update(
             session_id=session_id,
@@ -413,9 +414,11 @@ class TestSegmentAlerts:
         }
 
         # Mock database query
-        mock_result = AsyncMock()
-        mock_result.scalars.return_value.all.return_value = [action1, action2]
-        mock_session.execute.return_value = mock_result
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = [action1, action2]
+        mock_result.scalars.return_value = mock_scalars
+        mock_session.execute = AsyncMock(return_value=mock_result)
 
         # Mock WebSocket broadcast
         ws_callback = AsyncMock()
@@ -455,9 +458,11 @@ class TestSegmentAlerts:
         }
 
         # Mock database query
-        mock_result = AsyncMock()
-        mock_result.scalars.return_value.all.return_value = [action]
-        mock_session.execute.return_value = mock_result
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = [action]
+        mock_result.scalars.return_value = mock_scalars
+        mock_session.execute = AsyncMock(return_value=mock_result)
 
         alerts = await action_handler.generate_segment_alerts(
             session_id=session_id,
@@ -487,9 +492,11 @@ class TestActionMerging:
         existing_action.content = "Update the budget spreadsheet"
 
         # Mock database query
-        mock_result = AsyncMock()
-        mock_result.scalars.return_value.all.return_value = [existing_action]
-        mock_session.execute.return_value = mock_result
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = [existing_action]
+        mock_result.scalars.return_value = mock_scalars
+        mock_session.execute = AsyncMock(return_value=mock_result)
 
         similar_id = await action_handler._find_similar_action(
             session_id=session_id,
@@ -497,8 +504,9 @@ class TestActionMerging:
             session=mock_session
         )
 
-        # Should find similar action
-        assert similar_id == str(existing_action.id)
+        # Should find similar action (UUID needs to be converted to string for comparison)
+        expected_id = str(existing_action.id) if hasattr(existing_action.id, 'hex') else existing_action.id
+        assert similar_id == expected_id
 
     async def test_find_similar_action_low_similarity(
         self,
@@ -515,9 +523,11 @@ class TestActionMerging:
         existing_action.content = "Update the budget spreadsheet"
 
         # Mock database query
-        mock_result = AsyncMock()
-        mock_result.scalars.return_value.all.return_value = [existing_action]
-        mock_session.execute.return_value = mock_result
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = [existing_action]
+        mock_result.scalars.return_value = mock_scalars
+        mock_session.execute = AsyncMock(return_value=mock_result)
 
         similar_id = await action_handler._find_similar_action(
             session_id=session_id,

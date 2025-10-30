@@ -68,7 +68,7 @@ class TestGPT5StreamingClientInitialization:
         """Test client uses correct defaults."""
         client = GPT5StreamingClient(openai_client=mock_openai_client)
 
-        assert client.model == "gpt-5-mini"
+        assert client.model == "gpt-4o-mini"
         assert client.temperature == 0.3
         assert client.max_tokens == 1000
         assert client.timeout == 30.0

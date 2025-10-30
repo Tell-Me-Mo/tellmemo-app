@@ -57,8 +57,8 @@ def test_transcription_metrics_cost_estimate(transcription_metrics):
     # 1 minute of audio = 60 seconds
     transcription_metrics.audio_duration_seconds = 60.0
 
-    # Expected: 60 * $0.00025 = $0.015
-    assert transcription_metrics.cost_estimate == 0.015
+    # Expected: 60 * $0.000042 = $0.00252 (AssemblyAI Universal-Streaming v3: $0.15/hour)
+    assert transcription_metrics.cost_estimate == pytest.approx(0.00252, rel=1e-9)
 
 
 def test_transcription_metrics_cost_estimate_hour(transcription_metrics):
@@ -66,8 +66,8 @@ def test_transcription_metrics_cost_estimate_hour(transcription_metrics):
     # 1 hour of audio = 3600 seconds
     transcription_metrics.audio_duration_seconds = 3600.0
 
-    # Expected: 3600 * $0.00025 = $0.90
-    assert transcription_metrics.cost_estimate == 0.90
+    # Expected: 3600 * $0.000042 = $0.1512 (AssemblyAI Universal-Streaming v3: $0.15/hour)
+    assert transcription_metrics.cost_estimate == 0.1512
 
 
 def test_transcription_metrics_session_duration(transcription_metrics):
@@ -290,8 +290,8 @@ def test_audio_duration_10_seconds(transcription_metrics):
 
     assert transcription_metrics.audio_duration_seconds == 10.0
 
-    # Cost for 10 seconds: 10 * $0.00025 = $0.0025
-    assert transcription_metrics.cost_estimate == 0.0025
+    # Cost for 10 seconds: 10 * $0.000042 = $0.00042 (AssemblyAI Universal-Streaming v3)
+    assert transcription_metrics.cost_estimate == pytest.approx(0.00042, rel=1e-9)
 
 
 # Test: Connection URL Construction
@@ -302,7 +302,7 @@ def test_assemblyai_connection_url():
     sample_rate = AssemblyAIConnection.SAMPLE_RATE
     encoding = AssemblyAIConnection.ENCODING
 
-    assert base_url == "wss://api.assemblyai.com/v2/realtime/ws"
+    assert base_url == "wss://streaming.assemblyai.com/v3/ws"
     assert sample_rate == 16000
     assert encoding == "pcm_s16le"
 

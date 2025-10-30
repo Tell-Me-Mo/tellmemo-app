@@ -1,10 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:web_socket_channel/io.dart';
-import 'package:web_socket_channel/html.dart';
 
 /// WebSocket service for streaming audio to backend for real-time transcription.
 ///
@@ -77,12 +74,8 @@ class LiveAudioWebSocketService {
 
       _updateState(ConnectionState.connecting);
 
-      // Create platform-specific WebSocket channel
-      if (kIsWeb) {
-        _channel = HtmlWebSocketChannel.connect(Uri.parse(wsUrl));
-      } else {
-        _channel = IOWebSocketChannel.connect(Uri.parse(wsUrl));
-      }
+      // Create WebSocket channel (uses platform-appropriate implementation)
+      _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
 
       // Wait for connection to establish
       await _channel!.ready;
