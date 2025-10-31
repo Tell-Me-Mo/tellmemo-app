@@ -1842,23 +1842,32 @@ button:focus-visible {
 
     /* Cookie Banner - Mobile */
     .cookie-banner {
-        padding: 14px 16px;
+        padding: 10px 12px;
     }
 
     .cookie-content {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 14px;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
     }
 
     .cookie-content p {
-        font-size: 13px;
-        line-height: 1.5;
+        font-size: 11px;
+        line-height: 1.4;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .cookie-content p a {
+        white-space: nowrap;
     }
 
     .btn-accept {
-        width: 100%;
-        padding: 12px 24px;
-        font-size: 15px;
+        width: auto;
+        padding: 8px 16px;
+        font-size: 13px;
+        flex-shrink: 0;
+        white-space: nowrap;
     }
 }
