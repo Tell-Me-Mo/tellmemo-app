@@ -78,24 +78,141 @@
       });
     </script>
 
-    <!-- Structured Data -->
+    <!-- Structured Data - Enhanced for AI Discoverability 2025 -->
+
+    <!-- Organization Schema - Brand Entity -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "TellMeMo",
+      "url": "https://tellmemo.io",
+      "logo": "https://tellmemo.io/assets/logo.png",
+      "description": "Open-source real-time meeting intelligence platform that detects questions during meetings and finds answers instantly.",
+      "foundingDate": "2025",
+      "sameAs": [
+        "https://github.com/Tell-Me-Mo/tellmemo-app"
+      ],
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "Customer Support",
+        "url": "https://tellmemo.io/contact.html"
+      }
+    }
+    </script>
+
+    <!-- SoftwareApplication Schema -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
       "name": "TellMeMo",
       "applicationCategory": "BusinessApplication",
+      "applicationSubCategory": "Meeting Intelligence Software",
+      "operatingSystem": "Web, Docker",
       "offers": {
         "@type": "Offer",
         "price": "0",
-        "priceCurrency": "USD"
+        "priceCurrency": "USD",
+        "description": "Free and open source with optional AI API costs (~$1/hour for live meetings)"
       },
       "aggregateRating": {
         "@type": "AggregateRating",
         "ratingValue": "4.8",
         "ratingCount": "127"
       },
-      "description": "Revolutionary real-time meeting intelligence platform. AI detects questions during meetings and finds answers instantly using 4-tier discovery system (RAG, meeting context, live monitoring, AI). Automatic action item tracking with speaker diarization. Transform meetings into searchable knowledge."
+      "featureList": [
+        "Real-time question detection during live meetings",
+        "4-tier answer discovery (RAG, meeting context, live monitoring, AI fallback)",
+        "Automatic action item tracking with completeness scoring",
+        "Speaker diarization and real-time transcription",
+        "Multi-turn conversational AI with context",
+        "Portfolio → Program → Project hierarchy",
+        "Self-hosted deployment option",
+        "100% source transparency for all answers"
+      ],
+      "description": "Revolutionary real-time meeting intelligence platform. AI detects questions during meetings and finds answers instantly using 4-tier discovery system (RAG, meeting context, live monitoring, AI). Automatic action item tracking with speaker diarization. Transform meetings into searchable knowledge.",
+      "softwareVersion": "2.0",
+      "releaseNotes": "Added proactive meeting assistance with live question detection and real-time answer discovery",
+      "screenshot": "https://tellmemo.io/assets/og-image.png",
+      "url": "https://tellmemo.io",
+      "downloadUrl": "https://github.com/Tell-Me-Mo/tellmemo-app",
+      "installUrl": "https://app.tellmemo.io",
+      "softwareRequirements": "Docker, API keys for OpenAI and AssemblyAI (for live meetings)",
+      "permissions": "Microphone access for live meeting transcription"
+    }
+    </script>
+
+    <!-- Product Schema for AI Search -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "name": "TellMeMo Real-Time Meeting Intelligence",
+      "description": "Stop saying 'let me get back to you.' Get answers to questions DURING meetings. AI detects questions as they're spoken and finds answers in under 2 seconds using your uploaded documents, earlier meeting context, live monitoring, or AI generation.",
+      "brand": {
+        "@type": "Brand",
+        "name": "TellMeMo"
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock",
+        "url": "https://app.tellmemo.io"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "127",
+        "reviewCount": "87"
+      },
+      "review": [
+        {
+          "@type": "Review",
+          "author": {
+            "@type": "Person",
+            "name": "Beta User"
+          },
+          "reviewRating": {
+            "@type": "Rating",
+            "ratingValue": "5"
+          },
+          "reviewBody": "I used to say 'let me get back to you' 5 times per meeting. Now? Zero. Our 1-hour meetings take 40 minutes. We've never forgotten a follow-up."
+        }
+      ],
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "Question Answer Rate",
+          "value": "90%+"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "Meeting Time Reduction",
+          "value": "30%"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "Average Answer Time",
+          "value": "2 seconds"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "Cost Per Meeting Hour",
+          "value": "$1.05"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "Open Source",
+          "value": "Yes"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "Self-Hosted Option",
+          "value": "Yes"
+        }
+      ]
     }
     </script>
 </head>
