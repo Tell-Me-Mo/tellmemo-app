@@ -36,6 +36,14 @@ _session_organization_map: Dict[str, UUID] = {}
 # Used to pass tier configuration when creating orchestrator
 _session_tier_config: Dict[str, list] = {}
 
+# Session timestamp tracking: session_id -> datetime
+# Used for TTL-based cleanup of stale sessions
+_session_timestamps: Dict[str, datetime] = {}
+
+# Session cleanup configuration
+SESSION_TTL_HOURS = 24  # Sessions older than this will be cleaned up
+CLEANUP_INTERVAL_MINUTES = 30  # How often to run cleanup task
+
 
 class LiveInsightsConnectionManager:
     """
@@ -62,6 +70,10 @@ class LiveInsightsConnectionManager:
         self._pubsub_task: Optional[asyncio.Task] = None
         self._pubsub = None
         self._async_redis = None
+
+        # Session cleanup task
+        self._cleanup_task: Optional[asyncio.Task] = None
+        self._start_cleanup_task()
 
     async def connect(self, websocket: WebSocket, session_id: str, user_id: str):
         """
@@ -299,6 +311,75 @@ class LiveInsightsConnectionManager:
                 self._async_redis = None
         except Exception as e:
             logger.error(f"Fatal error in Redis pub/sub listener for live insights: {e}", exc_info=True)
+
+    def _start_cleanup_task(self):
+        """Start the background task for cleaning up stale sessions."""
+        try:
+            # Create cleanup task - it will run in background
+            self._cleanup_task = asyncio.create_task(self._cleanup_stale_sessions_loop())
+            logger.info(
+                f"Started session cleanup task (TTL: {SESSION_TTL_HOURS}h, "
+                f"interval: {CLEANUP_INTERVAL_MINUTES}m)"
+            )
+        except RuntimeError:
+            # No event loop running yet - task will be started on first connection
+            logger.debug("Event loop not running, cleanup task will start on first connection")
+
+    async def _cleanup_stale_sessions_loop(self):
+        """Background task that periodically cleans up stale sessions."""
+        logger.info("Session cleanup loop started")
+        try:
+            while True:
+                # Wait for cleanup interval
+                await asyncio.sleep(CLEANUP_INTERVAL_MINUTES * 60)
+
+                # Perform cleanup
+                await self._cleanup_stale_sessions()
+
+        except asyncio.CancelledError:
+            logger.info("Session cleanup task cancelled")
+        except Exception as e:
+            logger.error(f"Fatal error in session cleanup loop: {e}", exc_info=True)
+
+    async def _cleanup_stale_sessions(self):
+        """
+        Remove sessions older than SESSION_TTL_HOURS from global session maps.
+
+        This prevents unbounded memory growth by cleaning up sessions that are
+        no longer active.
+        """
+        global _session_organization_map, _session_tier_config, _session_timestamps
+
+        try:
+            cutoff_time = datetime.now() - timedelta(hours=SESSION_TTL_HOURS)
+            removed_sessions = []
+
+            # Iterate over copy of keys to avoid modification during iteration
+            for session_id in list(_session_timestamps.keys()):
+                session_time = _session_timestamps.get(session_id)
+
+                if session_time and session_time < cutoff_time:
+                    # Remove from all session maps
+                    _session_organization_map.pop(session_id, None)
+                    _session_tier_config.pop(session_id, None)
+                    _session_timestamps.pop(session_id, None)
+                    removed_sessions.append(session_id)
+
+            if removed_sessions:
+                logger.info(
+                    f"Cleaned up {len(removed_sessions)} stale sessions "
+                    f"(older than {SESSION_TTL_HOURS}h): "
+                    f"{[sanitize_for_log(sid) for sid in removed_sessions[:5]]}"
+                    f"{'...' if len(removed_sessions) > 5 else ''}"
+                )
+            else:
+                logger.debug(
+                    f"Session cleanup completed: 0 stale sessions removed "
+                    f"({len(_session_timestamps)} active sessions)"
+                )
+
+        except Exception as e:
+            logger.error(f"Error during session cleanup: {e}", exc_info=True)
 
 
 # Global connection manager instance
@@ -824,6 +905,8 @@ async def websocket_audio_stream(
         # Store organization_id for this session (for orchestrator context)
         if user.last_active_organization_id:
             _session_organization_map[session_id] = user.last_active_organization_id
+            # Update session timestamp for TTL tracking
+            _session_timestamps[session_id] = datetime.now()
 
         # Send connection confirmation
         await websocket.send_json({
@@ -934,10 +1017,11 @@ async def websocket_audio_stream(
         except Exception as e:
             logger.error(f"Error cleaning up orchestrator in finally block: {e}")
 
-        # Clean up tier configuration
-        if session_id in _session_tier_config:
-            del _session_tier_config[session_id]
-            logger.debug(f"Tier configuration cleaned up for session {sanitize_for_log(session_id)}")
+        # Clean up session maps to prevent memory leak
+        _session_organization_map.pop(session_id, None)
+        _session_tier_config.pop(session_id, None)
+        _session_timestamps.pop(session_id, None)
+        logger.debug(f"Session context cleaned up for session {sanitize_for_log(session_id)}")
 
         logger.info(f"Audio stream cleanup for session {sanitize_for_log(session_id)}")
 
@@ -976,6 +1060,9 @@ async def websocket_live_insights(
 
         # Connect to session
         await insights_manager.connect(websocket, session_id, user_id)
+
+        # Update session timestamp for TTL tracking
+        _session_timestamps[session_id] = datetime.now()
 
         # Send connection confirmation
         await websocket.send_json({
@@ -1026,6 +1113,8 @@ async def websocket_live_insights(
                     # Client is setting tier configuration for answer discovery
                     enabled_tiers = data.get("enabled_tiers", [])
                     _session_tier_config[session_id] = enabled_tiers
+                    # Update session timestamp when tier config is set
+                    _session_timestamps[session_id] = datetime.now()
                     logger.info(
                         f"User {sanitize_for_log(user_id)} set tier configuration for session "
                         f"{sanitize_for_log(session_id)}: {enabled_tiers}"

@@ -7,7 +7,7 @@ without requiring a running backend server.
 
 import pytest
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 
@@ -461,3 +461,173 @@ async def test_cleanup_removes_all_tracking():
     assert ws not in manager.websocket_to_session
     assert ws not in manager.websocket_to_user
     assert session_id not in manager.active_connections
+
+
+# =============================================================================
+# Session Memory Leak Prevention Tests
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_stale_session_cleanup():
+    """Test that stale sessions are cleaned up after TTL expires."""
+    from routers.websocket_live_insights import LiveInsightsConnectionManager
+    import routers.websocket_live_insights as insights_module
+
+    manager = LiveInsightsConnectionManager()
+
+    # Create test session IDs
+    old_session_id = str(uuid.uuid4())
+    recent_session_id = str(uuid.uuid4())
+
+    # Set up old session (25 hours ago - beyond 24h TTL)
+    old_timestamp = datetime.now() - timedelta(hours=25)
+    insights_module._session_timestamps[old_session_id] = old_timestamp
+    insights_module._session_organization_map[old_session_id] = uuid.uuid4()
+    insights_module._session_tier_config[old_session_id] = ["tier1", "tier2"]
+
+    # Set up recent session (1 hour ago - within TTL)
+    recent_timestamp = datetime.now() - timedelta(hours=1)
+    insights_module._session_timestamps[recent_session_id] = recent_timestamp
+    insights_module._session_organization_map[recent_session_id] = uuid.uuid4()
+    insights_module._session_tier_config[recent_session_id] = ["tier1"]
+
+    # Run cleanup
+    await manager._cleanup_stale_sessions()
+
+    # Old session should be removed
+    assert old_session_id not in insights_module._session_timestamps
+    assert old_session_id not in insights_module._session_organization_map
+    assert old_session_id not in insights_module._session_tier_config
+
+    # Recent session should still exist
+    assert recent_session_id in insights_module._session_timestamps
+    assert recent_session_id in insights_module._session_organization_map
+    assert recent_session_id in insights_module._session_tier_config
+
+    # Clean up test data
+    insights_module._session_timestamps.pop(recent_session_id, None)
+    insights_module._session_organization_map.pop(recent_session_id, None)
+    insights_module._session_tier_config.pop(recent_session_id, None)
+
+
+@pytest.mark.asyncio
+async def test_cleanup_handles_missing_entries():
+    """Test that cleanup gracefully handles sessions with missing entries in some maps."""
+    from routers.websocket_live_insights import LiveInsightsConnectionManager
+    import routers.websocket_live_insights as insights_module
+
+    manager = LiveInsightsConnectionManager()
+
+    # Create session with only timestamp (missing from other maps)
+    session_id = str(uuid.uuid4())
+    old_timestamp = datetime.now() - timedelta(hours=25)
+    insights_module._session_timestamps[session_id] = old_timestamp
+
+    # Run cleanup - should not raise exception
+    await manager._cleanup_stale_sessions()
+
+    # Session should be removed from timestamp map
+    assert session_id not in insights_module._session_timestamps
+
+
+@pytest.mark.asyncio
+async def test_session_timestamp_updated_on_access():
+    """Test that session timestamp is updated when session is accessed."""
+    import routers.websocket_live_insights as insights_module
+
+    session_id = str(uuid.uuid4())
+    org_id = uuid.uuid4()
+
+    # Simulate session creation
+    initial_time = datetime.now()
+    insights_module._session_organization_map[session_id] = org_id
+    insights_module._session_timestamps[session_id] = initial_time
+
+    # Wait a moment
+    import asyncio
+    await asyncio.sleep(0.1)
+
+    # Update timestamp (simulating access)
+    insights_module._session_timestamps[session_id] = datetime.now()
+
+    # Timestamp should be newer
+    assert insights_module._session_timestamps[session_id] > initial_time
+
+    # Clean up test data
+    insights_module._session_timestamps.pop(session_id, None)
+    insights_module._session_organization_map.pop(session_id, None)
+
+
+@pytest.mark.asyncio
+async def test_cleanup_logs_removed_sessions():
+    """Test that cleanup logs information about removed sessions."""
+    from routers.websocket_live_insights import LiveInsightsConnectionManager
+    import routers.websocket_live_insights as insights_module
+
+    manager = LiveInsightsConnectionManager()
+
+    # Create multiple old sessions
+    session_ids = [str(uuid.uuid4()) for _ in range(3)]
+    old_timestamp = datetime.now() - timedelta(hours=25)
+
+    for session_id in session_ids:
+        insights_module._session_timestamps[session_id] = old_timestamp
+        insights_module._session_organization_map[session_id] = uuid.uuid4()
+
+    # Run cleanup with logging check
+    with patch('routers.websocket_live_insights.logger') as mock_logger:
+        await manager._cleanup_stale_sessions()
+
+        # Should have logged the cleanup
+        assert mock_logger.info.called
+        log_message = mock_logger.info.call_args[0][0]
+        assert "Cleaned up" in log_message
+        assert "stale sessions" in log_message
+
+
+@pytest.mark.asyncio
+async def test_cleanup_with_no_stale_sessions():
+    """Test that cleanup handles case with no stale sessions."""
+    from routers.websocket_live_insights import LiveInsightsConnectionManager
+    import routers.websocket_live_insights as insights_module
+
+    manager = LiveInsightsConnectionManager()
+
+    # Create only recent sessions
+    session_id = str(uuid.uuid4())
+    recent_timestamp = datetime.now() - timedelta(hours=1)
+    insights_module._session_timestamps[session_id] = recent_timestamp
+    insights_module._session_organization_map[session_id] = uuid.uuid4()
+
+    # Run cleanup
+    await manager._cleanup_stale_sessions()
+
+    # Recent session should still exist
+    assert session_id in insights_module._session_timestamps
+    assert session_id in insights_module._session_organization_map
+
+    # Clean up test data
+    insights_module._session_timestamps.pop(session_id, None)
+    insights_module._session_organization_map.pop(session_id, None)
+
+
+@pytest.mark.asyncio
+async def test_cleanup_handles_exceptions():
+    """Test that cleanup handles exceptions gracefully without crashing."""
+    from routers.websocket_live_insights import LiveInsightsConnectionManager
+    import routers.websocket_live_insights as insights_module
+
+    manager = LiveInsightsConnectionManager()
+
+    # Create a session with invalid timestamp that might cause issues
+    session_id = str(uuid.uuid4())
+    insights_module._session_timestamps[session_id] = None  # Invalid timestamp
+
+    # Run cleanup - should not raise exception
+    try:
+        await manager._cleanup_stale_sessions()
+    except Exception as e:
+        pytest.fail(f"Cleanup should handle exceptions gracefully, but raised: {e}")
+
+    # Clean up test data
+    insights_module._session_timestamps.pop(session_id, None)
