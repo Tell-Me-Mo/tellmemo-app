@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:record/record.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 /// Service for real-time audio streaming to backend for live transcription.
 ///
@@ -129,10 +130,22 @@ class LiveAudioStreamingService {
       _updateState(StreamingState.streaming);
       print('[LiveAudioStreamingService] Audio streaming started successfully');
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('[LiveAudioStreamingService] Failed to start streaming: $e');
       print('[LiveAudioStreamingService] Error type: ${e.runtimeType}');
-      print('[LiveAudioStreamingService] Stack trace: ${StackTrace.current}');
+      print('[LiveAudioStreamingService] Stack trace: $stackTrace');
+
+      // Report to Sentry with platform context
+      await Sentry.captureException(
+        e,
+        stackTrace: stackTrace,
+        hint: Hint.withMap({
+          'context': 'Starting live audio streaming',
+          'platform': kIsWeb ? 'web' : 'native',
+          'error_type': e.runtimeType.toString(),
+        }),
+      );
+
       _updateState(StreamingState.error);
       return false;
     }

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:http/http.dart' as http;
+import 'package:sentry_flutter/sentry_flutter.dart';
 import '../../domain/services/audio_recording_service.dart';
 import '../../domain/services/transcription_service.dart';
 import '../../domain/services/live_audio_streaming_service.dart';
@@ -13,6 +14,7 @@ import '../../../../features/meetings/presentation/providers/upload_provider.dar
 import '../../../../features/content/presentation/providers/processing_jobs_provider.dart';
 import '../../../../core/services/firebase_analytics_service.dart';
 import '../../../../core/services/auth_service.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../../core/utils/error_utils.dart';
 import 'recording_preferences_provider.dart';
@@ -263,11 +265,29 @@ class RecordingNotifier extends _$RecordingNotifier {
           } else {
             debugPrint('[RecordingProvider] No auth token available for audio streaming');
           }
-        } catch (e) {
+        } catch (e, stackTrace) {
           debugPrint('[RecordingProvider] Failed to initialize live insights: $e');
+          // Report to Sentry with context
+          await Sentry.captureException(
+            e,
+            stackTrace: stackTrace,
+            hint: Hint.withMap({
+              'context': 'AI Assistant initialization during recording start',
+              'projectId': projectId,
+              'sessionId': sessionId,
+              'platform': kIsWeb ? 'web' : 'native',
+            }),
+          );
+
+          // Show elegant notification to user
+          ref.read(notificationServiceProvider.notifier).showWarning(
+            'Live insights are disabled. Recording will continue normally.',
+            title: 'AI Assistant unavailable',
+          );
+
           // Don't fail the recording if live insights connection fails
           state = state.copyWith(
-            errorMessage: 'AI Assistant initialization failed, but recording continues',
+            errorMessage: null, // Clear error message since we're showing notification
           );
         }
       }
@@ -298,8 +318,17 @@ class RecordingNotifier extends _$RecordingNotifier {
       try {
         await _liveAudioStreamingService!.stopStreaming();
         debugPrint('[RecordingProvider] Paused audio streaming');
-      } catch (e) {
+      } catch (e, stackTrace) {
         debugPrint('[RecordingProvider] Error pausing audio streaming: $e');
+        await Sentry.captureException(
+          e,
+          stackTrace: stackTrace,
+          hint: Hint.withMap({
+            'context': 'Pausing audio streaming',
+            'sessionId': state.sessionId,
+            'platform': kIsWeb ? 'web' : 'native',
+          }),
+        );
       }
     }
 
@@ -334,8 +363,17 @@ class RecordingNotifier extends _$RecordingNotifier {
           },
         );
         debugPrint('[RecordingProvider] Re-established audio chunk pipeline');
-      } catch (e) {
+      } catch (e, stackTrace) {
         debugPrint('[RecordingProvider] Error resuming audio streaming: $e');
+        await Sentry.captureException(
+          e,
+          stackTrace: stackTrace,
+          hint: Hint.withMap({
+            'context': 'Resuming audio streaming',
+            'sessionId': state.sessionId,
+            'platform': kIsWeb ? 'web' : 'native',
+          }),
+        );
       }
     }
 
@@ -384,8 +422,17 @@ class RecordingNotifier extends _$RecordingNotifier {
           debugPrint('[RecordingProvider] Disconnected live insights WebSocket');
 
           debugPrint('[RecordingProvider] All live insights services cleaned up');
-        } catch (e) {
+        } catch (e, stackTrace) {
           debugPrint('[RecordingProvider] Error during live insights cleanup: $e');
+          await Sentry.captureException(
+            e,
+            stackTrace: stackTrace,
+            hint: Hint.withMap({
+              'context': 'Cleaning up live insights on recording stop',
+              'sessionId': state.sessionId,
+              'platform': kIsWeb ? 'web' : 'native',
+            }),
+          );
           // Continue with recording stop even if cleanup fails
         }
       }
@@ -469,6 +516,16 @@ class RecordingNotifier extends _$RecordingNotifier {
           } catch (e, stackTrace) {
             debugPrint('[RecordingProvider] ✗ Error fetching live transcription: $e');
             debugPrint('[RecordingProvider] Stack trace: $stackTrace');
+            await Sentry.captureException(
+              e,
+              stackTrace: stackTrace,
+              hint: Hint.withMap({
+                'context': 'Fetching live transcription for upload',
+                'sessionId': state.sessionId,
+                'aiAssistantEnabled': state.aiAssistantEnabled,
+                'platform': kIsWeb ? 'web' : 'native',
+              }),
+            );
             // Continue without transcription - backend will transcribe audio file
           }
         } else {
@@ -608,8 +665,17 @@ class RecordingNotifier extends _$RecordingNotifier {
         await liveInsightsService.disconnect();
 
         debugPrint('[RecordingProvider] Live insights cleanup completed on cancel');
-      } catch (e) {
+      } catch (e, stackTrace) {
         debugPrint('[RecordingProvider] Error during live insights cleanup on cancel: $e');
+        await Sentry.captureException(
+          e,
+          stackTrace: stackTrace,
+          hint: Hint.withMap({
+            'context': 'Cleaning up live insights on recording cancel',
+            'sessionId': state.sessionId,
+            'platform': kIsWeb ? 'web' : 'native',
+          }),
+        );
       }
     }
 
