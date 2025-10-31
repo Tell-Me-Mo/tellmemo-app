@@ -38,8 +38,26 @@ Future<void> _runApp() async {
     AppConfig.debugPrint();
   }
 
-  // Initialize Firebase if analytics is enabled
+  // Initialize Supabase (only if using Supabase auth) - this is fast
+  await SupabaseConfig.initialize();
+
+  // Start the app immediately - don't block on Firebase
+  if (AppConfig.sentryEnabled) {
+    runApp(SentryWidget(child: const ProviderScope(child: PMasterApp())));
+  } else {
+    runApp(const ProviderScope(child: PMasterApp()));
+  }
+
+  // Initialize Firebase asynchronously in the background (if enabled)
+  // This won't block the UI from rendering
   if (AppConfig.firebaseAnalyticsEnabled) {
+    _initializeFirebaseInBackground();
+  }
+}
+
+/// Initialize Firebase in the background without blocking app startup
+Future<void> _initializeFirebaseInBackground() async {
+  try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
@@ -49,15 +67,9 @@ Future<void> _runApp() async {
 
     // Log app open
     await FirebaseAnalyticsService().logAppOpen();
-  }
-
-  // Initialize Supabase (only if using Supabase auth)
-  await SupabaseConfig.initialize();
-
-  // Wrap in SentryWidget only if Sentry is enabled
-  if (AppConfig.sentryEnabled) {
-    runApp(SentryWidget(child: const ProviderScope(child: PMasterApp())));
-  } else {
-    runApp(const ProviderScope(child: PMasterApp()));
+  } catch (e) {
+    if (kDebugMode) {
+      print('Firebase initialization failed (non-blocking): $e');
+    }
   }
 }
