@@ -58,6 +58,11 @@ class LiveInsightsConnectionManager:
         # Lock for thread-safe operations
         self.lock = asyncio.Lock()
 
+        # Redis pub/sub for cross-process communication
+        self._pubsub_task: Optional[asyncio.Task] = None
+        self._pubsub = None
+        self._async_redis = None
+
     async def connect(self, websocket: WebSocket, session_id: str, user_id: str):
         """
         Connect a WebSocket client to a meeting session.
@@ -73,11 +78,19 @@ class LiveInsightsConnectionManager:
             # Add to session connections
             if session_id not in self.active_connections:
                 self.active_connections[session_id] = set()
+                # Subscribe to Redis channel for this session
+                await self._subscribe_redis_channel(session_id)
+
             self.active_connections[session_id].add(websocket)
 
             # Store reverse mappings
             self.websocket_to_user[websocket] = user_id
             self.websocket_to_session[websocket] = session_id
+
+        # Start Redis pub/sub listener if not already running
+        if self._pubsub_task is None or self._pubsub_task.done():
+            self._pubsub_task = asyncio.create_task(self._listen_redis_pubsub())
+            logger.info("Started Redis pub/sub listener task for live insights")
 
         logger.info(
             f"Live insights WebSocket connected: session={sanitize_for_log(session_id)}, "
@@ -100,13 +113,22 @@ class LiveInsightsConnectionManager:
             if session_id and session_id in self.active_connections:
                 self.active_connections[session_id].discard(websocket)
 
-                # Remove empty session
+                # Remove empty session and unsubscribe from Redis
                 if not self.active_connections[session_id]:
                     del self.active_connections[session_id]
+                    await self._unsubscribe_redis_channel(session_id)
 
             # Clean up reverse mappings
             self.websocket_to_user.pop(websocket, None)
             self.websocket_to_session.pop(websocket, None)
+
+        # Stop pub/sub listener if no more connections
+        if not self.active_connections:
+            if self._pubsub_task:
+                self._pubsub_task.cancel()
+                self._pubsub_task = None
+            self._pubsub = None
+            logger.info("Stopped Redis pub/sub listener (no active connections)")
 
         if session_id:
             logger.info(
@@ -183,6 +205,101 @@ class LiveInsightsConnectionManager:
         """
         return len(self.active_connections.get(session_id, []))
 
+    async def _get_async_redis(self):
+        """Get or create async Redis connection for pub/sub."""
+        if self._async_redis is None:
+            from redis.asyncio import Redis as AsyncRedis
+            from config import get_settings
+
+            settings = get_settings()
+            if settings.redis_password:
+                redis_url = f"redis://:{settings.redis_password}@{settings.redis_host}:{settings.redis_port}/{settings.redis_db}"
+            else:
+                redis_url = f"redis://{settings.redis_host}:{settings.redis_port}/{settings.redis_db}"
+
+            self._async_redis = await AsyncRedis.from_url(
+                redis_url,
+                decode_responses=True,
+                socket_connect_timeout=5,
+                socket_keepalive=True
+            )
+            logger.info("Async Redis connection established for live insights pub/sub")
+
+        return self._async_redis
+
+    async def _subscribe_redis_channel(self, session_id: str):
+        """Subscribe to Redis pub/sub channel for a session."""
+        try:
+            if self._pubsub is None:
+                redis_conn = await self._get_async_redis()
+                self._pubsub = redis_conn.pubsub()
+
+            channel = f"live_insights:{session_id}"
+            await self._pubsub.subscribe(channel)
+            logger.debug(f"Subscribed to Redis channel: {channel}")
+        except Exception as e:
+            logger.error(f"Failed to subscribe to Redis channel for session {session_id}: {e}")
+
+    async def _unsubscribe_redis_channel(self, session_id: str):
+        """Unsubscribe from Redis pub/sub channel for a session."""
+        try:
+            if self._pubsub:
+                channel = f"live_insights:{session_id}"
+                await self._pubsub.unsubscribe(channel)
+                logger.debug(f"Unsubscribed from Redis channel: {channel}")
+        except Exception as e:
+            logger.error(f"Failed to unsubscribe from Redis channel for session {session_id}: {e}")
+
+    async def _listen_redis_pubsub(self):
+        """Background task to listen for Redis pub/sub messages and broadcast to WebSocket clients."""
+        logger.info("Redis pub/sub listener started for live insights")
+        try:
+            while True:
+                if self._pubsub is None:
+                    # Wait for first subscription
+                    await asyncio.sleep(1)
+                    continue
+
+                # Listen for messages with timeout
+                message = await self._pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+
+                if message and message['type'] == 'message':
+                    try:
+                        import json
+                        channel = message['channel']
+                        # Extract session_id from channel name (format: live_insights:{session_id})
+                        session_id = channel.split(':', 1)[1]
+                        event_data = json.loads(message['data'])
+
+                        event_type = event_data.get('type', 'UNKNOWN')
+                        logger.debug(f"Received Redis message for session {sanitize_for_log(session_id)}: type={event_type}")
+
+                        # Broadcast to all WebSocket clients connected to this session
+                        await self.broadcast_to_session(session_id, event_data)
+
+                    except Exception as e:
+                        logger.error(f"Error processing Redis pub/sub message for live insights: {e}", exc_info=True)
+
+        except asyncio.CancelledError:
+            logger.info("Redis pub/sub listener cancelled for live insights")
+            # Clean up pub/sub connection
+            if self._pubsub:
+                try:
+                    await self._pubsub.unsubscribe()
+                    await self._pubsub.aclose()
+                except Exception as e:
+                    logger.warning(f"Error closing pub/sub during cancellation: {e}")
+                self._pubsub = None
+            # Close async Redis connection
+            if self._async_redis:
+                try:
+                    await self._async_redis.aclose()
+                except Exception as e:
+                    logger.warning(f"Error closing Redis connection: {e}")
+                self._async_redis = None
+        except Exception as e:
+            logger.error(f"Fatal error in Redis pub/sub listener for live insights: {e}", exc_info=True)
+
 
 # Global connection manager instance
 insights_manager = LiveInsightsConnectionManager()
@@ -194,6 +311,21 @@ insights_manager = LiveInsightsConnectionManager()
 # These functions are called by backend services to broadcast insights to clients
 # =============================================================================
 
+async def _publish_to_redis(session_id: str, event_data: dict):
+    """
+    Helper to publish event data to Redis pub/sub in a thread-safe manner.
+
+    Uses asyncio.to_thread() to run synchronous Redis publish() without blocking
+    the async event loop.
+
+    Args:
+        session_id: Meeting session identifier
+        event_data: Event data dict with 'type' and other fields
+    """
+    from queue_config import queue_config
+    await asyncio.to_thread(queue_config.publish_live_insight, session_id, event_data)
+
+
 async def broadcast_question_detected(session_id: str, question_data: dict):
     """
     Broadcast when a new question is detected.
@@ -202,15 +334,14 @@ async def broadcast_question_detected(session_id: str, question_data: dict):
         session_id: The meeting session identifier
         question_data: Question details including id, text, speaker, timestamp
     """
-    await insights_manager.broadcast_to_session(
-        session_id,
-        {
-            "type": "QUESTION_DETECTED",
-            "data": question_data,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    )
-    logger.debug(f"Broadcast QUESTION_DETECTED to session {sanitize_for_log(session_id)}")
+    event_data = {
+        "type": "QUESTION_DETECTED",
+        "data": question_data,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+    await _publish_to_redis(session_id, event_data)
+    logger.debug(f"Published QUESTION_DETECTED to Redis for session {sanitize_for_log(session_id)}")
 
 
 async def broadcast_rag_result(session_id: str, question_id: str, result_data: dict):
@@ -222,16 +353,15 @@ async def broadcast_rag_result(session_id: str, question_id: str, result_data: d
         question_id: The question identifier
         result_data: RAG result including document, relevance score, metadata
     """
-    await insights_manager.broadcast_to_session(
-        session_id,
-        {
-            "type": "RAG_RESULT",
-            "question_id": question_id,
-            "data": result_data,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    )
-    logger.debug(f"Broadcast RAG_RESULT to session {sanitize_for_log(session_id)}")
+    event_data = {
+        "type": "RAG_RESULT",
+        "question_id": question_id,
+        "data": result_data,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+    await _publish_to_redis(session_id, event_data)
+    logger.debug(f"Published RAG_RESULT to Redis for session {sanitize_for_log(session_id)}")
 
 
 async def broadcast_answer_from_meeting(session_id: str, question_id: str, answer_data: dict):
@@ -243,16 +373,15 @@ async def broadcast_answer_from_meeting(session_id: str, question_id: str, answe
         question_id: The question identifier
         answer_data: Answer details including text, speaker, timestamp, confidence
     """
-    await insights_manager.broadcast_to_session(
-        session_id,
-        {
-            "type": "ANSWER_FROM_MEETING",
-            "question_id": question_id,
-            "data": answer_data,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    )
-    logger.debug(f"Broadcast ANSWER_FROM_MEETING to session {sanitize_for_log(session_id)}")
+    event_data = {
+        "type": "ANSWER_FROM_MEETING",
+        "question_id": question_id,
+        "data": answer_data,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+    await _publish_to_redis(session_id, event_data)
+    logger.debug(f"Published ANSWER_FROM_MEETING to Redis for session {sanitize_for_log(session_id)}")
 
 
 async def broadcast_question_answered_live(session_id: str, question_id: str, answer_data: dict):
@@ -264,16 +393,15 @@ async def broadcast_question_answered_live(session_id: str, question_id: str, an
         question_id: The question identifier
         answer_data: Answer details including text, speaker, timestamp, confidence
     """
-    await insights_manager.broadcast_to_session(
-        session_id,
-        {
-            "type": "QUESTION_ANSWERED_LIVE",
-            "question_id": question_id,
-            "data": answer_data,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    )
-    logger.debug(f"Broadcast QUESTION_ANSWERED_LIVE to session {sanitize_for_log(session_id)}")
+    event_data = {
+        "type": "QUESTION_ANSWERED_LIVE",
+        "question_id": question_id,
+        "data": answer_data,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+    await _publish_to_redis(session_id, event_data)
+    logger.debug(f"Published QUESTION_ANSWERED_LIVE to Redis for session {sanitize_for_log(session_id)}")
 
 
 async def broadcast_gpt_generated_answer(session_id: str, question_id: str, answer_data: dict):
@@ -285,16 +413,15 @@ async def broadcast_gpt_generated_answer(session_id: str, question_id: str, answ
         question_id: The question identifier
         answer_data: Answer including text, confidence, disclaimer
     """
-    await insights_manager.broadcast_to_session(
-        session_id,
-        {
-            "type": "GPT_GENERATED_ANSWER",
-            "question_id": question_id,
-            "data": answer_data,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    )
-    logger.debug(f"Broadcast GPT_GENERATED_ANSWER to session {sanitize_for_log(session_id)}")
+    event_data = {
+        "type": "GPT_GENERATED_ANSWER",
+        "question_id": question_id,
+        "data": answer_data,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+    await _publish_to_redis(session_id, event_data)
+    logger.debug(f"Published GPT_GENERATED_ANSWER to Redis for session {sanitize_for_log(session_id)}")
 
 
 async def broadcast_question_unanswered(session_id: str, question_id: str):
@@ -305,15 +432,14 @@ async def broadcast_question_unanswered(session_id: str, question_id: str):
         session_id: The meeting session identifier
         question_id: The question identifier
     """
-    await insights_manager.broadcast_to_session(
-        session_id,
-        {
-            "type": "QUESTION_UNANSWERED",
-            "question_id": question_id,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    )
-    logger.debug(f"Broadcast QUESTION_UNANSWERED to session {sanitize_for_log(session_id)}")
+    event_data = {
+        "type": "QUESTION_UNANSWERED",
+        "question_id": question_id,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+    await _publish_to_redis(session_id, event_data)
+    logger.debug(f"Published QUESTION_UNANSWERED to Redis for session {sanitize_for_log(session_id)}")
 
 
 async def broadcast_action_tracked(session_id: str, action_data: dict):
@@ -324,15 +450,14 @@ async def broadcast_action_tracked(session_id: str, action_data: dict):
         session_id: The meeting session identifier
         action_data: Action details including id, description, owner, deadline, completeness
     """
-    await insights_manager.broadcast_to_session(
-        session_id,
-        {
-            "type": "ACTION_TRACKED",
-            "data": action_data,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    )
-    logger.debug(f"Broadcast ACTION_TRACKED to session {sanitize_for_log(session_id)}")
+    event_data = {
+        "type": "ACTION_TRACKED",
+        "data": action_data,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+    await _publish_to_redis(session_id, event_data)
+    logger.debug(f"Published ACTION_TRACKED to Redis for session {sanitize_for_log(session_id)}")
 
 
 async def broadcast_action_updated(session_id: str, action_id: str, update_data: dict):
@@ -344,16 +469,15 @@ async def broadcast_action_updated(session_id: str, action_id: str, update_data:
         action_id: The action identifier
         update_data: Updated fields including owner, deadline, completeness
     """
-    await insights_manager.broadcast_to_session(
-        session_id,
-        {
-            "type": "ACTION_UPDATED",
-            "action_id": action_id,
-            "data": update_data,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    )
-    logger.debug(f"Broadcast ACTION_UPDATED to session {sanitize_for_log(session_id)}")
+    event_data = {
+        "type": "ACTION_UPDATED",
+        "action_id": action_id,
+        "data": update_data,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+    await _publish_to_redis(session_id, event_data)
+    logger.debug(f"Published ACTION_UPDATED to Redis for session {sanitize_for_log(session_id)}")
 
 
 async def broadcast_action_alert(session_id: str, action_id: str, alert_data: dict):
@@ -365,16 +489,15 @@ async def broadcast_action_alert(session_id: str, action_id: str, alert_data: di
         action_id: The action identifier
         alert_data: Alert details including missing fields, completeness score
     """
-    await insights_manager.broadcast_to_session(
-        session_id,
-        {
-            "type": "ACTION_ALERT",
-            "action_id": action_id,
-            "data": alert_data,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    )
-    logger.debug(f"Broadcast ACTION_ALERT to session {sanitize_for_log(session_id)}")
+    event_data = {
+        "type": "ACTION_ALERT",
+        "action_id": action_id,
+        "data": alert_data,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+    await _publish_to_redis(session_id, event_data)
+    logger.debug(f"Published ACTION_ALERT to Redis for session {sanitize_for_log(session_id)}")
 
 
 async def broadcast_segment_transition(session_id: str, segment_data: dict):
@@ -385,15 +508,14 @@ async def broadcast_segment_transition(session_id: str, segment_data: dict):
         session_id: The meeting session identifier
         segment_data: Segment details including boundary type, timestamp
     """
-    await insights_manager.broadcast_to_session(
-        session_id,
-        {
-            "type": "SEGMENT_TRANSITION",
-            "data": segment_data,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    )
-    logger.debug(f"Broadcast SEGMENT_TRANSITION to session {sanitize_for_log(session_id)}")
+    event_data = {
+        "type": "SEGMENT_TRANSITION",
+        "data": segment_data,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+    await _publish_to_redis(session_id, event_data)
+    logger.debug(f"Published SEGMENT_TRANSITION to Redis for session {sanitize_for_log(session_id)}")
 
 
 async def broadcast_meeting_summary(session_id: str, summary_data: dict):
@@ -404,15 +526,14 @@ async def broadcast_meeting_summary(session_id: str, summary_data: dict):
         session_id: The meeting session identifier
         summary_data: Complete summary including all insights
     """
-    await insights_manager.broadcast_to_session(
-        session_id,
-        {
-            "type": "MEETING_SUMMARY",
-            "data": summary_data,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    )
-    logger.debug(f"Broadcast MEETING_SUMMARY to session {sanitize_for_log(session_id)}")
+    event_data = {
+        "type": "MEETING_SUMMARY",
+        "data": summary_data,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+    await _publish_to_redis(session_id, event_data)
+    logger.debug(f"Published MEETING_SUMMARY to Redis for session {sanitize_for_log(session_id)}")
 
 
 async def broadcast_transcription_partial(session_id: str, transcript_data: dict):
@@ -423,14 +544,13 @@ async def broadcast_transcription_partial(session_id: str, transcript_data: dict
         session_id: The meeting session identifier
         transcript_data: Partial transcript including text, speaker, timestamp
     """
-    await insights_manager.broadcast_to_session(
-        session_id,
-        {
-            "type": "TRANSCRIPTION_PARTIAL",
-            "data": transcript_data,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    )
+    event_data = {
+        "type": "TRANSCRIPTION_PARTIAL",
+        "data": transcript_data,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+    await _publish_to_redis(session_id, event_data)
 
 
 async def broadcast_transcription_final(session_id: str, transcript_data: dict):
@@ -441,14 +561,13 @@ async def broadcast_transcription_final(session_id: str, transcript_data: dict):
         session_id: The meeting session identifier
         transcript_data: Final transcript including text, speaker, timestamp, confidence
     """
-    await insights_manager.broadcast_to_session(
-        session_id,
-        {
-            "type": "TRANSCRIPTION_FINAL",
-            "data": transcript_data,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    )
+    event_data = {
+        "type": "TRANSCRIPTION_FINAL",
+        "data": transcript_data,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+    await _publish_to_redis(session_id, event_data)
 
 
 async def broadcast_sync_state(session_id: str, state_data: dict):
@@ -459,15 +578,14 @@ async def broadcast_sync_state(session_id: str, state_data: dict):
         session_id: The meeting session identifier
         state_data: Complete state including all questions, actions, transcripts
     """
-    await insights_manager.broadcast_to_session(
-        session_id,
-        {
-            "type": "SYNC_STATE",
-            "data": state_data,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    )
-    logger.info(f"Broadcast SYNC_STATE to session {sanitize_for_log(session_id)}")
+    event_data = {
+        "type": "SYNC_STATE",
+        "data": state_data,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+    await _publish_to_redis(session_id, event_data)
+    logger.info(f"Published SYNC_STATE to Redis for session {sanitize_for_log(session_id)}")
 
 
 async def get_session_state(session_id: str, db: AsyncSession) -> dict:
@@ -649,18 +767,16 @@ async def handle_assemblyai_error(session_id: str, error: str):
     """
     logger.error(f"AssemblyAI error for session {sanitize_for_log(session_id)}: {error}")
 
-    # Broadcast error to clients (if any are connected)
+    # Publish error to Redis pub/sub for cross-process communication
     try:
-        await insights_manager.broadcast_to_session(
-            session_id,
-            {
-                "type": "TRANSCRIPTION_ERROR",
-                "error": error,
-                "timestamp": datetime.utcnow().isoformat()
-            }
-        )
+        event_data = {
+            "type": "TRANSCRIPTION_ERROR",
+            "error": error,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        await _publish_to_redis(session_id, event_data)
     except Exception as e:
-        logger.warning(f"Failed to broadcast AssemblyAI error to session {sanitize_for_log(session_id)}: {e}")
+        logger.warning(f"Failed to publish AssemblyAI error to Redis for session {sanitize_for_log(session_id)}: {e}")
 
 
 # =============================================================================

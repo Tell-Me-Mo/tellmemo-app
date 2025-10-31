@@ -294,14 +294,26 @@ class StreamingIntelligenceOrchestrator:
     def _set_websocket_callbacks(self):
         """Set WebSocket broadcasting callbacks for all handlers."""
         async def broadcast_wrapper(session_id: str, event_data: dict):
-            """Wrapper for WebSocket broadcasting."""
+            """
+            Wrapper for WebSocket broadcasting via Redis pub/sub.
+
+            This ensures cross-process communication between RQ workers
+            (which detect insights) and the main backend (which manages WebSockets).
+            """
             try:
+                import asyncio
+                from queue_config import queue_config
+
                 event_type = event_data.get("type", "UNKNOWN")
                 logger.info(f"📡 broadcast_wrapper called: session={session_id}, event_type={event_type}")
-                await _get_insights_manager().broadcast_to_session(session_id, event_data)
-                logger.info(f"✅ broadcast_to_session completed for {event_type}")
+
+                # Publish to Redis pub/sub instead of direct WebSocket broadcast
+                # Use asyncio.to_thread to run sync Redis call without blocking event loop
+                await asyncio.to_thread(queue_config.publish_live_insight, session_id, event_data)
+
+                logger.info(f"✅ Published {event_type} to Redis for session {session_id}")
             except Exception as e:
-                logger.error(f"❌ WebSocket broadcast failed: {e}", exc_info=True)
+                logger.error(f"❌ Failed to publish insight to Redis: {e}", exc_info=True)
 
         self.question_handler.set_websocket_callback(broadcast_wrapper)
         self.action_handler.set_websocket_callback(broadcast_wrapper)
@@ -909,18 +921,21 @@ async def _generate_meeting_summary(session_id: str, recording_id: Optional[UUID
                 f"{total_actions} actions ({complete_actions} complete)"
             )
 
-            # Broadcast summary to connected clients
+            # Broadcast summary to connected clients via Redis pub/sub
             try:
-                await _get_insights_manager().broadcast_to_session(
-                    session_id,
-                    {
-                        "type": "MEETING_SUMMARY",
-                        "summary": summary_data,
-                        "timestamp": datetime.utcnow().isoformat()
-                    }
-                )
+                import asyncio
+                from queue_config import queue_config
+
+                event_data = {
+                    "type": "MEETING_SUMMARY",
+                    "summary": summary_data,
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+                # Use asyncio.to_thread to run sync Redis call without blocking event loop
+                await asyncio.to_thread(queue_config.publish_live_insight, session_id, event_data)
+                logger.info(f"Published MEETING_SUMMARY to Redis for session {sanitize_for_log(session_id)}")
             except Exception as broadcast_error:
-                logger.warning(f"Could not broadcast meeting summary: {broadcast_error}")
+                logger.warning(f"Could not publish meeting summary to Redis: {broadcast_error}")
 
             # Update recording metadata with summary if recording exists
             if recording:
