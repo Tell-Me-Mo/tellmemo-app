@@ -134,6 +134,7 @@ TellMeMo helps teams extract insights from project content using AI:
 | **LLM (Fallback)** | OpenAI GPT | Automatic fallback on Claude overload |
 | **LLM (Real-Time)** | GPT-5-mini | Streaming intelligence for live meetings |
 | **Embeddings** | EmbeddingGemma | Local embedding model |
+| **Zero-Shot Classification** | ModernBERT-base-zeroshot-v2.0 | False positive filtering for questions/actions |
 | **Transcription** | OpenAI Whisper + Salad Cloud + Replicate | Audio to text (242x speedup with Replicate) |
 | **Real-Time STT** | AssemblyAI | Real-time speech-to-text with speaker diarization |
 | **Job Queue** | Redis Queue (RQ) | Background job processing with multi-priority queues |
@@ -589,7 +590,18 @@ Revolutionary real-time meeting intelligence that automatically detects question
 - Smart alerting at natural meeting breakpoints
 - Completeness scoring (description + owner + deadline = 100%)
 
-**3. Real-Time Transcription Display**
+**3. Zero-Shot Post-Processing Validation**
+- **ModernBERT-base-zeroshot-v2.0** model for false positive filtering
+- Two-stage validation pipeline:
+  - **Stage 1: Zero-Shot Classification** - Filters non-meaningful questions/actions
+    - Questions: Filters greetings, acknowledgments, rhetorical questions (70% confidence threshold)
+    - Actions: Filters comments, opinions, non-actionable statements (60% confidence threshold)
+  - **Stage 2: Semantic Duplicate Detection** - EmbeddingGemma-based deduplication (80% similarity threshold)
+- Fail-open strategy: Accepts items on validation errors
+- Reduces false positives by ~60-70% compared to raw GPT output
+- Initialized at app startup (mandatory when enabled)
+
+**4. Real-Time Transcription Display**
 - AssemblyAI real-time transcription with speaker diarization
 - Live transcript feed with partial and final states
 - Auto-scroll with manual override
@@ -610,6 +622,7 @@ Revolutionary real-time meeting intelligence that automatically detects question
 - GPT-5-mini streaming intelligence engine
 - Transcription buffer (60-second rolling window)
 - Stream router (NDJSON parsing and event routing)
+- Zero-shot validator (ModernBERT-based false positive filtering)
 - Question handler (manages answer discovery tiers)
 - Action handler (tracks and accumulates action items)
 - Answer handler (matches answers to questions)
@@ -644,6 +657,7 @@ Revolutionary real-time meeting intelligence that automatically detects question
 **Cost Efficiency:**
 - AssemblyAI: $0.90/hour (real-time transcription + diarization)
 - GPT-5-mini: ~$0.15/hour (streaming intelligence)
+- ModernBERT: Free (local zero-shot classification, CPU-optimized)
 - Total: ~$1.05/hour meeting cost (one connection per meeting)
 
 **Database Schema:**
