@@ -16,9 +16,17 @@ Features tested:
 - [ ] WebSocket streaming (not implemented in tests yet)
 
 Status: All tests passing
+
+Note: Most tests in this file use the mock_llm_client fixture to avoid real API calls.
+The test_provider_override.py file contains integration tests that use real provider
+instances with mocked HTTP calls to test provider selection logic.
 """
 
 import pytest
+
+
+# Apply mock_llm_client to all tests in this file
+pytestmark = pytest.mark.usefixtures("mock_llm_client")
 from datetime import datetime, timedelta
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession

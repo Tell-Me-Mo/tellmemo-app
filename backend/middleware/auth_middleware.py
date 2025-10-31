@@ -337,10 +337,13 @@ async def get_current_user_ws(token: str, db: AsyncSession) -> Optional[User]:
         if not token:
             return None
 
-        # Verify token with auth service
-        user_data = auth_service.verify_token(token)
+        # Verify token with native auth service (prefer native over Supabase)
+        user_data = native_auth_service.verify_jwt_token(token)
         if not user_data:
-            return None
+            # Fallback to Supabase auth if native fails
+            user_data = auth_service.verify_jwt_token(token)
+            if not user_data:
+                return None
 
         user_id = user_data.get("sub")
         if not user_id:

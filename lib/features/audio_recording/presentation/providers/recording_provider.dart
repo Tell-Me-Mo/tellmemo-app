@@ -1,15 +1,24 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:http/http.dart' as http;
 import '../../domain/services/audio_recording_service.dart';
 import '../../domain/services/transcription_service.dart';
+import '../../domain/services/live_audio_streaming_service.dart';
+import '../../domain/services/live_audio_websocket_service.dart';
 import '../../../../features/meetings/presentation/providers/upload_provider.dart';
 import '../../../../features/content/presentation/providers/processing_jobs_provider.dart';
 import '../../../../core/services/firebase_analytics_service.dart';
+import '../../../../core/services/auth_service.dart';
+import '../../../../core/config/api_config.dart';
 import '../../../../core/utils/error_utils.dart';
+import 'recording_preferences_provider.dart';
+import '../../../../features/live_insights/presentation/providers/live_insights_provider.dart';
+import '../../../../features/live_insights/presentation/providers/tier_settings_provider.dart';
+import '../../../../features/live_insights/domain/models/tier_settings.dart';
 
 part 'recording_provider.g.dart';
 
@@ -26,6 +35,7 @@ class RecordingStateModel {
   final String? contentId; // Added to track uploaded content
   final bool isUploading; // Added to track upload status
   final bool showDurationWarning; // Added to track 90-minute warning
+  final bool aiAssistantEnabled; // Added to track AI Assistant toggle state
 
   RecordingStateModel({
     this.state = RecordingState.idle,
@@ -39,6 +49,7 @@ class RecordingStateModel {
     this.contentId,
     this.isUploading = false,
     this.showDurationWarning = false,
+    this.aiAssistantEnabled = false,
   });
 
   RecordingStateModel copyWith({
@@ -53,6 +64,7 @@ class RecordingStateModel {
     String? contentId,
     bool? isUploading,
     bool? showDurationWarning,
+    bool? aiAssistantEnabled,
   }) {
     return RecordingStateModel(
       state: state ?? this.state,
@@ -66,6 +78,7 @@ class RecordingStateModel {
       contentId: contentId ?? this.contentId,
       isUploading: isUploading ?? this.isUploading,
       showDurationWarning: showDurationWarning ?? this.showDurationWarning,
+      aiAssistantEnabled: aiAssistantEnabled ?? this.aiAssistantEnabled,
     );
   }
 }
@@ -96,6 +109,11 @@ class RecordingNotifier extends _$RecordingNotifier {
   StreamSubscription? _stateSubscription;
   StreamSubscription? _warningSubscription;
 
+  // Live insights services (initialized when AI Assistant is enabled)
+  LiveAudioStreamingService? _liveAudioStreamingService;
+  LiveAudioWebSocketService? _liveAudioWebSocketService;
+  StreamSubscription? _audioChunkSubscription;
+
   @override
   RecordingStateModel build() {
     _audioService = ref.watch(audioRecordingServiceProvider);
@@ -104,7 +122,19 @@ class RecordingNotifier extends _$RecordingNotifier {
     // Set up listeners
     _setupListeners();
 
+    // Load AI Assistant preference
+    _loadAiAssistantPreference();
+
     return RecordingStateModel();
+  }
+
+  /// Load AI Assistant enabled preference from SharedPreferences
+  Future<void> _loadAiAssistantPreference() async {
+    final prefsService = ref.read(recordingPreferencesServiceProvider);
+    prefsService.whenData((service) {
+      final enabled = service.getAiAssistantEnabled();
+      state = state.copyWith(aiAssistantEnabled: enabled);
+    });
   }
 
   void _setupListeners() {
@@ -174,6 +204,74 @@ class RecordingNotifier extends _$RecordingNotifier {
       final sessionId = '${projectId}_${DateTime.now().millisecondsSinceEpoch}';
       state = state.copyWith(sessionId: sessionId);
 
+      // Initialize live insights WebSocket if AI Assistant is enabled
+      if (state.aiAssistantEnabled) {
+        debugPrint('[RecordingProvider] AI Assistant enabled - initializing live insights');
+        try {
+          // 1. Get tier settings
+          final tierSettings = await ref.read(tierSettingsNotifierProvider.future);
+          final enabledTiers = tierSettings.enabledTiers;
+          debugPrint('[RecordingProvider] Using tier configuration: $enabledTiers');
+
+          // 2. Connect to live insights WebSocket (for receiving questions/actions/transcriptions)
+          final liveInsightsService = ref.read(liveInsightsWebSocketServiceProvider);
+          await liveInsightsService.connect(sessionId, enabledTiers: enabledTiers);
+          debugPrint('[RecordingProvider] Connected to live insights WebSocket');
+
+          // 2. Initialize live audio streaming service
+          _liveAudioStreamingService = LiveAudioStreamingService();
+          debugPrint('[RecordingProvider] Initialized live audio streaming service');
+
+          // 3. Initialize and connect audio WebSocket for streaming audio to backend
+          final authService = AuthService();
+          final token = await authService.getToken();
+          if (token != null) {
+            _liveAudioWebSocketService = LiveAudioWebSocketService(
+              baseUrl: ApiConfig.baseUrl,
+            );
+
+            final audioWsConnected = await _liveAudioWebSocketService!.connect(
+              sessionId: sessionId,
+              token: token,
+              projectId: projectId,
+            );
+
+            if (audioWsConnected) {
+              debugPrint('[RecordingProvider] Connected to audio streaming WebSocket');
+
+              // 4. Start streaming audio chunks
+              final streamingStarted = await _liveAudioStreamingService!.startStreaming();
+              if (streamingStarted) {
+                debugPrint('[RecordingProvider] Started audio streaming');
+
+                // 5. Pipe audio chunks from streaming service to WebSocket
+                _audioChunkSubscription = _liveAudioStreamingService!.audioChunkStream.listen(
+                  (chunk) {
+                    _liveAudioWebSocketService?.sendAudioChunk(chunk);
+                  },
+                  onError: (error) {
+                    debugPrint('[RecordingProvider] Audio chunk stream error: $error');
+                  },
+                );
+                debugPrint('[RecordingProvider] Audio chunk pipeline established');
+              } else {
+                debugPrint('[RecordingProvider] Failed to start audio streaming');
+              }
+            } else {
+              debugPrint('[RecordingProvider] Failed to connect audio WebSocket');
+            }
+          } else {
+            debugPrint('[RecordingProvider] No auth token available for audio streaming');
+          }
+        } catch (e) {
+          debugPrint('[RecordingProvider] Failed to initialize live insights: $e');
+          // Don't fail the recording if live insights connection fails
+          state = state.copyWith(
+            errorMessage: 'AI Assistant initialization failed, but recording continues',
+          );
+        }
+      }
+
       // Log recording started analytics
       try {
         await FirebaseAnalyticsService().logRecordingStarted(
@@ -195,6 +293,16 @@ class RecordingNotifier extends _$RecordingNotifier {
   Future<void> pauseRecording() async {
     await _audioService.pauseRecording();
 
+    // Pause audio streaming if AI Assistant is enabled
+    if (state.aiAssistantEnabled && _liveAudioStreamingService != null) {
+      try {
+        await _liveAudioStreamingService!.stopStreaming();
+        debugPrint('[RecordingProvider] Paused audio streaming');
+      } catch (e) {
+        debugPrint('[RecordingProvider] Error pausing audio streaming: $e');
+      }
+    }
+
     // Log recording paused analytics
     try {
       await FirebaseAnalyticsService().logRecordingPaused(
@@ -208,6 +316,28 @@ class RecordingNotifier extends _$RecordingNotifier {
   // Resume recording
   Future<void> resumeRecording() async {
     await _audioService.resumeRecording();
+
+    // Resume audio streaming if AI Assistant is enabled
+    if (state.aiAssistantEnabled && _liveAudioStreamingService != null) {
+      try {
+        await _liveAudioStreamingService!.startStreaming();
+        debugPrint('[RecordingProvider] Resumed audio streaming');
+
+        // Re-establish audio chunk pipeline
+        _audioChunkSubscription?.cancel();
+        _audioChunkSubscription = _liveAudioStreamingService!.audioChunkStream.listen(
+          (chunk) {
+            _liveAudioWebSocketService?.sendAudioChunk(chunk);
+          },
+          onError: (error) {
+            debugPrint('[RecordingProvider] Audio chunk stream error: $error');
+          },
+        );
+        debugPrint('[RecordingProvider] Re-established audio chunk pipeline');
+      } catch (e) {
+        debugPrint('[RecordingProvider] Error resuming audio streaming: $e');
+      }
+    }
 
     // Log recording resumed analytics
     try {
@@ -224,6 +354,42 @@ class RecordingNotifier extends _$RecordingNotifier {
     String? meetingTitle,
   }) async {
     try {
+      // Cleanup live insights services if AI Assistant was enabled
+      if (state.aiAssistantEnabled) {
+        debugPrint('[RecordingProvider] Cleaning up live insights services');
+        try {
+          // 1. Cancel audio chunk subscription
+          await _audioChunkSubscription?.cancel();
+          _audioChunkSubscription = null;
+          debugPrint('[RecordingProvider] Cancelled audio chunk subscription');
+
+          // 2. Stop audio streaming service
+          if (_liveAudioStreamingService != null) {
+            await _liveAudioStreamingService!.stopStreaming();
+            _liveAudioStreamingService!.dispose();
+            _liveAudioStreamingService = null;
+            debugPrint('[RecordingProvider] Stopped and disposed audio streaming service');
+          }
+
+          // 3. Disconnect audio WebSocket
+          if (_liveAudioWebSocketService != null) {
+            await _liveAudioWebSocketService!.disconnect();
+            _liveAudioWebSocketService = null;
+            debugPrint('[RecordingProvider] Disconnected audio WebSocket');
+          }
+
+          // 4. Disconnect live insights WebSocket
+          final liveInsightsService = ref.read(liveInsightsWebSocketServiceProvider);
+          await liveInsightsService.disconnect();
+          debugPrint('[RecordingProvider] Disconnected live insights WebSocket');
+
+          debugPrint('[RecordingProvider] All live insights services cleaned up');
+        } catch (e) {
+          debugPrint('[RecordingProvider] Error during live insights cleanup: $e');
+          // Continue with recording stop even if cleanup fails
+        }
+      }
+
       // Stop audio recording and get file path
       final filePath = await _audioService.stopRecording();
 
@@ -268,6 +434,49 @@ class RecordingNotifier extends _$RecordingNotifier {
           fileName = filePath.split('/').last;
         }
 
+        // Get live transcription if AI Assistant was enabled
+        String? transcriptionText;
+        String? transcriptionSegments;
+
+        if (state.aiAssistantEnabled) {
+          debugPrint('[RecordingProvider] AI Assistant was enabled - fetching live transcription for upload');
+          try {
+            // Ensure provider is ready
+            await ref.read(liveTranscriptionsTrackerProvider.future);
+
+            // Get full transcription text
+            final fullTranscription = ref.read(liveTranscriptionsTrackerProvider.notifier).getFullTranscription();
+            debugPrint('[RecordingProvider] Full transcription length: ${fullTranscription.length} characters');
+
+            if (fullTranscription.isNotEmpty) {
+              transcriptionText = fullTranscription;
+              debugPrint('[RecordingProvider] ✓ Will send live transcription: ${transcriptionText.substring(0, transcriptionText.length > 100 ? 100 : transcriptionText.length)}...');
+
+              // Get segments with timing information
+              final segments = ref.read(liveTranscriptionsTrackerProvider.notifier).getTranscriptionSegments();
+              debugPrint('[RecordingProvider] Transcription segments count: ${segments.length}');
+
+              if (segments.isNotEmpty) {
+                // Convert to JSON string
+                transcriptionSegments = json.encode(segments);
+                debugPrint('[RecordingProvider] ✓ Will send ${segments.length} transcription segments');
+              } else {
+                debugPrint('[RecordingProvider] ⚠ No transcription segments available');
+              }
+            } else {
+              debugPrint('[RecordingProvider] ⚠ No live transcription text available - backend will transcribe audio');
+            }
+          } catch (e, stackTrace) {
+            debugPrint('[RecordingProvider] ✗ Error fetching live transcription: $e');
+            debugPrint('[RecordingProvider] Stack trace: $stackTrace');
+            // Continue without transcription - backend will transcribe audio file
+          }
+        } else {
+          debugPrint('[RecordingProvider] AI Assistant was NOT enabled - will transcribe audio file');
+        }
+
+        debugPrint('[RecordingProvider] Final transcription parameters - text: ${transcriptionText != null ? "YES (${transcriptionText.length} chars)" : "NO"}, segments: ${transcriptionSegments != null ? "YES" : "NO"}');
+
         // Use the uploadAudioFile method - exact same as file upload
         // Check if we should use AI matching (when projectId is 'auto')
         final useAiMatching = projectId == 'auto';
@@ -282,6 +491,8 @@ class RecordingNotifier extends _$RecordingNotifier {
           fileBytes: fileBytes,
           fileName: fileName,
           useAiMatching: useAiMatching,
+          transcriptionText: transcriptionText,
+          transcriptionSegments: transcriptionSegments,
         );
 
         print('[RecordingProvider] Upload response: $response');
@@ -371,6 +582,37 @@ class RecordingNotifier extends _$RecordingNotifier {
 
   // Cancel recording without saving
   Future<void> cancelRecording() async {
+    // Cleanup live insights services if AI Assistant was enabled
+    if (state.aiAssistantEnabled) {
+      debugPrint('[RecordingProvider] Cancelling recording - cleaning up live insights');
+      try {
+        // Cancel audio chunk subscription
+        await _audioChunkSubscription?.cancel();
+        _audioChunkSubscription = null;
+
+        // Stop and dispose audio streaming service
+        if (_liveAudioStreamingService != null) {
+          await _liveAudioStreamingService!.stopStreaming();
+          _liveAudioStreamingService!.dispose();
+          _liveAudioStreamingService = null;
+        }
+
+        // Disconnect audio WebSocket
+        if (_liveAudioWebSocketService != null) {
+          await _liveAudioWebSocketService!.disconnect();
+          _liveAudioWebSocketService = null;
+        }
+
+        // Disconnect live insights WebSocket
+        final liveInsightsService = ref.read(liveInsightsWebSocketServiceProvider);
+        await liveInsightsService.disconnect();
+
+        debugPrint('[RecordingProvider] Live insights cleanup completed on cancel');
+      } catch (e) {
+        debugPrint('[RecordingProvider] Error during live insights cleanup on cancel: $e');
+      }
+    }
+
     // Cancel recording and delete file
     await _audioService.cancelRecording();
 
@@ -427,6 +669,29 @@ class RecordingNotifier extends _$RecordingNotifier {
   // Get supported languages
   Future<List<String>> getSupportedLanguages() async {
     return await _transcriptionService.getSupportedLanguages();
+  }
+
+  /// Toggle AI Assistant enabled state
+  Future<void> toggleAiAssistant() async {
+    final newValue = !state.aiAssistantEnabled;
+    state = state.copyWith(aiAssistantEnabled: newValue);
+
+    // Persist preference
+    final prefsService = ref.read(recordingPreferencesServiceProvider);
+    prefsService.whenData((service) async {
+      await service.setAiAssistantEnabled(newValue);
+    });
+  }
+
+  /// Set AI Assistant enabled state
+  Future<void> setAiAssistantEnabled(bool enabled) async {
+    state = state.copyWith(aiAssistantEnabled: enabled);
+
+    // Persist preference
+    final prefsService = ref.read(recordingPreferencesServiceProvider);
+    prefsService.whenData((service) async {
+      await service.setAiAssistantEnabled(enabled);
+    });
   }
 
   // Clean up subscriptions

@@ -1087,7 +1087,139 @@ Provide a clear, unified answer based on the relevant information found."""
                 response_parts.append(f"- {text}...")
         
         return "\n".join(response_parts)
-    
+
+    async def query_for_live_insights(
+        self,
+        question: str,
+        project_id: str,
+        organization_id: str,
+        max_chunks: int = 5,
+        timeout: float = 5.0
+    ) -> Dict[str, Any]:
+        """
+        Optimized RAG query for live meeting insights.
+
+        Uses fast retrieval + LLM for concise answers during meetings:
+        - 5-second timeout for LLM generation
+        - Minimal token usage (concise prompt)
+        - Direct, factual answers only
+        - No complex strategies (just basic semantic search)
+        - Automatic fallback to document excerpts on timeout
+
+        Args:
+            question: The question asked during the meeting
+            project_id: Project UUID string
+            organization_id: Organization UUID string
+            max_chunks: Maximum document chunks to retrieve (default: 5)
+            timeout: Maximum time allowed for LLM call (default: 5.0s)
+
+        Returns:
+            Dict with keys: answer, sources, confidence, response_time_ms
+        """
+        start_time = time.time()
+
+        try:
+            # Step 1: Fast vector search (typically <200ms)
+            query_embedding = await embedding_service.generate_embedding(question)
+
+            # Use two-stage MRL search for better quality
+            results = await multi_tenant_vector_store.search_vectors_two_stage(
+                organization_id=organization_id,
+                query_vector=query_embedding,
+                initial_limit=max_chunks * 3,  # 3x candidates for stage 1
+                final_limit=max_chunks,
+                score_threshold=0.3,
+                filter_dict={"project_id": project_id}
+            )
+
+            if not results:
+                return {
+                    'answer': "No relevant documents found.",
+                    'sources': [],
+                    'confidence': 0.0,
+                    'response_time_ms': int((time.time() - start_time) * 1000),
+                    'chunks_retrieved': 0
+                }
+
+            # Step 2: Prepare context for LLM
+            chunks = []
+            sources = set()
+            context_parts = []
+
+            for result in results:
+                payload = result.get('payload', {})
+                title = payload.get('title', 'Untitled Document')
+                text = payload.get('text', '')
+                score = result.get('score', 0.0)
+
+                chunks.append({'title': title, 'text': text, 'score': score})
+                sources.add(title)
+                context_parts.append(f"From {title}:\n{text}")
+
+            context = "\n\n".join(context_parts)
+
+            # Step 3: Generate concise answer with LLM (with timeout)
+            if not self.llm_client.is_available():
+                # Fallback: return first document excerpt
+                return {
+                    'answer': chunks[0]['text'][:200] + "...",
+                    'sources': list(sources),
+                    'confidence': chunks[0]['score'],
+                    'response_time_ms': int((time.time() - start_time) * 1000),
+                    'chunks_retrieved': len(chunks)
+                }
+
+            # Import the live insights prompt
+            from services.prompts.rag_prompts import get_live_insights_rag_prompt
+
+            try:
+                # Use asyncio.wait_for to enforce timeout
+                response = await asyncio.wait_for(
+                    self.llm_client.create_message(
+                        prompt=get_live_insights_rag_prompt(question, context),
+                        model=self.llm_model,
+                        max_tokens=150,  # Limit to keep answer concise
+                        temperature=0.0  # Deterministic for factual answers
+                    ),
+                    timeout=timeout
+                )
+
+                answer = response.content[0].text.strip()
+
+                # Calculate confidence from retrieval scores
+                avg_score = sum(c['score'] for c in chunks) / len(chunks)
+                confidence = min(avg_score, 1.0)
+
+                return {
+                    'answer': answer,
+                    'sources': list(sources),
+                    'confidence': confidence,
+                    'response_time_ms': int((time.time() - start_time) * 1000),
+                    'chunks_retrieved': len(chunks),
+                    'token_count': response.usage.input_tokens + response.usage.output_tokens
+                }
+
+            except asyncio.TimeoutError:
+                logger.warning(f"LLM timeout ({timeout}s) for live insights query")
+                # Fallback to document excerpt
+                return {
+                    'answer': chunks[0]['text'][:200] + "...",
+                    'sources': list(sources),
+                    'confidence': chunks[0]['score'],
+                    'response_time_ms': int((time.time() - start_time) * 1000),
+                    'chunks_retrieved': len(chunks)
+                }
+
+        except Exception as e:
+            logger.error(f"Live insights RAG query failed: {e}", exc_info=True)
+            return {
+                'answer': "Error processing query.",
+                'sources': [],
+                'confidence': 0.0,
+                'response_time_ms': int((time.time() - start_time) * 1000),
+                'chunks_retrieved': 0
+            }
+
 
 # Global enhanced service instance
 enhanced_rag_service = EnhancedRAGService()

@@ -8,6 +8,10 @@ Status: TBD
 """
 
 import pytest
+
+
+# Apply mock_llm_client to all tests in this file
+pytestmark = pytest.mark.usefixtures("mock_llm_client")
 import io
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession

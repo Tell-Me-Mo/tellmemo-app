@@ -66,6 +66,7 @@ jobs:
       - name: Run tests with coverage
         env:
           TEST_DATABASE_URL: postgresql+asyncpg://pm_master:pm_master_pass@localhost:5432/pm_master_test
+          POSTGRES_DB: pm_master_test
           DISABLE_SCHEDULER: '1'
           QDRANT_HOST: localhost
           QDRANT_PORT: 6333
