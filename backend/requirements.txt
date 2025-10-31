@@ -58,6 +58,16 @@ purgatory==3.0.1  # Circuit breaker for resilient API calls
 langfuse==3.8.1
 sentry-sdk[fastapi]==2.43.0
 
+# OpenTelemetry (2025 Distro Approach - includes API, SDK, and bootstrap tool)
+# After pip install, run: opentelemetry-bootstrap -a install
+# This will auto-detect and install instrumentations for: FastAPI, SQLAlchemy, Redis, httpx, aiohttp
+opentelemetry-distro>=0.59b0
+opentelemetry-exporter-otlp>=1.38.0
+
+# OpenTelemetry Specialized Instrumentations (not auto-detected by bootstrap)
+opentelemetry-instrumentation-asyncpg>=0.59b0  # PostgreSQL async driver (asyncpg)
+opentelemetry-instrumentation-qdrant>=0.17.0   # Qdrant vector database (OpenLLMetry)
+
 # Authentication
 supabase==2.22.4
 gotrue==2.12.4
