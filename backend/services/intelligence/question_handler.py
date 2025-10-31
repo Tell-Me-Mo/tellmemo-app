@@ -522,6 +522,18 @@ class QuestionHandler:
             avg_confidence = sum(s["relevance_score"] for s in collected_sources) / len(collected_sources)
             num_sources = len(collected_sources)
 
+            # Check if confidence meets minimum threshold
+            CONFIDENCE_THRESHOLD = 0.50  # 50% minimum confidence for RAG results
+
+            if avg_confidence < CONFIDENCE_THRESHOLD:
+                logger.info(
+                    f"Tier 1: RAG confidence too low ({avg_confidence:.3f} < {CONFIDENCE_THRESHOLD}) "
+                    f"for question {question_id}, treating as not found - will try other tiers"
+                )
+                # Don't broadcast low-confidence results to UI - they're not helpful
+                # Other tiers will handle finding better answers
+                return False  # Allow other tiers to run
+
             # Broadcast final RAG completion event immediately after search completes
             # This provides instant feedback to the user without waiting for DB persistence
             await self._broadcast_event(session_id, {
