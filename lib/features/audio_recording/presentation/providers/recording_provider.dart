@@ -257,13 +257,19 @@ class RecordingNotifier extends _$RecordingNotifier {
                 );
                 debugPrint('[RecordingProvider] Audio chunk pipeline established');
               } else {
+                // SILENT FAILURE: Audio streaming failed to start
                 debugPrint('[RecordingProvider] Failed to start audio streaming');
+                throw Exception('Failed to start audio streaming - check microphone permissions and codec support');
               }
             } else {
+              // SILENT FAILURE: Audio WebSocket connection failed
               debugPrint('[RecordingProvider] Failed to connect audio WebSocket');
+              throw Exception('Failed to connect audio WebSocket - check network connectivity');
             }
           } else {
+            // SILENT FAILURE: No auth token available
             debugPrint('[RecordingProvider] No auth token available for audio streaming');
+            throw Exception('No authentication token available for audio streaming');
           }
         } catch (e, stackTrace) {
           debugPrint('[RecordingProvider] Failed to initialize live insights: $e');
