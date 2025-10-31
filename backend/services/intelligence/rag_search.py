@@ -71,7 +71,7 @@ class RAGSearchService:
 
     def __init__(
         self,
-        timeout: float = 2.0,
+        timeout: float = 5.0,  # Increased to 5s to allow LLM generation with fallback
         max_results: int = 5,
         score_threshold: float = 0.3,
         use_mrl_search: bool = True
@@ -79,7 +79,7 @@ class RAGSearchService:
         """Initialize RAG search service.
 
         Args:
-            timeout: Maximum search time in seconds (default: 2.0)
+            timeout: Maximum search time in seconds (default: 5.0)
             max_results: Maximum number of results to return (default: 5)
             score_threshold: Minimum relevance score threshold (default: 0.3)
             use_mrl_search: Use MRL two-stage search for better quality (default: True)
@@ -150,7 +150,12 @@ class RAGSearchService:
         organization_id: str,
         streaming: bool
     ) -> AsyncGenerator[RAGSearchResult, None]:
-        """Execute the actual search against vector store.
+        """Execute the actual search against vector store with LLM answer generation.
+
+        Uses enhanced RAG service with custom live insights prompt for:
+        - True RAG (retrieval + LLM generation)
+        - Concise, direct answers optimized for live meetings
+        - Fast execution within 2-second timeout
 
         Args:
             question: Question text
@@ -162,46 +167,46 @@ class RAGSearchService:
             RAGSearchResult objects
         """
         try:
-            # Strategy 1: Use enhanced RAG service (full pipeline with LLM)
-            # This provides context-aware answers, not just document chunks
-            rag_result = await enhanced_rag_service.query_project(
-                project_id=project_id,
+            # Use enhanced RAG with live insights prompt (true RAG with LLM)
+            logger.debug("Using enhanced RAG with live insights prompt for true RAG search")
+            result = await enhanced_rag_service.query_for_live_insights(
                 question=question,
-                strategy=RAGStrategy.BASIC,  # Use BASIC for speed (2s constraint)
-                organization_id=organization_id
+                project_id=project_id,
+                organization_id=organization_id,
+                max_chunks=self.max_results,
+                timeout=self.timeout
             )
 
-            # Extract sources from RAG result
-            sources = rag_result.get("sources", [])
-            answer = rag_result.get("answer", "")
-            confidence = rag_result.get("confidence", 0.0)
-
-            if sources:
-                logger.info(f"Found {len(sources)} RAG sources for question")
-
-                # Convert sources to RAGSearchResult objects
-                for idx, source in enumerate(sources[:self.max_results]):
-                    result = self._convert_source_to_result(source, idx)
-                    if result and result.relevance_score >= self.score_threshold:
-                        if streaming:
-                            yield result
-                            # Small delay between results for progressive UI updates
-                            await asyncio.sleep(0.05)
-                        else:
-                            yield result
-
-            # If enhanced RAG didn't find anything, try direct vector search
-            if not sources:
-                logger.debug("Enhanced RAG returned no sources, trying direct vector search")
-                async for result in self._direct_vector_search(
+            # If LLM-generated answer exists, yield it as a single result
+            if result.get('answer') and result['answer'] not in ["No relevant documents found.", "Error processing query."]:
+                rag_result = RAGSearchResult(
+                    document_id="llm-answer",
+                    title="AI-Generated Answer from Documents",
+                    content=result['answer'],  # LLM-generated concise answer
+                    relevance_score=result.get('confidence', 0.0),
+                    url=None,
+                    last_updated=None,
+                    metadata={
+                        "sources": result.get('sources', []),
+                        "chunks_retrieved": result.get('chunks_retrieved', 0),
+                        "response_time_ms": result.get('response_time_ms', 0),
+                        "answer_type": "llm_generated"
+                    }
+                )
+                yield rag_result
+            else:
+                # Fallback to direct vector search if LLM failed
+                logger.warning("Enhanced RAG returned no answer, falling back to direct vector search")
+                async for fallback_result in self._direct_vector_search(
                     question, project_id, organization_id, streaming
                 ):
-                    yield result
+                    yield fallback_result
 
         except Exception as e:
-            logger.error(f"Error executing RAG search: {e}", exc_info=True)
-            # Try fallback to direct vector search
+            logger.error(f"Enhanced RAG search failed: {e}", exc_info=True)
+            # Fallback to direct vector search
             try:
+                logger.info("Falling back to direct vector search")
                 async for result in self._direct_vector_search(
                     question, project_id, organization_id, streaming
                 ):
@@ -278,6 +283,10 @@ class RAGSearchService:
     ) -> Optional[RAGSearchResult]:
         """Convert enhanced RAG source to RAGSearchResult.
 
+        NOTE: This method is currently unused since we use direct vector search
+        instead of enhanced RAG service for live insights. Enhanced RAG returns
+        simplified sources (just title strings), but we need full chunk metadata.
+
         Args:
             source: Source dictionary from enhanced_rag_service
             index: Result index (for ordering)
@@ -312,20 +321,31 @@ class RAGSearchService:
         """Convert Qdrant vector result to RAGSearchResult.
 
         Args:
-            vec_result: Vector search result from Qdrant
+            vec_result: Vector search result from Qdrant (dict or object)
             index: Result index (for ordering)
 
         Returns:
             RAGSearchResult or None if conversion fails
         """
         try:
-            payload = vec_result.payload if hasattr(vec_result, 'payload') else {}
-            score = vec_result.score if hasattr(vec_result, 'score') else 0.0
+            # Handle both dict (from multi_tenant_vector_store) and object formats
+            if isinstance(vec_result, dict):
+                payload = vec_result.get('payload', {})
+                score = vec_result.get('score', 0.0)
+            else:
+                # Object format (direct Qdrant response)
+                payload = vec_result.payload if hasattr(vec_result, 'payload') else {}
+                score = vec_result.score if hasattr(vec_result, 'score') else 0.0
+
+            # Qdrant payload uses 'text' field, not 'content'
+            # Limit content to first 500 chars for progressive UI display
+            text_content = payload.get("text", payload.get("content", ""))
+            content_preview = text_content[:500] if text_content else ""
 
             return RAGSearchResult(
                 document_id=str(payload.get("content_id", f"vec_{index}")),
                 title=payload.get("title", "Untitled Document"),
-                content=payload.get("content", ""),
+                content=content_preview,
                 relevance_score=float(score),
                 url=payload.get("url"),
                 last_updated=None,
@@ -334,7 +354,8 @@ class RAGSearchService:
                     "content_type": payload.get("content_type"),
                     "date": payload.get("date"),
                     "project_id": payload.get("project_id"),
-                    "organization_id": payload.get("organization_id")
+                    "organization_id": payload.get("organization_id"),
+                    "full_text_length": len(text_content) if text_content else 0
                 }
             )
         except Exception as e:
@@ -404,7 +425,7 @@ class RAGSearchService:
 
 # Global service instance
 rag_search_service = RAGSearchService(
-    timeout=2.0,
+    timeout=5.0,  # 5-second total budget (2s vector search + 3s LLM)
     max_results=5,
     score_threshold=0.3,
     use_mrl_search=True

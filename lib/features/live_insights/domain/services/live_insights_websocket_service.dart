@@ -164,6 +164,7 @@ class LiveInsightsWebSocketService {
           break;
 
         case 'ANSWER_DETECTED_ENRICHED':
+        case 'RAG_RESULT_ENRICHED':
           _handleQuestionUpdate(data);
           break;
 

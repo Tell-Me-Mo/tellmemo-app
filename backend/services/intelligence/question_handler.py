@@ -573,6 +573,26 @@ class QuestionHandler:
                             f"Tier 1: Persisted {num_sources} RAG results to database "
                             f"for question {question_id}"
                         )
+
+                        # ====================================================================
+                        # PHASE 3: Broadcast enriched event with full question object
+                        # ====================================================================
+                        # After DB persistence, send the complete question data to frontend
+                        # This includes tier results, status, answer_source, etc.
+                        await db_session.refresh(question)
+                        question_dict = question.to_dict()
+
+                        enriched_event = {
+                            "type": "RAG_RESULT_ENRICHED",
+                            "data": question_dict,
+                            "timestamp": datetime.utcnow().isoformat() + "Z"
+                        }
+
+                        await self._broadcast_event(session_id, enriched_event)
+                        logger.debug(
+                            f"Tier 1: Broadcasted enriched event with full question data "
+                            f"for question {question_id}"
+                        )
                     else:
                         logger.error(
                             f"Tier 1: Question {question_id} not found in database - "

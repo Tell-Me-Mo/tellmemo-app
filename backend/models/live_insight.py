@@ -234,21 +234,45 @@ class LiveMeetingInsight(Base):
                     logger.info(f"[to_dict] Processing tier_type={tier_type}, tier_data={tier_data}")
                     # Extract answer text from tier data
                     if isinstance(tier_data, dict):
-                        content = tier_data.get("answer", tier_data.get("content", ""))
-                        tier_confidence = tier_data.get("confidence", 0.85)
-                        source = tier_data.get("source", tier_type)
-                        timestamp = tier_data.get("timestamp", datetime.utcnow().isoformat())
+                        # For RAG tier, sources is a list of documents with content
+                        # For other tiers, look for answer or content field directly
+                        if tier_type == "rag" and "sources" in tier_data:
+                            sources = tier_data.get("sources", [])
+                            if sources and isinstance(sources, list) and len(sources) > 0:
+                                # Create a TierResult for each source document
+                                for idx, source_doc in enumerate(sources):
+                                    if isinstance(source_doc, dict):
+                                        doc_content = source_doc.get("content", "")
+                                        doc_title = source_doc.get("title", "Untitled Document")
+                                        doc_score = source_doc.get("relevance_score", 0.0)
 
-                        tier_result = {
-                            "tierType": tier_type,
-                            "content": content,
-                            "confidence": tier_confidence,
-                            "source": source,
-                            "foundAt": timestamp,
-                            "metadata": tier_data
-                        }
-                        tier_results_list.append(tier_result)
-                        logger.info(f"[to_dict] Added tier_result: {tier_result}")
+                                        tier_result = {
+                                            "tierType": tier_type,
+                                            "content": doc_content,  # Document content preview
+                                            "confidence": doc_score,  # Individual document score
+                                            "source": doc_title,  # Document title
+                                            "foundAt": tier_data.get("timestamp", datetime.utcnow().isoformat()),
+                                            "metadata": source_doc  # Full source metadata
+                                        }
+                                        tier_results_list.append(tier_result)
+                                        logger.info(f"[to_dict] Added RAG tier_result {idx+1}/{len(sources)}: title={doc_title}, score={doc_score:.3f}, content_len={len(doc_content)}")
+                        else:
+                            # Non-RAG tiers or fallback: look for answer/content directly
+                            content = tier_data.get("answer", tier_data.get("content", ""))
+                            tier_confidence = tier_data.get("confidence", 0.85)
+                            source = tier_data.get("source", tier_type)
+                            timestamp = tier_data.get("timestamp", datetime.utcnow().isoformat())
+
+                            tier_result = {
+                                "tierType": tier_type,
+                                "content": content,
+                                "confidence": tier_confidence,
+                                "source": source,
+                                "foundAt": timestamp,
+                                "metadata": tier_data
+                            }
+                            tier_results_list.append(tier_result)
+                            logger.info(f"[to_dict] Added tier_result: {tier_result}")
             elif isinstance(tier_results_dict, list):
                 tier_results_list = tier_results_dict
                 logger.info(f"[to_dict] tier_results_dict is already a list: {tier_results_list}")
