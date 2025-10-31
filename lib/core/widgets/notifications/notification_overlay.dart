@@ -63,6 +63,7 @@ class _NotificationOverlayState extends ConsumerState<NotificationOverlay> {
     NotificationService service,
   ) {
     final overlays = <Widget>[];
+    final safeAreaPadding = MediaQuery.of(context).padding;
 
     for (final position in NotificationPosition.values) {
       final notifications = _positionedNotifications[position] ?? [];
@@ -70,8 +71,8 @@ class _NotificationOverlayState extends ConsumerState<NotificationOverlay> {
 
       overlays.add(
         Positioned(
-          top: _getTop(position),
-          bottom: _getBottom(position),
+          top: _getTop(position, safeAreaPadding),
+          bottom: _getBottom(position, safeAreaPadding),
           left: _getLeft(position),
           right: _getRight(position),
           child: Column(
@@ -97,23 +98,23 @@ class _NotificationOverlayState extends ConsumerState<NotificationOverlay> {
     return overlays;
   }
 
-  double? _getTop(NotificationPosition position) {
+  double? _getTop(NotificationPosition position, EdgeInsets safeAreaPadding) {
     switch (position) {
       case NotificationPosition.top:
       case NotificationPosition.topLeft:
       case NotificationPosition.topRight:
-        return 0;
+        return safeAreaPadding.top + 16; // Add safe area padding + 16px margin
       default:
         return null;
     }
   }
 
-  double? _getBottom(NotificationPosition position) {
+  double? _getBottom(NotificationPosition position, EdgeInsets safeAreaPadding) {
     switch (position) {
       case NotificationPosition.bottom:
       case NotificationPosition.bottomLeft:
       case NotificationPosition.bottomRight:
-        return 0;
+        return safeAreaPadding.bottom + 16; // Add safe area padding + 16px margin
       default:
         return null;
     }
