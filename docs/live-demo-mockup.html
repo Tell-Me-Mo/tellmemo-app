@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TellMeMo Live Demo - Real-Time Meeting Intelligence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Variables matching the main site */
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #111118;
+            --bg-tertiary: #1a1a24;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b0;
+            --text-tertiary: #707088;
+            --accent-primary: #6366F1;
+            --accent-secondary: #8B5CF6;
+            --border-color: #2a2a38;
+            --success-color: #22C55E;
+            --warning-color: #F59E0B;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            padding: 40px 20px;
+        }
+
+        .demo-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .demo-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .demo-header h1 {
+            font-size: clamp(32px, 5vw, 48px);
+            font-weight: 700;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .demo-header p {
+            font-size: 18px;
+            color: var(--text-secondary);
+        }
+
+        /* App Mockup Container */
+        .app-mockup {
+            background: var(--bg-secondary);
+            border-radius: 24px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        /* App Header */
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .app-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .recording-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .recording-dot {
+            width: 8px;
+            height: 8px;
+            background: #EF4444;
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .ai-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border: 1px solid var(--accent-primary);
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--accent-primary);
+        }
+
+        /* App Content Grid */
+        .app-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0;
+        }
+
+        @media (min-width: 768px) {
+            .app-content {
+                grid-template-columns: 2fr 1fr;
+            }
+        }
+
+        /* Transcript Section */
+        .transcript-section {
+            padding: 24px;
+            border-right: 1px solid var(--border-color);
+            background: var(--bg-primary);
+            min-height: 500px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 20px;
+        }
+
+        .transcript-item {
+            margin-bottom: 20px;
+            padding: 16px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            border-left: 3px solid transparent;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideIn 0.4s ease-out forwards;
+        }
+
+        @keyframes slideIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .transcript-item.speaker-a {
+            border-left-color: #3B82F6;
+        }
+
+        .transcript-item.speaker-b {
+            border-left-color: #10B981;
+        }
+
+        .transcript-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .speaker-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .transcript-time {
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        .transcript-text {
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        /* Insights Section */
+        .insights-section {
+            padding: 24px;
+            background: var(--bg-secondary);
+            overflow-y: auto;
+            max-height: 600px;
+        }
+
+        .insights-group {
+            margin-bottom: 32px;
+        }
+
+        .insights-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .insights-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .insights-icon {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Question Card */
+        .question-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            opacity: 0;
+            transform: translateX(20px);
+            animation: slideInRight 0.5s ease-out forwards;
+        }
+
+        @keyframes slideInRight {
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .question-text {
+            font-weight: 500;
+            font-size: 14px;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .answer-item {
+            background: rgba(99, 102, 241, 0.05);
+            border-left: 3px solid var(--accent-primary);
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 8px;
+            opacity: 0;
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        .answer-source {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--accent-primary);
+            margin-bottom: 6px;
+        }
+
+        .answer-text {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .answer-link {
+            font-size: 12px;
+            color: var(--accent-primary);
+            text-decoration: none;
+            margin-top: 6px;
+            display: inline-block;
+        }
+
+        .answer-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Action Card */
+        .action-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            opacity: 0;
+            transform: translateX(20px);
+            animation: slideInRight 0.5s ease-out forwards;
+        }
+
+        .action-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .action-description {
+            font-weight: 500;
+            font-size: 14px;
+            color: var(--text-primary);
+            flex: 1;
+        }
+
+        .completeness-badge {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .completeness-badge.complete {
+            background: rgba(34, 197, 94, 0.1);
+            color: var(--success-color);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .completeness-badge.partial {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning-color);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .action-details {
+            display: flex;
+            gap: 16px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .action-detail {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Searching State */
+        .searching-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px;
+            background: rgba(99, 102, 241, 0.05);
+            border-radius: 8px;
+            margin-top: 8px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            opacity: 0;
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+
+        .searching-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .searching-dots span {
+            width: 4px;
+            height: 4px;
+            background: var(--accent-primary);
+            border-radius: 50%;
+            animation: bounce 1.4s ease-in-out infinite;
+        }
+
+        .searching-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .searching-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-8px); }
+        }
+
+        /* Responsive */
+        @media (max-width: 767px) {
+            .transcript-section {
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+
+            .app-header {
+                flex-direction: column;
+                gap: 12px;
+                align-items: flex-start;
+            }
+        }
+
+        /* Control Button */
+        .demo-controls {
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .replay-button {
+            background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+            color: white;
+            padding: 14px 32px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .replay-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <div class="demo-header">
+            <h1>See TellMeMo in Action</h1>
+            <p>Watch how questions get answered automatically during a real meeting</p>
+        </div>
+
+        <div class="app-mockup">
+            <!-- App Header -->
+            <div class="app-header">
+                <div class="app-title">
+                    <svg width="24" height="24" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#6366F1"/>
+                                <stop offset="100%" stop-color="#8B5CF6"/>
+                            </linearGradient>
+                        </defs>
+                        <circle cx="100" cy="100" r="80" fill="url(#gradient)"/>
+                        <circle cx="100" cy="100" r="15" fill="white"/>
+                        <ellipse cx="100" cy="100" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6"/>
+                    </svg>
+                    <span>Q4 Planning Meeting</span>
+                </div>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                    <div class="recording-badge">
+                        <div class="recording-dot"></div>
+                        <span>Recording</span>
+                    </div>
+                    <div class="ai-toggle">
+                        ✨ AI Assistant ON
+                    </div>
+                </div>
+            </div>
+
+            <!-- App Content -->
+            <div class="app-content">
+                <!-- Transcript Section -->
+                <div class="transcript-section">
+                    <div class="section-title">🎤 Live Transcript</div>
+                    <div id="transcript-container"></div>
+                </div>
+
+                <!-- Insights Section -->
+                <div class="insights-section">
+                    <!-- Questions -->
+                    <div class="insights-group">
+                        <div class="insights-header">
+                            <svg class="insights-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                <path d="M9 10h6"/>
+                                <path d="M12 7v6"/>
+                            </svg>
+                            <span class="section-title" style="margin: 0;">Questions</span>
+                        </div>
+                        <div id="questions-container"></div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="insights-group">
+                        <div class="insights-header">
+                            <svg class="insights-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
+                                <path d="M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                            </svg>
+                            <span class="section-title" style="margin: 0;">Actions</span>
+                        </div>
+                        <div id="actions-container"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="demo-controls">
+            <button class="replay-button" onclick="replayDemo()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                    <path d="M21 3v5h-5"/>
+                    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                    <path d="M3 21v-5h5"/>
+                </svg>
+                Replay Demo
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Meeting scenario data
+        const meetingScenario = [
+            {
+                type: 'transcript',
+                delay: 0,
+                speaker: 'Sarah Chen',
+                speakerClass: 'speaker-a',
+                time: '10:15',
+                text: 'Good morning everyone. Let\'s start with our Q4 infrastructure planning. We need to finalize the budget today.'
+            },
+            {
+                type: 'transcript',
+                delay: 3000,
+                speaker: 'Michael Torres',
+                speakerClass: 'speaker-b',
+                time: '10:16',
+                text: 'What\'s our total infrastructure budget for Q4? I want to make sure we have enough for the cloud migration.'
+            },
+            {
+                type: 'question',
+                delay: 3500,
+                id: 'q1',
+                question: 'What\'s our total infrastructure budget for Q4?',
+                answers: [
+                    {
+                        delay: 1000,
+                        source: '📚 From Documents',
+                        text: 'Q4 infrastructure budget is $450,000, allocated as: Cloud Services ($200k), Hardware ($150k), Security ($100k)',
+                        link: 'Q4_Budget_Plan.pdf'
+                    }
+                ]
+            },
+            {
+                type: 'transcript',
+                delay: 7000,
+                speaker: 'Sarah Chen',
+                speakerClass: 'speaker-a',
+                time: '10:17',
+                text: 'Perfect! According to our approved budget, we have $450,000 for Q4 infrastructure. That includes $200k for cloud services.'
+            },
+            {
+                type: 'transcript',
+                delay: 10000,
+                speaker: 'Michael Torres',
+                speakerClass: 'speaker-b',
+                time: '10:18',
+                text: 'Great. And what about the cloud migration timeline? When are we planning to move to AWS?'
+            },
+            {
+                type: 'question',
+                delay: 10500,
+                id: 'q2',
+                question: 'When are we planning to move to AWS?',
+                answers: [
+                    {
+                        delay: 1200,
+                        source: '💬 Earlier in Meeting',
+                        text: 'Cloud migration timeline was mentioned in last week\'s meeting: Phase 1 starts November 1st, full migration by December 15th.',
+                        link: 'Jump to 10:15 in previous meeting'
+                    }
+                ]
+            },
+            {
+                type: 'transcript',
+                delay: 14000,
+                speaker: 'Sarah Chen',
+                speakerClass: 'speaker-a',
+                time: '10:19',
+                text: 'We discussed this last week. Phase 1 begins November 1st, and we should complete the full migration by December 15th.'
+            },
+            {
+                type: 'transcript',
+                delay: 17000,
+                speaker: 'Michael Torres',
+                speakerClass: 'speaker-b',
+                time: '10:20',
+                text: 'Perfect. I\'ll update the migration timeline in our project tracker by Friday and share it with the team.'
+            },
+            {
+                type: 'action',
+                delay: 17500,
+                id: 'a1',
+                description: 'Update migration timeline in project tracker',
+                owner: 'Michael Torres',
+                deadline: 'Friday, Nov 3',
+                completeness: 'complete'
+            },
+            {
+                type: 'transcript',
+                delay: 20000,
+                speaker: 'Sarah Chen',
+                speakerClass: 'speaker-a',
+                time: '10:21',
+                text: 'Thanks Michael. Emma, can you prepare the security audit report for the new infrastructure?'
+            },
+            {
+                type: 'action',
+                delay: 20500,
+                id: 'a2',
+                description: 'Prepare security audit report for new infrastructure',
+                owner: 'Emma Rodriguez',
+                deadline: null,
+                completeness: 'partial'
+            }
+        ];
+
+        let animationTimeouts = [];
+
+        function startDemo() {
+            const transcriptContainer = document.getElementById('transcript-container');
+            const questionsContainer = document.getElementById('questions-container');
+            const actionsContainer = document.getElementById('actions-container');
+
+            meetingScenario.forEach((item) => {
+                const timeout = setTimeout(() => {
+                    if (item.type === 'transcript') {
+                        addTranscript(transcriptContainer, item);
+                    } else if (item.type === 'question') {
+                        addQuestion(questionsContainer, item);
+                    } else if (item.type === 'action') {
+                        addAction(actionsContainer, item);
+                    }
+                }, item.delay);
+                animationTimeouts.push(timeout);
+            });
+        }
+
+        function addTranscript(container, data) {
+            const item = document.createElement('div');
+            item.className = `transcript-item ${data.speakerClass}`;
+            item.innerHTML = `
+                <div class="transcript-header">
+                    <span class="speaker-name">${data.speaker}</span>
+                    <span class="transcript-time">${data.time}</span>
+                </div>
+                <div class="transcript-text">${data.text}</div>
+            `;
+            container.appendChild(item);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function addQuestion(container, data) {
+            const card = document.createElement('div');
+            card.className = 'question-card';
+            card.id = data.id;
+            card.innerHTML = `
+                <div class="question-text">"${data.question}"</div>
+                <div id="${data.id}-answers"></div>
+            `;
+            container.appendChild(card);
+
+            // Add searching indicator
+            const answersDiv = document.getElementById(`${data.id}-answers`);
+            const searchingIndicator = document.createElement('div');
+            searchingIndicator.className = 'searching-indicator';
+            searchingIndicator.innerHTML = `
+                <div class="searching-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <span>Searching documents and meeting context...</span>
+            `;
+            answersDiv.appendChild(searchingIndicator);
+
+            // Add answers
+            data.answers.forEach((answer) => {
+                const answerTimeout = setTimeout(() => {
+                    searchingIndicator.remove();
+                    const answerItem = document.createElement('div');
+                    answerItem.className = 'answer-item';
+                    answerItem.innerHTML = `
+                        <div class="answer-source">${answer.source}</div>
+                        <div class="answer-text">${answer.text}</div>
+                        <a href="#" class="answer-link">${answer.link} →</a>
+                    `;
+                    answersDiv.appendChild(answerItem);
+                }, answer.delay);
+                animationTimeouts.push(answerTimeout);
+            });
+        }
+
+        function addAction(container, data) {
+            const card = document.createElement('div');
+            card.className = 'action-card';
+            card.innerHTML = `
+                <div class="action-header">
+                    <div class="action-description">${data.description}</div>
+                    <div class="completeness-badge ${data.completeness}">${data.completeness === 'complete' ? 'Complete' : 'Partial'}</div>
+                </div>
+                <div class="action-details">
+                    ${data.owner ? `<div class="action-detail">👤 ${data.owner}</div>` : ''}
+                    ${data.deadline ? `<div class="action-detail">📅 ${data.deadline}</div>` : '<div class="action-detail" style="color: var(--warning-color);">⚠️ No deadline set</div>'}
+                </div>
+            `;
+            container.appendChild(card);
+        }
+
+        function replayDemo() {
+            // Clear existing content
+            document.getElementById('transcript-container').innerHTML = '';
+            document.getElementById('questions-container').innerHTML = '';
+            document.getElementById('actions-container').innerHTML = '';
+
+            // Clear all timeouts
+            animationTimeouts.forEach(timeout => clearTimeout(timeout));
+            animationTimeouts = [];
+
+            // Start demo again
+            startDemo();
+        }
+
+        // Start demo on page load
+        startDemo();
+    </script>
+</body>
+</html>
