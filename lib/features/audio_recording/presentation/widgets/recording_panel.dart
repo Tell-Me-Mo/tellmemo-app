@@ -1365,12 +1365,12 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
       );
     }
 
-    // If only one section is visible, show it without tabs
+    // If only one section is visible, show it without tabs (keep header since no tabs)
     if (!showQuestions) {
-      return _buildActionsSection(colorScheme, isMobile: true);
+      return _buildActionsSection(colorScheme, isMobile: true, showHeader: true);
     }
     if (!showActions) {
-      return _buildQuestionsSection(colorScheme, isMobile: true);
+      return _buildQuestionsSection(colorScheme, isMobile: true, showHeader: true);
     }
 
     // Both sections visible - show tabs
@@ -1406,8 +1406,8 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
           Expanded(
             child: TabBarView(
               children: [
-                _buildQuestionsSection(colorScheme, isMobile: true),
-                _buildActionsSection(colorScheme, isMobile: true),
+                _buildQuestionsSection(colorScheme, isMobile: true, showHeader: false),
+                _buildActionsSection(colorScheme, isMobile: true, showHeader: false),
               ],
             ),
           ),
@@ -1416,7 +1416,7 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
     );
   }
 
-  Widget _buildQuestionsSection(ColorScheme colorScheme, {required bool isMobile}) {
+  Widget _buildQuestionsSection(ColorScheme colorScheme, {required bool isMobile, bool showHeader = true}) {
     return Container(
       decoration: BoxDecoration(
         color: colorScheme.surface,
@@ -1428,24 +1428,26 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                const Icon(Icons.help_outline, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  'Questions (${_questions.length})',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+          // Header - only show if showHeader is true
+          if (showHeader) ...[
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const Icon(Icons.help_outline, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Questions (${_questions.length})',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          Divider(height: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+            Divider(height: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+          ],
 
           // Questions list
           Expanded(
@@ -1506,7 +1508,7 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
     );
   }
 
-  Widget _buildActionsSection(ColorScheme colorScheme, {required bool isMobile}) {
+  Widget _buildActionsSection(ColorScheme colorScheme, {required bool isMobile, bool showHeader = true}) {
     return Container(
       decoration: BoxDecoration(
         color: colorScheme.surface,
@@ -1518,24 +1520,26 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                const Icon(Icons.check_circle_outline, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  'Actions (${_actions.length})',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+          // Header - only show if showHeader is true
+          if (showHeader) ...[
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle_outline, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Actions (${_actions.length})',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          Divider(height: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+            Divider(height: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+          ],
 
           // Actions list
           Expanded(
