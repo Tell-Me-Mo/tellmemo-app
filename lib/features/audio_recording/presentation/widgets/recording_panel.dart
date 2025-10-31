@@ -184,7 +184,7 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
               timestamp: preservedTimestamp, // Preserve original question time
             );
 
-            debugPrint('[RecordingPanel] Updated question ${question.id}: preserved speaker="$preservedSpeaker", timestamp=${preservedTimestamp}');
+            debugPrint('[RecordingPanel] Updated question ${question.id}: preserved speaker="$preservedSpeaker", timestamp=$preservedTimestamp');
           } else {
             _questions.add(question);
             debugPrint('[RecordingPanel] Added new question ${question.id}');
@@ -606,6 +606,109 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
         : _titleController.text;
     final screenInfo = ScreenInfo.fromContext(context);
 
+    // Minimal single-row layout for mobile
+    if (screenInfo.isMobile) {
+      return Container(
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 12,
+          top: MediaQuery.of(context).padding.top + 8,
+          bottom: 8,
+        ),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          border: Border(
+            bottom: BorderSide(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+              width: 1,
+            ),
+          ),
+        ),
+        child: Row(
+          children: [
+            // Recording indicator dot
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: recordingState.state == RecordingState.paused
+                    ? colorScheme.onSurfaceVariant.withValues(alpha: 0.5)
+                    : Colors.red,
+              ),
+              child: recordingState.state == RecordingState.paused
+                  ? null
+                  : AnimatedOpacity(
+                      opacity: recordingState.state == RecordingState.recording ? 1.0 : 0.3,
+                      duration: const Duration(milliseconds: 500),
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ),
+            ),
+            const SizedBox(width: 8),
+            // Timer
+            Text(
+              _formatDuration(recordingState.duration),
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                fontFeatures: [const FontFeature.tabularFigures()],
+              ),
+            ),
+            const Spacer(),
+            // Pause/Resume button
+            IconButton.filled(
+              onPressed: recordingState.state == RecordingState.paused
+                  ? () => ref.read(recordingNotifierProvider.notifier).resumeRecording()
+                  : () => ref.read(recordingNotifierProvider.notifier).pauseRecording(),
+              icon: Icon(
+                recordingState.state == RecordingState.paused
+                    ? Icons.play_arrow
+                    : Icons.pause,
+                size: 18,
+              ),
+              tooltip: recordingState.state == RecordingState.paused ? 'Resume' : 'Pause',
+              style: IconButton.styleFrom(
+                backgroundColor: colorScheme.secondaryContainer,
+                foregroundColor: colorScheme.onSecondaryContainer,
+                minimumSize: const Size(36, 36),
+                padding: EdgeInsets.zero,
+              ),
+            ),
+            const SizedBox(width: 6),
+            // Stop button
+            IconButton.filled(
+              onPressed: () => ref.read(recordingNotifierProvider.notifier).stopRecording(),
+              icon: const Icon(Icons.stop, size: 18),
+              tooltip: 'Stop',
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.red.withValues(alpha: 0.15),
+                foregroundColor: Colors.red,
+                minimumSize: const Size(36, 36),
+                padding: EdgeInsets.zero,
+              ),
+            ),
+            const SizedBox(width: 6),
+            // Close/Cancel button
+            IconButton(
+              icon: const Icon(Icons.close, size: 20),
+              onPressed: _handleClose,
+              tooltip: 'Cancel',
+              style: IconButton.styleFrom(
+                foregroundColor: colorScheme.onSurfaceVariant,
+                minimumSize: const Size(36, 36),
+                padding: EdgeInsets.zero,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Original desktop/tablet layout
     return Container(
       padding: EdgeInsets.only(
         left: 20,
