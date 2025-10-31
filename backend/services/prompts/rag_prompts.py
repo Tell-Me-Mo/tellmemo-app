@@ -81,6 +81,38 @@ Instructions for Intelligent Response:
 Please provide your comprehensive answer:"""
 
 
+def get_live_insights_rag_prompt(question: str, context: str) -> str:
+    """
+    Generate prompt for live meeting insights RAG response.
+
+    Optimized for real-time answers during meetings:
+    - Concise and direct (no fluff)
+    - Fast to generate (minimal token usage)
+    - Focused on factual answers only
+
+    Args:
+        question: The question asked during the meeting
+        context: Retrieved document context
+
+    Returns:
+        Formatted prompt string for live insights RAG response
+    """
+    return f"""Answer this meeting question using the provided documents. Be direct and concise.
+
+Context from documents:
+{context}
+
+Question: {question}
+
+Instructions:
+- Answer in 1-2 sentences maximum
+- State only facts from the documents
+- If the answer isn't in the documents, say "Not found in documents"
+- No introductions, explanations, or markdown formatting
+
+Answer:"""
+
+
 def get_rag_system_prompt() -> str:
     """
     Get the system prompt for RAG operations.

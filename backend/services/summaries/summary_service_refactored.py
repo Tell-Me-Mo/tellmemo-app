@@ -1071,6 +1071,47 @@ class SummaryService:
         if model_override:
             logger.info(f"Using manual summary LLM override: provider={provider_override}, model={model}, max_tokens={max_tokens}")
 
+        # Select the appropriate provider client based on provider_override
+        if provider_override:
+            from services.llm.multi_llm_client import ClaudeProviderClient, OpenAIProviderClient, DeepSeekProviderClient
+
+            provider_lower = provider_override.lower()
+            provider_client = None
+
+            # Check both primary and secondary providers for the requested provider type
+            if provider_lower == "claude":
+                if isinstance(self.llm_client.primary_provider_client, ClaudeProviderClient):
+                    provider_client = self.llm_client.primary_provider_client
+                elif self.llm_client.secondary_provider_client and isinstance(self.llm_client.secondary_provider_client, ClaudeProviderClient):
+                    provider_client = self.llm_client.secondary_provider_client
+            elif provider_lower == "openai":
+                if isinstance(self.llm_client.primary_provider_client, OpenAIProviderClient):
+                    provider_client = self.llm_client.primary_provider_client
+                elif self.llm_client.secondary_provider_client and isinstance(self.llm_client.secondary_provider_client, OpenAIProviderClient):
+                    provider_client = self.llm_client.secondary_provider_client
+            elif provider_lower == "deepseek":
+                if isinstance(self.llm_client.primary_provider_client, DeepSeekProviderClient):
+                    provider_client = self.llm_client.primary_provider_client
+                elif self.llm_client.secondary_provider_client and isinstance(self.llm_client.secondary_provider_client, DeepSeekProviderClient):
+                    provider_client = self.llm_client.secondary_provider_client
+            else:
+                logger.warning(f"Unknown provider override '{provider_override}', using default")
+
+            # If we found a matching provider, use it directly
+            if provider_client:
+                logger.info(f"Using provider override '{provider_override}' for summary generation")
+                return await provider_client.create_message(
+                    prompt=prompt,
+                    model=model,
+                    max_tokens=max_tokens,
+                    temperature=self.temperature,
+                    system="You are a JSON API that ONLY returns valid JSON responses. Never ask questions or engage in conversation. Process the input and return the complete JSON summary immediately."
+                )
+            else:
+                logger.error(f"Provider override '{provider_override}' requested but not available in primary or secondary providers")
+                raise ValueError(f"Provider '{provider_override}' not available. Check your LLM provider configuration.")
+
+        # Default behavior - use MultiProviderLLMClient
         return await self.llm_client.create_message(
             prompt=prompt,
             model=model,

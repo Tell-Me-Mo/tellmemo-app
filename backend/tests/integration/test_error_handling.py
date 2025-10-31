@@ -10,6 +10,12 @@ Tests cover:
 - Vector DB error handling
 """
 
+import pytest
+
+
+# Apply mock_llm_client to all tests in this file
+pytestmark = pytest.mark.usefixtures("mock_llm_client")
+
 from httpx import AsyncClient
 from unittest.mock import patch, MagicMock
 from anthropic import APIError, APIConnectionError, RateLimitError

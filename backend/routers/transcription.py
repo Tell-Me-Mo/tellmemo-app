@@ -39,6 +39,8 @@ async def transcribe_audio(
     language: Optional[str] = Form("auto", description="Language code (e.g., 'en', 'es', 'fr') or 'auto' for automatic detection"),
     timestamp: Optional[str] = Form(None),
     use_ai_matching: bool = Form(False, description="Use AI to match to project if project_id is 'auto'"),
+    transcription_text: Optional[str] = Form(None, description="Pre-existing transcription text from live recording (skips audio transcription)"),
+    transcription_segments: Optional[str] = Form(None, description="JSON array of transcription segments with timing info"),
     db: AsyncSession = Depends(get_db),
     current_org: Organization = Depends(get_current_organization)
 ):
@@ -91,12 +93,15 @@ async def transcribe_audio(
             # Save original path for cleanup before converting to container path
             temp_file_path_for_cleanup = temp_file_path
 
-            # Convert to container path for RQ worker
-            # Worker always sees /app/uploads due to bind mount
-            if not temp_file_path.startswith("/app/"):
-                # Running on host - convert to container path
+            # Only convert to container path if RQ worker is in Docker
+            # Check if we're in a Docker environment by looking for /.dockerenv
+            is_docker = os.path.exists('/.dockerenv')
+
+            if is_docker and not temp_file_path.startswith("/app/"):
+                # Running on host FastAPI but worker is in Docker - convert to container path
                 temp_file_name = Path(temp_file_path).name
                 temp_file_path = f"/app/uploads/temp_audio/{temp_file_name}"
+            # If both FastAPI and RQ worker are on host, keep the local path as-is
 
             # Check file size
             if file_size > max_size_bytes:
@@ -159,6 +164,8 @@ async def transcribe_audio(
                 filename=audio_file.filename,
                 organization_id=str(current_org.id),  # Convert UUID to string for RQ serialization
                 use_ai_matching=use_ai_matching,
+                transcription_text=transcription_text,  # Pass pre-existing transcription if available
+                transcription_segments=transcription_segments,  # Pass segments if available
                 job_timeout='30m',  # 30 minute timeout for long transcriptions
                 result_ttl=3600,  # Keep result for 1 hour
                 failure_ttl=86400  # Keep failed jobs for 24 hours

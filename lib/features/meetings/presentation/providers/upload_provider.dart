@@ -291,6 +291,8 @@ class UploadContent extends _$UploadContent {
     Uint8List? fileBytes,
     required String fileName,
     bool useAiMatching = false,
+    String? transcriptionText,
+    String? transcriptionSegments,
   }) async {
     state = state.copyWith(isUploading: true, progress: 0.0, error: null);
 
@@ -334,6 +336,8 @@ class UploadContent extends _$UploadContent {
         meetingTitle: title,
         language: 'en', // Default to English, can be made configurable
         useAiMatching: useAiMatching,
+        transcriptionText: transcriptionText,
+        transcriptionSegments: transcriptionSegments,
       );
 
       // Extract job ID from response

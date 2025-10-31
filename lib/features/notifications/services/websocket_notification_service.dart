@@ -1,11 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:web_socket_channel/io.dart';
-import 'package:web_socket_channel/html.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/services/auth_service.dart';
 import '../data/models/notification_model.dart';
@@ -45,17 +42,10 @@ class WebSocketNotificationService {
       // Get the base URL from environment or configuration
       final wsUrl = _getWebSocketUrl(token);
 
-      // Create WebSocket channel based on platform
-      if (kIsWeb) {
-        _channel = HtmlWebSocketChannel.connect(wsUrl);
-      } else {
-        _channel = IOWebSocketChannel.connect(
-          wsUrl,
-          headers: {
-            'Authorization': 'Bearer $token',
-          },
-        );
-      }
+      // Create WebSocket channel (platform-appropriate implementation)
+      // Note: Token is passed in URL query parameter for both platforms
+      // as WebSocketChannel.connect doesn't support custom headers
+      _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
 
       _messageController = StreamController<WebSocketMessage>.broadcast();
 

@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 import sentry_sdk
 
 from config import get_settings, configure_logging
-from routers import health, projects, content, queries, admin, scheduler, activities, transcription, jobs, websocket_jobs, integrations, upload, portfolios, programs, hierarchy, hierarchy_summaries, content_availability, unified_summaries, risks_tasks, lessons_learned, auth, native_auth, organizations, invitations, websocket_notifications, support_tickets, websocket_tickets, conversations, notifications, email_preferences, email_admin
+from routers import health, projects, content, queries, admin, scheduler, activities, transcription, jobs, websocket_jobs, integrations, upload, portfolios, programs, hierarchy, hierarchy_summaries, content_availability, unified_summaries, risks_tasks, lessons_learned, auth, native_auth, organizations, invitations, websocket_notifications, support_tickets, websocket_tickets, conversations, notifications, email_preferences, email_admin, websocket_live_insights
 from utils.logger import get_logger
 from db.database import init_database, close_database
 from db.multi_tenant_vector_store import multi_tenant_vector_store
@@ -265,6 +265,7 @@ app.include_router(notifications.router)
 app.include_router(websocket_notifications.router, tags=["websocket"])
 app.include_router(support_tickets.router)
 app.include_router(websocket_tickets.router, tags=["websocket"])
+app.include_router(websocket_live_insights.router, tags=["websocket"])
 app.include_router(email_preferences.router)
 
 if settings.enable_reset_endpoint and settings.is_development:

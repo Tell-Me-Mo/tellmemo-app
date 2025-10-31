@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../projects/domain/entities/project.dart';
@@ -9,6 +10,14 @@ import 'recording_button.dart';
 import '../../../content/presentation/providers/processing_jobs_provider.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../core/utils/screen_info.dart';
+import '../../../live_insights/presentation/widgets/live_transcription_widget.dart';
+import '../../../live_insights/presentation/widgets/live_question_card.dart';
+import '../../../live_insights/presentation/widgets/live_action_card.dart';
+import '../../../live_insights/presentation/widgets/tier_settings_dialog.dart';
+import '../../../live_insights/data/models/transcript_model.dart';
+import '../../../live_insights/data/models/live_insight_model.dart';
+import '../../../live_insights/presentation/providers/live_insights_provider.dart';
+import '../../../live_insights/presentation/providers/tier_settings_provider.dart';
 
 enum ProjectSelectionMode { automatic, manual, specific }
 
@@ -37,6 +46,23 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
   late AnimationController _animationController;
   late Animation<Offset> _slideAnimation;
 
+  // Live transcription state
+  final List<TranscriptModel> _transcripts = [];
+  bool _transcriptionCollapsed = true; // Start collapsed by default
+  StreamSubscription<TranscriptSegment>? _transcriptionSubscription;
+
+  // Live insights state (questions and actions)
+  final List<LiveQuestion> _questions = [];
+  final List<LiveAction> _actions = [];
+  StreamSubscription<LiveQuestion>? _questionsSubscription;
+  StreamSubscription<LiveAction>? _actionsSubscription;
+
+  // Scroll controller for auto-scrolling to new questions
+  final ScrollController _questionsScrollController = ScrollController();
+
+  // Track if user has manually scrolled up (to avoid auto-scroll interruption)
+  bool _isUserScrolledUp = false;
+
   @override
   void initState() {
     super.initState();
@@ -61,13 +87,172 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
     ));
 
     _animationController.forward();
+
+    // Listen to scroll position to detect manual scrolling
+    _questionsScrollController.addListener(_handleScroll);
+  }
+
+  void _handleScroll() {
+    if (!_questionsScrollController.hasClients) return;
+
+    final position = _questionsScrollController.position;
+    final isAtBottom = position.pixels >= position.maxScrollExtent - 50; // 50px threshold
+
+    setState(() {
+      _isUserScrolledUp = !isAtBottom;
+    });
   }
 
   @override
   void dispose() {
     _animationController.dispose();
     _titleController.dispose();
+    _questionsScrollController.dispose();
+    _transcriptionSubscription?.cancel();
+    _questionsSubscription?.cancel();
+    _actionsSubscription?.cancel();
     super.dispose();
+  }
+
+  /// Convert TranscriptSegment from WebSocket to TranscriptModel for UI
+  TranscriptModel _convertSegmentToModel(TranscriptSegment segment) {
+    return TranscriptModel(
+      id: segment.id,
+      text: segment.text,
+      speaker: segment.speaker,
+      timestamp: segment.startTime,
+      state: segment.isFinal ? TranscriptionState.final_ : TranscriptionState.partial,
+      confidence: segment.confidence,
+      startMs: null,
+      endMs: null,
+    );
+  }
+
+  /// Subscribe to live insights streams (transcriptions, questions, actions)
+  void _subscribeToLiveInsights() {
+    final liveInsightsService = ref.read(liveInsightsWebSocketServiceProvider);
+
+    // Subscribe to transcriptions
+    _transcriptionSubscription?.cancel();
+    _transcriptionSubscription = liveInsightsService.transcriptionUpdates.listen(
+      (transcriptSegment) {
+        if (!mounted) return;
+
+        // Only show FINAL transcripts in UI (ignore partial for cleaner display)
+        if (!transcriptSegment.isFinal) {
+          return;
+        }
+
+        setState(() {
+          final transcriptModel = _convertSegmentToModel(transcriptSegment);
+
+          // Check if this transcript already exists (shouldn't happen with finals, but check anyway)
+          final index = _transcripts.indexWhere((t) => t.id == transcriptModel.id);
+          if (index != -1) {
+            // Update existing transcript
+            _transcripts[index] = transcriptModel;
+          } else {
+            // Add new final transcript
+            _transcripts.add(transcriptModel);
+          }
+        });
+      },
+      onError: (error) {
+        debugPrint('[RecordingPanel] Transcription stream error: $error');
+      },
+    );
+
+    // Subscribe to questions
+    _questionsSubscription?.cancel();
+    _questionsSubscription = liveInsightsService.questionUpdates.listen(
+      (question) {
+        if (!mounted) return;
+
+        setState(() {
+          final index = _questions.indexWhere((q) => q.id == question.id);
+
+          if (index != -1) {
+            // Update existing question - preserve text, speaker, and timestamp if incoming is empty/null/changed
+            final existingQuestion = _questions[index];
+            final preservedText = question.text.isEmpty ? existingQuestion.text : question.text;
+            final preservedSpeaker = question.speaker ?? existingQuestion.speaker;
+            final preservedTimestamp = existingQuestion.timestamp; // Always keep original timestamp
+
+            _questions[index] = question.copyWith(
+              text: preservedText,
+              speaker: preservedSpeaker,
+              timestamp: preservedTimestamp, // Preserve original question time
+            );
+
+            debugPrint('[RecordingPanel] Updated question ${question.id}: preserved speaker="$preservedSpeaker", timestamp=${preservedTimestamp}');
+          } else {
+            _questions.add(question);
+            debugPrint('[RecordingPanel] Added new question ${question.id}');
+          }
+
+          // Chat-like auto-scroll: only scroll if user is at bottom (hasn't scrolled up)
+          // This applies to both new questions AND updates to existing questions
+          final shouldAutoScroll = !_isUserScrolledUp;
+
+          if (shouldAutoScroll) {
+            // Schedule scroll after setState completes and ListView rebuilds
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              // Add a microtask to ensure the frame is fully complete
+              Future.microtask(() {
+                if (mounted && _questionsScrollController.hasClients) {
+                  try {
+                    _questionsScrollController.animateTo(
+                      _questionsScrollController.position.maxScrollExtent,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                    );
+                  } catch (e) {
+                    debugPrint('[RecordingPanel] Error scrolling to bottom: $e');
+                  }
+                }
+              });
+            });
+          }
+        });
+      },
+      onError: (error) {
+        debugPrint('[RecordingPanel] Questions stream error: $error');
+      },
+    );
+
+    // Subscribe to actions
+    _actionsSubscription?.cancel();
+    _actionsSubscription = liveInsightsService.actionUpdates.listen(
+      (action) {
+        if (!mounted) return;
+
+        setState(() {
+          final index = _actions.indexWhere((a) => a.id == action.id);
+          if (index != -1) {
+            _actions[index] = action;
+          } else {
+            _actions.add(action);
+          }
+        });
+      },
+      onError: (error) {
+        debugPrint('[RecordingPanel] Actions stream error: $error');
+      },
+    );
+
+    debugPrint('[RecordingPanel] Subscribed to live insights streams');
+  }
+
+  /// Unsubscribe from all live insights streams
+  void _unsubscribeFromLiveInsights() {
+    _transcriptionSubscription?.cancel();
+    _transcriptionSubscription = null;
+    _questionsSubscription?.cancel();
+    _questionsSubscription = null;
+    _actionsSubscription?.cancel();
+    _actionsSubscription = null;
+
+    debugPrint('[RecordingPanel] Unsubscribed from live insights streams');
   }
 
   Future<void> _handleClose() async {
@@ -185,14 +370,64 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final recordingState = ref.watch(recordingNotifierProvider);
+
+    // Listen for recording state changes to subscribe/unsubscribe from live insights
+    ref.listen<RecordingStateModel>(recordingNotifierProvider, (previous, next) {
+      final shouldBeSubscribed = next.aiAssistantEnabled &&
+          (next.state == RecordingState.recording || next.state == RecordingState.paused);
+
+      final wasSubscribed = previous != null &&
+          previous.aiAssistantEnabled &&
+          (previous.state == RecordingState.recording || previous.state == RecordingState.paused);
+
+      // Subscribe when AI Assistant starts with recording
+      if (shouldBeSubscribed && !wasSubscribed) {
+        debugPrint('[RecordingPanel] AI Assistant recording started - subscribing to live insights');
+        _subscribeToLiveInsights();
+      }
+
+      // Unsubscribe when recording stops or AI Assistant is disabled
+      if (!shouldBeSubscribed && wasSubscribed) {
+        debugPrint('[RecordingPanel] AI Assistant recording stopped - unsubscribing from live insights');
+        _unsubscribeFromLiveInsights();
+        // Clear the lists
+        setState(() {
+          _transcripts.clear();
+          _questions.clear();
+          _actions.clear();
+        });
+      }
+
+      // Auto-close panel when recording completes successfully
+      if (previous?.state == RecordingState.processing && next.state == RecordingState.idle) {
+        debugPrint('[RecordingPanel] Recording completed successfully - closing panel');
+        _handleClose();
+      }
+    });
+
     final screenInfo = ScreenInfo.fromContext(context);
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    final screenWidth = MediaQuery.of(context).size.width;
 
-    final panelWidth = screenInfo.isMobile
-        ? MediaQuery.of(context).size.width
-        : MediaQuery.of(context).size.width * 0.45;
-    final maxWidth = 600.0;
-    final actualWidth = panelWidth > maxWidth ? maxWidth : panelWidth;
+    // Responsive panel width based on AI Assistant state and recording status
+    final isRecordingActive = recordingState.state == RecordingState.recording ||
+        recordingState.state == RecordingState.paused;
+
+    double panelWidth;
+    if (screenInfo.isMobile) {
+      // Mobile: Always full width
+      panelWidth = screenWidth;
+    } else if (recordingState.aiAssistantEnabled && isRecordingActive) {
+      // Desktop with AI + Recording Active: 80% of screen width for spacious layout
+      panelWidth = screenWidth * 0.8;
+    } else {
+      // Desktop without AI or not recording: Narrow panel (original behavior)
+      panelWidth = screenWidth * 0.45;
+      const maxWidth = 600.0;
+      if (panelWidth > maxWidth) panelWidth = maxWidth;
+    }
+
+    final actualWidth = panelWidth;
 
     return Material(
       type: MaterialType.transparency,
@@ -212,15 +447,17 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
                   : const SizedBox.shrink();
             },
           ),
-          // Panel
+          // Panel with animated width
           Positioned(
             right: widget.rightOffset,
             top: 0,
             bottom: screenInfo.isMobile ? keyboardHeight : 0,
-            width: actualWidth,
             child: SlideTransition(
               position: _slideAnimation,
-              child: Container(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 400),
+                curve: Curves.easeInOutCubic,
+                width: actualWidth,
                 decoration: BoxDecoration(
                   color: colorScheme.surface,
                   boxShadow: [
@@ -233,90 +470,44 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
                 ),
                 child: Column(
                   children: [
-                    // Header
-                    Container(
-                      padding: EdgeInsets.only(
-                        left: 24,
-                        right: 16,
-                        top: MediaQuery.of(context).padding.top + 16,
-                        bottom: 16,
-                      ),
-                      decoration: BoxDecoration(
-                        color: colorScheme.surface,
-                        border: Border(
-                          bottom: BorderSide(
-                            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-                            width: 1,
-                          ),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: Colors.red.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.mic,
-                              size: 24,
-                              color: Colors.red,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Record Meeting',
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  widget.project != null
-                                      ? widget.project!.name
-                                      : 'Record and transcribe meeting',
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.close),
-                            onPressed: _handleClose,
-                            tooltip: 'Close',
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Content
+                    // Header - Show integrated compact header when AI Assistant is ON and recording
+                    (recordingState.aiAssistantEnabled &&
+                            (recordingState.state == RecordingState.recording ||
+                                recordingState.state == RecordingState.paused))
+                        ? _buildIntegratedCompactHeader(recordingState, theme, colorScheme)
+                        : _buildStandardHeader(theme, colorScheme),
+                    // Content - Conditional based on recording state
                     Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // Project Selection (if not specific project)
-                            if (widget.project == null) ...[
-                              _buildProjectSelection(),
-                              const SizedBox(height: 24),
-                            ],
-                            // Title Field
-                            _buildTitleField(),
-                            const SizedBox(height: 32),
-                            // Recording Button
-                            _buildRecordingSection(recordingState),
-                          ],
-                        ),
-                      ),
+                      child: (recordingState.aiAssistantEnabled &&
+                              (recordingState.state == RecordingState.recording ||
+                                  recordingState.state == RecordingState.paused))
+                          ? // AI Assistant content during recording (non-scrollable, fills space)
+                          Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: _buildAiAssistantContent(recordingState),
+                            )
+                          : // Standard recording setup (scrollable)
+                          SingleChildScrollView(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  // Project Selection (if not specific project)
+                                  if (widget.project == null) ...[
+                                    _buildProjectSelection(),
+                                    const SizedBox(height: 24),
+                                  ],
+                                  // Title Field
+                                  _buildTitleField(),
+                                  const SizedBox(height: 24),
+                                  // AI Assistant Toggle
+                                  _buildAiAssistantToggle(recordingState),
+                                  const SizedBox(height: 32),
+                                  // Recording Button
+                                  _buildRecordingSection(recordingState),
+                                ],
+                              ),
+                            ),
                     ),
                   ],
                 ),
@@ -326,6 +517,324 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
         ],
       ),
     );
+  }
+
+  Widget _buildStandardHeader(ThemeData theme, ColorScheme colorScheme) {
+    return Container(
+      padding: EdgeInsets.only(
+        left: 24,
+        right: 16,
+        top: MediaQuery.of(context).padding.top + 16,
+        bottom: 16,
+      ),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.red.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.mic,
+              size: 24,
+              color: Colors.red,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Record Meeting',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  widget.project != null
+                      ? widget.project!.name
+                      : 'Record and transcribe meeting',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          // Settings button for tier configuration
+          IconButton(
+            icon: const Icon(Icons.tune),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => const TierSettingsDialog(),
+              );
+            },
+            tooltip: 'Answer Discovery Settings',
+          ),
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: _handleClose,
+            tooltip: 'Close',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIntegratedCompactHeader(
+    RecordingStateModel recordingState,
+    ThemeData theme,
+    ColorScheme colorScheme,
+  ) {
+    final meetingTitle = _titleController.text.isEmpty
+        ? 'Untitled Meeting'
+        : _titleController.text;
+    final screenInfo = ScreenInfo.fromContext(context);
+
+    return Container(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 16,
+        top: MediaQuery.of(context).padding.top + 12,
+        bottom: 12,
+      ),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          // Recording indicator dot + Meeting info
+          Row(
+            children: [
+              // Animated recording dot
+              Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: recordingState.state == RecordingState.paused
+                      ? colorScheme.onSurfaceVariant.withValues(alpha: 0.5)
+                      : Colors.red,
+                ),
+                child: recordingState.state == RecordingState.paused
+                    ? null
+                    : AnimatedOpacity(
+                        opacity: recordingState.state == RecordingState.recording ? 1.0 : 0.3,
+                        duration: const Duration(milliseconds: 500),
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ),
+              ),
+              const SizedBox(width: 12),
+              // Meeting title + AI indicator
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    meetingTitle,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.auto_awesome,
+                        size: 12,
+                        color: colorScheme.primary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'AI Assistant',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          const SizedBox(width: 16),
+
+          // Timer
+          Text(
+            _formatDuration(recordingState.duration),
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              fontFeatures: [const FontFeature.tabularFigures()],
+            ),
+          ),
+
+          // Amplitude meter (compact) - only show on desktop/tablet
+          if (!screenInfo.isMobile) ...[
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildCompactAmplitudeMeter(recordingState, colorScheme),
+            ),
+            const SizedBox(width: 16),
+          ] else
+            const Spacer(),
+
+          // Recording controls
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Settings button (only visible when AI Assistant is enabled)
+              IconButton(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => const TierSettingsDialog(),
+                  );
+                },
+                icon: const Icon(Icons.tune, size: 18),
+                tooltip: 'Answer Discovery Settings',
+                style: IconButton.styleFrom(
+                  foregroundColor: colorScheme.onSurfaceVariant,
+                  minimumSize: const Size(32, 32),
+                  padding: EdgeInsets.zero,
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Pause/Resume button
+              IconButton.filled(
+                onPressed: recordingState.state == RecordingState.paused
+                    ? () => ref.read(recordingNotifierProvider.notifier).resumeRecording()
+                    : () => ref.read(recordingNotifierProvider.notifier).pauseRecording(),
+                icon: Icon(
+                  recordingState.state == RecordingState.paused
+                      ? Icons.play_arrow
+                      : Icons.pause,
+                  size: 18,
+                ),
+                tooltip: recordingState.state == RecordingState.paused ? 'Resume' : 'Pause',
+                style: IconButton.styleFrom(
+                  backgroundColor: colorScheme.secondaryContainer,
+                  foregroundColor: colorScheme.onSecondaryContainer,
+                  minimumSize: const Size(32, 32),
+                  padding: EdgeInsets.zero,
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Stop button
+              IconButton.filled(
+                onPressed: () => ref.read(recordingNotifierProvider.notifier).stopRecording(),
+                icon: const Icon(Icons.stop, size: 18),
+                tooltip: 'Stop',
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.red.withValues(alpha: 0.15),
+                  foregroundColor: Colors.red,
+                  minimumSize: const Size(32, 32),
+                  padding: EdgeInsets.zero,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(width: 8),
+
+          // Close button
+          IconButton(
+            icon: const Icon(Icons.close, size: 20),
+            onPressed: _handleClose,
+            tooltip: 'Close',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactAmplitudeMeter(
+    RecordingStateModel recordingState,
+    ColorScheme colorScheme,
+  ) {
+    // Normalize amplitude from dB (typically -60dB to 0dB) to 0.0-1.0 scale
+    // Same formula as used in recording_button.dart:528
+    double normalizedAmplitude = (recordingState.amplitude + 60) / 60;
+    normalizedAmplitude = normalizedAmplitude.clamp(0.0, 1.0);
+
+    return SizedBox(
+      height: 24,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: List.generate(40, (index) {
+          // Create varying bar heights based on amplitude
+          // Add some randomness for visual effect when recording
+          final baseHeight = normalizedAmplitude > 0.05
+              ? (normalizedAmplitude * 0.7) + (0.3 * ((index * 7) % 10) / 10)
+              : 0.1 + (0.05 * ((index * 3) % 5) / 5); // Minimal idle animation
+
+          final barHeight = (baseHeight * 20).clamp(2.0, 20.0);
+
+          return Container(
+            width: 2,
+            height: barHeight,
+            margin: const EdgeInsets.symmetric(horizontal: 1),
+            decoration: BoxDecoration(
+              color: normalizedAmplitude > 0.05
+                  ? _getAmplitudeColor(normalizedAmplitude, colorScheme)
+                  : colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(1),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Color _getAmplitudeColor(double amplitude, ColorScheme colorScheme) {
+    if (amplitude < 0.3) {
+      return colorScheme.primary.withValues(alpha: 0.5);
+    } else if (amplitude < 0.7) {
+      return colorScheme.primary;
+    } else {
+      return Colors.orange;
+    }
+  }
+
+  String _formatDuration(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    final seconds = duration.inSeconds.remainder(60);
+
+    if (hours > 0) {
+      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    }
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
   Widget _buildProjectSelection() {
@@ -596,6 +1105,512 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildAiAssistantToggle(RecordingStateModel recordingState) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: recordingState.aiAssistantEnabled
+            ? colorScheme.primaryContainer.withValues(alpha: 0.3)
+            : colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: recordingState.aiAssistantEnabled
+              ? colorScheme.primary.withValues(alpha: 0.5)
+              : colorScheme.outline.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.auto_awesome,
+            size: 20,
+            color: recordingState.aiAssistantEnabled
+                ? colorScheme.primary
+                : colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'AI Assistant',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: recordingState.aiAssistantEnabled
+                        ? colorScheme.primary
+                        : colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Live transcription, questions & actions',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: recordingState.aiAssistantEnabled,
+            onChanged: (_) {
+              ref.read(recordingNotifierProvider.notifier).toggleAiAssistant();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAiAssistantContent(RecordingStateModel recordingState) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // Determine layout based on screen size
+    final bool isDesktop = screenWidth >= 1024;
+    final bool isTablet = screenWidth >= 768 && screenWidth < 1024;
+    final bool isMobile = screenWidth < 768;
+
+    // AI Assistant content (Questions, Actions, Transcript)
+    // Header is now integrated at the top of the panel
+    return Container(
+            padding: EdgeInsets.all(isMobile ? 12 : 20),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // 2-column layout for Questions and Actions (desktop/tablet)
+                // Single column with tabs for mobile
+                Expanded(
+                  flex: 2,
+                  child: (isDesktop || isTablet)
+                      ? _buildTwoColumnLayout(colorScheme, isMobile: isMobile)
+                      : _buildMobileTabLayout(colorScheme),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Live Transcript at bottom (collapsible)
+                _buildLiveTranscriptSection(colorScheme, isMobile: isMobile),
+              ],
+            ),
+          );
+  }
+
+  Widget _buildTwoColumnLayout(ColorScheme colorScheme, {required bool isMobile}) {
+    final tierSettings = ref.watch(tierSettingsNotifierProvider).value;
+    final showQuestions = tierSettings?.showQuestionsSection ?? true;
+    final showActions = tierSettings?.showActionsSection ?? true;
+
+    // If both sections are hidden, show empty state
+    if (!showQuestions && !showActions) {
+      return _buildEmptyState(
+        icon: Icons.settings,
+        title: 'All sections hidden',
+        subtitle: 'Enable sections in settings to see live insights',
+      );
+    }
+
+    // If only one section is visible, show it full width
+    if (!showQuestions) {
+      return _buildActionsSection(colorScheme, isMobile: isMobile);
+    }
+    if (!showActions) {
+      return _buildQuestionsSection(colorScheme, isMobile: isMobile);
+    }
+
+    // Both sections visible - show two columns
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Questions column (left)
+        Expanded(
+          child: _buildQuestionsSection(colorScheme, isMobile: isMobile),
+        ),
+
+        const SizedBox(width: 16),
+
+        // Actions column (right)
+        Expanded(
+          child: _buildActionsSection(colorScheme, isMobile: isMobile),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMobileTabLayout(ColorScheme colorScheme) {
+    final tierSettings = ref.watch(tierSettingsNotifierProvider).value;
+    final showQuestions = tierSettings?.showQuestionsSection ?? true;
+    final showActions = tierSettings?.showActionsSection ?? true;
+
+    // If both sections are hidden, show empty state
+    if (!showQuestions && !showActions) {
+      return _buildEmptyState(
+        icon: Icons.settings,
+        title: 'All sections hidden',
+        subtitle: 'Enable sections in settings to see live insights',
+      );
+    }
+
+    // If only one section is visible, show it without tabs
+    if (!showQuestions) {
+      return _buildActionsSection(colorScheme, isMobile: true);
+    }
+    if (!showActions) {
+      return _buildQuestionsSection(colorScheme, isMobile: true);
+    }
+
+    // Both sections visible - show tabs
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          TabBar(
+            tabs: [
+              Tab(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.help_outline, size: 18),
+                    const SizedBox(width: 8),
+                    Text('Questions (${_questions.length})'),
+                  ],
+                ),
+              ),
+              Tab(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.check_circle_outline, size: 18),
+                    const SizedBox(width: 8),
+                    Text('Actions (${_actions.length})'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _buildQuestionsSection(colorScheme, isMobile: true),
+                _buildActionsSection(colorScheme, isMobile: true),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuestionsSection(ColorScheme colorScheme, {required bool isMobile}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const Icon(Icons.help_outline, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Questions (${_questions.length})',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Divider(height: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+
+          // Questions list
+          Expanded(
+            child: _questions.isEmpty
+                ? _buildEmptyState(
+                    icon: Icons.question_answer,
+                    title: 'Listening for questions...',
+                    subtitle: 'Questions detected in the conversation will appear here',
+                  )
+                : ListView.separated(
+                    controller: _questionsScrollController,
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _questions.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final question = _questions[index];
+                      final liveInsightsService = ref.read(liveInsightsWebSocketServiceProvider);
+
+                      return LiveQuestionCard(
+                        question: question,
+                        onMarkAnswered: () {
+                          liveInsightsService.markQuestionAsAnswered(question.id);
+                          // Update local state
+                          setState(() {
+                            final index = _questions.indexWhere((q) => q.id == question.id);
+                            if (index != -1) {
+                              _questions[index] = question.copyWith(
+                                status: InsightStatus.answered,
+                              );
+                            }
+                          });
+                        },
+                        onNeedsFollowUp: () {
+                          liveInsightsService.markQuestionNeedsFollowUp(question.id);
+                          // Update local state
+                          setState(() {
+                            final index = _questions.indexWhere((q) => q.id == question.id);
+                            if (index != -1) {
+                              _questions[index] = question.copyWith(
+                                status: InsightStatus.monitoring,
+                              );
+                            }
+                          });
+                        },
+                        onDismiss: () async {
+                          await liveInsightsService.dismissQuestion(question.id);
+                          // Remove from local state
+                          setState(() {
+                            _questions.removeWhere((q) => q.id == question.id);
+                          });
+                        },
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionsSection(ColorScheme colorScheme, {required bool isMobile}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle_outline, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Actions (${_actions.length})',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Divider(height: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+
+          // Actions list
+          Expanded(
+            child: _actions.isEmpty
+                ? _buildEmptyState(
+                    icon: Icons.task_alt,
+                    title: 'Tracking actions...',
+                    subtitle: 'Action items mentioned will appear here',
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _actions.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final action = _actions[index];
+                      final liveInsightsService = ref.read(liveInsightsWebSocketServiceProvider);
+
+                      return LiveActionCard(
+                        action: action,
+                        onAssignOwner: (owner) {
+                          // Call assignAction with current deadline (if any)
+                          liveInsightsService.assignAction(
+                            action.id,
+                            owner,
+                            action.deadline,
+                          );
+                          // Update local state
+                          setState(() {
+                            final index = _actions.indexWhere((a) => a.id == action.id);
+                            if (index != -1) {
+                              _actions[index] = action.copyWith(owner: owner);
+                            }
+                          });
+                        },
+                        onSetDeadline: (deadline) {
+                          // Call assignAction with owner and new deadline
+                          liveInsightsService.assignAction(
+                            action.id,
+                            action.owner ?? '',
+                            deadline,
+                          );
+                          // Update local state
+                          setState(() {
+                            final index = _actions.indexWhere((a) => a.id == action.id);
+                            if (index != -1) {
+                              _actions[index] = action.copyWith(deadline: deadline);
+                            }
+                          });
+                        },
+                        onMarkComplete: () {
+                          liveInsightsService.markActionComplete(action.id);
+                          // Update local state
+                          setState(() {
+                            final index = _actions.indexWhere((a) => a.id == action.id);
+                            if (index != -1) {
+                              _actions[index] = action.copyWith(
+                                status: InsightStatus.complete,
+                              );
+                            }
+                          });
+                        },
+                        onDismiss: () async {
+                          await liveInsightsService.dismissAction(action.id);
+                          // Remove from local state
+                          setState(() {
+                            _actions.removeWhere((a) => a.id == action.id);
+                          });
+                        },
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLiveTranscriptSection(ColorScheme colorScheme, {required bool isMobile}) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      height: _transcriptionCollapsed ? 56 : (isMobile ? 150 : 200),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        children: [
+          // Header with collapse button
+          InkWell(
+            onTap: () {
+              setState(() {
+                _transcriptionCollapsed = !_transcriptionCollapsed;
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  const Icon(Icons.mic, size: 20),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Live Transcript',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    _transcriptionCollapsed
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (!_transcriptionCollapsed) ...[
+            Divider(height: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+            Expanded(
+              child: LiveTranscriptionWidget(
+                transcripts: _transcripts,
+                isCollapsed: _transcriptionCollapsed,
+                onToggleCollapse: () {
+                  setState(() {
+                    _transcriptionCollapsed = !_transcriptionCollapsed;
+                  });
+                },
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 48,
+              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 14,
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 

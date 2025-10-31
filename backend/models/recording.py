@@ -44,6 +44,7 @@ class Recording(Base):
     # Note: Project relationship temporarily disabled until recordings table is created
     # project = relationship("Project", back_populates="recordings")
     transcripts = relationship("RecordingTranscript", back_populates="recording", cascade="all, delete-orphan")
+    live_insights = relationship("LiveMeetingInsight", back_populates="recording", cascade="all, delete-orphan")
     
     def to_dict(self):
         """Convert to dictionary."""

@@ -310,6 +310,20 @@ async def test_user_token(test_user: User) -> str:
 
 
 @pytest.fixture
+async def ws_token(test_user_token: str) -> str:
+    """
+    Alias for test_user_token for WebSocket tests.
+
+    Args:
+        test_user_token: Valid JWT access token
+
+    Returns:
+        Valid JWT access token for WebSocket authentication
+    """
+    return test_user_token
+
+
+@pytest.fixture
 async def test_user_refresh_token(test_user: User) -> str:
     """
     Create a valid refresh token for the test user.
@@ -579,13 +593,22 @@ async def test_org_2(db_session: AsyncSession, test_user_2: User) -> Organizatio
     return org
 
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(scope="function", autouse=False)
 def mock_llm_client():
     """
     Mock the LLM client to prevent real API calls during tests.
 
-    This fixture automatically mocks the MultiProviderLLMClient for all tests,
-    preventing accidental calls to Anthropic or OpenAI APIs.
+    This fixture mocks the MultiProviderLLMClient for tests that don't need
+    to test provider selection logic. Use this for tests focused on other
+    functionality (API endpoints, data validation, etc.).
+
+    Usage:
+        @pytest.mark.usefixtures("mock_llm_client")
+        class TestSomething:
+            pass
+
+    For integration tests that need to test provider selection, DO NOT use
+    this fixture. Instead, mock only the HTTP/API layer in your test.
     """
     async def mock_create_message(**kwargs):
         """Return different mock responses based on the system prompt or prompt content."""

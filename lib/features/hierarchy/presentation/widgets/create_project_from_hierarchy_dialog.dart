@@ -116,39 +116,28 @@ class _CreateProjectDialogFromHierarchyState extends ConsumerState<CreateProject
   }
 
   Widget _buildProgramSection(WidgetRef ref, ColorScheme colorScheme, List<dynamic> programs) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Program (Optional)',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w500,
-          ),
+    return _StyledDropdownField(
+      value: _selectedProgramId,
+      label: 'Program (Optional)',
+      hint: 'No Program',
+      icon: Icons.category,
+      colorScheme: colorScheme,
+      enabled: !_isLoading,
+      items: [
+        const DropdownMenuItem<String>(
+          value: null,
+          child: Text('No Program'),
         ),
-        const SizedBox(height: _DialogConstants.tinyPadding),
-        _StyledDropdownField(
-          value: _selectedProgramId,
-          hint: 'No Program',
-          icon: Icons.category,
-          colorScheme: colorScheme,
-          enabled: !_isLoading,
-          items: [
-            const DropdownMenuItem<String>(
-              value: null,
-              child: Text('No Program'),
-            ),
-            ...programs.map((program) => DropdownMenuItem<String>(
-              value: program.id,
-              child: Text(program.name),
-            )),
-          ],
-          onChanged: (value) {
-            setState(() {
-              _selectedProgramId = value;
-            });
-          },
-        ),
+        ...programs.map((program) => DropdownMenuItem<String>(
+          value: program.id,
+          child: Text(program.name),
+        )),
       ],
+      onChanged: (value) {
+        setState(() {
+          _selectedProgramId = value;
+        });
+      },
     );
   }
 
@@ -191,17 +180,14 @@ class _CreateProjectDialogFromHierarchyState extends ConsumerState<CreateProject
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Material(
-      color: colorScheme.surface,
-      borderRadius: BorderRadius.circular(_DialogConstants.largeBorderRadius),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-            // Header
-            _DialogHeader(
-              colorScheme: colorScheme,
-              textTheme: textTheme,
-            ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Header
+        _DialogHeader(
+          colorScheme: colorScheme,
+          textTheme: textTheme,
+        ),
             // Content
             Flexible(
               child: SingleChildScrollView(
@@ -215,38 +201,27 @@ class _CreateProjectDialogFromHierarchyState extends ConsumerState<CreateProject
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Project Name Field with Label
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Project Name',
-                            style: textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: _DialogConstants.tinyPadding),
-                          _StyledFormField(
-                            controller: _nameController,
-                            hint: 'Enter project name',
-                            icon: Icons.folder,
-                            colorScheme: colorScheme,
-                            enabled: !_isLoading,
-                            autofocus: true,
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Please enter a project name';
-                              }
-                              if (value.trim().length < 3) {
-                                return 'Project name must be at least 3 characters';
-                              }
-                              if (value.trim().length > 100) {
-                                return 'Project name must be less than 100 characters';
-                              }
-                              return null;
-                            },
-                          ),
-                        ],
+                      // Project Name Field
+                      _StyledFormField(
+                        controller: _nameController,
+                        label: 'Project Name',
+                        hint: 'Enter project name',
+                        icon: Icons.folder,
+                        colorScheme: colorScheme,
+                        enabled: !_isLoading,
+                        autofocus: true,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter a project name';
+                          }
+                          if (value.trim().length < 3) {
+                            return 'Project name must be at least 3 characters';
+                          }
+                          if (value.trim().length > 100) {
+                            return 'Project name must be less than 100 characters';
+                          }
+                          return null;
+                        },
                       ),
                       const SizedBox(height: _DialogConstants.spacing),
 
@@ -262,43 +237,32 @@ class _CreateProjectDialogFromHierarchyState extends ConsumerState<CreateProject
                                   return const SizedBox.shrink();
                                 }
 
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Portfolio (Optional)',
-                                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                        fontWeight: FontWeight.w500,
-                                      ),
+                                return _StyledDropdownField(
+                                  value: _selectedPortfolioId,
+                                  label: 'Portfolio (Optional)',
+                                  hint: 'No Portfolio',
+                                  icon: Icons.business_center,
+                                  colorScheme: colorScheme,
+                                  enabled: !_isLoading,
+                                  items: [
+                                    const DropdownMenuItem<String>(
+                                      value: null,
+                                      child: Text('No Portfolio'),
                                     ),
-                                    const SizedBox(height: _DialogConstants.tinyPadding),
-                                    _StyledDropdownField(
-                                      value: _selectedPortfolioId,
-                                      hint: 'No Portfolio',
-                                      icon: Icons.business_center,
-                                      colorScheme: colorScheme,
-                                      enabled: !_isLoading,
-                                      items: [
-                                        const DropdownMenuItem<String>(
-                                          value: null,
-                                          child: Text('No Portfolio'),
-                                        ),
-                                        ...portfolios.map((portfolio) => DropdownMenuItem<String>(
-                                          value: portfolio.id,
-                                          child: Text(portfolio.name),
-                                        )),
-                                      ],
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _selectedPortfolioId = value;
-                                          // Reset program if portfolio changed
-                                          if (value != widget.preselectedPortfolioId) {
-                                            _selectedProgramId = null;
-                                          }
-                                        });
-                                      },
-                                    ),
+                                    ...portfolios.map((portfolio) => DropdownMenuItem<String>(
+                                      value: portfolio.id,
+                                      child: Text(portfolio.name),
+                                    )),
                                   ],
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _selectedPortfolioId = value;
+                                      // Reset program if portfolio changed
+                                      if (value != widget.preselectedPortfolioId) {
+                                        _selectedProgramId = null;
+                                      }
+                                    });
+                                  },
                                 );
                               },
                               loading: () => const LinearProgressIndicator(),
@@ -323,15 +287,9 @@ class _CreateProjectDialogFromHierarchyState extends ConsumerState<CreateProject
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const SizedBox(height: _DialogConstants.spacing),
-                                    Text(
-                                      'Program (Optional)',
-                                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    const SizedBox(height: _DialogConstants.tinyPadding),
                                     _StyledDropdownField(
                                       value: _selectedProgramId,
+                                      label: 'Program (Optional)',
                                       hint: selectedProgram.name,
                                       icon: Icons.category,
                                       colorScheme: colorScheme,
@@ -403,32 +361,21 @@ class _CreateProjectDialogFromHierarchyState extends ConsumerState<CreateProject
 
                       const SizedBox(height: _DialogConstants.spacing),
 
-                      // Description Field with Label
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Description (Optional)',
-                            style: textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: _DialogConstants.tinyPadding),
-                          _StyledFormField(
-                            controller: _descriptionController,
-                            hint: 'Enter project description',
-                            icon: Icons.description,
-                            colorScheme: colorScheme,
-                            enabled: !_isLoading,
-                            maxLines: 3,
-                            validator: (value) {
-                              if (value != null && value.trim().length > 500) {
-                                return 'Description must be less than 500 characters';
-                              }
-                              return null;
-                            },
-                          ),
-                        ],
+                      // Description Field
+                      _StyledFormField(
+                        controller: _descriptionController,
+                        label: 'Description (Optional)',
+                        hint: 'Enter project description',
+                        icon: Icons.description,
+                        colorScheme: colorScheme,
+                        enabled: !_isLoading,
+                        maxLines: 3,
+                        validator: (value) {
+                          if (value != null && value.trim().length > 500) {
+                            return 'Description must be less than 500 characters';
+                          }
+                          return null;
+                        },
                       ),
 
                       // Error Message
@@ -482,7 +429,6 @@ class _CreateProjectDialogFromHierarchyState extends ConsumerState<CreateProject
           onSubmit: _handleSubmit,
         ),
       ],
-      ),
     );
   }
 }
@@ -559,6 +505,7 @@ class _DialogHeader extends StatelessWidget {
 // Styled Form Field Component
 class _StyledFormField extends StatelessWidget {
   final TextEditingController controller;
+  final String? label;
   final String hint;
   final IconData icon;
   final ColorScheme colorScheme;
@@ -569,6 +516,7 @@ class _StyledFormField extends StatelessWidget {
 
   const _StyledFormField({
     required this.controller,
+    this.label,
     required this.hint,
     required this.icon,
     required this.colorScheme,
@@ -588,6 +536,7 @@ class _StyledFormField extends StatelessWidget {
       validator: validator,
       textCapitalization: maxLines == 1 ? TextCapitalization.words : TextCapitalization.sentences,
       decoration: InputDecoration(
+        labelText: label,
         hintText: hint,
         hintStyle: TextStyle(
           color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
@@ -645,6 +594,7 @@ class _StyledFormField extends StatelessWidget {
 // Styled Dropdown Field Component
 class _StyledDropdownField extends StatelessWidget {
   final String? value;
+  final String? label;
   final String hint;
   final IconData icon;
   final ColorScheme colorScheme;
@@ -654,6 +604,7 @@ class _StyledDropdownField extends StatelessWidget {
 
   const _StyledDropdownField({
     required this.value,
+    this.label,
     required this.hint,
     required this.icon,
     required this.colorScheme,
@@ -670,6 +621,7 @@ class _StyledDropdownField extends StatelessWidget {
       onChanged: enabled ? onChanged : null,
       isExpanded: true,
       decoration: InputDecoration(
+        labelText: label,
         hintText: hint,
         hintStyle: TextStyle(
           color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),

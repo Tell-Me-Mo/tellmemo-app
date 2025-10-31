@@ -4,7 +4,7 @@ Provides dynamic provider switching based on organization configuration.
 """
 
 import logging
-from typing import Optional, Dict, Any, List, Union
+from typing import Optional, Dict, Any, List, Union, AsyncGenerator
 from abc import ABC, abstractmethod
 import httpx
 from anthropic import AsyncAnthropic
@@ -69,6 +69,20 @@ class BaseProviderClient(ABC):
         """Check if the provider client is available."""
         pass
 
+    @abstractmethod
+    async def create_message_stream(
+        self,
+        prompt: str,
+        *,
+        model: str,
+        max_tokens: int,
+        temperature: float,
+        system: Optional[str] = None,
+        **kwargs
+    ) -> AsyncGenerator[Any, None]:
+        """Create a message with streaming response."""
+        pass
+
 
 class ClaudeProviderClient(BaseProviderClient):
     """Claude (Anthropic) provider client."""
@@ -125,7 +139,13 @@ class ClaudeProviderClient(BaseProviderClient):
         if system:
             api_params["system"] = system
 
-        api_params.update(kwargs)
+        # Filter out OpenAI-specific parameters that Claude doesn't support
+        # Also filter out common naming mistakes (e.g., system_prompt instead of system)
+        claude_incompatible_params = {
+            "response_format", "stream", "n", "logprobs", "top_logprobs", "system_prompt"
+        }
+        filtered_kwargs = {k: v for k, v in kwargs.items() if k not in claude_incompatible_params}
+        api_params.update(filtered_kwargs)
 
         response = await self.client.messages.create(**api_params)
 
@@ -144,17 +164,42 @@ class ClaudeProviderClient(BaseProviderClient):
         if not self.client:
             return None
 
+        # Filter out OpenAI-specific parameters that Claude doesn't support
+        # Also filter out common naming mistakes (e.g., system_prompt instead of system)
+        claude_incompatible_params = {
+            "response_format", "stream", "n", "logprobs", "top_logprobs", "system_prompt"
+        }
+        filtered_kwargs = {k: v for k, v in kwargs.items() if k not in claude_incompatible_params}
+
         api_params = {
             "model": model,
             "max_tokens": max_tokens,
             "temperature": temperature,
             "messages": messages,
-            **kwargs
+            **filtered_kwargs
         }
 
         response = await self.client.messages.create(**api_params)
 
         return response
+
+    async def create_message_stream(
+        self,
+        prompt: str,
+        *,
+        model: str,
+        max_tokens: int,
+        temperature: float,
+        system: Optional[str] = None,
+        **kwargs
+    ) -> AsyncGenerator[Any, None]:
+        """
+        Create a streaming message using Claude API.
+
+        Note: Not implemented yet. Streaming is currently only supported for OpenAI.
+        """
+        raise NotImplementedError("Streaming not yet implemented for Claude provider")
+        yield  # Make this an async generator
 
 
 class OpenAIProviderClient(BaseProviderClient):
@@ -291,6 +336,70 @@ class OpenAIProviderClient(BaseProviderClient):
 
         return WrappedResponse(response)
 
+    async def create_message_stream(
+        self,
+        prompt: str,
+        *,
+        model: str,
+        max_tokens: int,
+        temperature: float,
+        system: Optional[str] = None,
+        **kwargs
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """
+        Create a streaming message using OpenAI API.
+
+        Implements NDJSON parsing for real-time object extraction from GPT-5-mini.
+        Includes rate limit handling and stream interruption recovery.
+
+        Args:
+            prompt: User prompt text
+            model: Model name (e.g., "gpt-5-mini")
+            max_tokens: Maximum tokens to generate
+            temperature: Temperature setting (GPT-5 only supports 1.0)
+            system: Optional system prompt
+            **kwargs: Additional OpenAI API parameters
+
+        Yields:
+            Dict objects parsed from NDJSON stream
+
+        Note:
+            This method is specifically designed for GPT-5-mini streaming intelligence.
+            It delegates to the GPT5StreamingClient for NDJSON parsing and error handling.
+        """
+        if not self.client:
+            raise ValueError("OpenAI client not initialized")
+
+        # Import GPT5StreamingClient
+        from services.llm.gpt5_streaming import GPT5StreamingClient
+
+        # Create streaming client
+        streaming_client = GPT5StreamingClient(
+            openai_client=self.client,
+            model=model,
+            temperature=temperature if not model.startswith(("gpt-5", "o1")) else 1.0,
+            max_tokens=max_tokens,
+            timeout=kwargs.get("timeout", 30.0)
+        )
+
+        # Format context from kwargs
+        context = {
+            "recent_questions": kwargs.get("recent_questions", []),
+            "recent_actions": kwargs.get("recent_actions", []),
+            "session_id": kwargs.get("session_id", "unknown")
+        }
+
+        # System prompt (should be passed in kwargs or as parameter)
+        system_prompt = system or kwargs.get("system_prompt", "You are a meeting intelligence assistant.")
+
+        # Stream intelligence detections
+        async for obj in streaming_client.stream_intelligence(
+            transcript_buffer=prompt,  # Prompt is the transcript buffer
+            context=context,
+            system_prompt=system_prompt
+        ):
+            yield obj
+
 
 class DeepSeekProviderClient(BaseProviderClient):
     """DeepSeek provider client (OpenAI-compatible API)."""
@@ -426,6 +535,24 @@ class DeepSeekProviderClient(BaseProviderClient):
                     raise
 
         return WrappedResponse(response)
+
+    async def create_message_stream(
+        self,
+        prompt: str,
+        *,
+        model: str,
+        max_tokens: int,
+        temperature: float,
+        system: Optional[str] = None,
+        **kwargs
+    ) -> AsyncGenerator[Any, None]:
+        """
+        Create a streaming message using DeepSeek API.
+
+        Note: Not implemented yet. Streaming is currently only supported for OpenAI.
+        """
+        raise NotImplementedError("Streaming not yet implemented for DeepSeek provider")
+        yield  # Make this an async generator
 
 
 class ProviderCascade:
@@ -1217,6 +1344,74 @@ class MultiProviderLLMClient:
             )
 
         return response
+
+    async def create_message_stream(
+        self,
+        prompt: str,
+        *,
+        session: Optional[AsyncSession] = None,
+        organization_id: Optional[str] = None,
+        model: Optional[str] = None,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        system: Optional[str] = None,
+        **kwargs
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """
+        Create a streaming message using the active provider.
+
+        Note: Currently only supported for OpenAI provider. Will raise
+        NotImplementedError for Claude and DeepSeek providers.
+
+        Args:
+            prompt: Transcript buffer or user prompt
+            session: Database session (optional)
+            organization_id: Organization ID for provider selection
+            model: Model name (optional, uses config if not provided)
+            max_tokens: Maximum tokens (optional, uses config if not provided)
+            temperature: Temperature setting (optional, uses config if not provided)
+            system: System prompt (optional)
+            **kwargs: Additional parameters (recent_questions, recent_actions, session_id, etc.)
+
+        Yields:
+            Dict objects parsed from streaming response
+
+        Raises:
+            NotImplementedError: If provider doesn't support streaming
+        """
+        if session:
+            provider_client, ai_config = await self.get_active_provider(session, organization_id)
+        else:
+            # Use fallback provider when no session is available
+            provider_client = self.fallback_provider
+            ai_config = None
+
+        if not provider_client:
+            logger.warning("No LLM provider available for streaming")
+            raise ValueError("No LLM provider available")
+
+        # Use configuration dict or fallback values
+        if ai_config:
+            model = model or ai_config.get("model", self.fallback_model)
+            max_tokens = max_tokens or ai_config.get("max_tokens", self.fallback_max_tokens)
+            temperature = temperature or ai_config.get("temperature", self.fallback_temperature)
+        else:
+            model = model or self.fallback_model
+            max_tokens = max_tokens or self.fallback_max_tokens
+            temperature = temperature or self.fallback_temperature
+
+        # Stream from provider
+        logger.info(f"Starting streaming with provider: {type(provider_client).__name__}, model: {model}")
+
+        async for obj in provider_client.create_message_stream(
+            prompt=prompt,
+            model=model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            system=system,
+            **kwargs
+        ):
+            yield obj
 
     # Note: _update_usage_stats removed (AIConfiguration table dropped)
 

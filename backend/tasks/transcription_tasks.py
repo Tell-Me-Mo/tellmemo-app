@@ -39,7 +39,9 @@ def process_audio_transcription_task(
     file_size: int,
     filename: str,
     organization_id: str,  # UUID as string for RQ serialization
-    use_ai_matching: bool = False
+    use_ai_matching: bool = False,
+    transcription_text: Optional[str] = None,
+    transcription_segments: Optional[str] = None
 ):
     """
     RQ Task: Process audio transcription.
@@ -95,6 +97,8 @@ def process_audio_transcription_task(
                 filename=filename,
                 organization_id=org_uuid,
                 use_ai_matching=use_ai_matching,
+                transcription_text=transcription_text,
+                transcription_segments=transcription_segments,
                 rq_job=rq_job
             )
         )
@@ -175,6 +179,8 @@ async def _process_transcription_async(
     filename: str,
     organization_id: uuid.UUID,
     use_ai_matching: bool,
+    transcription_text: Optional[str],
+    transcription_segments: Optional[str],
     rq_job
 ) -> dict:
     """
@@ -246,105 +252,139 @@ async def _process_transcription_async(
                     'api_key': settings.replicate_api_key
                 }
 
-        # Progress callback with cancellation checking
-        async def transcription_progress(progress: float, description: str):
-            # Check for cancellation during transcription
-            checkpoint.check(f"during transcription at {progress:.1%}")
+        # Check if we already have transcription from live recording
+        if transcription_text:
+            logger.info("Using pre-existing transcription from live recording (skipping audio transcription)")
 
-            job_progress = 10.0 + (progress * 0.55)  # 10% to 65%
-
-            # Update RQ job meta
+            # Update progress
             if rq_job:
-                rq_job.meta['progress'] = job_progress
-                rq_job.meta['step'] = description
+                rq_job.meta['progress'] = 65.0
+                rq_job.meta['step'] = 'Using live transcription'
                 rq_job.save_meta()
-
-                # Publish via Redis for real-time updates
                 queue_config.publish_job_update(rq_job.id, {
                     'status': 'processing',
-                    'progress': job_progress,
-                    'step': description
+                    'progress': 65.0,
+                    'step': 'Using live transcription'
                 })
 
-        # Transcribe using selected service
-        logger.info(f"Starting transcription: {temp_file_path} using {service_type.capitalize()}")
+            # Parse segments if provided
+            import json
+            segments_list = []
+            if transcription_segments:
+                try:
+                    segments_list = json.loads(transcription_segments)
+                except json.JSONDecodeError:
+                    logger.warning("Failed to parse transcription_segments, using empty list")
 
-        transcription_language = None if language == "auto" else language
-
-        if service_type == 'salad':
-            if not service_config.get('api_key') or not service_config.get('organization_name'):
-                raise ValueError("Salad API key and organization name required")
-
-            salad_service = get_salad_service(
-                api_key=service_config['api_key'],
-                organization_name=service_config['organization_name']
-            )
-
-            if rq_job:
-                rq_job.meta['progress'] = 10.0
-                rq_job.meta['step'] = 'Connecting to Salad API...'
-                rq_job.save_meta()
-
-                # Publish via Redis
-                queue_config.publish_job_update(rq_job.id, {
-                    'status': 'processing',
-                    'progress': 10.0,
-                    'step': 'Connecting to Salad API...'
-                })
-
-            transcription_result = await salad_service.transcribe_audio_file(
-                audio_path=temp_file_path,
-                language=transcription_language,
-                progress_callback=transcription_progress
-            )
-
-        elif service_type == 'replicate':
-            if not service_config.get('api_key'):
-                raise ValueError("Replicate API key required")
-
-            replicate_service = get_replicate_service(
-                api_key=service_config['api_key']
-            )
-
-            if rq_job:
-                rq_job.meta['progress'] = 10.0
-                rq_job.meta['step'] = 'Connecting to Replicate API...'
-                rq_job.save_meta()
-
-                # Publish via Redis
-                queue_config.publish_job_update(rq_job.id, {
-                    'status': 'processing',
-                    'progress': 10.0,
-                    'step': 'Connecting to Replicate API...'
-                })
-
-            transcription_result = await replicate_service.transcribe_audio_file(
-                audio_path=temp_file_path,
-                language=transcription_language,
-                progress_callback=transcription_progress
-            )
-
+            # Create transcription result matching the expected format
+            transcription_result = {
+                'text': transcription_text,
+                'segments': segments_list,
+                'language': language if language != 'auto' else 'en',
+                'language_probability': 1.0,  # High confidence since it's from live transcription
+                'duration': None,  # Will be calculated from audio file if needed
+                'from_live_recording': True  # Flag to indicate source
+            }
         else:
-            # Local Whisper
-            whisper_service = get_whisper_service()
+            # Progress callback with cancellation checking
+            async def transcription_progress(progress: float, description: str):
+                # Check for cancellation during transcription
+                checkpoint.check(f"during transcription at {progress:.1%}")
 
-            if rq_job:
-                rq_job.meta['progress'] = 10.0
-                rq_job.meta['step'] = 'Model ready, starting transcription...'
-                rq_job.save_meta()
+                job_progress = 10.0 + (progress * 0.55)  # 10% to 65%
 
-                # Publish via Redis
-                queue_config.publish_job_update(rq_job.id, {
-                    'status': 'processing',
-                    'progress': 10.0,
-                    'step': 'Model ready, starting transcription...'
-                })
+                # Update RQ job meta
+                if rq_job:
+                    rq_job.meta['progress'] = job_progress
+                    rq_job.meta['step'] = description
+                    rq_job.save_meta()
 
-            transcription_result = await whisper_service.transcribe_audio_file(
-                audio_path=temp_file_path,
-                language=language,
-                progress_callback=transcription_progress
-            )
+                    # Publish via Redis for real-time updates
+                    queue_config.publish_job_update(rq_job.id, {
+                        'status': 'processing',
+                        'progress': job_progress,
+                        'step': description
+                    })
+
+            # Transcribe using selected service
+            logger.info(f"Starting transcription: {temp_file_path} using {service_type.capitalize()}")
+
+            transcription_language = None if language == "auto" else language
+
+            if service_type == 'salad':
+                if not service_config.get('api_key') or not service_config.get('organization_name'):
+                    raise ValueError("Salad API key and organization name required")
+
+                salad_service = get_salad_service(
+                    api_key=service_config['api_key'],
+                    organization_name=service_config['organization_name']
+                )
+
+                if rq_job:
+                    rq_job.meta['progress'] = 10.0
+                    rq_job.meta['step'] = 'Connecting to Salad API...'
+                    rq_job.save_meta()
+
+                    # Publish via Redis
+                    queue_config.publish_job_update(rq_job.id, {
+                        'status': 'processing',
+                        'progress': 10.0,
+                        'step': 'Connecting to Salad API...'
+                    })
+
+                transcription_result = await salad_service.transcribe_audio_file(
+                    audio_path=temp_file_path,
+                    language=transcription_language,
+                    progress_callback=transcription_progress
+                )
+
+            elif service_type == 'replicate':
+                if not service_config.get('api_key'):
+                    raise ValueError("Replicate API key required")
+
+                replicate_service = get_replicate_service(
+                    api_key=service_config['api_key']
+                )
+
+                if rq_job:
+                    rq_job.meta['progress'] = 10.0
+                    rq_job.meta['step'] = 'Connecting to Replicate API...'
+                    rq_job.save_meta()
+
+                    # Publish via Redis
+                    queue_config.publish_job_update(rq_job.id, {
+                        'status': 'processing',
+                        'progress': 10.0,
+                        'step': 'Connecting to Replicate API...'
+                    })
+
+                transcription_result = await replicate_service.transcribe_audio_file(
+                    audio_path=temp_file_path,
+                    language=transcription_language,
+                    progress_callback=transcription_progress
+                )
+
+            else:
+                # Local Whisper
+                whisper_service = get_whisper_service()
+
+                if rq_job:
+                    rq_job.meta['progress'] = 10.0
+                    rq_job.meta['step'] = 'Model ready, starting transcription...'
+                    rq_job.save_meta()
+
+                    # Publish via Redis
+                    queue_config.publish_job_update(rq_job.id, {
+                        'status': 'processing',
+                        'progress': 10.0,
+                        'step': 'Model ready, starting transcription...'
+                    })
+
+                transcription_result = await whisper_service.transcribe_audio_file(
+                    audio_path=temp_file_path,
+                    language=language,
+                    progress_callback=transcription_progress
+                )
 
         if not transcription_result:
             raise Exception("Transcription failed - no result returned")
