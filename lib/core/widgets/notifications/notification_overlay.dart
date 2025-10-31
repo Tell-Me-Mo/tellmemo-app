@@ -103,7 +103,8 @@ class _NotificationOverlayState extends ConsumerState<NotificationOverlay> {
       case NotificationPosition.top:
       case NotificationPosition.topLeft:
       case NotificationPosition.topRight:
-        return safeAreaPadding.top + 16; // Add safe area padding + 16px margin
+        // Position notifications directly below status bar/safe area with no margin
+        return safeAreaPadding.top;
       default:
         return null;
     }
