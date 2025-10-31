@@ -117,6 +117,21 @@ async def lifespan(app: FastAPI):
         logger.error("Please check your HF_TOKEN and network connectivity")
         raise RuntimeError(f"Cannot start application without embedding service: {e}")
 
+    # Initialize zero-shot validator (MANDATORY - app will not start without it)
+    if settings.enable_zeroshot_validation:
+        try:
+            from services.intelligence.zeroshot_validator_service import init_zeroshot_validator
+            await init_zeroshot_validator()
+            logger.info("✅ ModernBERT zero-shot classifier initialized successfully")
+        except Exception as e:
+            logger.error(f"❌ CRITICAL: Failed to initialize zero-shot validator: {e}")
+            logger.error("ModernBERT classifier is required for question/action filtering")
+            logger.error("Please check your HF_TOKEN and network connectivity")
+            raise RuntimeError(f"Cannot start application without zero-shot validator: {e}")
+    else:
+        logger.warning("⚠️ Zero-shot validation is DISABLED - false positive filtering will not work")
+        logger.warning("   Set ENABLE_ZEROSHOT_VALIDATION=true in .env to enable")
+
     # Initialize language detection service (optional but recommended)
     try:
         from services.llm.langdetect_service import language_detection_service

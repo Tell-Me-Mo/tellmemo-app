@@ -131,6 +131,12 @@ class Settings(BaseSettings):
     embedding_dimension: int = Field(default=768, env="EMBEDDING_DIMENSION")
     top_k_chunks: int = Field(default=5, env="TOP_K_CHUNKS")
 
+    # Zero-Shot Classification for Question/Action Validation (ModernBERT)
+    zeroshot_model: str = Field(default="MoritzLaurer/ModernBERT-base-zeroshot-v2.0", env="ZEROSHOT_MODEL")
+    zeroshot_question_threshold: float = Field(default=0.70, env="ZEROSHOT_QUESTION_THRESHOLD")  # 70% confidence for questions (good false positive filtering)
+    zeroshot_action_threshold: float = Field(default=0.60, env="ZEROSHOT_ACTION_THRESHOLD")  # 60% confidence for actions (more lenient)
+    enable_zeroshot_validation: bool = Field(default=True, env="ENABLE_ZEROSHOT_VALIDATION")  # Enable/disable validation
+
     # EmbeddingGemma MRL (Matryoshka) Configuration
     enable_mrl: bool = Field(default=True, env="ENABLE_MRL")
     mrl_dimensions: str = Field(default="128,256,512,768", env="MRL_DIMENSIONS")
