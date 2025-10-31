@@ -12,8 +12,11 @@ These metrics help answer questions like:
 - Are users getting value from RAG queries?
 """
 
+import logging
 from typing import Optional
 from opentelemetry import metrics
+
+logger = logging.getLogger(__name__)
 
 # Singleton business metrics instance
 _business_metrics_instance: Optional["BusinessMetrics"] = None
@@ -328,18 +331,24 @@ class BusinessMetrics:
 
     def record_user_session(self, user_id: str, duration_seconds: float):
         """Record a user session."""
-        self.user_sessions_total.add(1, {"user_id": user_id})
-        self.user_engagement_duration.record(duration_seconds, {"user_id": user_id})
+        try:
+            self.user_sessions_total.add(1, {"user_id": user_id})
+            self.user_engagement_duration.record(duration_seconds, {"user_id": user_id})
+        except Exception as e:
+            logger.error(f"Failed to record user session metrics for user {user_id}: {e}")
 
     def record_user_question(self, user_id: str, project_id: str, has_results: bool):
         """Record a user asking a question."""
-        attributes = {"user_id": user_id, "project_id": project_id}
-        self.user_questions_total.add(1, attributes)
+        try:
+            attributes = {"user_id": user_id, "project_id": project_id}
+            self.user_questions_total.add(1, attributes)
 
-        if has_results:
-            self.queries_with_results.add(1, attributes)
-        else:
-            self.queries_without_results.add(1, attributes)
+            if has_results:
+                self.queries_with_results.add(1, attributes)
+            else:
+                self.queries_without_results.add(1, attributes)
+        except Exception as e:
+            logger.error(f"Failed to record user question metrics: {e}")
 
     def record_meeting_processed(
         self,
@@ -350,23 +359,29 @@ class BusinessMetrics:
         success: bool = True,
     ):
         """Record a meeting being processed (transcribed + summarized)."""
-        attributes = {
-            "user_id": user_id,
-            "project_id": project_id,
-            "status": "success" if success else "failed",
-        }
+        try:
+            attributes = {
+                "user_id": user_id,
+                "project_id": project_id,
+                "status": "success" if success else "failed",
+            }
 
-        if success:
-            self.meetings_processed_total.add(1, attributes)
-            self.content_processing_time.record(duration_seconds, attributes)
-            self.content_size_total.add(content_size_bytes, attributes)
+            if success:
+                self.meetings_processed_total.add(1, attributes)
+                self.content_processing_time.record(duration_seconds, attributes)
+                self.content_size_total.add(content_size_bytes, attributes)
+        except Exception as e:
+            logger.error(f"Failed to record meeting processed metrics: {e}")
 
     def record_project_created(self, user_id: str, organization_id: Optional[str] = None):
         """Record a new project creation."""
-        attributes = {"user_id": user_id}
-        if organization_id:
-            attributes["organization_id"] = organization_id
-        self.user_projects_created.add(1, attributes)
+        try:
+            attributes = {"user_id": user_id}
+            if organization_id:
+                attributes["organization_id"] = organization_id
+            self.user_projects_created.add(1, attributes)
+        except Exception as e:
+            logger.error(f"Failed to record project creation metrics: {e}")
 
     def record_llm_cost(
         self,
@@ -376,98 +391,140 @@ class BusinessMetrics:
         user_id: Optional[str] = None,
     ):
         """Record LLM cost for cost tracking and optimization."""
-        attributes = {
-            "provider": provider,
-            "operation": operation_type,
-        }
+        try:
+            attributes = {
+                "provider": provider,
+                "operation": operation_type,
+            }
 
-        # Track total cost by provider
-        self.llm_provider_cost_breakdown.add(cost_cents, attributes)
-        self.monthly_llm_cost.add(cost_cents, {"provider": provider})
+            # Track total cost by provider
+            self.llm_provider_cost_breakdown.add(cost_cents, attributes)
+            self.monthly_llm_cost.add(cost_cents, {"provider": provider})
 
-        # Track per-operation cost
-        if operation_type == "query":
-            self.llm_cost_per_query.record(cost_cents, attributes)
+            # Track per-operation cost
+            if operation_type == "query":
+                self.llm_cost_per_query.record(cost_cents, attributes)
 
-        # Track per-user cost if user_id is available
-        if user_id:
-            self.llm_cost_per_user.record(cost_cents, {**attributes, "user_id": user_id})
+            # Track per-user cost if user_id is available
+            if user_id:
+                self.llm_cost_per_user.record(cost_cents, {**attributes, "user_id": user_id})
+        except Exception as e:
+            logger.error(f"Failed to record LLM cost metrics: {e}")
 
     def record_feature_usage(self, feature_name: str, user_id: str):
         """Record usage of a specific feature."""
-        self.feature_usage.add(1, {"feature": feature_name, "user_id": user_id})
+        try:
+            self.feature_usage.add(1, {"feature": feature_name, "user_id": user_id})
+        except Exception as e:
+            logger.error(f"Failed to record feature usage metrics: {e}")
 
     def record_user_feedback(self, rating: int, feature: str):
         """Record user feedback (1-5 stars or 1-10 score)."""
-        attributes = {"feature": feature, "rating_bucket": f"{rating}"}
-        self.user_feedback_received.add(1, attributes)
+        try:
+            attributes = {"feature": feature, "rating_bucket": f"{rating}"}
+            self.user_feedback_received.add(1, attributes)
+        except Exception as e:
+            logger.error(f"Failed to record user feedback metrics: {e}")
 
     def record_critical_error(self, error_type: str, endpoint: str):
         """Record a critical error that affects user experience."""
-        self.error_rate_critical.add(1, {"error_type": error_type, "endpoint": endpoint})
+        try:
+            self.error_rate_critical.add(1, {"error_type": error_type, "endpoint": endpoint})
+        except Exception as e:
+            logger.error(f"Failed to record critical error metrics: {e}")
 
     def record_onboarding_completed(self, user_id: str):
         """Record a user completing onboarding flow."""
-        self.user_onboarding_completed.add(1, {"user_id": user_id})
+        try:
+            self.user_onboarding_completed.add(1, {"user_id": user_id})
+        except Exception as e:
+            logger.error(f"Failed to record onboarding completion metrics: {e}")
 
     def update_active_users(self, count: int, time_window: str = "24h"):
         """Update the count of active users in a time window."""
-        self.active_users_daily.add(count, {"window": time_window})
+        try:
+            self.active_users_daily.add(count, {"window": time_window})
+        except Exception as e:
+            logger.error(f"Failed to update active users metrics: {e}")
 
     def record_system_availability(self, is_available: bool):
         """Record system availability status."""
-        self.system_availability.add(1 if is_available else 0)
+        try:
+            self.system_availability.add(1 if is_available else 0)
+        except Exception as e:
+            logger.error(f"Failed to record system availability metrics: {e}")
 
     # === ORGANIZATION-LEVEL TRACKING ===
 
     def record_org_query(self, organization_id: str, user_id: str, cost_cents: float = 0):
         """Record a query for organization-level tracking."""
-        attributes = {"organization_id": organization_id}
-        self.org_query_volume.add(1, attributes)
-        if cost_cents > 0:
-            self.org_llm_cost.add(cost_cents, attributes)
+        try:
+            attributes = {"organization_id": organization_id}
+            self.org_query_volume.add(1, attributes)
+            if cost_cents > 0:
+                self.org_llm_cost.add(cost_cents, attributes)
+        except Exception as e:
+            logger.error(f"Failed to record org query metrics: {e}")
 
     def record_org_content_processed(self, organization_id: str, content_size_bytes: int):
         """Record content processed for organization."""
-        self.org_content_volume.add(
-            content_size_bytes,
-            {"organization_id": organization_id}
-        )
+        try:
+            self.org_content_volume.add(
+                content_size_bytes,
+                {"organization_id": organization_id}
+            )
+        except Exception as e:
+            logger.error(f"Failed to record org content processed metrics: {e}")
 
     def update_org_active_users(self, organization_id: str, active_user_count: int):
         """Update active users for an organization."""
-        self.org_active_users.add(active_user_count, {"organization_id": organization_id})
+        try:
+            self.org_active_users.add(active_user_count, {"organization_id": organization_id})
+        except Exception as e:
+            logger.error(f"Failed to update org active users metrics: {e}")
 
     def record_org_seat_utilization(self, organization_id: str, utilization_percent: float):
         """Record seat utilization for an organization."""
-        self.org_seats_utilized.record(
-            utilization_percent,
-            {"organization_id": organization_id}
-        )
+        try:
+            self.org_seats_utilized.record(
+                utilization_percent,
+                {"organization_id": organization_id}
+            )
+        except Exception as e:
+            logger.error(f"Failed to record org seat utilization metrics: {e}")
 
     # === TIME-TO-VALUE TRACKING ===
 
     def record_time_to_first_query(self, user_id: str, seconds_since_signup: float, success: bool):
         """Record time from signup to first query."""
-        self.time_to_first_query.record(
-            seconds_since_signup,
-            {"user_id": user_id, "success": str(success).lower()}
-        )
-        self.first_query_success_rate.add(
-            1 if success else 0,
-            {"user_id": user_id}
-        )
+        try:
+            self.time_to_first_query.record(
+                seconds_since_signup,
+                {"user_id": user_id, "success": str(success).lower()}
+            )
+            self.first_query_success_rate.add(
+                1 if success else 0,
+                {"user_id": user_id}
+            )
+        except Exception as e:
+            logger.error(f"Failed to record time to first query metrics: {e}")
 
     def record_time_to_first_project(self, user_id: str, seconds_since_signup: float):
         """Record time from signup to first project creation."""
-        self.time_to_first_project.record(
-            seconds_since_signup,
-            {"user_id": user_id}
-        )
+        try:
+            self.time_to_first_project.record(
+                seconds_since_signup,
+                {"user_id": user_id}
+            )
+        except Exception as e:
+            logger.error(f"Failed to record time to first project metrics: {e}")
 
     def record_queries_until_success(self, user_id: str, query_count: int):
         """Record how many queries it took until first successful result."""
-        self.queries_until_success.record(query_count, {"user_id": user_id})
+        try:
+            self.queries_until_success.record(query_count, {"user_id": user_id})
+        except Exception as e:
+            logger.error(f"Failed to record queries until success metrics: {e}")
 
     # === CONTENT COVERAGE & QUALITY TRACKING ===
 
@@ -479,21 +536,27 @@ class BusinessMetrics:
         reason: str = "no_results"
     ):
         """Record a query that found no relevant content."""
-        self.content_coverage_gaps.add(
-            1,
-            {
-                "project_id": project_id,
-                "user_id": user_id,
-                "reason": reason  # "no_results", "low_relevance", "stale_content"
-            }
-        )
+        try:
+            self.content_coverage_gaps.add(
+                1,
+                {
+                    "project_id": project_id,
+                    "user_id": user_id,
+                    "reason": reason  # "no_results", "low_relevance", "stale_content"
+                }
+            )
+        except Exception as e:
+            logger.error(f"Failed to record content coverage gap metrics: {e}")
 
     def record_content_staleness(self, content_age_days: float, content_id: str):
         """Record the age of content being retrieved."""
-        self.content_staleness.record(
-            content_age_days,
-            {"content_type": "meeting"}  # Can track by type
-        )
+        try:
+            self.content_staleness.record(
+                content_age_days,
+                {"content_type": "meeting"}  # Can track by type
+            )
+        except Exception as e:
+            logger.error(f"Failed to record content staleness metrics: {e}")
 
     def record_low_relevance_result(
         self,
@@ -503,41 +566,56 @@ class BusinessMetrics:
         threshold: float = 0.3
     ):
         """Record queries with low-relevance results."""
-        if relevance_score < threshold:
-            self.low_relevance_results.add(
-                1,
-                {
-                    "project_id": project_id,
-                    "score_range": f"{int(relevance_score * 10)}/10"
-                }
-            )
+        try:
+            if relevance_score < threshold:
+                self.low_relevance_results.add(
+                    1,
+                    {
+                        "project_id": project_id,
+                        "score_range": f"{int(relevance_score * 10)}/10"
+                    }
+                )
+        except Exception as e:
+            logger.error(f"Failed to record low relevance result metrics: {e}")
 
     # === AT-RISK USER DETECTION ===
 
     def flag_engagement_decline(self, user_id: str, decline_percent: float):
         """Flag a user with declining engagement (churn risk)."""
-        self.user_engagement_decline.add(
-            1,
-            {
-                "user_id": user_id,
-                "decline_level": "high" if decline_percent > 50 else "medium"
-            }
-        )
+        try:
+            self.user_engagement_decline.add(
+                1,
+                {
+                    "user_id": user_id,
+                    "decline_level": "high" if decline_percent > 50 else "medium"
+                }
+            )
+        except Exception as e:
+            logger.error(f"Failed to flag engagement decline metrics: {e}")
 
     def update_inactive_users(self, count: int, days_inactive: int = 7):
         """Update count of inactive users (churn risk)."""
-        self.inactive_users.add(count, {"days_inactive": str(days_inactive)})
+        try:
+            self.inactive_users.add(count, {"days_inactive": str(days_inactive)})
+        except Exception as e:
+            logger.error(f"Failed to update inactive users metrics: {e}")
 
     def update_weekly_active_users(self, count: int):
         """Update weekly active users count."""
-        self.weekly_active_users.add(count, {"window": "7d"})
+        try:
+            self.weekly_active_users.add(count, {"window": "7d"})
+        except Exception as e:
+            logger.error(f"Failed to update weekly active users metrics: {e}")
 
     def record_user_activity_streak(self, user_id: str, consecutive_days: int):
         """Record user's activity streak (engagement indicator)."""
-        self.user_activity_streak.record(
-            consecutive_days,
-            {"user_id": user_id}
-        )
+        try:
+            self.user_activity_streak.record(
+                consecutive_days,
+                {"user_id": user_id}
+            )
+        except Exception as e:
+            logger.error(f"Failed to record user activity streak metrics: {e}")
 
     # === SLA COMPLIANCE TRACKING ===
 
@@ -549,31 +627,43 @@ class BusinessMetrics:
         success: bool = True
     ):
         """Record SLA compliance for operations."""
-        met_sla = response_time_ms <= sla_threshold_ms and success
+        try:
+            met_sla = response_time_ms <= sla_threshold_ms and success
 
-        if not met_sla:
-            self.sla_violations.add(
-                1,
-                {
-                    "operation": operation,
-                    "violation_type": "latency" if response_time_ms > sla_threshold_ms else "error"
-                }
-            )
+            if not met_sla:
+                self.sla_violations.add(
+                    1,
+                    {
+                        "operation": operation,
+                        "violation_type": "latency" if response_time_ms > sla_threshold_ms else "error"
+                    }
+                )
+        except Exception as e:
+            logger.error(f"Failed to record SLA compliance metrics: {e}")
 
     def update_sla_compliance_rate(self, compliance_percent: float, operation: str):
         """Update SLA compliance rate for an operation."""
-        self.sla_compliance_rate.record(
-            compliance_percent,
-            {"operation": operation}
-        )
+        try:
+            self.sla_compliance_rate.record(
+                compliance_percent,
+                {"operation": operation}
+            )
+        except Exception as e:
+            logger.error(f"Failed to update SLA compliance rate metrics: {e}")
 
     def update_error_budget(self, remaining_percent: float):
         """Update remaining error budget."""
-        self.error_budget_remaining.record(remaining_percent)
+        try:
+            self.error_budget_remaining.record(remaining_percent)
+        except Exception as e:
+            logger.error(f"Failed to update error budget metrics: {e}")
 
     def record_availability(self, availability_percent: float):
         """Record system availability percentage."""
-        self.availability_sla.record(availability_percent)
+        try:
+            self.availability_sla.record(availability_percent)
+        except Exception as e:
+            logger.error(f"Failed to record availability metrics: {e}")
 
 
 def get_business_metrics() -> BusinessMetrics:
