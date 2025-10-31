@@ -136,6 +136,7 @@
                             <a href="#use-cases">Common Use Cases</a>
                             <a href="#uploading-content">Uploading Content</a>
                             <a href="#querying">Querying with RAG</a>
+                            <a href="#live-meeting-intelligence">Live Meeting Intelligence</a>
                             <a href="#summaries">Generating Summaries</a>
                             <a href="#email-digests">Email Digests</a>
                         </div>
@@ -155,11 +156,18 @@
                         <h2>Overview</h2>
                         <p>TellMeMo is an open-source AI platform that turns project chaos into clarity. Upload meetings, ask questions in plain English, get instant answers with sources. Generate summaries across your entire portfolio.</p>
 
+                        <div class="info-box" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%); border-left: 4px solid #6366F1;">
+                            <h4>⚡ NEW: Live Meeting Intelligence</h4>
+                            <p><strong>Revolutionary feature:</strong> Get answers to questions DURING meetings, not after. AI detects questions as they're spoken and finds answers in real-time using 4-tier discovery (RAG → Meeting Context → Live Monitoring → AI Fallback). No more "let me get back to you."</p>
+                            <p><a href="#live-meeting-intelligence" style="color: #6366F1;">Learn more →</a></p>
+                        </div>
+
                         <div class="info-box">
                             <h4>💡 What You'll Learn</h4>
                             <ul>
                                 <li>Install TellMeMo in 10 minutes with Docker</li>
                                 <li>Configure AI models and integrations</li>
+                                <li>Use Live Meeting Intelligence for real-time answers</li>
                                 <li>Upload content and generate summaries</li>
                                 <li>Best practices for security and backups</li>
                             </ul>
@@ -181,6 +189,18 @@
                                 </tr>
                             </thead>
                             <tbody>
+                                <tr>
+                                    <td><strong>Live Question Detection</strong></td>
+                                    <td>✅ Real-time during meetings</td>
+                                    <td>❌ Post-meeting only</td>
+                                    <td>❌ No</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Real-Time Answers</strong></td>
+                                    <td>✅ 4-tier discovery (RAG + context + live + AI)</td>
+                                    <td>❌ No</td>
+                                    <td>❌ No</td>
+                                </tr>
                                 <tr>
                                     <td><strong>Open Source</strong></td>
                                     <td>✅ Yes</td>
@@ -207,7 +227,7 @@
                                 </tr>
                                 <tr>
                                     <td><strong>Cost</strong></td>
-                                    <td>💰 Free</td>
+                                    <td>💰 Free (+ ~$1/hr for live meetings)</td>
                                     <td>💰💰 $20-40/user/mo</td>
                                     <td>💰💰 $10-18/user/mo</td>
                                 </tr>
@@ -867,6 +887,175 @@ EMAIL_DIGEST_RATE_LIMIT=100  # Free tier: 100 emails/day</code></pre>
                                 <li>"Summarize all feedback about the new UI design"</li>
                             </ul>
                         </div>
+                    </article>
+
+                    <!-- Live Meeting Intelligence -->
+                    <article id="live-meeting-intelligence" class="docs-article">
+                        <h2>Live Meeting Intelligence</h2>
+                        <p><strong>Revolutionary feature:</strong> Get answers to questions DURING your meetings, not after. TellMeMo's real-time intelligence detects questions as they're spoken and finds answers instantly.</p>
+
+                        <div class="info-box" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%); border-left: 4px solid #6366F1;">
+                            <h4>⚡ What This Means</h4>
+                            <p>No more "let me get back to you." No more awkward pauses while someone searches for documents. Questions get answered in real-time while your meeting continues naturally.</p>
+                        </div>
+
+                        <h3>How to Use Live Meeting Intelligence</h3>
+
+                        <ol>
+                            <li><strong>Start Your Meeting Session</strong>
+                                <ul>
+                                    <li>Navigate to your Project</li>
+                                    <li>Click "Start Live Meeting"</li>
+                                    <li>Toggle "AI Assistant" ON</li>
+                                    <li>Allow microphone access when prompted</li>
+                                </ul>
+                            </li>
+                            <li><strong>Have Your Meeting Normally</strong>
+                                <ul>
+                                    <li>AI listens in the background</li>
+                                    <li>Real-time transcription via AssemblyAI</li>
+                                    <li>Questions detected automatically as they're spoken</li>
+                                </ul>
+                            </li>
+                            <li><strong>Get Instant Answers</strong>
+                                <ul>
+                                    <li>Answer cards appear on screen within seconds</li>
+                                    <li>Source shown (documents, earlier in meeting, or AI-generated)</li>
+                                    <li>Click to see full context</li>
+                                </ul>
+                            </li>
+                            <li><strong>Track Actions Automatically</strong>
+                                <ul>
+                                    <li>AI detects commitments and task assignments</li>
+                                    <li>Extracts owner, deadline, and description</li>
+                                    <li>Completeness score shown (100% = has all details)</li>
+                                </ul>
+                            </li>
+                        </ol>
+
+                        <h3>Four-Tier Answer Discovery</h3>
+                        <p>When a question is detected, TellMeMo searches in this order:</p>
+
+                        <div class="code-block">
+                            <pre><code><strong style="color: #6366F1;">Tier 1: RAG Search (2-3 seconds)</strong>
+📚 Searches all your uploaded documents
+   • Meeting transcripts
+   • PDFs, emails, notes
+   • 50% confidence threshold
+   • Source: "From Documents: filename.pdf"
+
+<strong style="color: #6366F1;">Tier 2: Meeting Context (0.5 seconds)</strong>
+💬 Searches earlier in THIS meeting
+   • Maybe someone already answered it
+   • Prevents duplicate questions
+   • Source: "Earlier in Meeting: [10:08] Mike said..."
+
+<strong style="color: #6366F1;">Tier 3: Live Monitoring (15 seconds)</strong>
+👂 Waits to see if someone answers naturally
+   • AI listens to next 15 seconds
+   • If answer appears, card shows it
+   • Source: "Answered Live: Sarah just said..."
+
+<strong style="color: #6366F1;">Tier 4: AI Fallback (2-3 seconds)</strong>
+🤖 GPT-5-mini generates best guess
+   • ONLY if all other tiers fail
+   • Big warning: "AI-generated, verify this"
+   • Source: "AI Answer (verify)" with disclaimer</code></pre>
+                        </div>
+
+                        <h3>Real Example</h3>
+                        <div class="info-box">
+                            <h4>Question Detected: "What's our API rate limit?"</h4>
+                            <ul>
+                                <li><strong>Time to answer:</strong> 0.8 seconds</li>
+                                <li><strong>Source:</strong> Technical Specification v2.3, page 8</li>
+                                <li><strong>Answer:</strong> "1000 requests per hour per API key"</li>
+                                <li><strong>Result:</strong> Nobody stopped talking. Meeting continued.</li>
+                            </ul>
+                        </div>
+
+                        <h3>Required API Keys</h3>
+                        <p>To use Live Meeting Intelligence, you need:</p>
+                        <ul>
+                            <li><strong>OPENAI_API_KEY</strong> - For GPT-5-mini streaming intelligence (~$0.15/hour)</li>
+                            <li><strong>ASSEMBLYAI_API_KEY</strong> - For real-time transcription with speaker diarization (~$0.90/hour)</li>
+                        </ul>
+
+                        <div class="code-block">
+                            <pre><code># Add to your .env file
+OPENAI_API_KEY=sk-proj-your-key-here
+ASSEMBLYAI_API_KEY=your-assemblyai-key-here</code></pre>
+                        </div>
+
+                        <h3>Cost Per Meeting</h3>
+                        <table class="docs-table">
+                            <thead>
+                                <tr>
+                                    <th>Service</th>
+                                    <th>Cost per Hour</th>
+                                    <th>What It Does</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>AssemblyAI</td>
+                                    <td>$0.90</td>
+                                    <td>Real-time transcription + speaker diarization</td>
+                                </tr>
+                                <tr>
+                                    <td>GPT-5-mini</td>
+                                    <td>~$0.15</td>
+                                    <td>Streaming intelligence (question detection, action tracking)</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Total</strong></td>
+                                    <td><strong>~$1.05</strong></td>
+                                    <td><strong>Complete real-time meeting intelligence</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <p><strong>For comparison:</strong> Otter.ai Business costs $20/user/month. If you have 10 users and 20 meetings/month, that's $200/month = $10 per meeting hour. <strong>TellMeMo is 10x cheaper.</strong></p>
+
+                        <h3>Best Practices</h3>
+                        <ul>
+                            <li><strong>Upload documents first</strong> - The more content in your knowledge base, the better Tier 1 (RAG) answers will be</li>
+                            <li><strong>Use good microphone</strong> - Clear audio = better transcription accuracy</li>
+                            <li><strong>Review action items after</strong> - AI auto-extracts tasks, but verify owner and deadline</li>
+                            <li><strong>Verify AI-generated answers</strong> - If you see the Tier 4 fallback, double-check the answer</li>
+                            <li><strong>Check completeness scores</strong> - 100% means action has description + owner + deadline</li>
+                        </ul>
+
+                        <div class="info-box">
+                            <h4>💡 Privacy & Security</h4>
+                            <p>Audio is processed in real-time and NOT stored on AssemblyAI servers. Only the transcript is saved to your database. All data stays within your control when self-hosting.</p>
+                        </div>
+
+                        <h3>Troubleshooting</h3>
+
+                        <h4>Questions Not Being Detected</h4>
+                        <ul>
+                            <li>Check microphone permissions in browser</li>
+                            <li>Verify OPENAI_API_KEY is set correctly</li>
+                            <li>Check browser console for errors</li>
+                            <li>Make sure questions are clear and specific</li>
+                        </ul>
+
+                        <h4>No Answers Appearing</h4>
+                        <ul>
+                            <li>Verify you have documents uploaded (Tier 1 needs content to search)</li>
+                            <li>Check ASSEMBLYAI_API_KEY is valid</li>
+                            <li>Wait for all 4 tiers to complete (can take up to 20 seconds total)</li>
+                            <li>Check backend logs: <code>docker compose logs -f backend</code></li>
+                        </ul>
+
+                        <h4>High API Costs</h4>
+                        <ul>
+                            <li>Use Live Meeting Intelligence only for important meetings</li>
+                            <li>Turn off AI Assistant for informal chats</li>
+                            <li>Monitor usage in OpenAI and AssemblyAI dashboards</li>
+                            <li>Set up billing alerts in both platforms</li>
+                        </ul>
                     </article>
 
                     <!-- Summaries -->

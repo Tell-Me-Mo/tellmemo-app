@@ -1,4 +1,48 @@
+# TellMeMo - Robots.txt
+# Allow AI crawlers and search engines for maximum discoverability in 2025
+
+# Default rule for all crawlers
 User-agent: *
 Allow: /
 
+# Explicitly allow AI crawlers for LLM training and AI search (2025 best practice)
+# OpenAI (ChatGPT, GPT-4, etc.)
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+# Google AI (Gemini, Bard, AI Overviews)
+User-agent: Google-Extended
+Allow: /
+
+# Common Crawl (used by many AI models for training)
+User-agent: CCBot
+Allow: /
+
+# Perplexity AI
+User-agent: PerplexityBot
+Allow: /
+
+# Anthropic Claude
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+# Apple Intelligence
+User-agent: Applebot-Extended
+Allow: /
+
+# Cohere AI
+User-agent: cohere-ai
+Allow: /
+
+# Diffbot
+User-agent: Diffbot
+Allow: /
+
+# Sitemap for search engines and AI crawlers
 Sitemap: https://tellmemo.io/sitemap.xml

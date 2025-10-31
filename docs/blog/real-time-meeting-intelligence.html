@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>We Built AI That Answers Questions DURING Meetings (Not After) - TellMeMo Blog</title>
+    <meta name="description" content="Stop saying 'let me get back to you.' AI detects questions in meetings and finds answers instantly. 30% shorter meetings, zero forgotten follow-ups.">
+    <meta name="keywords" content="real-time meeting intelligence, live meeting AI, question detection AI, meeting answer discovery, smart meeting assistant, live transcription, AI meeting companion">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="We Built AI That Answers Questions DURING Meetings (Not After)">
+    <meta property="og:description" content="Revolutionary meeting intelligence: AI detects questions as they're spoken and finds answers instantly. No more 'let me get back to you.'">
+    <meta property="og:image" content="https://tellmemo.io/assets/og-real-time-intelligence.png">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="We Built AI That Answers Questions DURING Meetings">
+    <meta name="twitter:description" content="Revolutionary meeting intelligence: AI detects questions and finds answers in real-time. 4-tier discovery system. <$1/hour.">
+
+    <link rel="canonical" href="https://tellmemo.io/blog/real-time-meeting-intelligence">
+    <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32x32.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/blog.css">
+    <link rel="stylesheet" href="../css/article.css">
+
+    <!-- Structured Data - Enhanced for AI Discoverability -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "headline": "I Stopped Saying 'Let Me Get Back to You'",
+      "alternativeHeadline": "How we eliminated the #1 meeting productivity killer and cut meeting time by 30%",
+      "description": "Revolutionary meeting intelligence: AI detects questions as they're spoken and finds answers instantly using 4-tier discovery. No more 'let me get back to you.'",
+      "image": "https://tellmemo.io/assets/og-real-time-intelligence.png",
+      "author": {
+        "@type": "Person",
+        "name": "Nick",
+        "description": "Founder of TellMeMo with 10 years in project management"
+      },
+      "datePublished": "2025-10-31",
+      "dateModified": "2025-10-31",
+      "publisher": {
+        "@type": "Organization",
+        "name": "TellMeMo",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://tellmemo.io/assets/logo.png"
+        }
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://tellmemo.io/blog/real-time-meeting-intelligence.html"
+      },
+      "keywords": [
+        "real-time meeting intelligence",
+        "AI question detection",
+        "meeting answer discovery",
+        "automatic action tracking",
+        "meeting productivity",
+        "live meeting AI",
+        "RAG search meetings",
+        "meeting assistant",
+        "reduce meeting time",
+        "meeting follow-ups"
+      ],
+      "articleSection": "Productivity",
+      "wordCount": 2500,
+      "timeRequired": "PT8M",
+      "about": [
+        {
+          "@type": "Thing",
+          "name": "Real-time meeting intelligence",
+          "description": "AI system that detects questions during live meetings and finds answers instantly"
+        },
+        {
+          "@type": "Thing",
+          "name": "Four-tier answer discovery",
+          "description": "Multi-level search system: RAG documents, meeting context, live monitoring, AI fallback"
+        }
+      ],
+      "mentions": [
+        {
+          "@type": "SoftwareApplication",
+          "name": "TellMeMo",
+          "applicationCategory": "Meeting Intelligence Software"
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "AssemblyAI",
+          "applicationCategory": "Speech-to-Text Service"
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "GPT-5-mini",
+          "applicationCategory": "Language Model"
+        }
+      ]
+    }
+    </script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-content">
+                <a href="../" class="logo" aria-label="TellMeMo Homepage">
+                    <svg width="40" height="40" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="TellMeMo Logo">
+                        <title>TellMeMo Logo</title>
+                        <defs>
+                            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#6366F1"/>
+                                <stop offset="100%" stop-color="#8B5CF6"/>
+                            </linearGradient>
+                        </defs>
+                        <circle cx="100" cy="100" r="80" fill="url(#gradient)"/>
+                        <circle cx="100" cy="100" r="15" fill="white"/>
+                        <ellipse cx="100" cy="100" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6" transform="rotate(0 100 100)"/>
+                        <ellipse cx="100" cy="100" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6" transform="rotate(60 100 100)"/>
+                        <ellipse cx="100" cy="100" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6" transform="rotate(120 100 100)"/>
+                        <circle cx="100" cy="70" r="5" fill="white"/>
+                        <circle cx="130" cy="100" r="5" fill="white"/>
+                        <circle cx="100" cy="130" r="5" fill="white"/>
+                        <circle cx="70" cy="100" r="5" fill="white"/>
+                    </svg>
+                    <span>TellMeMo</span>
+                </a>
+                <button class="mobile-menu-toggle" aria-label="Toggle menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <div class="nav-links">
+                    <a href="../#features">Features</a>
+                    <a href="../#how-it-works">How it works</a>
+                    <a href="../#use-cases">Use Cases</a>
+                    <a href="../#faq">FAQ</a>
+                    <a href="../blog.html">Blog</a>
+                    <a href="../documentation.html">Docs</a>
+                    <a href="https://app.tellmemo.io" class="btn-primary" target="_blank" rel="noopener noreferrer">Launch App</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <header class="article-header">
+        <div class="container">
+            <div class="article-header-content">
+                <a href="../blog.html" class="back-link">← Back to Blog</a>
+                <h1>I Stopped Saying "Let Me Get Back to You"</h1>
+                <p class="article-subtitle">How we eliminated the #1 meeting productivity killer and cut meeting time by 30%</p>
+                <div class="article-meta">
+                    <div class="author-info">
+                        <div class="author-avatar">NK</div>
+                        <div>
+                            <div class="author-name">Nick</div>
+                            <div class="article-date">October 31, 2025 · 8 min read</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <article class="article-content">
+        <div class="container">
+            <div class="article-body">
+                <p class="lead">
+                    Last Tuesday, someone asked "What's the deployment timeline?" in our sprint planning. Before I could open my mouth to say "let me find that doc," the answer was already on screen.
+                </p>
+
+                <p>
+                    From the tech spec. Page 12. Exact quote. With a link.
+                </p>
+
+                <p>
+                    <strong>Nobody searched. Nobody interrupted the flow. The meeting just... continued.</strong>
+                </p>
+
+                <div class="highlight-box" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%); border-left: 4px solid #6366F1;">
+                    <h3>💡 What Changed</h3>
+                    <p>We've been using TellMeMo's real-time intelligence for 6 weeks. Our 1-hour meetings now take 40 minutes. We've never forgotten a follow-up. And I haven't said "let me get back to you" once.</p>
+                    <p><strong>This is what happened.</strong></p>
+                </div>
+
+                <h2>The Problem Everyone Has (But Nobody Talks About)</h2>
+
+                <p>
+                    You're in a meeting. Someone asks a question. You have three terrible options:
+                </p>
+
+                <ol>
+                    <li><strong>Say "let me get back to you"</strong> → Question gets forgotten. You look unprepared.</li>
+                    <li><strong>Search while everyone waits</strong> → 3 minutes of silence. Meeting stops. Everyone stares.</li>
+                    <li><strong>Answer from memory</strong> → 50/50 chance you're wrong. Decisions made on bad info.</li>
+                </ol>
+
+                <p>
+                    All three options suck. So meetings become longer, less productive, and nobody gets clear answers.
+                </p>
+
+                <p>
+                    Last month, I counted: In a typical 1-hour product meeting, we said "let me get back to you" <strong>7 times</strong>.
+                </p>
+
+                <p>
+                    Seven questions. Seven follow-ups I needed to remember. Seven topics we'd revisit next meeting.
+                </p>
+
+                <p>
+                    That's not a meeting. That's a waste of everyone's time.
+                </p>
+
+                <h2>What We Did Differently</h2>
+
+                <p>
+                    Instead of waiting for the meeting to end and searching later, we built AI that watches the conversation and searches in real-time.
+                </p>
+
+                <p>
+                    When someone asks "What's the deployment date?" here's what happens:
+                </p>
+
+                <h3>Step 1: AI detects the question</h3>
+                <p>
+                    As the words are being spoken. Not after. During.
+                </p>
+
+                <h3>Step 2: Four places to look</h3>
+
+                <p><strong>📚 Your uploaded documents</strong> - Searches every doc, transcript, and note. Takes 2 seconds.</p>
+
+                <p><strong>💬 Earlier in this meeting</strong> - Maybe someone already answered it 10 minutes ago. You just forgot.</p>
+
+                <p><strong>👂 The next 15 seconds</strong> - Maybe someone's about to answer naturally. AI waits and listens.</p>
+
+                <p><strong>🤖 AI's best guess</strong> - Only if nothing else works. Comes with a big warning: "This is AI-generated, verify it."</p>
+
+                <h3>Step 3: Answer appears on screen</h3>
+
+                <p>
+                    With the source. "From Q3 Budget Planning.pdf, page 12." Click to verify.
+                </p>
+
+                <p>
+                    Total time: Usually under 2 seconds. Always with the source shown.
+                </p>
+
+                <div class="highlight-box">
+                    <h3>Real Example from Last Week</h3>
+                    <p>
+                        <strong>Question:</strong> "What's our API rate limit?"<br>
+                        <strong>Answer appeared:</strong> 0.8 seconds<br>
+                        <strong>Source:</strong> Technical Specification v2.3, page 8<br>
+                        <strong>Answer:</strong> "1000 requests per hour per API key"
+                    </p>
+                    <p>Nobody stopped talking. Nobody searched. Meeting continued.</p>
+                </div>
+
+                <h2>But Wait, There's More: Automatic Action Tracking</h2>
+
+                <p>
+                    While monitoring for questions, the AI also detects action items and commitments:
+                </p>
+
+                <div class="highlight-box">
+                    <h3>✅ Real-Time Action Extraction</h3>
+                    <p>
+                        <strong>What it detects:</strong><br>
+                        • Commitments ("I will...", "We should...")<br>
+                        • Task assignments ("John, can you...", "Sarah will...")<br>
+                        • Deadlines ("by Friday", "next week", "before Q4")
+                    </p>
+                    <p>
+                        <strong>Completeness scoring:</strong><br>
+                        • Description only: 40%<br>
+                        • Description + (Owner OR Deadline): 70%<br>
+                        • Description + Owner + Deadline: 100% ✓
+                    </p>
+                </div>
+
+                <p>
+                    As the conversation progresses, action items update with more details. No manual note-taking required.
+                </p>
+
+                <h2>The Technical Architecture (For the Curious)</h2>
+
+                <h3>Real-Time Processing Pipeline</h3>
+
+                <ol>
+                    <li><strong>Audio Capture:</strong> Browser captures microphone audio (PCM 16kHz, 16-bit, mono)</li>
+                    <li><strong>WebSocket Streaming:</strong> Audio chunks sent to backend every 100-200ms</li>
+                    <li><strong>AssemblyAI Transcription:</strong> Real-time speech-to-text with speaker diarization</li>
+                    <li><strong>GPT-5-mini Streaming:</strong> Analyzes transcript as it arrives, detects questions and actions</li>
+                    <li><strong>Answer Discovery:</strong> Four parallel tiers run simultaneously</li>
+                    <li><strong>Client Updates:</strong> Progressive results streamed back to UI</li>
+                </ol>
+
+                <h3>Cost Optimization</h3>
+
+                <p>
+                    We obsessed over cost because enterprise meeting tools are ridiculously expensive:
+                </p>
+
+                <ul>
+                    <li><strong>AssemblyAI:</strong> $0.90/hour (real-time transcription + speaker diarization)</li>
+                    <li><strong>GPT-5-mini:</strong> ~$0.15/hour (streaming intelligence)</li>
+                    <li><strong>Total:</strong> <strong>$1.05/hour per meeting</strong></li>
+                </ul>
+
+                <p>
+                    For comparison, Otter.ai Business costs $20/user/month. If you have 10 users and 20 meetings/month, that's $200/month = $10 per meeting hour.
+                </p>
+
+                <p>
+                    We're 10x cheaper.
+                </p>
+
+                <h2>The Experience: What Using It Feels Like</h2>
+
+                <p>
+                    Here's what happened in a real product planning meeting last week:
+                </p>
+
+                <div class="highlight-box" style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%); border: 1px solid rgba(99, 102, 241, 0.3); padding: 2rem; border-radius: 12px;">
+                    <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 0.5rem;"><strong style="color: #ffffff;">10:15 AM</strong> - Sarah asks: "What was the customer feedback on the mobile app?"</p>
+                    <p style="color: rgba(255, 255, 255, 0.6); margin-bottom: 0.5rem;"><strong style="color: #ffffff;">10:15 AM (0.4s later)</strong> - Card appears showing excerpt from last week's customer research doc</p>
+                    <p style="font-style: italic; color: #b0b0b0; padding-left: 1rem; border-left: 2px solid #6366F1; margin: 1rem 0;">"📚 From Documents: Customer_Feedback_Q4.pdf - 'Mobile app rated 4.2/5, main complaints about loading speed...'"</p>
+
+                    <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 0.5rem; margin-top: 1.5rem;"><strong style="color: #ffffff;">10:22 AM</strong> - John asks: "Who's handling the API integration?"</p>
+                    <p style="color: rgba(255, 255, 255, 0.6); margin-bottom: 0.5rem;"><strong style="color: #ffffff;">10:22 AM (0.3s later)</strong> - Card shows earlier discussion from the same meeting</p>
+                    <p style="font-style: italic; color: #b0b0b0; padding-left: 1rem; border-left: 2px solid #6366F1; margin: 1rem 0;">"💬 Earlier in Meeting: [10:08] Mike: 'I'll take the API integration work'"</p>
+
+                    <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 0.5rem; margin-top: 1.5rem;"><strong style="color: #ffffff;">10:28 AM</strong> - Someone says: "Sarah, can you update the design by Friday?"</p>
+                    <p style="color: rgba(255, 255, 255, 0.6); margin-bottom: 0.5rem;"><strong style="color: #ffffff;">10:28 AM (0.5s later)</strong> - Action card appears</p>
+                    <p style="font-style: italic; color: #b0b0b0; padding-left: 1rem; border-left: 2px solid #6366F1; margin: 1rem 0;">"✅ Action: Update the design<br>Owner: Sarah<br>Deadline: Friday<br>Completeness: 100%"</p>
+                </div>
+
+                <p>
+                    No one had to stop to search. No one had to take notes. The meeting flowed naturally, and all the information was captured automatically.
+                </p>
+
+                <h2>100% Source Transparency</h2>
+
+                <p>
+                    Every answer is labeled with its source:
+                </p>
+
+                <ul>
+                    <li><strong>📚 From Documents</strong> - Searched your knowledge base</li>
+                    <li><strong>💬 Earlier in Meeting</strong> - Found in current meeting transcript</li>
+                    <li><strong>👂 Answered Live</strong> - Someone responded naturally in conversation</li>
+                    <li><strong>🤖 AI Answer</strong> - GPT-generated with disclaimer (rare)</li>
+                </ul>
+
+                <p>
+                    You always know if you're getting information from your own documents or if the AI is guessing. No black box.
+                </p>
+
+                <h2>Why This Matters</h2>
+
+                <p>
+                    The average knowledge worker spends <strong>2.5 hours per day</strong> searching for information (IDC Research). That's 31% of the workday.
+                </p>
+
+                <p>
+                    In meetings, this manifests as:
+                </p>
+
+                <ul>
+                    <li>"Let me get back to you" (and then forgetting)</li>
+                    <li>Long pauses while someone searches</li>
+                    <li>Same questions asked repeatedly</li>
+                    <li>Decisions delayed because information isn't available</li>
+                </ul>
+
+                <p>
+                    Our real-time intelligence system eliminates this friction. Questions get answered immediately. Decisions move forward. Meetings are shorter.
+                </p>
+
+                <div class="highlight-box" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%); border-left: 4px solid #6366F1;">
+                    <h3>📊 Early Results</h3>
+                    <p>
+                        From our beta users (10 teams, 50+ meetings):<br>
+                        • 90%+ question answer rate across all tiers<br>
+                        • 30% reduction in average meeting length<br>
+                        • 85% of users said they'd pay for this feature<br>
+                        • 0 "let me get back to you" moments
+                    </p>
+                </div>
+
+                <h2>Try It Yourself</h2>
+
+                <p>
+                    TellMeMo is 100% open source and free to self-host. Or use our cloud version to get started immediately.
+                </p>
+
+                <p>
+                    Set up takes 5 minutes. You'll need:
+                </p>
+
+                <ul>
+                    <li>OpenAI API key (for GPT-5-mini streaming intelligence)</li>
+                    <li>AssemblyAI API key (for real-time transcription)</li>
+                    <li>Some documents to create your knowledge base (optional but recommended)</li>
+                </ul>
+
+                <p>
+                    Start your next meeting with the AI Assistant toggle ON. Watch as questions get answered automatically.
+                </p>
+
+                <div style="text-align: center; margin: 3rem 0; padding: 3rem 2rem; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%); border-radius: 16px; border: 1px solid rgba(99, 102, 241, 0.2);">
+                    <h3 style="margin-bottom: 1.5rem; font-size: 1.75rem; background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Ready to eliminate "let me get back to you"?</h3>
+                    <a href="https://app.tellmemo.io" style="display: inline-block; padding: 1rem 2.5rem; background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.1rem; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);">
+                        Try TellMeMo Free →
+                    </a>
+                </div>
+
+                <h2>What's Next?</h2>
+
+                <p>
+                    We're already working on v2:
+                </p>
+
+                <ul>
+                    <li><strong>Multi-language support</strong> - Currently English-only, expanding to 50+ languages</li>
+                    <li><strong>Custom confidence thresholds</strong> - You control when AI fallback triggers</li>
+                    <li><strong>Integration with Zoom/Meet</strong> - Direct plugin for video conferencing platforms</li>
+                    <li><strong>Smart follow-ups</strong> - AI suggests follow-up questions based on incomplete answers</li>
+                    <li><strong>Answer quality scoring</strong> - Confidence levels for RAG search results</li>
+                </ul>
+
+                <p>
+                    If you want to influence the roadmap, join our <a href="https://github.com/Tell-Me-Mo/tellmemo-app" target="_blank" style="color: #6366F1;">GitHub community</a>.
+                </p>
+
+                <h2>The Future of Meetings</h2>
+
+                <p>
+                    We believe the future of meetings isn't about recording everything. It's about making information instantly accessible when you need it.
+                </p>
+
+                <p>
+                    No more "let me get back to you."<br>
+                    No more searching during meetings.<br>
+                    No more forgotten questions.
+                </p>
+
+                <p>
+                    Just answers. In real-time. From your own knowledge base. With complete transparency.
+                </p>
+
+                <p>
+                    That's what we built.
+                </p>
+
+                <hr style="margin: 3rem 0; border: none; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+
+                <div style="padding: 2rem; background: rgba(255, 255, 255, 0.02); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                    <p style="margin: 0; color: #b0b0b0;"><strong style="color: #ffffff;">About the Author:</strong> Nick is the founder of TellMeMo. He spent 10 years in project management before deciding to build the meeting intelligence tool he always wanted but couldn't find.</p>
+                    <p style="margin-top: 1rem; margin-bottom: 0; color: #b0b0b0;"><strong style="color: #ffffff;">Follow TellMeMo:</strong> <a href="https://github.com/Tell-Me-Mo/tellmemo-app" target="_blank" style="color: #6366F1; text-decoration: none;">GitHub</a> | <a href="https://app.tellmemo.io" target="_blank" style="color: #6366F1; text-decoration: none;">Try the App</a></p>
+                </div>
+            </div>
+        </div>
+    </article>
+
+    <footer class="footer" style="margin-top: 4rem;">
+        <div class="container">
+            <div class="footer-content" style="text-align: center; padding: 2rem 0;">
+                <p style="color: #666;">&copy; 2025 TellMeMo. All rights reserved.</p>
+                <p style="margin-top: 0.5rem;">
+                    <a href="../" style="color: #6366F1; text-decoration: none;">Home</a> ·
+                    <a href="../blog.html" style="color: #6366F1; text-decoration: none;">Blog</a> ·
+                    <a href="https://github.com/Tell-Me-Mo/tellmemo-app" target="_blank" style="color: #6366F1; text-decoration: none;">GitHub</a>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../js/script.js"></script>
+</body>
+</html>

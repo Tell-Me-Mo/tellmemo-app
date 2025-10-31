@@ -9,6 +9,125 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added (October 2025)
 
+#### 🚀 Proactive Meeting Assistance - Real-Time Intelligence System (PR #XX - 2025-10-31)
+
+**Revolutionary Feature:** Live meeting intelligence that differentiates TellMeMo from competitors.
+
+**Core Capabilities:**
+
+**1. Real-Time Question Detection & Four-Tier Answer Discovery**
+- GPT-5-mini streaming analyzes live transcripts as they're spoken
+- Detects explicit and implicit questions instantly (<500ms latency)
+- **Tier 1: Knowledge Base Search (RAG)**
+  - Searches organization's document repository
+  - Returns top 3-5 relevant documents with progressive streaming
+  - 2-second timeout, displays with "📚 From Documents" label
+- **Tier 2: Meeting Context Search**
+  - Searches earlier in current meeting transcript
+  - Identifies if question was already answered with timestamp
+  - 1.5-second timeout, displays with "💬 Earlier in Meeting" label
+- **Tier 3: Live Conversation Monitoring**
+  - Monitors subsequent conversation for 15 seconds
+  - Semantically matches answers to questions
+  - Displays with "👂 Answered Live" label when detected
+- **Tier 4: GPT-Generated Answer (Fallback)**
+  - Only triggers when Tiers 1-3 fail
+  - GPT-5-mini generates answer with confidence score (>70% threshold)
+  - Prominent disclaimer: "AI-generated, not from documents or meeting"
+  - Displays with "🤖 AI Answer" label and warning badge
+
+**2. Automatic Action Item Tracking**
+- Real-time detection of commitments and task assignments
+- Extracts owner, deadline, and description automatically
+- Accumulates details as conversation progresses (action_update events)
+- Smart alerting at natural meeting breakpoints (not constant noise)
+- Completeness scoring: 0.0-1.0 based on description, owner, and deadline presence
+- Cross-reference resolution for pronouns and implicit subjects
+
+**3. Real-Time Transcription Display**
+- AssemblyAI real-time transcription with speaker diarization
+- Live transcript feed with partial and final states
+- Auto-scroll with manual override (pause when user scrolls up)
+- Speaker color-coding and name attribution
+- Clickable timestamps for playback navigation
+- Virtualized list rendering for performance (last 100 segments in memory)
+
+**Technical Architecture:**
+
+**Frontend (Flutter):**
+- Audio capture: PCM 16kHz, 16-bit, mono (100-200ms chunks)
+- WebSocket streaming (binary audio frames + JSON events)
+- Recording panel with integrated AI Assistant toggle
+- Live transcription widget with auto-scroll
+- Question and action cards with progressive updates
+- Clear source attribution (4 distinct visual styles for each tier)
+
+**Backend Services:**
+- `websocket_live_insights.py` - WebSocket server and connection management
+- `assemblyai_service.py` - Real-time speech-to-text integration
+- `streaming_orchestrator.py` - Main intelligence engine
+- `stream_router.py` - NDJSON parsing and event routing
+- `question_handler.py` - Manages four-tier answer discovery
+- `action_handler.py` - Tracks and accumulates action items
+- `answer_handler.py` - Matches answers to questions
+- `segment_detector.py` - Identifies meeting breakpoints
+- `rag_search.py` - Tier 1 knowledge base search
+- `meeting_context_search.py` - Tier 2 meeting history search
+- `gpt_answer_generator.py` - Tier 4 fallback generation
+
+**Data Storage:**
+- Redis hot state: transcript buffer (60s rolling window), active questions/actions
+- PostgreSQL persistent storage: `live_meeting_insights` table
+- Session lifecycle: recording_id = session_id (1:1 mapping)
+- Insights persisted at recording end for historical access
+
+**Features:**
+- Toggle AI Assistant ON/OFF mid-meeting without reconnection
+- Clear source attribution for all answers (100% transparency)
+- Progressive result streaming (show results as they arrive)
+- Non-blocking UI with dismissible alerts
+- Post-meeting summary includes all captured insights
+- Cost optimization: <$1.05 per meeting hour
+
+**Success Metrics:**
+- Question answer rate: 90%+ across all four tiers
+- Answer source clarity: 100% attribution (every answer labeled)
+- Action item detection accuracy: 90%+
+- Latency to first result: <500ms
+- GPT-generated answers: <15% of total (rare fallback only)
+
+**Cost Efficiency:**
+- AssemblyAI: $0.90/hour (real-time transcription + speaker diarization)
+- GPT-5-mini: ~$0.15/hour (streaming intelligence)
+- Total: ~$1.05/hour meeting cost (shared connection across all participants)
+
+**Database Schema:**
+- New table: `live_meeting_insights` (id, session_id, recording_id, insight_type, content, metadata, created_at, organization_id, project_id)
+- Alembic migrations: `f11cd7beb6f5_add_live_meeting_insights_table.py`
+- Database indexes for optimized queries
+
+**Testing:**
+- 1,105+ lines of comprehensive integration tests
+- Unit tests for all intelligence handlers
+- WebSocket connection tests
+- End-to-end streaming tests
+- GPT-5-mini streaming performance validation
+
+**Documentation:**
+- `PROACTIVE_MEETING_ASSISTANCE_HLD.md` - Complete technical specification (1,211 lines)
+- System architecture diagrams
+- GPT-5-mini prompt specifications
+- Four-tier answer discovery workflow
+- AssemblyAI integration guide
+
+**Why This Differentiates TellMeMo:**
+- **Instant Knowledge Access**: No need to search later - answers appear during the meeting
+- **Zero Overhead**: No extra work required - system monitors automatically
+- **Complete Transparency**: Every answer clearly shows its source (documents, meeting, live, or AI)
+- **Smart Fallback**: AI-generated answers only when necessary, always with disclaimer
+- **Action Tracking**: Never miss commitments - automatic extraction and completeness tracking
+- **Cost Effective**: <$1.05/hour for enterprise-grade meeting intelligence
+
 #### UI/UX Improvements (PR #76 - 2025-10-18)
 - **Time Expectation Messages**: Added "This usually takes 1-2 minutes" messaging during summary generation
   - Clear time expectations in summary generation modal dialog

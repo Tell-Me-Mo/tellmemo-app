@@ -306,6 +306,413 @@ Projects can exist:
 
 ---
 
+## Proactive Meeting Assistance - Real-Time Intelligence
+
+### Overview
+
+**Revolutionary Feature:** Live meeting intelligence that automatically detects questions, finds answers, and tracks action items as they happen during meetings.
+
+**Key Benefits:**
+- **Instant Answers**: No need to search later - answers appear during the meeting
+- **Zero Overhead**: Completely automatic - no extra work required
+- **Complete Transparency**: Every answer shows its source (documents, meeting, live, or AI)
+- **Never Miss Commitments**: Automatic action item extraction and tracking
+- **Cost Effective**: <$1.05 per hour for enterprise-grade intelligence
+
+### Getting Started with Proactive Meeting Assistance
+
+**Prerequisites:**
+1. Project created in TellMeMo
+2. Some content uploaded for knowledge base (optional but recommended for RAG search)
+3. API keys configured:
+   - OpenAI API Key (for GPT-5-mini streaming intelligence)
+   - AssemblyAI API Key (for real-time transcription)
+
+**Initial Setup:**
+1. Navigate to project details
+2. Access recording panel (right side of screen)
+3. Enable "AI Assistant" toggle
+4. Grant microphone permissions when prompted
+5. Start recording
+
+### Recording Panel Layout
+
+The recording panel integrates three sections when AI Assistant is enabled:
+
+```
+┌─────────────────────────────────────────┐
+│  Section 1: Recording Controls          │
+│  ⏺ Recording... 15:23                   │
+│  [Pause] [Stop] [AI Assistant: ON]      │
+│  Audio Level: ████████░░ 80%            │
+├─────────────────────────────────────────┤
+│  Section 2: Live Transcription          │
+│  🎤 Live Transcript                     │
+│  ─────────────────────────────────────  │
+│  [10:15] Speaker A: "What's the..."     │
+│         [FINAL]                          │
+│  [10:16] Speaker B: "I think..."        │
+│         [PARTIAL - transcribing...]      │
+├─────────────────────────────────────────┤
+│  Section 3: AI Assistant Content        │
+│  ❓ Questions (3)                       │
+│  ─────────────────────────────────────  │
+│  [LiveQuestionCard 1]                   │
+│  [LiveQuestionCard 2]                   │
+│                                          │
+│  ✅ Actions (2)                         │
+│  ─────────────────────────────────────  │
+│  [LiveActionCard 1]                     │
+│  [LiveActionCard 2]                     │
+└─────────────────────────────────────────┘
+```
+
+### Live Transcription Features
+
+**What You See:**
+- Real-time transcript of spoken words
+- Speaker labels (Speaker A, B, C) with color coding
+- Transcript status indicators:
+  - **[PARTIAL]**: Still transcribing (light gray, italic)
+  - **[FINAL]**: Complete transcript (normal text, bold timestamp)
+- Timestamps (clickable for playback navigation)
+
+**Auto-Scroll Behavior:**
+- Automatically scrolls to latest transcript
+- Pause auto-scroll by manually scrolling up
+- "New transcript ↓" button appears to resume
+- Resumes automatically after 5 seconds of inactivity
+
+**Performance:**
+- Only visible transcripts rendered (virtualized list)
+- Last 100 segments kept in memory
+- Older segments loaded on-demand
+
+### Four-Tier Answer Discovery System
+
+When a question is detected, TellMeMo runs four discovery tiers in parallel:
+
+**Tier 1: Knowledge Base Search (RAG) - 2 second timeout**
+
+**What It Does:**
+- Searches all uploaded documents in your organization
+- Returns top 3-5 most relevant documents
+- Results stream progressively as found
+
+**Display:**
+- Label: "📚 From Documents"
+- Shows document names and relevance excerpts
+- Links to full documents
+
+**Example:**
+```
+❓ Question: "What's our cloud infrastructure budget?"
+📚 From Documents (Tier 1)
+   - Q3 Budget Planning.pdf (page 12)
+   - Infrastructure Costs 2025.xlsx
+   - "Cloud services budget: $250,000"
+```
+
+**Tier 2: Meeting Context Search - 1.5 second timeout**
+
+**What It Does:**
+- Searches earlier in current meeting transcript
+- Identifies if question was already answered
+- Provides timestamp reference
+
+**Display:**
+- Label: "💬 Earlier in Meeting"
+- Shows speaker and timestamp
+- Quote from earlier discussion
+
+**Example:**
+```
+❓ Question: "What was the deployment date again?"
+💬 Earlier in Meeting (Tier 2)
+   [10:12] Sarah: "We're deploying on Friday, October 25th"
+   Click timestamp to jump to that moment →
+```
+
+**Tier 3: Live Conversation Monitoring - 15 second window**
+
+**What It Does:**
+- Monitors subsequent conversation for answers
+- Semantically matches answers to questions
+- Marks question resolved when confident answer detected
+
+**Display:**
+- Label: "👂 Answered Live"
+- Shows speaker and answer text
+- Updates question status to "Answered"
+
+**Example:**
+```
+❓ Question: "Who's responsible for the API documentation?"
+   (monitoring conversation...)
+👂 Answered Live (Tier 3)
+   [10:18] John: "I'll handle the API docs, should be done by next week"
+   Status: Answered ✓
+```
+
+**Tier 4: AI-Generated Answer (Fallback) - 3 second timeout**
+
+**When It Triggers:**
+- Only when Tiers 1-3 fail to find answers
+- Requires >70% confidence threshold
+
+**What It Does:**
+- GPT-5-mini generates answer based on general knowledge
+- Includes confidence score
+- Prominent disclaimer that it's AI-generated
+
+**Display:**
+- Label: "🤖 AI Answer"
+- Warning badge: "AI-generated, not from documents or meeting"
+- Confidence score displayed
+- Suggestion to verify accuracy
+
+**Example:**
+```
+❓ Question: "What's the typical ROI timeline for infrastructure investments?"
+🤖 AI Answer (Tier 4) - Confidence: 78%
+   ⚠️ AI-generated, not from your documents or meeting
+   "Typical infrastructure investments show ROI within 18-36 months,
+   depending on scope. Cloud infrastructure often delivers faster
+   returns (12-18 months) vs on-premises (24-36 months)."
+
+   Please verify this information with authoritative sources.
+```
+
+### Question Card States
+
+**Searching State:**
+- Shows spinning indicator
+- "Searching knowledge base..." message
+- Tier 1 and 2 running in parallel
+
+**Results Found:**
+- Progressive display (results appear as they arrive)
+- Multiple sources may appear (e.g., both documents and meeting context)
+- Best answer highlighted
+
+**Monitoring State:**
+- "Listening for answer..." message
+- 15-second countdown indicator
+- Tier 3 active
+
+**Answered:**
+- Green checkmark ✓
+- "Answered" badge
+- Source clearly labeled
+
+**Unanswered:**
+- Gray status after all tiers complete
+- "No answer found" message
+- Option to ask follow-up or dismiss
+
+### Automatic Action Item Tracking
+
+**Detection:**
+GPT-5-mini automatically detects:
+- Commitments ("I will...", "We should...")
+- Task assignments ("John, can you...", "Sarah will...")
+- Deadlines ("by Friday", "next week", "before Q4")
+
+**Accumulation Phase:**
+
+As conversation progresses, action items update with more details:
+
+**Example Flow:**
+```
+[10:20] Sarah: "We need to update the API documentation"
+✅ Action Tracked
+   Description: "Update API documentation"
+   Completeness: 40% (description only, no owner/deadline)
+
+[10:21] John: "I can handle that"
+✅ Action Updated
+   Description: "Update API documentation"
+   Owner: John
+   Completeness: 70% (description + owner, no deadline)
+
+[10:22] Sarah: "Can you have it done by next Friday?"
+[10:23] John: "Sure, I'll have it ready by Friday"
+✅ Action Updated
+   Description: "Update API documentation"
+   Owner: John
+   Deadline: Friday, November 1st
+   Completeness: 100% ✓
+```
+
+**Completeness Scoring:**
+- Description only: 40%
+- Description + (Owner OR Deadline): 70%
+- Description + Owner + Deadline: 100% ✓
+
+**Smart Alerting:**
+
+Actions trigger alerts only at natural breakpoints:
+- Segment transitions (topic changes)
+- Meeting end
+- When high-confidence action is incomplete
+
+**No alert fatigue** - system waits for appropriate moments.
+
+**Action Card Features:**
+- Real-time status updates (tracking badge)
+- Assign to team members
+- Set/edit deadline
+- Mark as complete
+- Dismiss if incorrect
+- Export to task management
+
+### User Actions During Meeting
+
+**For Questions:**
+- Mark as answered (if you got your answer)
+- Mark as "needs follow-up" (for later investigation)
+- Dismiss (if it was rhetorical or not important)
+- Ask clarifying question
+
+**For Action Items:**
+- Assign to team member (if not auto-detected)
+- Set or adjust deadline
+- Add missing details
+- Mark as complete (if done immediately)
+- Dismiss (if not actually an action item)
+
+### Toggle AI Assistant Mid-Meeting
+
+**Enable AI Assistant:**
+1. Click "AI Assistant: OFF" toggle
+2. System initializes (2-3 seconds)
+3. Transcription begins
+4. Questions and actions start appearing
+
+**Disable AI Assistant:**
+1. Click "AI Assistant: ON" toggle
+2. System stops processing new audio
+3. Existing insights remain visible (read-only)
+4. State preserved for potential re-enable
+
+**Re-Enable:**
+1. Click toggle again
+2. Processing resumes immediately
+3. New insights append to existing list
+4. No reconnection needed (WebSocket stays alive)
+
+### Post-Meeting Summary
+
+**At Meeting End:**
+1. Click "Stop Recording"
+2. System generates comprehensive summary
+3. All captured insights included:
+   - All questions (answered and unanswered)
+   - All action items with completeness scores
+   - Full transcript
+   - Source attributions
+
+**Summary Includes:**
+- **Questions Section**: List of all detected questions
+  - Answered questions with sources
+  - Unanswered questions for follow-up
+- **Action Items Section**: Complete list of commitments
+  - Fully specified actions (description + owner + deadline)
+  - Incomplete actions (missing details highlighted)
+  - Completeness indicators
+- **Transcription**: Full meeting transcript with timestamps
+
+**Export Options:**
+- View in TellMeMo dashboard
+- Export action items to task management
+- Share summary with stakeholders
+- Link to full recording (if saved)
+
+### Best Practices
+
+**For Best Results:**
+
+**1. Upload Relevant Content First**
+- Upload project documents, past meetings, specifications
+- Builds knowledge base for Tier 1 (RAG) search
+- More content = better answers
+
+**2. Enable AI Assistant at Meeting Start**
+- Captures entire conversation
+- Builds meeting context for Tier 2 search
+- Early questions can reference later discussions
+
+**3. Speak Clearly**
+- State names explicitly ("John will handle this")
+- Mention deadlines clearly ("by next Friday")
+- Avoid pronouns when assigning ("he will do it")
+
+**4. Review Insights in Real-Time**
+- Mark questions answered if you got your answer
+- Correct action item assignments if wrong
+- Dismiss false positives immediately
+
+**5. Use Natural Language**
+- No special syntax required
+- Ask questions naturally
+- Make commitments as you normally would
+
+**6. Trust the System**
+- Answers clearly show their source
+- AI-generated answers are rare and marked
+- False positives can be dismissed
+
+### Cost Management
+
+**Pricing:**
+- AssemblyAI: $0.90/hour (transcription + speaker diarization)
+- GPT-5-mini: ~$0.15/hour (streaming intelligence)
+- **Total: ~$1.05/hour per meeting**
+
+**Cost Optimization:**
+- Single connection per meeting (shared across participants)
+- Enable only when needed (toggle mid-meeting)
+- Efficient streaming reduces token usage
+- Local embedding model (no API costs)
+
+**Example:**
+- 1-hour meeting with 5 participants = $1.05 total
+- Monthly (20 meetings/month) = ~$21/month
+- Yearly (240 meetings/year) = ~$252/year
+
+### Troubleshooting
+
+**No transcription appearing:**
+- Check microphone permissions
+- Verify AssemblyAI API key configured
+- Ensure audio level indicator shows activity
+- Try toggling AI Assistant OFF then ON
+
+**Questions not being detected:**
+- Verify OpenAI API key configured (for GPT-5-mini)
+- Check that questions are being spoken clearly
+- Review transcript to ensure accurate transcription
+- Some rhetorical questions may be filtered
+
+**Answers not appearing:**
+- Tier 1 requires uploaded content (knowledge base)
+- Tier 2 requires earlier meeting discussion
+- Tier 3 monitors for 15 seconds after question
+- Tier 4 fallback only triggers if all else fails
+
+**Action items missing:**
+- Speak commitments explicitly ("I will..." not "maybe...")
+- Include owner and deadline for completeness
+- System filters uncertain statements
+
+**Performance issues:**
+- Virtualized list handles long meetings efficiently
+- Older transcripts load on-demand
+- Try collapsing transcription panel if not needed
+- Refresh browser if WebSocket connection drops
+
+---
+
 ## Summary Generation
 
 ### Summary Types
