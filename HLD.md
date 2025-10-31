@@ -29,6 +29,7 @@ TellMeMo is a production SaaS platform for AI-powered project intelligence. This
 TellMeMo helps teams extract insights from project content using AI:
 
 - **Content Processing**: Upload transcripts, audio, documents, and emails
+- **Real-Time Meeting Intelligence**: Live question detection, automatic answer discovery, and action item tracking during meetings
 - **AI Analysis**: Semantic search and RAG-based question answering
 - **Smart Summaries**: Generate summaries at project, program, and portfolio levels
 - **Project Organization**: 3-tier hierarchy (Portfolio → Program → Project)
@@ -43,6 +44,9 @@ TellMeMo helps teams extract insights from project content using AI:
 - Multi-turn conversation support
 
 **AI Features:**
+- Real-time meeting intelligence with question detection and answer discovery
+- Four-tier answer discovery (RAG → Meeting Context → Live Monitoring → AI-Generated)
+- Automatic action item extraction with real-time tracking
 - Natural language querying
 - Source citation
 - Multi-format summaries (general, executive, technical, stakeholder)
@@ -128,8 +132,10 @@ TellMeMo helps teams extract insights from project content using AI:
 | **Auth** | Supabase Auth | User authentication |
 | **LLM (Primary)** | Anthropic Claude | AI generation (Haiku/Sonnet/Opus) |
 | **LLM (Fallback)** | OpenAI GPT | Automatic fallback on Claude overload |
+| **LLM (Real-Time)** | GPT-5-mini | Streaming intelligence for live meetings |
 | **Embeddings** | EmbeddingGemma | Local embedding model |
 | **Transcription** | OpenAI Whisper + Salad Cloud + Replicate | Audio to text (242x speedup with Replicate) |
+| **Real-Time STT** | AssemblyAI | Real-time speech-to-text with speaker diarization |
 | **Job Queue** | Redis Queue (RQ) | Background job processing with multi-priority queues |
 | **Cache & Pub/Sub** | Redis | Job state management and real-time updates |
 | **Monitoring** | Sentry + Langfuse | Error & LLM tracking |
@@ -558,7 +564,115 @@ APPEND_UPDATES_TO_DESCRIPTION=true  # Append vs replace
 **Database Tables:**
 - `integrations` - Integration configurations (encrypted API keys)
 
-### 14. Email Digest System
+### 14. Proactive Meeting Assistance System
+
+**Technology**: WebSocket + AssemblyAI + GPT-5-mini + Real-time Intelligence Engine
+
+**Overview:**
+Revolutionary real-time meeting intelligence that automatically detects questions, finds answers, and tracks action items as they happen during live meetings.
+
+**Core Capabilities:**
+
+**1. Real-Time Question Detection & Answer Discovery**
+- GPT-5-mini streaming analyzes live transcripts as they're spoken
+- Detects both explicit and implicit questions instantly (<500ms latency)
+- Four-tier answer discovery system:
+  - **Tier 1: RAG Search** - Searches organization's knowledge base (2s timeout)
+  - **Tier 2: Meeting Context** - Checks if answered earlier in meeting (1.5s timeout)
+  - **Tier 3: Live Monitoring** - Watches conversation for natural answers (15s window)
+  - **Tier 4: AI-Generated** - GPT fallback with clear disclaimer (3s timeout, >70% confidence)
+
+**2. Automatic Action Item Tracking**
+- Real-time detection of commitments and task assignments
+- Extracts owner, deadline, and description automatically
+- Accumulates details as conversation progresses
+- Smart alerting at natural meeting breakpoints
+- Completeness scoring (description + owner + deadline = 100%)
+
+**3. Real-Time Transcription Display**
+- AssemblyAI real-time transcription with speaker diarization
+- Live transcript feed with partial and final states
+- Auto-scroll with manual override
+- Speaker color-coding and attribution
+- Clickable timestamps for playback navigation
+
+**Architecture Components:**
+
+**Client Layer (Flutter):**
+- Audio capture (PCM 16kHz, 16-bit, mono)
+- WebSocket streaming (binary audio + JSON events)
+- Recording panel with integrated AI Assistant toggle
+- Live transcription display
+- Question and action cards with progressive updates
+
+**Backend Services:**
+- AssemblyAI integration for real-time speech-to-text
+- GPT-5-mini streaming intelligence engine
+- Transcription buffer (60-second rolling window)
+- Stream router (NDJSON parsing and event routing)
+- Question handler (manages answer discovery tiers)
+- Action handler (tracks and accumulates action items)
+- Answer handler (matches answers to questions)
+
+**Answer Discovery Services:**
+- RAG search service (Tier 1)
+- Meeting context search service (Tier 2)
+- Live monitoring service (Tier 3)
+- GPT answer generator (Tier 4 fallback)
+
+**Data Storage:**
+- Redis hot state (transcript buffer, active questions/actions)
+- PostgreSQL persistent storage (live_meeting_insights table)
+- Session lifecycle management
+- 1:1 mapping: recording_id = session_id
+
+**Features:**
+- Toggle AI Assistant ON/OFF mid-meeting
+- Clear source attribution for all answers (📚 Documents, 💬 Earlier in Meeting, 👂 Answered Live, 🤖 AI Answer)
+- Progressive result streaming (show results as they arrive)
+- Non-blocking UI with dismissible alerts
+- Post-meeting summary with all captured insights
+- Cost optimization: <$0.18 per meeting hour
+
+**Success Metrics:**
+- Question answer rate: 90%+ across all tiers
+- Answer source clarity: 100% attribution
+- Action item detection: 90%+ accuracy
+- Latency to first result: <500ms
+- GPT-generated answers: <15% (should be rare fallback)
+
+**Cost Efficiency:**
+- AssemblyAI: $0.90/hour (real-time transcription + diarization)
+- GPT-5-mini: ~$0.15/hour (streaming intelligence)
+- Total: ~$1.05/hour meeting cost (one connection per meeting)
+
+**Database Schema:**
+```sql
+CREATE TABLE live_meeting_insights (
+    id UUID PRIMARY KEY,
+    session_id VARCHAR,  -- matches recording_id
+    recording_id UUID REFERENCES recordings(id),
+    insight_type VARCHAR,  -- 'question' or 'action'
+    content JSONB,  -- question/action details
+    metadata JSONB,  -- sources, confidence, timestamps
+    created_at TIMESTAMP,
+    organization_id UUID,
+    project_id UUID
+);
+```
+
+**Session Lifecycle:**
+1. Recording start → Create recording + WebSocket connection
+2. AI toggle ON → Initialize Redis state + AssemblyAI connection
+3. Live streaming → Real-time intelligence processing
+4. AI toggle OFF → Preserve state (read-only access)
+5. Recording end → Persist insights to PostgreSQL
+
+**See Also:** [PROACTIVE_MEETING_ASSISTANCE_HLD.md](docs/PROACTIVE_MEETING_ASSISTANCE_HLD.md) for comprehensive technical specification.
+
+---
+
+### 15. Email Digest System
 
 **Technology**: APScheduler + SendGrid + Jinja2
 
@@ -767,6 +881,10 @@ Return to user
 **integrations**
 - id, organization_id, integration_type, config (encrypted), status, created_at, updated_at
 
+**live_meeting_insights**
+- id, session_id, recording_id, insight_type, content (JSONB), metadata (JSONB), created_at, organization_id, project_id
+- Stores real-time questions and actions from Proactive Meeting Assistance
+
 **item_updates**
 - id, item_type, item_id, update_type, update_data, similarity_score, organization_id, created_at
 - Tracks updates from semantic deduplication system
@@ -919,6 +1037,7 @@ Return to user
 - `WS /ws/jobs` - Upload job progress
 - `WS /ws/notifications` - Real-time notifications
 - `WS /ws/tickets` - Ticket updates
+- `WS /ws/live-insights/{session_id}` - Real-time meeting intelligence (Proactive Meeting Assistance)
 
 ### Scheduler
 - `POST /api/scheduler/schedule-summary` - Schedule automated summary

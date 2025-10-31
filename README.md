@@ -4,6 +4,8 @@ Turn project chaos into clarity. AI-powered platform that transforms meetings in
 
 ## ✨ Features
 
+- 🎯 **Real-Time Meeting Intelligence** - Live question detection with four-tier answer discovery (RAG → Meeting Context → Live Monitoring → AI-Generated)
+- 🤖 **Automatic Action Tracking** - Extract tasks, owners, and deadlines as they're mentioned
 - 🔍 **Ask questions** - Search in plain English, get answers with sources
 - ✅ **Track actions** - AI extracts tasks automatically
 - ⚠️ **Detect risks** - Spot problems before they become critical
@@ -28,6 +30,8 @@ See [CHANGELOG.md](CHANGELOG.md) for latest features, improvements, and bug fixe
 ### AI & ML
 - **Primary LLM**: Claude 3.5 Haiku (Anthropic)
 - **Fallback LLM**: GPT-4o/GPT-4o-mini (OpenAI) - automatic fallback on Claude overload
+- **Real-Time LLM**: GPT-5-mini (OpenAI) - streaming intelligence for live meetings
+- **Real-Time STT**: AssemblyAI - speech-to-text with speaker diarization
 - **Embeddings**: Google EmbeddingGemma-300m (local, 768-dimensional)
 - **Circuit Breaker**: Purgatory library for production resilience
 
@@ -75,7 +79,9 @@ docker compose up -d
 
 **HF_TOKEN** (Required): Get from [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) → Create token (Read permission)
 
-**OPENAI_API_KEY** (Optional): Get from [platform.openai.com](https://platform.openai.com/api-keys) → For automatic fallback when Claude is overloaded
+**OPENAI_API_KEY** (Optional but Recommended): Get from [platform.openai.com](https://platform.openai.com/api-keys) → For automatic fallback when Claude is overloaded + powers GPT-5-mini for real-time meeting intelligence
+
+**ASSEMBLYAI_API_KEY** (Optional): Get from [assemblyai.com](https://www.assemblyai.com/) → For real-time meeting transcription with speaker diarization
 
 ### Useful Commands
 
