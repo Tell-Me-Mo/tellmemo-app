@@ -821,7 +821,6 @@ async def handle_transcription_result(session_id: str, result: TranscriptionResu
                 logger.info(f"Sending final transcript to orchestrator for session {sanitize_for_log(session_id)}")
                 await orchestrator.process_transcription_chunk(
                     text=result.text,
-                    speaker=result.speaker,
                     timestamp=datetime.fromisoformat(result.created_at.replace('Z', '+00:00')) if result.created_at else datetime.utcnow(),
                     is_final=True
                 )

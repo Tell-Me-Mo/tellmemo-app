@@ -349,16 +349,16 @@ class StreamingIntelligenceOrchestrator:
     async def process_transcription_chunk(
         self,
         text: str,
-        speaker: Optional[str] = None,
         timestamp: Optional[datetime] = None,
         is_final: bool = True
     ) -> Dict[str, Any]:
         """
         Process a transcription chunk and trigger intelligence analysis.
 
+        Note: Speaker diarization not supported in Universal-Streaming v3 API.
+
         Args:
             text: Transcription text
-            speaker: Speaker identifier (e.g., "Speaker A")
             timestamp: Timestamp of transcription
             is_final: Whether this is a final transcript (vs partial)
 
