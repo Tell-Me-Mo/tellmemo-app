@@ -97,8 +97,8 @@ async def transcribe_audio(
             # Check if we're in a Docker environment by looking for /.dockerenv
             is_docker = os.path.exists('/.dockerenv')
 
-            if is_docker and not temp_file_path.startswith("/app/"):
-                # Running on host FastAPI but worker is in Docker - convert to container path
+            if not is_docker and not temp_file_path.startswith("/app/"):
+                # Backend running on host, worker is in Docker - convert to container path
                 temp_file_name = Path(temp_file_path).name
                 temp_file_path = f"/app/uploads/temp_audio/{temp_file_name}"
             # If both FastAPI and RQ worker are on host, keep the local path as-is
