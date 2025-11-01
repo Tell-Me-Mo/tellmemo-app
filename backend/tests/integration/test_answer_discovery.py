@@ -312,7 +312,7 @@ class TestFullAnswerDiscoveryFlow:
         assert result is not None
         assert result.insight_type == InsightType.QUESTION
         assert result.content == question_data["text"]
-        assert result.speaker == "Speaker A"
+        # Note: speaker field removed - streaming API doesn't support speaker diarization
 
         # Get the actual database-generated question ID
         db_question_id = str(result.id)
