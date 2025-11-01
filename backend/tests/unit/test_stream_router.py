@@ -558,6 +558,8 @@ class TestIntegration:
     @pytest.mark.asyncio
     async def test_full_conversation_flow(self, router: StreamRouter):
         """Test routing full conversation with question, answer, and action."""
+        from unittest.mock import AsyncMock, patch
+
         routed_objects = {
             "questions": [],
             "actions": [],
@@ -577,30 +579,37 @@ class TestIntegration:
         router.register_action_handler(action_handler)
         router.register_answer_handler(answer_handler)
 
-        # Question
-        question = {
-            "type": "question",
-            "text": "What's the deadline?",
-            "timestamp": "2025-10-26T10:00:00Z"
-        }
-        await router.route_object(question)
+        # Mock validator to always return is_meaningful=True for this test
+        mock_validator = AsyncMock()
+        mock_validator.validate_question = AsyncMock(return_value=(True, 0.9))
+        mock_validator.validate_action = AsyncMock(return_value=(True, 0.9))
 
-        # Action
-        action = {
-            "type": "action",
-            "description": "Complete the report",
-            "timestamp": "2025-10-26T10:01:00Z"
-        }
-        await router.route_object(action)
+        with patch('services.intelligence.stream_router._get_zeroshot_validator', return_value=mock_validator):
 
-        # Answer (must reference question by text)
-        answer = {
-            "type": "answer",
-            "question_text": question["text"],  # Match by text
-            "answer_text": "The deadline is Friday",
-            "timestamp": "2025-10-26T10:02:00Z"
-        }
-        await router.route_object(answer)
+            # Question - use more specific question to pass meaningful check
+            question = {
+                "type": "question",
+                "text": "What's the deadline for the Q4 infrastructure project report?",
+                "timestamp": "2025-10-26T10:00:00Z"
+            }
+            await router.route_object(question)
+
+            # Action
+            action = {
+                "type": "action",
+                "description": "Complete the report",
+                "timestamp": "2025-10-26T10:01:00Z"
+            }
+            await router.route_object(action)
+
+            # Answer (must reference question by text)
+            answer = {
+                "type": "answer",
+                "question_text": question["text"],  # Match by text
+                "answer_text": "The deadline for the Q4 infrastructure project report is Friday, November 15th",
+                "timestamp": "2025-10-26T10:02:00Z"
+            }
+            await router.route_object(answer)
 
         assert len(routed_objects["questions"]) == 1
         assert len(routed_objects["actions"]) == 1

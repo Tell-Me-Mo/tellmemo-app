@@ -11,7 +11,6 @@ _$TranscriptModelImpl _$$TranscriptModelImplFromJson(
 ) => _$TranscriptModelImpl(
   id: json['id'] as String,
   text: json['text'] as String,
-  speaker: json['speaker'] as String?,
   timestamp: DateTime.parse(json['timestamp'] as String),
   state: $enumDecode(_$TranscriptionStateEnumMap, json['state']),
   confidence: (json['confidence'] as num?)?.toDouble(),
@@ -24,7 +23,6 @@ Map<String, dynamic> _$$TranscriptModelImplToJson(
 ) => <String, dynamic>{
   'id': instance.id,
   'text': instance.text,
-  'speaker': instance.speaker,
   'timestamp': instance.timestamp.toIso8601String(),
   'state': _$TranscriptionStateEnumMap[instance.state]!,
   'confidence': instance.confidence,

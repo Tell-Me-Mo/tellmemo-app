@@ -23,11 +23,14 @@ settings = get_settings()
 
 @dataclass
 class TranscriptionSentence:
-    """Represents a single transcription sentence in the buffer."""
+    """
+    Represents a single transcription sentence in the buffer.
+
+    Note: Speaker field removed - not supported in Universal-Streaming v3 API.
+    """
 
     sentence_id: str
     text: str
-    speaker: str
     timestamp: float
     start_time: float
     end_time: float
@@ -182,16 +185,16 @@ class TranscriptionBufferService:
         self,
         session_id: str,
         include_timestamps: bool = True,
-        include_speakers: bool = True,
         max_age_seconds: Optional[int] = None
     ) -> str:
         """
         Get formatted buffer content for GPT consumption.
 
+        Note: include_speakers parameter removed - not supported in streaming API.
+
         Args:
             session_id: Session identifier
             include_timestamps: Include timestamps in output
-            include_speakers: Include speaker names
             max_age_seconds: Optional override for window size
 
         Returns:
@@ -212,9 +215,6 @@ class TranscriptionBufferService:
             if include_timestamps:
                 time_str = datetime.fromtimestamp(s.timestamp).strftime("%H:%M:%S")
                 parts.append(f"[{time_str}]")
-
-            if include_speakers:
-                parts.append(f"{s.speaker}:")
 
             parts.append(s.text)
 

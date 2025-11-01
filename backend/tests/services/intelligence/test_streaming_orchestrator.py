@@ -103,7 +103,7 @@ class TestTranscriptionProcessing:
 
                     result = await orchestrator.process_transcription_chunk(
                         text="Hello world",
-                        speaker="Speaker A",
+                        
                         timestamp=datetime.utcnow(),
                         is_final=True
                     )
@@ -122,7 +122,7 @@ class TestTranscriptionProcessing:
         """Test that partial transcriptions are skipped."""
         result = await orchestrator.process_transcription_chunk(
             text="Hello",
-            speaker="Speaker A",
+            
             is_final=False
         )
 
@@ -459,7 +459,7 @@ class TestIntegration:
                     for i in range(5):
                         result = await orch.process_transcription_chunk(
                             text=f"Chunk {i}",
-                            speaker="Speaker A",
+                            
                             is_final=True
                         )
                         assert result["status"] == "success"

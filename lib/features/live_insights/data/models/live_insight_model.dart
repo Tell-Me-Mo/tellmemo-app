@@ -121,6 +121,7 @@ class TierResult with _$TierResult {
 // ============================================================================
 
 /// Real-time question detected during live meeting
+/// Note: Speaker diarization not supported in Universal-Streaming v3 API
 @freezed
 class LiveQuestion with _$LiveQuestion {
   const LiveQuestion._();
@@ -131,9 +132,6 @@ class LiveQuestion with _$LiveQuestion {
 
     /// The question text as spoken
     required String text,
-
-    /// Speaker who asked the question
-    String? speaker,
 
     /// Timestamp when question was detected
     @DateTimeConverter() required DateTime timestamp,
@@ -175,9 +173,6 @@ class LiveQuestion with _$LiveQuestion {
   /// Check if question remains unanswered
   bool get isUnanswered => status == InsightStatus.unanswered;
 
-  /// Get display-friendly speaker label
-  String get displaySpeaker => speaker ?? 'Unknown Speaker';
-
   /// Get RAG tier results only
   List<TierResult> get ragResults =>
       tierResults.where((r) => r.tierType == TierType.rag).toList();
@@ -212,6 +207,7 @@ class LiveQuestion with _$LiveQuestion {
 // ============================================================================
 
 /// Real-time action item detected during live meeting
+/// Note: Speaker diarization not supported in Universal-Streaming v3 API
 @freezed
 class LiveAction with _$LiveAction {
   const LiveAction._();
@@ -234,9 +230,6 @@ class LiveAction with _$LiveAction {
 
     /// Current status of the action
     @Default(InsightStatus.tracked) InsightStatus status,
-
-    /// Speaker who mentioned the action
-    String? speaker,
 
     /// Timestamp when action was detected
     @DateTimeConverter() required DateTime timestamp,
@@ -274,9 +267,6 @@ class LiveAction with _$LiveAction {
 
   /// Check if action is complete
   bool get isComplete => status == InsightStatus.complete;
-
-  /// Get display-friendly speaker label
-  String get displaySpeaker => speaker ?? 'Unknown Speaker';
 
   /// Get badge color based on completeness
   String get badgeColor {
@@ -452,6 +442,7 @@ extension ActionCompletenessX on ActionCompleteness {
 // ============================================================================
 
 /// A segment of live transcription from the meeting
+/// Note: Speaker diarization not supported in Universal-Streaming v3 API
 @freezed
 class TranscriptSegment with _$TranscriptSegment {
   const TranscriptSegment._();
@@ -462,9 +453,6 @@ class TranscriptSegment with _$TranscriptSegment {
 
     /// The transcribed text
     required String text,
-
-    /// Speaker who spoke this segment
-    String? speaker,
 
     /// Start timestamp of this segment
     @DateTimeConverter() required DateTime startTime,
@@ -484,9 +472,6 @@ class TranscriptSegment with _$TranscriptSegment {
 
   factory TranscriptSegment.fromJson(Map<String, dynamic> json) =>
       _$TranscriptSegmentFromJson(json);
-
-  /// Get display-friendly speaker label
-  String get displaySpeaker => speaker ?? 'Unknown Speaker';
 
   /// Get duration of this segment
   Duration? get duration {

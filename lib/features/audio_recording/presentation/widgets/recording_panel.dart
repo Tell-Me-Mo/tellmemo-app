@@ -119,7 +119,6 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
     return TranscriptModel(
       id: segment.id,
       text: segment.text,
-      speaker: segment.speaker,
       timestamp: segment.startTime,
       state: segment.isFinal ? TranscriptionState.final_ : TranscriptionState.partial,
       confidence: segment.confidence,
@@ -172,19 +171,17 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
           final index = _questions.indexWhere((q) => q.id == question.id);
 
           if (index != -1) {
-            // Update existing question - preserve text, speaker, and timestamp if incoming is empty/null/changed
+            // Update existing question - preserve text and timestamp if incoming is empty/changed
             final existingQuestion = _questions[index];
             final preservedText = question.text.isEmpty ? existingQuestion.text : question.text;
-            final preservedSpeaker = question.speaker ?? existingQuestion.speaker;
             final preservedTimestamp = existingQuestion.timestamp; // Always keep original timestamp
 
             _questions[index] = question.copyWith(
               text: preservedText,
-              speaker: preservedSpeaker,
               timestamp: preservedTimestamp, // Preserve original question time
             );
 
-            debugPrint('[RecordingPanel] Updated question ${question.id}: preserved speaker="$preservedSpeaker", timestamp=${preservedTimestamp}');
+            debugPrint('[RecordingPanel] Updated question ${question.id}: timestamp=$preservedTimestamp');
           } else {
             _questions.add(question);
             debugPrint('[RecordingPanel] Added new question ${question.id}');
@@ -606,6 +603,109 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
         : _titleController.text;
     final screenInfo = ScreenInfo.fromContext(context);
 
+    // Minimal single-row layout for mobile
+    if (screenInfo.isMobile) {
+      return Container(
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 12,
+          top: MediaQuery.of(context).padding.top + 8,
+          bottom: 8,
+        ),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          border: Border(
+            bottom: BorderSide(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+              width: 1,
+            ),
+          ),
+        ),
+        child: Row(
+          children: [
+            // Recording indicator dot
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: recordingState.state == RecordingState.paused
+                    ? colorScheme.onSurfaceVariant.withValues(alpha: 0.5)
+                    : Colors.red,
+              ),
+              child: recordingState.state == RecordingState.paused
+                  ? null
+                  : AnimatedOpacity(
+                      opacity: recordingState.state == RecordingState.recording ? 1.0 : 0.3,
+                      duration: const Duration(milliseconds: 500),
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ),
+            ),
+            const SizedBox(width: 8),
+            // Timer
+            Text(
+              _formatDuration(recordingState.duration),
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                fontFeatures: [const FontFeature.tabularFigures()],
+              ),
+            ),
+            const Spacer(),
+            // Pause/Resume button
+            IconButton.filled(
+              onPressed: recordingState.state == RecordingState.paused
+                  ? () => ref.read(recordingNotifierProvider.notifier).resumeRecording()
+                  : () => ref.read(recordingNotifierProvider.notifier).pauseRecording(),
+              icon: Icon(
+                recordingState.state == RecordingState.paused
+                    ? Icons.play_arrow
+                    : Icons.pause,
+                size: 18,
+              ),
+              tooltip: recordingState.state == RecordingState.paused ? 'Resume' : 'Pause',
+              style: IconButton.styleFrom(
+                backgroundColor: colorScheme.secondaryContainer,
+                foregroundColor: colorScheme.onSecondaryContainer,
+                minimumSize: const Size(36, 36),
+                padding: EdgeInsets.zero,
+              ),
+            ),
+            const SizedBox(width: 6),
+            // Stop button
+            IconButton.filled(
+              onPressed: () => ref.read(recordingNotifierProvider.notifier).stopRecording(),
+              icon: const Icon(Icons.stop, size: 18),
+              tooltip: 'Stop',
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.red.withValues(alpha: 0.15),
+                foregroundColor: Colors.red,
+                minimumSize: const Size(36, 36),
+                padding: EdgeInsets.zero,
+              ),
+            ),
+            const SizedBox(width: 6),
+            // Close/Cancel button
+            IconButton(
+              icon: const Icon(Icons.close, size: 20),
+              onPressed: _handleClose,
+              tooltip: 'Cancel',
+              style: IconButton.styleFrom(
+                foregroundColor: colorScheme.onSurfaceVariant,
+                minimumSize: const Size(36, 36),
+                padding: EdgeInsets.zero,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Original desktop/tablet layout
     return Container(
       padding: EdgeInsets.only(
         left: 20,
@@ -1262,12 +1362,12 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
       );
     }
 
-    // If only one section is visible, show it without tabs
+    // If only one section is visible, show it without tabs (keep header since no tabs)
     if (!showQuestions) {
-      return _buildActionsSection(colorScheme, isMobile: true);
+      return _buildActionsSection(colorScheme, isMobile: true, showHeader: true);
     }
     if (!showActions) {
-      return _buildQuestionsSection(colorScheme, isMobile: true);
+      return _buildQuestionsSection(colorScheme, isMobile: true, showHeader: true);
     }
 
     // Both sections visible - show tabs
@@ -1303,8 +1403,8 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
           Expanded(
             child: TabBarView(
               children: [
-                _buildQuestionsSection(colorScheme, isMobile: true),
-                _buildActionsSection(colorScheme, isMobile: true),
+                _buildQuestionsSection(colorScheme, isMobile: true, showHeader: false),
+                _buildActionsSection(colorScheme, isMobile: true, showHeader: false),
               ],
             ),
           ),
@@ -1313,7 +1413,7 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
     );
   }
 
-  Widget _buildQuestionsSection(ColorScheme colorScheme, {required bool isMobile}) {
+  Widget _buildQuestionsSection(ColorScheme colorScheme, {required bool isMobile, bool showHeader = true}) {
     return Container(
       decoration: BoxDecoration(
         color: colorScheme.surface,
@@ -1325,24 +1425,26 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                const Icon(Icons.help_outline, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  'Questions (${_questions.length})',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+          // Header - only show if showHeader is true
+          if (showHeader) ...[
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const Icon(Icons.help_outline, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Questions (${_questions.length})',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          Divider(height: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+            Divider(height: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+          ],
 
           // Questions list
           Expanded(
@@ -1403,7 +1505,7 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
     );
   }
 
-  Widget _buildActionsSection(ColorScheme colorScheme, {required bool isMobile}) {
+  Widget _buildActionsSection(ColorScheme colorScheme, {required bool isMobile, bool showHeader = true}) {
     return Container(
       decoration: BoxDecoration(
         color: colorScheme.surface,
@@ -1415,24 +1517,26 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                const Icon(Icons.check_circle_outline, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  'Actions (${_actions.length})',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+          // Header - only show if showHeader is true
+          if (showHeader) ...[
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle_outline, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Actions (${_actions.length})',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          Divider(height: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+            Divider(height: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+          ],
 
           // Actions list
           Expanded(

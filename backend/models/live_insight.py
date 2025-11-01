@@ -76,10 +76,8 @@ class LiveMeetingInsight(Base):
     # Temporal information
     detected_at = Column(DateTime(timezone=True), nullable=False, index=True)
 
-    # Speaker attribution
-    speaker = Column(String(255), nullable=True, index=True)
-
     # Content
+    # Note: Speaker diarization not supported in streaming API
     content = Column(Text, nullable=False)
 
     # Status tracking
@@ -201,7 +199,6 @@ class LiveMeetingInsight(Base):
             "organization_id": str(self.organization_id),
             "insight_type": self.insight_type if isinstance(self.insight_type, str) else self.insight_type.value,
             "timestamp": self.detected_at.isoformat() if self.detected_at else None,  # Flutter expects 'timestamp'
-            "speaker": self.speaker,
             "text": self.content,  # Flutter expects 'text' not 'content'
             "description": self.content,  # For actions, Flutter expects 'description'
             "status": self.status,
@@ -210,6 +207,7 @@ class LiveMeetingInsight(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+        # Note: Speaker diarization not supported in streaming API
 
         # Add Flutter-specific fields with sensible defaults
         metadata = self.insight_metadata or {}

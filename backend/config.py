@@ -131,6 +131,12 @@ class Settings(BaseSettings):
     embedding_dimension: int = Field(default=768, env="EMBEDDING_DIMENSION")
     top_k_chunks: int = Field(default=5, env="TOP_K_CHUNKS")
 
+    # Zero-Shot Classification for Question/Action Validation (ModernBERT)
+    zeroshot_model: str = Field(default="MoritzLaurer/ModernBERT-base-zeroshot-v2.0", env="ZEROSHOT_MODEL")
+    zeroshot_question_threshold: float = Field(default=0.70, env="ZEROSHOT_QUESTION_THRESHOLD")  # 70% confidence for questions (good false positive filtering)
+    zeroshot_action_threshold: float = Field(default=0.60, env="ZEROSHOT_ACTION_THRESHOLD")  # 60% confidence for actions (more lenient)
+    enable_zeroshot_validation: bool = Field(default=True, env="ENABLE_ZEROSHOT_VALIDATION")  # Enable/disable validation
+
     # EmbeddingGemma MRL (Matryoshka) Configuration
     enable_mrl: bool = Field(default=True, env="ENABLE_MRL")
     mrl_dimensions: str = Field(default="128,256,512,768", env="MRL_DIMENSIONS")
@@ -219,6 +225,19 @@ class Settings(BaseSettings):
     sentry_environment: str = Field(default="development", env="SENTRY_ENVIRONMENT")
     sentry_traces_sample_rate: float = Field(default=1.0, env="SENTRY_TRACES_SAMPLE_RATE")
     sentry_profile_sample_rate: float = Field(default=1.0, env="SENTRY_PROFILE_SAMPLE_RATE")
+
+    # OpenTelemetry Configuration (Grafana Cloud)
+    otel_enabled: bool = Field(default=True, env="OTEL_ENABLED")
+    otel_service_name: str = Field(default="tellmemo-app", env="OTEL_SERVICE_NAME")
+    otel_service_version: str = Field(default="0.1.0", env="OTEL_SERVICE_VERSION")
+    otel_deployment_environment: str = Field(default="development", env="OTEL_DEPLOYMENT_ENVIRONMENT")
+    otel_exporter_otlp_endpoint: str = Field(default="https://otlp-gateway-prod-eu-west-2.grafana.net/otlp", env="OTEL_EXPORTER_OTLP_ENDPOINT")
+    otel_exporter_otlp_headers: str = Field(default="", env="OTEL_EXPORTER_OTLP_HEADERS")  # Format: "Authorization=Basic <base64>"
+    otel_exporter_otlp_protocol: str = Field(default="http/protobuf", env="OTEL_EXPORTER_OTLP_PROTOCOL")
+    otel_traces_sampler: str = Field(default="always_on", env="OTEL_TRACES_SAMPLER")  # always_on, always_off, traceidratio
+    otel_traces_sampler_arg: float = Field(default=1.0, env="OTEL_TRACES_SAMPLER_ARG")  # 1.0 = 100% sampling
+    otel_metrics_export_interval_millis: int = Field(default=60000, env="OTEL_METRICS_EXPORT_INTERVAL_MILLIS")  # 60s default
+    otel_logs_export_interval_millis: int = Field(default=60000, env="OTEL_LOGS_EXPORT_INTERVAL_MILLIS")  # 60s default
 
     # Logging Configuration
     enable_logstash: bool = Field(default=False, env="ENABLE_LOGSTASH")

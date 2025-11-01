@@ -89,7 +89,6 @@ def test_transcription_result_creation():
     result = TranscriptionResult(
         text="Hello, what is the budget?",
         is_final=True,
-        speaker="Speaker A",
         confidence=0.95,
         audio_start=0,
         audio_end=3000,
@@ -99,7 +98,6 @@ def test_transcription_result_creation():
 
     assert result.text == "Hello, what is the budget?"
     assert result.is_final is True
-    assert result.speaker == "Speaker A"
     assert result.confidence == 0.95
     assert result.audio_start == 0
     assert result.audio_end == 3000
@@ -110,7 +108,6 @@ def test_transcription_result_partial():
     result = TranscriptionResult(
         text="Hello, what is...",
         is_final=False,
-        speaker=None,
         confidence=0.75,
         audio_start=0,
         audio_end=1500,
@@ -119,7 +116,6 @@ def test_transcription_result_partial():
     )
 
     assert result.is_final is False
-    assert result.speaker is None
     assert result.confidence == 0.75
 
 
@@ -143,10 +139,9 @@ def test_parse_transcription_result_final():
         "audio_start": 0,
         "audio_end": 4000,
         "created": "2025-10-26T10:30:00Z",
-        "speaker_labels": ["Speaker B"],
         "words": [
-            {"text": "The", "start": 0, "end": 200, "confidence": 0.99, "speaker": "B"},
-            {"text": "budget", "start": 200, "end": 500, "confidence": 0.98, "speaker": "B"}
+            {"text": "The", "start": 0, "end": 200, "confidence": 0.99},
+            {"text": "budget", "start": 200, "end": 500, "confidence": 0.98}
         ]
     }
 
@@ -154,7 +149,6 @@ def test_parse_transcription_result_final():
 
     assert result.text == "The budget is $250,000 for infrastructure."
     assert result.is_final is True
-    assert result.speaker == "Speaker B"
     assert result.confidence == 0.97
     assert result.audio_start == 0
     assert result.audio_end == 4000
@@ -187,43 +181,8 @@ def test_parse_transcription_result_partial():
     assert result.confidence == 0.85
 
 
-def test_extract_speaker_from_words():
-    """Test speaker extraction from words array."""
-    connection = AssemblyAIConnection(
-        session_id="test_session",
-        api_key="test_key",
-        on_transcription=None,
-        on_error=None
-    )
-
-    assemblyai_response = {
-        "text": "Hello everyone",
-        "words": [
-            {"text": "Hello", "speaker": "A"},
-            {"text": "everyone", "speaker": "A"}
-        ]
-    }
-
-    speaker = connection._extract_speaker(assemblyai_response)
-    assert speaker == "Speaker A"
-
-
-def test_extract_speaker_no_speaker():
-    """Test speaker extraction when no speaker info available."""
-    connection = AssemblyAIConnection(
-        session_id="test_session",
-        api_key="test_key",
-        on_transcription=None,
-        on_error=None
-    )
-
-    assemblyai_response = {
-        "text": "Hello everyone",
-        "words": []
-    }
-
-    speaker = connection._extract_speaker(assemblyai_response)
-    assert speaker is None
+# Note: Speaker diarization not supported in Universal-Streaming v3 API
+# Tests for _extract_speaker removed as the method no longer exists
 
 
 # Test: AssemblyAIConnectionManager

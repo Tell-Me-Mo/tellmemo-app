@@ -63,10 +63,13 @@ class TranscriptionMetrics:
 
 @dataclass
 class TranscriptionResult:
-    """Parsed transcription result from AssemblyAI."""
+    """
+    Parsed transcription result from AssemblyAI Universal-Streaming v3.
+
+    Note: Speaker diarization is not supported in streaming API.
+    """
     text: str
     is_final: bool
-    speaker: Optional[str]
     confidence: float
     audio_start: int  # milliseconds
     audio_end: int  # milliseconds
@@ -270,8 +273,9 @@ class AssemblyAIConnection:
                 f"&encoding={self.ENCODING}"
             )
 
-            # Enable speaker diarization
-            url += "&enable_speaker_labels=true"
+            # Note: Speaker diarization is NOT supported in Universal-Streaming v3
+            # It's only available for pre-recorded (async) transcription API
+            # For streaming with speaker separation, multichannel audio is required
 
             logger.info(f"Connecting to AssemblyAI Universal-Streaming v3 for session {sanitize_for_log(self.session_id)}...")
 
@@ -493,38 +497,12 @@ class AssemblyAIConnection:
         return TranscriptionResult(
             text=text,
             is_final=is_final,
-            speaker=self._extract_speaker(data),
             confidence=data.get("confidence", 0.0),
             audio_start=audio_start,
             audio_end=audio_end,
             created_at=data.get("created", datetime.utcnow().isoformat()),
             words=words
         )
-
-    def _extract_speaker(self, data: Dict[str, Any]) -> Optional[str]:
-        """
-        Extract speaker label from AssemblyAI response.
-
-        Args:
-            data: AssemblyAI JSON response
-
-        Returns:
-            Speaker label (e.g., "Speaker A") or None
-        """
-        # Check for speaker_labels field (array of speakers)
-        speaker_labels = data.get("speaker_labels")
-        if speaker_labels and len(speaker_labels) > 0:
-            return speaker_labels[0]
-
-        # Check for words array with speaker information
-        words = data.get("words", [])
-        if words and len(words) > 0:
-            first_word = words[0]
-            speaker = first_word.get("speaker")
-            if speaker:
-                return f"Speaker {speaker}"
-
-        return None
 
     async def _attempt_reconnect(self):
         """

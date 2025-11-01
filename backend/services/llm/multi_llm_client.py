@@ -30,8 +30,54 @@ except ImportError as e:
 from config import Settings
 from models.integration import AIProvider, AIModel, MODEL_PROVIDER_MAP, Integration, IntegrationType, IntegrationStatus, get_equivalent_model
 from models.organization import Organization
+from observability.metrics import get_metrics
+from observability.business_metrics import get_business_metrics
+import time
 
 logger = logging.getLogger(__name__)
+metrics = get_metrics()
+business_metrics = get_business_metrics()
+
+# LLM Cost Estimation (USD per 1M tokens)
+LLM_COSTS = {
+    "claude": {
+        "claude-3-5-sonnet-latest": {"input": 3.00, "output": 15.00},
+        "claude-3-5-haiku-latest": {"input": 0.80, "output": 4.00},
+        "claude-3-opus-latest": {"input": 15.00, "output": 75.00},
+    },
+    "openai": {
+        "gpt-4o": {"input": 2.50, "output": 10.00},
+        "gpt-4o-mini": {"input": 0.15, "output": 0.60},
+        "gpt-4-turbo": {"input": 10.00, "output": 30.00},
+    },
+    "deepseek": {
+        "deepseek-chat": {"input": 0.14, "output": 0.28},
+        "deepseek-reasoner": {"input": 0.55, "output": 2.19},
+    },
+}
+
+
+def estimate_llm_cost(provider: str, model: str, input_tokens: int, output_tokens: int) -> float:
+    """
+    Estimate LLM cost in USD cents.
+
+    Args:
+        provider: LLM provider (claude, openai, deepseek)
+        model: Model name
+        input_tokens: Number of input/prompt tokens
+        output_tokens: Number of output/completion tokens
+
+    Returns:
+        Estimated cost in USD cents
+    """
+    provider_costs = LLM_COSTS.get(provider.lower(), {})
+    model_costs = provider_costs.get(model, {"input": 1.0, "output": 2.0})  # Fallback
+
+    # Calculate cost per million tokens, convert to cents
+    input_cost = (input_tokens / 1_000_000) * model_costs["input"] * 100
+    output_cost = (output_tokens / 1_000_000) * model_costs["output"] * 100
+
+    return round(input_cost + output_cost, 4)
 
 
 class BaseProviderClient(ABC):
@@ -1268,6 +1314,54 @@ class MultiProviderLLMClient:
                 f"⚠️  Fallback used: {metadata.get('primary_model')} → {metadata.get('fallback_model')} "
                 f"(reason: {metadata.get('fallback_reason')})"
             )
+
+        # Record metrics for observability
+        try:
+            actual_provider = metadata.get("actual_provider", provider_name)
+            actual_model = metadata.get("actual_model", model)
+            prompt_tokens = 0
+            completion_tokens = 0
+
+            # Extract token usage if available
+            if response and hasattr(response, 'usage'):
+                prompt_tokens = getattr(response.usage, 'input_tokens', 0)
+                completion_tokens = getattr(response.usage, 'output_tokens', 0)
+
+            metrics.record_llm_request(
+                provider=actual_provider.lower(),
+                model=actual_model,
+                duration=metadata.get("duration_seconds", 0),
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                success=response is not None,
+                error_type=metadata.get("error_type")
+            )
+
+            # Record business cost metrics
+            if response and prompt_tokens > 0:
+                cost_cents = estimate_llm_cost(
+                    provider=actual_provider.lower(),
+                    model=actual_model,
+                    input_tokens=prompt_tokens,
+                    output_tokens=completion_tokens
+                )
+                business_metrics.record_llm_cost(
+                    provider=actual_provider.lower(),
+                    cost_cents=cost_cents,
+                    operation_type="query",  # Default operation type
+                    user_id=kwargs.get("user_id")  # Pass user_id if available in kwargs
+                )
+
+                # Record organization-level LLM cost if organization_id is available
+                org_id = kwargs.get("organization_id") or (organization_id if session else None)
+                if org_id:
+                    business_metrics.record_org_query(
+                        organization_id=org_id,
+                        user_id=kwargs.get("user_id", "system"),
+                        cost_cents=cost_cents
+                    )
+        except Exception as e:
+            logger.warning(f"Failed to record LLM metrics: {e}")
 
         return response
 

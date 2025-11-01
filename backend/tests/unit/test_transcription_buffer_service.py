@@ -24,11 +24,10 @@ from services.transcription.transcription_buffer_service import (
 
 @pytest.fixture
 def sample_sentence() -> TranscriptionSentence:
-    """Create a sample transcription sentence."""
+    """Create a sample transcription sentence. Note: Speaker diarization removed."""
     return TranscriptionSentence(
         sentence_id="sent_001",
         text="Hello, what is the budget for Q4?",
-        speaker="Speaker A",
         timestamp=datetime.now().timestamp(),
         start_time=datetime.now().timestamp(),
         end_time=datetime.now().timestamp() + 3.5,
@@ -39,7 +38,7 @@ def sample_sentence() -> TranscriptionSentence:
 
 @pytest.fixture
 def sample_sentences() -> List[TranscriptionSentence]:
-    """Create multiple sample sentences spanning a time window."""
+    """Create multiple sample sentences spanning a time window. Note: Speaker diarization removed."""
     current_time = datetime.now().timestamp()
     sentences = []
 
@@ -47,7 +46,6 @@ def sample_sentences() -> List[TranscriptionSentence]:
         sentences.append(TranscriptionSentence(
             sentence_id=f"sent_{i:03d}",
             text=f"This is sentence number {i}.",
-            speaker=f"Speaker {chr(65 + i % 3)}",
             timestamp=current_time + (i * 10),
             start_time=current_time + (i * 10),
             end_time=current_time + (i * 10) + 2,
@@ -75,33 +73,30 @@ def session_id() -> str:
 # Test: TranscriptionSentence Data Model
 
 def test_transcription_sentence_creation(sample_sentence):
-    """Test creation of TranscriptionSentence dataclass."""
+    """Test creation of TranscriptionSentence dataclass. Note: Speaker diarization removed."""
     assert sample_sentence.sentence_id == "sent_001"
     assert sample_sentence.text == "Hello, what is the budget for Q4?"
-    assert sample_sentence.speaker == "Speaker A"
     assert sample_sentence.confidence == 0.95
     assert sample_sentence.metadata == {"language": "en"}
 
 
 def test_transcription_sentence_to_dict(sample_sentence):
-    """Test conversion of sentence to dictionary."""
+    """Test conversion of sentence to dictionary. Note: Speaker diarization removed."""
     sentence_dict = sample_sentence.to_dict()
 
     assert isinstance(sentence_dict, dict)
     assert sentence_dict["sentence_id"] == "sent_001"
     assert sentence_dict["text"] == "Hello, what is the budget for Q4?"
-    assert sentence_dict["speaker"] == "Speaker A"
     assert sentence_dict["confidence"] == 0.95
 
 
 def test_transcription_sentence_from_dict(sample_sentence):
-    """Test creation of sentence from dictionary."""
+    """Test creation of sentence from dictionary. Note: Speaker diarization removed."""
     sentence_dict = sample_sentence.to_dict()
     reconstructed = TranscriptionSentence.from_dict(sentence_dict)
 
     assert reconstructed.sentence_id == sample_sentence.sentence_id
     assert reconstructed.text == sample_sentence.text
-    assert reconstructed.speaker == sample_sentence.speaker
     assert reconstructed.confidence == sample_sentence.confidence
     assert reconstructed.metadata == sample_sentence.metadata
 
@@ -193,7 +188,6 @@ async def test_get_buffer_with_max_age(buffer_service, session_id):
     old_sentence = TranscriptionSentence(
         sentence_id="old",
         text="Old sentence",
-        speaker="Speaker A",
         timestamp=current_time - 50,
         start_time=current_time - 50,
         end_time=current_time - 48,
@@ -203,7 +197,6 @@ async def test_get_buffer_with_max_age(buffer_service, session_id):
     recent_sentence = TranscriptionSentence(
         sentence_id="recent",
         text="Recent sentence",
-        speaker="Speaker B",
         timestamp=current_time - 5,
         start_time=current_time - 5,
         end_time=current_time - 3,
@@ -235,7 +228,6 @@ async def test_auto_trim_by_time(buffer_service, session_id):
     old_sentence = TranscriptionSentence(
         sentence_id="old",
         text="Old sentence",
-        speaker="Speaker A",
         timestamp=current_time - 70,
         start_time=current_time - 70,
         end_time=current_time - 68,
@@ -246,7 +238,6 @@ async def test_auto_trim_by_time(buffer_service, session_id):
     recent_sentence = TranscriptionSentence(
         sentence_id="recent",
         text="Recent sentence",
-        speaker="Speaker B",
         timestamp=current_time - 5,
         start_time=current_time - 5,
         end_time=current_time - 3,
@@ -281,7 +272,6 @@ async def test_auto_trim_by_count(buffer_service, session_id):
         sentence = TranscriptionSentence(
             sentence_id=f"sent_{i}",
             text=f"Sentence {i}",
-            speaker="Speaker A",
             timestamp=current_time + i,
             start_time=current_time + i,
             end_time=current_time + i + 1,
@@ -319,8 +309,8 @@ async def test_get_formatted_context_empty(buffer_service, session_id):
 
 
 @pytest.mark.asyncio
-async def test_get_formatted_context_with_timestamps_and_speakers(buffer_service, session_id, sample_sentences):
-    """Test formatted context with timestamps and speakers."""
+async def test_get_formatted_context_with_timestamps(buffer_service, session_id, sample_sentences):
+    """Test formatted context with timestamps. Note: Speaker diarization removed."""
     # Add sentences
     for sentence in sample_sentences:
         await buffer_service.add_sentence(session_id, sentence)
@@ -328,19 +318,17 @@ async def test_get_formatted_context_with_timestamps_and_speakers(buffer_service
     # Get formatted context
     context = await buffer_service.get_formatted_context(
         session_id,
-        include_timestamps=True,
-        include_speakers=True
+        include_timestamps=True
     )
 
-    # Verify format: "[HH:MM:SS] Speaker X: Text"
+    # Verify format: "[HH:MM:SS] Text" (no speaker labels)
     lines = context.split("\n")
     assert len(lines) == len(sample_sentences)
 
     for line in lines:
         assert line.startswith("[")
         assert "]" in line
-        assert "Speaker" in line
-        assert ":" in line
+        assert "This is sentence" in line
 
     # Clean up
     await buffer_service.clear_buffer(session_id)
@@ -348,7 +336,7 @@ async def test_get_formatted_context_with_timestamps_and_speakers(buffer_service
 
 @pytest.mark.asyncio
 async def test_get_formatted_context_without_timestamps(buffer_service, session_id, sample_sentences):
-    """Test formatted context without timestamps."""
+    """Test formatted context without timestamps. Note: Speaker diarization removed."""
     # Add sentences
     for sentence in sample_sentences:
         await buffer_service.add_sentence(session_id, sentence)
@@ -356,39 +344,13 @@ async def test_get_formatted_context_without_timestamps(buffer_service, session_
     # Get formatted context
     context = await buffer_service.get_formatted_context(
         session_id,
-        include_timestamps=False,
-        include_speakers=True
+        include_timestamps=False
     )
 
     lines = context.split("\n")
 
     for line in lines:
         assert not line.startswith("[")
-        assert "Speaker" in line
-
-    # Clean up
-    await buffer_service.clear_buffer(session_id)
-
-
-@pytest.mark.asyncio
-async def test_get_formatted_context_without_speakers(buffer_service, session_id, sample_sentences):
-    """Test formatted context without speaker attribution."""
-    # Add sentences
-    for sentence in sample_sentences:
-        await buffer_service.add_sentence(session_id, sentence)
-
-    # Get formatted context
-    context = await buffer_service.get_formatted_context(
-        session_id,
-        include_timestamps=True,
-        include_speakers=False
-    )
-
-    lines = context.split("\n")
-
-    for line in lines:
-        assert line.startswith("[")
-        # Should not have "Speaker X:" pattern
         assert "This is sentence" in line
 
     # Clean up
@@ -472,7 +434,6 @@ async def test_close_connection(buffer_service):
     sample = TranscriptionSentence(
         sentence_id="test",
         text="Test",
-        speaker="A",
         timestamp=datetime.now().timestamp(),
         start_time=datetime.now().timestamp(),
         end_time=datetime.now().timestamp() + 1,

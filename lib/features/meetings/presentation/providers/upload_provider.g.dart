@@ -23,7 +23,7 @@ final uploadStateProvider = AutoDisposeProvider<UploadState>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef UploadStateRef = AutoDisposeProviderRef<UploadState>;
-String _$uploadContentHash() => r'67e015c68be029d1ccd54ce9c10c8e3456dff512';
+String _$uploadContentHash() => r'f5f88115b91b002dda03f9125f344af620d17b59';
 
 /// See also [UploadContent].
 @ProviderFor(UploadContent)

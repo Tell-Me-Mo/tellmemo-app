@@ -27,11 +27,14 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class MeetingContextResult:
-    """Result from meeting context search."""
+    """Result from meeting context search.
+
+    Note: Speaker diarization not supported in streaming API.
+    """
 
     found_answer: bool
     answer_text: Optional[str] = None
-    quotes: Optional[List[Dict[str, Any]]] = None  # [{text, speaker, timestamp}]
+    quotes: Optional[List[Dict[str, Any]]] = None  # [{text, timestamp}]
     confidence: float = 0.0
     search_duration_ms: int = 0
 
@@ -51,7 +54,9 @@ class MeetingContextSearchService:
     Service to search current meeting transcript for answers to questions.
 
     Uses GPT-5-mini for semantic search and improved reference detection.
-    Returns exact quotes with speaker attribution and clickable timestamps.
+    Returns exact quotes with clickable timestamps.
+
+    Note: Speaker diarization not supported in streaming API.
     """
 
     def __init__(
@@ -84,7 +89,6 @@ class MeetingContextSearchService:
         self,
         question: str,
         session_id: str,
-        speaker: Optional[str] = None,
         organization_id: Optional[str] = None
     ) -> MeetingContextResult:
         """
@@ -93,11 +97,12 @@ class MeetingContextSearchService:
         Args:
             question: The question text to search for
             session_id: Meeting session identifier
-            speaker: Who asked the question (optional)
             organization_id: Organization ID for LLM tracking (optional)
 
         Returns:
             MeetingContextResult with answer, quotes, and confidence
+
+        Note: Speaker diarization not supported in streaming API.
         """
         start_time = datetime.now()
 
@@ -106,7 +111,6 @@ class MeetingContextSearchService:
             search_task = self._search_transcript(
                 question=question,
                 session_id=session_id,
-                speaker=speaker,
                 organization_id=organization_id
             )
 
@@ -156,7 +160,6 @@ class MeetingContextSearchService:
         self,
         question: str,
         session_id: str,
-        speaker: Optional[str],
         organization_id: Optional[str]
     ) -> MeetingContextResult:
         """
@@ -165,17 +168,18 @@ class MeetingContextSearchService:
         Args:
             question: Question text
             session_id: Session identifier
-            speaker: Question speaker
             organization_id: Organization ID
 
         Returns:
             MeetingContextResult with findings
+
+        Note: Speaker diarization not supported in streaming API.
         """
         # Step 1: Get formatted meeting transcript
+        # Note: Speaker diarization not supported in streaming API
         transcript = await self.transcription_buffer.get_formatted_context(
             session_id=session_id,
-            include_timestamps=True,
-            include_speakers=True
+            include_timestamps=True
         )
 
         if not transcript or len(transcript.strip()) < 20:
@@ -189,8 +193,7 @@ class MeetingContextSearchService:
         system_prompt = self._build_system_prompt()
         user_prompt = self._build_user_prompt(
             question=question,
-            transcript=transcript,
-            speaker=speaker
+            transcript=transcript
         )
 
         # Step 3: Call GPT-5-mini for semantic search
@@ -217,13 +220,16 @@ class MeetingContextSearchService:
             return MeetingContextResult(found_answer=False)
 
     def _build_system_prompt(self) -> str:
-        """Build system prompt for GPT-5-mini semantic search."""
+        """Build system prompt for GPT-5-mini semantic search.
+
+        Note: Speaker diarization not supported in streaming API.
+        """
         return """You are a meeting transcript search assistant. Your job is to search the meeting transcript for answers to questions.
 
 TASK:
 1. Read the provided meeting transcript carefully
 2. Determine if the question was already answered earlier in the meeting
-3. If yes, extract the answer with exact quotes, speaker attribution, and timestamps
+3. If yes, extract the answer with exact quotes and timestamps
 4. If no, return found_answer=false
 
 CRITICAL: Output ONLY raw JSON. Do NOT wrap in markdown code blocks. Do NOT include ```json or ``` markers.
@@ -235,7 +241,6 @@ OUTPUT FORMAT (JSON):
   "quotes": [
     {
       "text": "Exact quote from transcript",
-      "speaker": "Speaker A",
       "timestamp": "[HH:MM:SS]"
     }
   ],
@@ -245,7 +250,7 @@ OUTPUT FORMAT (JSON):
 RULES:
 - Only return found_answer=true if confident (>75% confidence)
 - Use exact quotes from the transcript, do not paraphrase
-- Include speaker attribution and timestamps for all quotes
+- Include timestamps for all quotes
 - Return up to 3 most relevant quotes
 - Confidence should be 0.0-1.0 based on how clearly the answer was stated
 - If the question wasn't discussed, return found_answer=false
@@ -254,8 +259,7 @@ RULES:
     def _build_user_prompt(
         self,
         question: str,
-        transcript: str,
-        speaker: Optional[str]
+        transcript: str
     ) -> str:
         """
         Build user prompt with question and transcript.
@@ -263,15 +267,14 @@ RULES:
         Args:
             question: Question to search for
             transcript: Formatted meeting transcript
-            speaker: Question speaker (optional)
 
         Returns:
             Formatted user prompt
-        """
-        speaker_info = f"\nAsked by: {speaker}" if speaker else ""
 
+        Note: Speaker diarization not supported in streaming API.
+        """
         return f"""QUESTION TO SEARCH FOR:
-"{question}"{speaker_info}
+"{question}"
 
 MEETING TRANSCRIPT:
 {transcript}
@@ -326,12 +329,12 @@ Search the transcript above and determine if this question was already answered 
             quotes = data.get("quotes", [])
 
             # Validate quotes structure
+            # Note: Speaker diarization not supported in streaming API
             validated_quotes = []
             for quote in quotes[:self.max_quotes]:
                 if isinstance(quote, dict) and "text" in quote:
                     validated_quotes.append({
                         "text": quote.get("text", ""),
-                        "speaker": quote.get("speaker", "Unknown"),
                         "timestamp": quote.get("timestamp", "")
                     })
 

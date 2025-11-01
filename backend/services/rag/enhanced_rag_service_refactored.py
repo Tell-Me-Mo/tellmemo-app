@@ -30,8 +30,13 @@ from services.prompts.rag_prompts import (
 )
 from config import get_settings
 from utils.logger import get_logger, sanitize_for_log
+from observability.decorators import track_rag_query
+from observability.metrics import get_metrics
+from observability.business_metrics import get_business_metrics
 
 logger = get_logger(__name__)
+metrics = get_metrics()
+business_metrics = get_business_metrics()
 
 
 class RAGStrategy(Enum):
@@ -120,6 +125,7 @@ class EnhancedRAGService:
             diversity_boost=0.1
         )
     
+    @track_rag_query()
     async def query_project(
         self,
         project_id: str,
@@ -161,10 +167,69 @@ class EnhancedRAGService:
             result['response_time_ms'] = total_time
             result['strategy_used'] = strategy.value
 
+            # Record technical metrics
+            metrics.record_rag_query(
+                duration=time.time() - start_time,
+                chunks_retrieved=len(result.get('sources', [])),
+                context_size=len(result.get('answer', '')),
+                success=True
+            )
+
+            # Record business metrics
+            has_results = len(result.get('sources', [])) > 0
+            num_sources = len(result.get('sources', []))
+
+            business_metrics.record_user_question(
+                user_id=user_id or "anonymous",
+                project_id=project_id,
+                has_results=has_results
+            )
+
+            # Record organization-level metrics if organization_id is available
+            if organization_id:
+                business_metrics.record_org_query(
+                    organization_id=organization_id,
+                    user_id=user_id or "anonymous",
+                    cost_cents=0  # LLM cost tracked separately
+                )
+
+            # Record content coverage gaps (no results or low relevance)
+            if not has_results:
+                business_metrics.record_content_coverage_gap(
+                    query=question,
+                    project_id=project_id,
+                    user_id=user_id or "anonymous",
+                    reason="no_results"
+                )
+            elif num_sources > 0 and result.get('sources', [{}])[0].get('score', 1.0) < 0.3:
+                # Low relevance score
+                business_metrics.record_low_relevance_result(
+                    query=question,
+                    project_id=project_id,
+                    relevance_score=result['sources'][0].get('score', 0),
+                    threshold=0.3
+                )
+
+            # Record SLA compliance (2 second target)
+            business_metrics.record_sla_compliance(
+                operation="rag_query",
+                response_time_ms=total_time,
+                sla_threshold_ms=2000,
+                success=True
+            )
+
             logger.info(f"Enhanced RAG query completed using {strategy.value} in {total_time}ms")
             return result
 
         except Exception as e:
+            # Record failure metrics
+            metrics.record_rag_query(
+                duration=time.time() - start_time,
+                chunks_retrieved=0,
+                context_size=0,
+                success=False,
+                error_type=type(e).__name__
+            )
             logger.error(f"Enhanced RAG query failed for project {sanitize_for_log(project_id)}: {e}")
             raise
 

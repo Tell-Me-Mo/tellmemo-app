@@ -17,8 +17,40 @@ import numpy as np
 from utils.logger import get_logger
 from utils.exceptions import APIException
 from services.rag.embedding_service import embedding_service
+from config import get_settings
+
+# Lazy-load zero-shot validator to avoid circular imports
+_zeroshot_validator = None
+_validator_loaded = False
 
 logger = get_logger(__name__)
+
+
+def _get_zeroshot_validator():
+    """
+    Lazy-load the zero-shot validator service.
+
+    Returns:
+        ZeroShotValidatorService instance or None if disabled/unavailable
+    """
+    global _zeroshot_validator, _validator_loaded
+
+    if not _validator_loaded:
+        _validator_loaded = True
+        settings = get_settings()
+
+        if settings.enable_zeroshot_validation:
+            try:
+                from services.intelligence.zeroshot_validator_service import zeroshot_validator_service
+                _zeroshot_validator = zeroshot_validator_service
+                logger.debug("Zero-shot validator loaded successfully")
+            except Exception as e:
+                logger.warning(f"Failed to load zero-shot validator: {e}")
+                _zeroshot_validator = None
+        else:
+            logger.debug("Zero-shot validation disabled in configuration")
+
+    return _zeroshot_validator
 
 
 class StreamRouterException(APIException):
@@ -421,10 +453,37 @@ class StreamRouter:
 
         Generates a backend UUID and tracks by question text for answer matching.
         Uses semantic embeddings to detect duplicate questions.
+        Uses zero-shot classification to filter false positives.
         """
         question_text = obj["text"]
 
-        # Check for semantic duplicates using embeddings
+        # ========================================================================
+        # STEP 1: Validate question with zero-shot classifier (filter false positives)
+        # ========================================================================
+        validator = _get_zeroshot_validator()
+        if validator:
+            try:
+                is_meaningful, confidence = await validator.validate_question(question_text)
+
+                if not is_meaningful:
+                    logger.info(
+                        f"❌ Filtered non-meaningful question (confidence={confidence:.3f}): "
+                        f"'{question_text[:80]}...'"
+                    )
+                    # Don't route this question - it's a false positive
+                    return
+
+                logger.debug(
+                    f"✅ Question validated as meaningful (confidence={confidence:.3f}): "
+                    f"'{question_text[:50]}...'"
+                )
+            except Exception as validation_error:
+                logger.warning(f"Zero-shot validation failed, accepting question by default: {validation_error}")
+                # Fail-open: if validation fails, accept the question
+
+        # ========================================================================
+        # STEP 2: Check for semantic duplicates using embeddings
+        # ========================================================================
         is_duplicate, existing_id, similarity = await self._find_duplicate_question(question_text)
         if is_duplicate:
             logger.info(
@@ -465,11 +524,38 @@ class StreamRouter:
 
         Generates a backend UUID and tracks by description for action_update matching.
         Uses semantic embeddings to detect duplicate actions.
+        Uses zero-shot classification to filter false positives.
         If duplicate action detected, treats it as an action update.
         """
         action_description = obj["description"]
 
-        # Check for semantic duplicates using embeddings
+        # ========================================================================
+        # STEP 1: Validate action with zero-shot classifier (filter false positives)
+        # ========================================================================
+        validator = _get_zeroshot_validator()
+        if validator:
+            try:
+                is_meaningful, confidence = await validator.validate_action(action_description)
+
+                if not is_meaningful:
+                    logger.info(
+                        f"❌ Filtered non-meaningful action (confidence={confidence:.3f}): "
+                        f"'{action_description[:80]}...'"
+                    )
+                    # Don't route this action - it's a false positive
+                    return
+
+                logger.debug(
+                    f"✅ Action validated as meaningful (confidence={confidence:.3f}): "
+                    f"'{action_description[:50]}...'"
+                )
+            except Exception as validation_error:
+                logger.warning(f"Zero-shot validation failed, accepting action by default: {validation_error}")
+                # Fail-open: if validation fails, accept the action
+
+        # ========================================================================
+        # STEP 2: Check for semantic duplicates using embeddings
+        # ========================================================================
         is_duplicate, existing_id, similarity = await self._find_duplicate_action(action_description)
 
         if is_duplicate:

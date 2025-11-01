@@ -266,7 +266,8 @@ void main() {
 
       expect(positioned.top, isNull);
       expect(positioned.right, isNull);
-      expect(positioned.bottom, 0);
+      // Bottom should be safeAreaPadding.bottom + 16 (test environment has 0 safe area padding)
+      expect(positioned.bottom, 16.0);
       expect(positioned.left, 0);
     });
   });

@@ -6,11 +6,12 @@ import '../../data/models/transcript_model.dart';
 /// Live Transcription Display Widget
 ///
 /// Displays real-time transcription from AssemblyAI with:
-/// - Speaker attribution (color-coded)
 /// - Partial vs Final state indicators
 /// - Auto-scroll to latest transcript
-/// - Clickable timestamps
+/// - Timestamps
 /// - Collapsible panel
+///
+/// Note: Speaker diarization not supported in Universal-Streaming v3 API
 class LiveTranscriptionWidget extends ConsumerStatefulWidget {
   final List<TranscriptModel> transcripts;
   final bool isCollapsed;
@@ -33,20 +34,6 @@ class _LiveTranscriptionWidgetState
   final ScrollController _scrollController = ScrollController();
   bool _autoScroll = true;
   bool _showNewTranscriptButton = false;
-
-  // Speaker colors for visual tracking
-  final Map<String, Color> _speakerColors = {};
-  final List<Color> _availableColors = [
-    const Color(0xFF6366F1), // Indigo
-    const Color(0xFF8B5CF6), // Purple
-    const Color(0xFFEC4899), // Pink
-    const Color(0xFF10B981), // Green
-    const Color(0xFFF59E0B), // Amber
-    const Color(0xFF3B82F6), // Blue
-    const Color(0xFFEF4444), // Red
-    const Color(0xFF14B8A6), // Teal
-  ];
-  int _colorIndex = 0;
 
   @override
   void initState() {
@@ -113,17 +100,6 @@ class _LiveTranscriptionWidgetState
       _showNewTranscriptButton = false;
     });
     _scrollToBottom();
-  }
-
-  Color _getSpeakerColor(String? speaker) {
-    if (speaker == null) return Colors.grey;
-
-    if (!_speakerColors.containsKey(speaker)) {
-      _speakerColors[speaker] = _availableColors[_colorIndex % _availableColors.length];
-      _colorIndex++;
-    }
-
-    return _speakerColors[speaker]!;
   }
 
   @override
@@ -292,8 +268,6 @@ class _LiveTranscriptionWidgetState
     ColorScheme colorScheme, {
     bool isCompact = false,
   }) {
-    final speakerColor = _getSpeakerColor(transcript.speaker);
-
     return Padding(
       padding: EdgeInsets.only(bottom: isCompact ? 4 : 12),
       child: Row(
@@ -311,32 +285,7 @@ class _LiveTranscriptionWidgetState
           ),
           const SizedBox(width: 12),
 
-          // Speaker indicator and label
-          if (transcript.speaker != null) ...[
-            Container(
-              width: 3,
-              height: 20,
-              decoration: BoxDecoration(
-                color: speakerColor,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 80,
-              child: Text(
-                transcript.displaySpeaker,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: speakerColor,
-                  fontWeight: FontWeight.w600,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: 12),
-          ],
-
-          // Transcript text
+          // Transcript text (speaker diarization not supported)
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

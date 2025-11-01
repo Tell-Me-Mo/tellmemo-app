@@ -63,7 +63,7 @@ def sample_question_record():
         organization_id=uuid.uuid4(),
         insight_type=InsightType.QUESTION,
         detected_at=datetime.now(timezone.utc),
-        speaker="Speaker A",
+        
         content="What is the typical ROI timeline for infrastructure investments?",
         status=InsightStatus.MONITORING.value,
         insight_metadata={"gpt_id": "q_abc123-def456"}
@@ -143,7 +143,7 @@ async def test_generate_answer_success(
             session_id="test-session-123",
             question_id=str(sample_question_record.id),
             question_text="What is the typical ROI timeline?",
-            speaker="Speaker A",
+            
             meeting_context="Discussion about budget planning",
             db_session=mock_db_session
         )
@@ -186,7 +186,7 @@ async def test_generate_answer_low_confidence(
             session_id="test-session-123",
             question_id=str(sample_question_record.id),
             question_text="What is the budget?",
-            speaker="Speaker A",
+            
             meeting_context="Budget discussion",
             db_session=mock_db_session
         )
@@ -220,7 +220,7 @@ async def test_generate_answer_timeout(
             session_id="test-session-123",
             question_id=str(sample_question_record.id),
             question_text="What is the budget?",
-            speaker="Speaker A",
+            
             meeting_context="Budget discussion",
             db_session=mock_db_session
         )
@@ -258,7 +258,7 @@ async def test_generate_answer_missing_answer_field(
             session_id="test-session-123",
             question_id=str(sample_question_record.id),
             question_text="What is the budget?",
-            speaker="Speaker A",
+            
             meeting_context="Budget discussion",
             db_session=mock_db_session
         )
@@ -300,7 +300,7 @@ async def test_generate_answer_confidence_normalization(
             session_id="test-session-123",
             question_id=str(sample_question_record.id),
             question_text="What is the budget?",
-            speaker="Speaker A",
+            
             meeting_context="Budget discussion",
             db_session=mock_db_session
         )
@@ -353,7 +353,7 @@ async def test_broadcast_gpt_answer(
             session_id="test-session-123",
             question_id=str(sample_question_record.id),
             question_text="What is ROI timeline?",
-            speaker="Speaker A",
+            
             meeting_context="Budget discussion",
             db_session=mock_db_session
         )
@@ -407,7 +407,7 @@ async def test_broadcast_failure_handled_gracefully(
             session_id="test-session-123",
             question_id=str(sample_question_record.id),
             question_text="What is the budget?",
-            speaker="Speaker A",
+            
             meeting_context="Budget discussion",
             db_session=mock_db_session
         )
@@ -459,7 +459,7 @@ async def test_question_not_found_in_database(
             session_id="test-session-123",
             question_id=str(uuid.uuid4()),
             question_text="What is the budget?",
-            speaker="Speaker A",
+            
             meeting_context="Budget discussion",
             db_session=mock_db_session
         )
@@ -505,7 +505,7 @@ async def test_database_commit_failure(
             session_id="test-session-123",
             question_id=str(sample_question_record.id),
             question_text="What is the budget?",
-            speaker="Speaker A",
+            
             meeting_context="Budget discussion",
             db_session=mock_db_session
         )
@@ -533,13 +533,11 @@ def test_build_user_prompt(gpt_generator):
     """Test user prompt generation with context."""
     user_prompt = gpt_generator._build_user_prompt(
         question_text="What is the Q4 budget?",
-        speaker="Sarah",
         meeting_context="[10:30] John: We need to finalize the budget..."
     )
 
     assert isinstance(user_prompt, str)
     assert "What is the Q4 budget?" in user_prompt
-    assert "Sarah" in user_prompt
     assert "John: We need to finalize the budget" in user_prompt
 
 
@@ -549,7 +547,7 @@ def test_build_user_prompt_truncates_long_context(gpt_generator):
 
     user_prompt = gpt_generator._build_user_prompt(
         question_text="What is the budget?",
-        speaker="Sarah",
+        
         meeting_context=long_context
     )
 
