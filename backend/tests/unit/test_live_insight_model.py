@@ -54,7 +54,6 @@ def test_create_question_insight():
         organization_id=uuid.uuid4(),
         insight_type=InsightType.QUESTION,
         detected_at=datetime.utcnow(),
-        speaker="Sarah",
         content="What is the budget for Q4?",
         status="searching"
     )
@@ -62,7 +61,6 @@ def test_create_question_insight():
     assert question.id == question_id
     assert question.insight_type == InsightType.QUESTION
     assert question.content == "What is the budget for Q4?"
-    assert question.speaker == "Sarah"
     assert question.status == "searching"
 
 
@@ -75,7 +73,6 @@ def test_create_action_insight():
         organization_id=uuid.uuid4(),
         insight_type=InsightType.ACTION,
         detected_at=datetime.utcnow(),
-        speaker="John",
         content="Update the documentation by Friday",
         status="tracked",
         insight_metadata={
@@ -308,7 +305,6 @@ def test_to_dict_method():
         organization_id=organization_id,
         insight_type=InsightType.QUESTION,
         detected_at=detected_at,
-        speaker="Alice",
         content="What is the timeline?",
         status="answered",
         answer_source="meeting_context",
@@ -322,7 +318,6 @@ def test_to_dict_method():
     assert result["project_id"] == str(project_id)
     assert result["organization_id"] == str(organization_id)
     assert result["insight_type"] == "question"
-    assert result["speaker"] == "Alice"
     # Flutter expects 'text' key, not 'content'
     assert result["text"] == "What is the timeline?"
     assert result["status"] == "answered"
@@ -330,23 +325,8 @@ def test_to_dict_method():
     assert result["metadata"]["confidence"] == 0.95
 
 
-def test_to_dict_with_null_speaker():
-    """Test to_dict handles nullable speaker field."""
-    question = LiveMeetingInsight(
-        session_id="session-null",
-        recording_id=uuid.uuid4(),
-        project_id=uuid.uuid4(),
-        organization_id=uuid.uuid4(),
-        insight_type=InsightType.QUESTION,
-        detected_at=datetime.utcnow(),
-        speaker=None,  # Nullable field
-        content="Anonymous question?",
-        status="searching"
-    )
+# Note: Speaker field removed - streaming API doesn't support speaker diarization
 
-    result = question.to_dict()
-
-    assert result["speaker"] is None
 
 
 def test_metadata_initialization():

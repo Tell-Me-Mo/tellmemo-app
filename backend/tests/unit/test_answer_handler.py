@@ -72,7 +72,7 @@ def sample_question_record():
         organization_id=uuid4(),
         insight_type=InsightType.QUESTION,
         detected_at=datetime.now(timezone.utc),
-        speaker="Speaker A",
+        
         content="What is the budget for infrastructure?",
         status=InsightStatus.SEARCHING.value,
         insight_metadata={"gpt_id": "q_abc123-def456"}

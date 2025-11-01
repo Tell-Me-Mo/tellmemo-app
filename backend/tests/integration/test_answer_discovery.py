@@ -156,7 +156,7 @@ def mock_meeting_context_service():
     """Mock meeting context search service."""
     service = Mock(spec=MeetingContextSearchService)
 
-    async def mock_search(question, session_id, speaker=None, organization_id=None):
+    async def mock_search(question, session_id, organization_id=None):
         """Mock meeting context search - can be configured per test."""
         # Default: no answer found
         return MeetingContextResult(
@@ -175,7 +175,7 @@ def mock_gpt_answer_generator():
     """Mock GPT answer generator."""
     generator = Mock(spec=GPTAnswerGenerator)
 
-    async def mock_generate(session_id, question_id, question_text, speaker=None,
+    async def mock_generate(session_id, question_id, question_text,
                            meeting_context=None, db_session=None):
         """Mock GPT answer generation - can be configured per test."""
         # Default: answer generated successfully
@@ -290,7 +290,6 @@ class TestFullAnswerDiscoveryFlow:
                 question_data = {
                     "id": question_id,
                     "text": "What's the budget for Q4 infrastructure?",
-                    "speaker": "Speaker A",
                     "timestamp": datetime.utcnow().isoformat(),
                     "confidence": 0.95,
                     "category": "factual"
@@ -363,14 +362,14 @@ class TestFullAnswerDiscoveryFlow:
         mock_rag_service.search = rag_no_results
 
         # Meeting context finds answer
-        async def meeting_context_finds_answer(question, session_id, speaker=None, organization_id=None):
+        async def meeting_context_finds_answer(question, session_id, organization_id=None):
             await asyncio.sleep(0.2)  # Simulate search
             return MeetingContextResult(
                 found_answer=True,
                 answer_text="The budget is $250,000 for infrastructure.",
                 quotes=[{
                     "text": "The budget is $250,000 for infrastructure, including cloud costs.",
-                    "speaker": "Speaker C",
+                    
                     "timestamp": "2025-10-26T10:16:45Z"
                 }],
                 confidence=0.88,
@@ -388,7 +387,7 @@ class TestFullAnswerDiscoveryFlow:
                 question_data = {
                     "id": question_id,
                     "text": "What did we say about the infrastructure budget?",
-                    "speaker": "Speaker A",
+                    
                     "timestamp": datetime.utcnow().isoformat(),
                     "confidence": 0.92,
                     "category": "clarification"
@@ -444,7 +443,7 @@ class TestFullAnswerDiscoveryFlow:
             return
             yield
 
-        async def no_results_meeting(question, session_id, speaker=None, organization_id=None):
+        async def no_results_meeting(question, session_id, organization_id=None):
             return MeetingContextResult(found_answer=False, confidence=0.0)
 
         mock_rag_service.search = no_results_rag
@@ -462,7 +461,7 @@ class TestFullAnswerDiscoveryFlow:
                 question_data = {
                     "id": question_id,
                     "text": "Who will lead the new project?",
-                    "speaker": "Speaker A",
+                    
                     "timestamp": datetime.utcnow().isoformat(),
                     "confidence": 0.90
                 }
@@ -488,7 +487,7 @@ class TestFullAnswerDiscoveryFlow:
                     "type": "answer",
                     "question_id": question_id,  # Use GPT ID (from metadata), not database UUID
                     "answer_text": "Sarah will lead the new infrastructure project.",
-                    "speaker": "Speaker B",
+                    
                     "timestamp": datetime.utcnow().isoformat(),
                     "confidence": 0.92
                 }
@@ -538,11 +537,11 @@ class TestFullAnswerDiscoveryFlow:
             return
             yield
 
-        async def no_results_meeting(question, session_id, speaker=None, organization_id=None):
+        async def no_results_meeting(question, session_id, organization_id=None):
             return MeetingContextResult(found_answer=False, confidence=0.0)
 
         # GPT generates answer successfully
-        async def gpt_generates_answer(session_id, question_id, question_text, speaker=None,
+        async def gpt_generates_answer(session_id, question_id, question_text,
                                        meeting_context=None, db_session=None):
             """Simulate GPT answer generation."""
             # Broadcast GPT answer via callback
@@ -574,7 +573,7 @@ class TestFullAnswerDiscoveryFlow:
                 question_data = {
                     "id": question_id,
                     "text": "What's the typical ROI timeline for infrastructure investments?",
-                    "speaker": "Speaker A",
+                    
                     "timestamp": datetime.utcnow().isoformat(),
                     "confidence": 0.88
                 }
@@ -598,7 +597,6 @@ class TestFullAnswerDiscoveryFlow:
                     session_id=session_id,
                     question_id=db_question_id,  # Use database ID
                     question_text=question_data["text"],
-                    speaker="Speaker A",
                     meeting_context="Meeting about infrastructure planning",
                     db_session=db_session
                 )
@@ -657,7 +655,7 @@ class TestTimeoutHandling:
             question_data = {
                 "id": question_id,
                 "text": "Test RAG timeout?",
-                "speaker": "Speaker A",
+                
                 "timestamp": datetime.utcnow().isoformat(),
                 "confidence": 0.9
             }
@@ -700,7 +698,7 @@ class TestTimeoutHandling:
     ):
         """Test meeting context search times out after 1.5 seconds."""
         # Arrange: Meeting context search hangs
-        async def slow_meeting_search(question, session_id, speaker=None, organization_id=None):
+        async def slow_meeting_search(question, session_id, organization_id=None):
             await asyncio.sleep(2.5)  # Exceeds 1.5s timeout
             return MeetingContextResult(
                 found_answer=True,
@@ -718,7 +716,7 @@ class TestTimeoutHandling:
             question_data = {
                 "id": question_id,
                 "text": "Test meeting context timeout?",
-                "speaker": "Speaker A",
+                
                 "timestamp": datetime.utcnow().isoformat(),
                 "confidence": 0.9
             }
@@ -758,7 +756,7 @@ class TestTimeoutHandling:
             return
             yield
 
-        async def no_results_meeting(question, session_id, speaker=None, organization_id=None):
+        async def no_results_meeting(question, session_id, organization_id=None):
             return MeetingContextResult(found_answer=False, confidence=0.0)
 
         mock_rag_service.search = no_results_rag
@@ -775,7 +773,7 @@ class TestTimeoutHandling:
                 question_data = {
                     "id": question_id,
                     "text": "This question will never be answered",
-                    "speaker": "Speaker A",
+                    
                     "timestamp": datetime.utcnow().isoformat(),
                     "confidence": 0.9
                 }
@@ -833,7 +831,7 @@ class TestGracefulDegradation:
             yield
 
         # Meeting context works fine
-        async def meeting_context_works(question, session_id, speaker=None, organization_id=None):
+        async def meeting_context_works(question, session_id, organization_id=None):
             return MeetingContextResult(
                 found_answer=True,
                 answer_text="Found in earlier discussion",
@@ -852,7 +850,7 @@ class TestGracefulDegradation:
                 question_data = {
                     "id": question_id,
                     "text": "Test graceful degradation",
-                    "speaker": "Speaker A",
+                    
                     "timestamp": datetime.utcnow().isoformat(),
                     "confidence": 0.9
                 }
@@ -904,7 +902,7 @@ class TestGracefulDegradation:
             question_data = {
                 "id": question_id,
                 "text": "Test vector DB unavailable",
-                "speaker": "Speaker A",
+                
                 "timestamp": datetime.utcnow().isoformat(),
                 "confidence": 0.9
             }
@@ -972,7 +970,7 @@ class TestConcurrentQuestions:
                 {
                     "id": f"q_{uuid.uuid4()}",
                     "text": f"Question {i}?",
-                    "speaker": "Speaker A",
+                    
                     "timestamp": datetime.utcnow().isoformat(),
                     "confidence": 0.9
                 }
@@ -1053,7 +1051,7 @@ class TestProgressiveResults:
             question_data = {
                 "id": question_id,
                 "text": "Test progressive delivery",
-                "speaker": "Speaker A",
+                
                 "timestamp": datetime.utcnow().isoformat(),
                 "confidence": 0.9
             }

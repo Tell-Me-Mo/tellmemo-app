@@ -111,7 +111,6 @@ class TestHandleQuestion:
         assert result.content == sample_question_data["text"]
         assert result.insight_type == InsightType.QUESTION
         assert result.status == InsightStatus.SEARCHING.value
-        assert result.speaker == sample_question_data["speaker"]
 
         # Verify metadata stored
         assert result.insight_metadata["gpt_id"] == sample_question_data["id"]

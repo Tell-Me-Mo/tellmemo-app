@@ -118,7 +118,6 @@ class TestHandleAction:
         assert result is not None
         assert result.insight_type == InsightType.ACTION
         assert result.content == sample_action_data["description"]
-        assert result.speaker == sample_action_data["speaker"]
         assert result.status == InsightStatus.TRACKED.value
 
         # Verify metadata
