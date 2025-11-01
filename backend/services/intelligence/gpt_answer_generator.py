@@ -56,7 +56,6 @@ class GPTAnswerGenerator:
         session_id: str,
         question_id: str,
         question_text: str,
-        speaker: Optional[str] = None,
         meeting_context: Optional[str] = None,
         db_session: Optional[Session] = None
     ) -> bool:
@@ -67,12 +66,13 @@ class GPTAnswerGenerator:
             session_id: Meeting session ID
             question_id: Question ID
             question_text: The question to answer
-            speaker: Speaker who asked the question
             meeting_context: Brief meeting context summary
             db_session: Database session for updates
 
         Returns:
             bool: True if answer generated successfully, False otherwise
+
+        Note: Speaker diarization not supported in streaming API.
         """
         logger.info(
             f"[Tier 4] Generating GPT answer for question {question_id}: "
@@ -84,7 +84,6 @@ class GPTAnswerGenerator:
             result = await asyncio.wait_for(
                 self._call_gpt_for_answer(
                     question_text=question_text,
-                    speaker=speaker,
                     meeting_context=meeting_context
                 ),
                 timeout=self.timeout
@@ -146,7 +145,6 @@ class GPTAnswerGenerator:
     async def _call_gpt_for_answer(
         self,
         question_text: str,
-        speaker: Optional[str] = None,
         meeting_context: Optional[str] = None
     ) -> Optional[Dict[str, Any]]:
         """
@@ -154,11 +152,12 @@ class GPTAnswerGenerator:
 
         Args:
             question_text: The question to answer
-            speaker: Speaker who asked the question
             meeting_context: Brief meeting context
 
         Returns:
             Dict with answer, confidence, and disclaimer, or None on failure
+
+        Note: Speaker diarization not supported in streaming API.
         """
         try:
             # Get multi-LLM client (fallback provider for background tasks)
@@ -168,7 +167,6 @@ class GPTAnswerGenerator:
             system_prompt = self._build_system_prompt()
             user_prompt = self._build_user_prompt(
                 question_text=question_text,
-                speaker=speaker,
                 meeting_context=meeting_context
             )
 
@@ -305,7 +303,6 @@ IMPORTANT:
     def _build_user_prompt(
         self,
         question_text: str,
-        speaker: Optional[str] = None,
         meeting_context: Optional[str] = None
     ) -> str:
         """
@@ -313,18 +310,16 @@ IMPORTANT:
 
         Args:
             question_text: The question to answer
-            speaker: Speaker who asked the question
             meeting_context: Brief meeting context
 
         Returns:
             Formatted user prompt
+
+        Note: Speaker diarization not supported in streaming API.
         """
         prompt_parts = [
             f"Question: {question_text}",
         ]
-
-        if speaker:
-            prompt_parts.append(f"Asked by: {speaker}")
 
         if meeting_context:
             # Truncate long context to max 1500 chars

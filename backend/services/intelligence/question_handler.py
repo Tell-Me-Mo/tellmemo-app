@@ -149,7 +149,6 @@ class QuestionHandler:
         try:
             question_id = question_data.get("id", f"q_{uuid.uuid4()}")
             question_text = question_data.get("text", "")
-            speaker = question_data.get("speaker")
             timestamp_str = question_data.get("timestamp")
             confidence = question_data.get("confidence", 0.0)
             category = question_data.get("category", "factual")
@@ -187,6 +186,7 @@ class QuestionHandler:
                 return existing
 
             # Create LiveMeetingInsight record
+            # Note: Speaker diarization not supported in streaming API
             question_insight = LiveMeetingInsight(
                 session_id=session_id,
                 recording_id=uuid.UUID(recording_id) if recording_id else None,
@@ -194,7 +194,6 @@ class QuestionHandler:
                 organization_id=uuid.UUID(organization_id) if organization_id else None,
                 insight_type=InsightType.QUESTION,
                 detected_at=detected_at,
-                speaker=speaker,
                 content=question_text,
                 status=InsightStatus.SEARCHING.value,
                 insight_metadata={
@@ -228,8 +227,7 @@ class QuestionHandler:
                     question_id=db_question_id,
                     question_text=question_text,
                     project_id=project_id,
-                    organization_id=organization_id,
-                    speaker=speaker
+                    organization_id=organization_id
                 )
             )
 
@@ -252,8 +250,7 @@ class QuestionHandler:
         question_id: str,
         question_text: str,
         project_id: str,
-        organization_id: str,
-        speaker: Optional[str] = None
+        organization_id: str
     ) -> None:
         """Execute parallel answer discovery across four tiers.
 
@@ -275,7 +272,8 @@ class QuestionHandler:
             question_text: The question text
             project_id: Project UUID string
             organization_id: Organization UUID string
-            speaker: Speaker who asked the question (optional)
+
+        Note: Speaker diarization not supported in streaming API.
         """
         try:
             # Start fast tiers (Tier 1 and Tier 2) in parallel
@@ -296,7 +294,7 @@ class QuestionHandler:
             if self.tier_config['meeting_context']:
                 tier2_task = asyncio.create_task(
                     self._tier2_meeting_context_search(
-                        session_id, question_id, question_text, speaker, organization_id
+                        session_id, question_id, question_text, organization_id
                     )
                 )
                 fast_tasks.append(('tier2', tier2_task))
@@ -338,7 +336,7 @@ class QuestionHandler:
                     f"No answer found in Tiers 1-2 for question {question_id}, "
                     f"triggering Tier 3 (GPT). Tier 4 continues monitoring in background."
                 )
-                tier3_found = await self._tier3_gpt_generated_answer(session_id, question_id, question_text, speaker)
+                tier3_found = await self._tier3_gpt_generated_answer(session_id, question_id, question_text)
 
             # Wait for Tier 4 to complete (if it's running) before marking as unanswered
             tier4_found = False
@@ -632,24 +630,24 @@ class QuestionHandler:
         session_id: str,
         question_id: str,
         question_text: str,
-        speaker: Optional[str] = None,
         organization_id: Optional[str] = None
     ) -> bool:
         """Tier 2: Search current meeting transcript for answers.
 
         Uses GPT-5-mini to semantically search the current meeting transcript
         for answers to the detected question. Returns exact quotes with
-        speaker attribution and clickable timestamps.
+        clickable timestamps.
 
         Args:
             session_id: Meeting session ID
             question_id: Question database ID
             question_text: The question text
-            speaker: Who asked the question (optional)
             organization_id: Organization ID for tracking (optional)
 
         Returns:
             True if answer found in meeting context, False otherwise
+
+        Note: Speaker diarization not supported in streaming API.
         """
         try:
             logger.debug(f"Tier 2: Starting meeting context search for question {question_id}")
@@ -940,8 +938,7 @@ class QuestionHandler:
         self,
         session_id: str,
         question_id: str,
-        question_text: str,
-        speaker: Optional[str] = None
+        question_text: str
     ) -> bool:
         """Tier 3: Generate answer using GPT-5-mini (fallback when all tiers fail).
 
@@ -949,10 +946,11 @@ class QuestionHandler:
             session_id: Meeting session ID
             question_id: Question database ID
             question_text: The question text
-            speaker: Speaker who asked the question (optional)
 
         Returns:
             True if GPT generated a confident answer, False otherwise
+
+        Note: Speaker diarization not supported in streaming API.
         """
         try:
             logger.info(f"Tier 3: Requesting GPT-generated answer for question {question_id}")
@@ -975,7 +973,6 @@ class QuestionHandler:
                     session_id=session_id,
                     question_id=question_id,
                     question_text=question_text,
-                    speaker=speaker,
                     meeting_context=None,  # TODO: Add meeting context if available
                     db_session=db_session
                 )

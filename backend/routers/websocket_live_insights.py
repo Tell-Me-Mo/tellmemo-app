@@ -702,10 +702,10 @@ async def get_session_state(session_id: str, db: AsyncSession) -> dict:
         for insight in insights:
             if insight.insight_type == InsightType.QUESTION:
                 # Convert database model to Flutter-compatible format
+                # Note: Speaker diarization not supported in streaming API
                 question_data = {
                     "id": str(insight.id),
                     "text": insight.content,
-                    "speaker": insight.speaker,
                     "timestamp": insight.detected_at.isoformat() if insight.detected_at else None,
                     "status": insight.status,
                     "answer_source": insight.answer_source,
@@ -716,13 +716,13 @@ async def get_session_state(session_id: str, db: AsyncSession) -> dict:
 
             elif insight.insight_type == InsightType.ACTION:
                 # Convert database model to Flutter-compatible format
+                # Note: Speaker diarization not supported in streaming API
                 metadata = insight.insight_metadata or {}
                 action_data = {
                     "id": str(insight.id),
                     "description": insight.content,
                     "owner": metadata.get("owner"),
                     "deadline": metadata.get("deadline"),
-                    "speaker": insight.speaker,
                     "timestamp": insight.detected_at.isoformat() if insight.detected_at else None,
                     "completeness": metadata.get("completeness_score", 0.0),
                     "status": insight.status,
