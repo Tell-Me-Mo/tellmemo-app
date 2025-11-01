@@ -119,7 +119,7 @@
       "description": "Percentage of queries that found relevant content",
       "targets": [
         {
-          "expr": "sum(business_rag_queries_with_results) / (sum(business_rag_queries_with_results) + sum(business_rag_queries_without_results)) * 100",
+          "expr": "sum(increase(business_rag_queries_with_results[24h])) / (sum(increase(business_rag_queries_with_results[24h])) + sum(increase(business_rag_queries_without_results[24h]))) * 100",
           "refId": "A",
           "legendFormat": ""
         }
@@ -194,9 +194,14 @@
       "description": "Queries with results vs without results over time",
       "targets": [
         {
-          "expr": "sum(rate(business_rag_queries_with_results[5m])) by (job)",
+          "expr": "sum(rate(business_rag_queries_with_results[5m])) * 60",
           "refId": "A",
-          "legendFormat": ""
+          "legendFormat": "With Results"
+        },
+        {
+          "expr": "sum(rate(business_rag_queries_without_results[5m])) * 60",
+          "refId": "B",
+          "legendFormat": "Without Results"
         }
       ],
       "fieldConfig": {
@@ -221,7 +226,7 @@
       "description": "Total content processed across all projects",
       "targets": [
         {
-          "expr": "sum(business_content_size_bytes) / 1024 / 1024 / 1024",
+          "expr": "sum(business_content_size_total) / 1024 / 1024 / 1024",
           "refId": "A",
           "legendFormat": ""
         }

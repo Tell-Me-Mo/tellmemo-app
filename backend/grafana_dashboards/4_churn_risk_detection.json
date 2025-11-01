@@ -20,7 +20,7 @@
       "description": "Users with no activity in last 7 days",
       "targets": [
         {
-          "expr": "sum(business_users_inactive{period=\"7d\"})",
+          "expr": "sum(business_users_inactive{days_inactive=\"7\"})",
           "refId": "A",
           "legendFormat": ""
         }
@@ -139,11 +139,11 @@
                 "color": "red"
               },
               {
-                "value": 70,
-                "color": "yellow"
+                "value": 20,
+                "color": "orange"
               },
               {
-                "value": 90,
+                "value": 40,
                 "color": "green"
               }
             ]
@@ -248,7 +248,7 @@
       "description": "Trend of inactive users over time",
       "targets": [
         {
-          "expr": "sum(business_users_inactive{period=\"7d\"})",
+          "expr": "sum(business_users_inactive{days_inactive=\"7\"})",
           "refId": "A",
           "legendFormat": ""
         }

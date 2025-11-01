@@ -38,15 +38,15 @@
             "steps": [
               {
                 "value": 0,
-                "color": "red"
+                "color": "green"
               },
               {
-                "value": 70,
+                "value": 30,
                 "color": "yellow"
               },
               {
-                "value": 90,
-                "color": "green"
+                "value": 50,
+                "color": "red"
               }
             ]
           }
@@ -237,7 +237,7 @@
       "description": "Average age of retrieved content (days)",
       "targets": [
         {
-          "expr": "avg(business_content_staleness) / 86400",
+          "expr": "avg(business_content_staleness)",
           "refId": "A",
           "legendFormat": ""
         }

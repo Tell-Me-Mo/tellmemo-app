@@ -20,7 +20,7 @@
       "description": "Total LLM costs in last 24 hours (USD)",
       "targets": [
         {
-          "expr": "sum(increase(business_llm_cost_per_query[24h])) / 100",
+          "expr": "sum(increase(business_llm_cost_monthly[24h])) / 100",
           "refId": "A",
           "legendFormat": ""
         }
@@ -53,7 +53,7 @@
       "description": "Average cost per query",
       "targets": [
         {
-          "expr": "avg(business_llm_cost_per_query) / 100",
+          "expr": "histogram_quantile(0.50, sum(rate(business_llm_cost_per_query_bucket[5m])) by (le)) / 100",
           "refId": "A",
           "legendFormat": ""
         }
@@ -119,7 +119,7 @@
       "description": "Average LLM cost per user",
       "targets": [
         {
-          "expr": "avg(business_llm_cost_per_user) / 100",
+          "expr": "histogram_quantile(0.50, sum(rate(business_llm_cost_per_user_bucket[5m])) by (le)) / 100",
           "refId": "A",
           "legendFormat": ""
         }
@@ -154,7 +154,7 @@
         {
           "expr": "sum(rate(business_llm_cost_by_provider[1h])) by (provider) * 3600 / 100",
           "refId": "A",
-          "legendFormat": ""
+          "legendFormat": "{{provider}}"
         }
       ],
       "fieldConfig": {
@@ -179,7 +179,7 @@
       "description": "Total cost distribution across providers",
       "targets": [
         {
-          "expr": "sum(business_llm_cost_by_provider) by (provider) / 100",
+          "expr": "sum(increase(business_llm_cost_by_provider[24h])) by (provider) / 100",
           "refId": "A",
           "legendFormat": ""
         }
@@ -233,7 +233,7 @@
       "description": "Cost efficiency: dollars per user question",
       "targets": [
         {
-          "expr": "sum(rate(business_llm_cost_per_query[5m])) / sum(rate(business_user_questions_total[5m]))",
+          "expr": "sum(increase(business_llm_cost_monthly[5m])) / sum(increase(business_user_questions_total[5m])) / 100",
           "refId": "A",
           "legendFormat": ""
         }

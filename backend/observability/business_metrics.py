@@ -261,8 +261,8 @@ class BusinessMetrics:
 
         self.content_staleness = self.meter.create_histogram(
             name="business.content.staleness",
-            description="Average age of content retrieved in days",
-            unit="days",
+            description="Average age of content retrieved in seconds (divide by 86400 for days)",
+            unit="s",
         )
 
         self.content_utilization_rate = self.meter.create_histogram(
@@ -503,8 +503,8 @@ class BusinessMetrics:
                 {"user_id": user_id, "success": str(success).lower()}
             )
             self.first_query_success_rate.add(
-                1 if success else 0,
-                {"user_id": user_id}
+                1,
+                {"user_id": user_id, "success": str(success).lower()}
             )
         except Exception as e:
             logger.error(f"Failed to record time to first query metrics: {e}")

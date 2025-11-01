@@ -154,7 +154,7 @@
         {
           "expr": "sum(rate(business_organization_queries_total[5m])) by (organization_id) * 300",
           "refId": "A",
-          "legendFormat": ""
+          "legendFormat": "Org {{organization_id}}"
         }
       ],
       "fieldConfig": {
@@ -181,7 +181,7 @@
         {
           "expr": "sum(rate(business_organization_llm_cost[1h])) by (organization_id) * 3600 / 100",
           "refId": "A",
-          "legendFormat": ""
+          "legendFormat": "Org {{organization_id}}"
         }
       ],
       "fieldConfig": {

@@ -20,7 +20,7 @@
       "description": "% of requests meeting SLA (target: >95%)",
       "targets": [
         {
-          "expr": "avg(business_sla_compliance_rate) * 100",
+          "expr": "avg(business_sla_compliance_rate)",
           "refId": "A",
           "legendFormat": ""
         }
@@ -101,7 +101,7 @@
       "description": "Remaining error budget (target: >10%)",
       "targets": [
         {
-          "expr": "avg(business_sla_error_budget_remaining) * 100",
+          "expr": "avg(business_sla_error_budget_remaining)",
           "refId": "A",
           "legendFormat": ""
         }
@@ -149,7 +149,7 @@
       "description": "Overall system availability (target: 99.9%)",
       "targets": [
         {
-          "expr": "avg(business_sla_availability) * 100",
+          "expr": "avg(business_sla_availability)",
           "refId": "A",
           "legendFormat": ""
         }
@@ -197,7 +197,7 @@
       "description": "SLA compliance rate trend",
       "targets": [
         {
-          "expr": "avg(business_sla_compliance_rate) * 100",
+          "expr": "avg(business_sla_compliance_rate)",
           "refId": "A",
           "legendFormat": ""
         }
@@ -251,7 +251,7 @@
       "description": "95th percentile RAG query response time (SLA: <2000ms)",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(business_sla_compliance_rate_bucket[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(rag_query_duration_bucket[5m])) by (le)) * 1000",
           "refId": "A",
           "legendFormat": ""
         }
@@ -278,7 +278,7 @@
       "description": "Error budget remaining over time",
       "targets": [
         {
-          "expr": "avg(business_sla_error_budget_remaining) * 100",
+          "expr": "avg(business_sla_error_budget_remaining)",
           "refId": "A",
           "legendFormat": ""
         }

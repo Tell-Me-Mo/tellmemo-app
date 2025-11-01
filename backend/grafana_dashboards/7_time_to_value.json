@@ -20,7 +20,7 @@
       "description": "Median time from signup to first query (minutes)",
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(business_users_time_to_first_query_bucket[24h])) by (le)) / 60",
+          "expr": "histogram_quantile(0.50, sum(increase(business_users_time_to_first_query_bucket[24h])) by (le)) / 60",
           "refId": "A",
           "legendFormat": ""
         }
@@ -53,7 +53,7 @@
       "description": "95th percentile time to first query (target: <5 min)",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(business_users_time_to_first_query_bucket[24h])) by (le)) / 60",
+          "expr": "histogram_quantile(0.95, sum(increase(business_users_time_to_first_query_bucket[24h])) by (le)) / 60",
           "refId": "A",
           "legendFormat": ""
         }
@@ -167,7 +167,7 @@
       "description": "Median time to first query over time (minutes)",
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(business_users_time_to_first_query_bucket[1h])) by (le)) / 60",
+          "expr": "histogram_quantile(0.50, sum(increase(business_users_time_to_first_query_bucket[1h])) by (le)) / 60",
           "refId": "A",
           "legendFormat": ""
         }
@@ -221,7 +221,7 @@
       "description": "Median time from signup to first project creation",
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(business_users_time_to_first_project_bucket[24h])) by (le)) / 60",
+          "expr": "histogram_quantile(0.50, sum(increase(business_users_time_to_first_project_bucket[24h])) by (le)) / 60",
           "refId": "A",
           "legendFormat": ""
         }
@@ -248,7 +248,7 @@
       "description": "Distribution of attempts before successful query",
       "targets": [
         {
-          "expr": "sum(business_users_queries_until_success) by (le)",
+          "expr": "sum(rate(business_users_queries_until_success_bucket[5m])) by (le)",
           "refId": "A",
           "legendFormat": ""
         }
