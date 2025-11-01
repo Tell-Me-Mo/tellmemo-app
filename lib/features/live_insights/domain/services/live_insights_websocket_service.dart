@@ -235,13 +235,12 @@ class LiveInsightsWebSocketService {
       final answerData = data['data'] as Map<String, dynamic>;
       final questionId = answerData['id'] as String;
       final answerText = answerData['answerText'] as String?;
-      final answerSpeaker = answerData['answerSpeaker'] as String?;
       final answerConfidence = (answerData['answerConfidence'] as num?)?.toDouble();
 
       debugPrint(
         '[LiveInsightsWebSocket] Answer detected for question $questionId: '
         '${answerText?.substring(0, answerText.length > 50 ? 50 : answerText.length)}... '
-        '(speaker: $answerSpeaker, confidence: $answerConfidence)'
+        '(confidence: $answerConfidence)'
       );
 
       // Note: This is a lightweight notification for fast UX. The full enriched
@@ -277,7 +276,6 @@ class LiveInsightsWebSocketService {
       final minimalUpdate = LiveQuestion(
         id: questionId,
         text: '', // Will be preserved from existing question during merge
-        speaker: null,
         timestamp: DateTime.tryParse(timestamp ?? '') ?? DateTime.now(),
         status: InsightStatus.unanswered,
         answerSource: AnswerSource.unanswered,
@@ -351,14 +349,13 @@ class LiveInsightsWebSocketService {
           // Phase 1: Lightweight notification
           final questionId = data['question_id'] as String?;
           final answerText = dataField['answer_text'] as String?;
-          final speaker = dataField['speaker'] as String?;
           final confidence = (dataField['confidence'] as num?)?.toDouble();
           final tier = dataField['tier'] as String?;
 
           debugPrint(
             '[LiveInsightsWebSocket] Live conversation answer detected for question $questionId: '
             '${answerText != null ? answerText.substring(0, answerText.length > 50 ? 50 : answerText.length) : 'N/A'}... '
-            '(speaker: $speaker, confidence: $confidence, tier: $tier) 👂'
+            '(confidence: $confidence, tier: $tier) 👂'
           );
 
           // Note: This is Phase 1 lightweight notification for fast UX.

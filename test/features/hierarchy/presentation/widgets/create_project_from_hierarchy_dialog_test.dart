@@ -78,9 +78,21 @@ void main() {
               onPressed: () {
                 showDialog(
                   context: context,
-                  builder: (_) => CreateProjectDialogFromHierarchy(
-                    preselectedPortfolioId: preselectedPortfolioId,
-                    preselectedProgramId: preselectedProgramId,
+                  builder: (_) => Dialog(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20.0),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Container(
+                      constraints: const BoxConstraints(
+                        maxWidth: 500,
+                        maxHeight: 600,
+                      ),
+                      child: CreateProjectDialogFromHierarchy(
+                        preselectedPortfolioId: preselectedPortfolioId,
+                        preselectedProgramId: preselectedProgramId,
+                      ),
+                    ),
                   ),
                 );
               },

@@ -1,0 +1,400 @@
+{
+  "title": "\ud83d\udcca Business Overview",
+  "tags": [
+    "tellmemo",
+    "business",
+    "overview"
+  ],
+  "timezone": "browser",
+  "refresh": "30s",
+  "editable": true,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "title": "Total Users",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "description": "Daily active users in last 24 hours",
+      "targets": [
+        {
+          "expr": "sum(business_users_active_daily{window=\"24h\"})",
+          "refId": "A",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          }
+        }
+      },
+      "options": {
+        "graphMode": "area",
+        "colorMode": "background_gradient",
+        "orientation": "horizontal",
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "title": "Total Questions Asked",
+      "type": "stat",
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "description": "User questions asked in last 24 hours",
+      "targets": [
+        {
+          "expr": "sum(increase(business_user_questions_total[24h]))",
+          "refId": "A",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          }
+        }
+      },
+      "options": {
+        "graphMode": "area",
+        "colorMode": "background_gradient",
+        "orientation": "horizontal",
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "title": "Questions with Results",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "description": "Queries that returned results (24h)",
+      "targets": [
+        {
+          "expr": "sum(increase(business_rag_queries_with_results[24h]))",
+          "refId": "A",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          }
+        }
+      },
+      "options": {
+        "graphMode": "area",
+        "colorMode": "background_gradient",
+        "orientation": "horizontal",
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "title": "RAG Success Rate",
+      "type": "gauge",
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "description": "Percentage of queries that found relevant content",
+      "targets": [
+        {
+          "expr": "sum(increase(business_rag_queries_with_results[24h])) / (sum(increase(business_rag_queries_with_results[24h])) + sum(increase(business_rag_queries_without_results[24h]))) * 100",
+          "refId": "A",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "red"
+              },
+              {
+                "value": 70,
+                "color": "yellow"
+              },
+              {
+                "value": 90,
+                "color": "green"
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true,
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"]
+        },
+        "text": {
+          "titleSize": 16,
+          "valueSize": 32
+        }
+      }
+    },
+    {
+      "title": "User Questions Over Time",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "description": "User questions per minute",
+      "targets": [
+        {
+          "expr": "rate(business_user_questions_total[5m]) * 60",
+          "refId": "A",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqpm",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "pointSize": 5
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["lastNotNull", "mean", "max"]
+        }
+      }
+    },
+    {
+      "title": "RAG Query Success vs Failure",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "description": "Queries with results vs without results over time",
+      "targets": [
+        {
+          "expr": "sum(rate(business_rag_queries_with_results[5m])) * 60",
+          "refId": "A",
+          "legendFormat": "With Results"
+        },
+        {
+          "expr": "sum(rate(business_rag_queries_without_results[5m])) * 60",
+          "refId": "B",
+          "legendFormat": "Without Results"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 25,
+            "gradientMode": "opacity",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "With Results"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Without Results"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["lastNotNull", "mean", "sum"]
+        }
+      }
+    },
+    {
+      "title": "Content Processed (GB)",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 8,
+        "h": 4
+      },
+      "description": "Total content processed across all projects",
+      "targets": [
+        {
+          "expr": "sum(business_content_size_total) / 1024 / 1024 / 1024",
+          "refId": "A",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "gbytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          }
+        }
+      },
+      "options": {
+        "graphMode": "area",
+        "colorMode": "background_gradient",
+        "orientation": "horizontal",
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "title": "Projects Created",
+      "type": "stat",
+      "gridPos": {
+        "x": 8,
+        "y": 12,
+        "w": 8,
+        "h": 4
+      },
+      "description": "New projects created in last 24 hours",
+      "targets": [
+        {
+          "expr": "sum(increase(business_projects_created[24h]))",
+          "refId": "A",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          }
+        }
+      },
+      "options": {
+        "graphMode": "area",
+        "colorMode": "background_gradient",
+        "orientation": "horizontal",
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "title": "Content Coverage Gaps",
+      "type": "stat",
+      "gridPos": {
+        "x": 16,
+        "y": 12,
+        "w": 8,
+        "h": 4
+      },
+      "description": "Queries with no relevant results (indicates missing content)",
+      "targets": [
+        {
+          "expr": "sum(increase(business_content_coverage_gaps[24h]))",
+          "refId": "A",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          }
+        }
+      },
+      "options": {
+        "graphMode": "area",
+        "colorMode": "background_gradient",
+        "orientation": "horizontal",
+        "textMode": "value_and_name"
+      }
+    }
+  ],
+  "schemaVersion": 36
+}

@@ -27,9 +27,6 @@ mixin _$TranscriptModel {
   /// The transcribed text
   String get text => throw _privateConstructorUsedError;
 
-  /// Speaker label (e.g., "Speaker A", "Speaker B", or actual name if mapped)
-  String? get speaker => throw _privateConstructorUsedError;
-
   /// Timestamp when this segment was spoken
   DateTime get timestamp => throw _privateConstructorUsedError;
 
@@ -65,7 +62,6 @@ abstract class $TranscriptModelCopyWith<$Res> {
   $Res call({
     String id,
     String text,
-    String? speaker,
     DateTime timestamp,
     TranscriptionState state,
     double? confidence,
@@ -91,7 +87,6 @@ class _$TranscriptModelCopyWithImpl<$Res, $Val extends TranscriptModel>
   $Res call({
     Object? id = null,
     Object? text = null,
-    Object? speaker = freezed,
     Object? timestamp = null,
     Object? state = null,
     Object? confidence = freezed,
@@ -108,10 +103,6 @@ class _$TranscriptModelCopyWithImpl<$Res, $Val extends TranscriptModel>
                 ? _value.text
                 : text // ignore: cast_nullable_to_non_nullable
                       as String,
-            speaker: freezed == speaker
-                ? _value.speaker
-                : speaker // ignore: cast_nullable_to_non_nullable
-                      as String?,
             timestamp: null == timestamp
                 ? _value.timestamp
                 : timestamp // ignore: cast_nullable_to_non_nullable
@@ -150,7 +141,6 @@ abstract class _$$TranscriptModelImplCopyWith<$Res>
   $Res call({
     String id,
     String text,
-    String? speaker,
     DateTime timestamp,
     TranscriptionState state,
     double? confidence,
@@ -175,7 +165,6 @@ class __$$TranscriptModelImplCopyWithImpl<$Res>
   $Res call({
     Object? id = null,
     Object? text = null,
-    Object? speaker = freezed,
     Object? timestamp = null,
     Object? state = null,
     Object? confidence = freezed,
@@ -192,10 +181,6 @@ class __$$TranscriptModelImplCopyWithImpl<$Res>
             ? _value.text
             : text // ignore: cast_nullable_to_non_nullable
                   as String,
-        speaker: freezed == speaker
-            ? _value.speaker
-            : speaker // ignore: cast_nullable_to_non_nullable
-                  as String?,
         timestamp: null == timestamp
             ? _value.timestamp
             : timestamp // ignore: cast_nullable_to_non_nullable
@@ -227,7 +212,6 @@ class _$TranscriptModelImpl implements _TranscriptModel {
   const _$TranscriptModelImpl({
     required this.id,
     required this.text,
-    this.speaker,
     required this.timestamp,
     required this.state,
     this.confidence,
@@ -245,10 +229,6 @@ class _$TranscriptModelImpl implements _TranscriptModel {
   /// The transcribed text
   @override
   final String text;
-
-  /// Speaker label (e.g., "Speaker A", "Speaker B", or actual name if mapped)
-  @override
-  final String? speaker;
 
   /// Timestamp when this segment was spoken
   @override
@@ -272,7 +252,7 @@ class _$TranscriptModelImpl implements _TranscriptModel {
 
   @override
   String toString() {
-    return 'TranscriptModel(id: $id, text: $text, speaker: $speaker, timestamp: $timestamp, state: $state, confidence: $confidence, startMs: $startMs, endMs: $endMs)';
+    return 'TranscriptModel(id: $id, text: $text, timestamp: $timestamp, state: $state, confidence: $confidence, startMs: $startMs, endMs: $endMs)';
   }
 
   @override
@@ -282,7 +262,6 @@ class _$TranscriptModelImpl implements _TranscriptModel {
             other is _$TranscriptModelImpl &&
             (identical(other.id, id) || other.id == id) &&
             (identical(other.text, text) || other.text == text) &&
-            (identical(other.speaker, speaker) || other.speaker == speaker) &&
             (identical(other.timestamp, timestamp) ||
                 other.timestamp == timestamp) &&
             (identical(other.state, state) || other.state == state) &&
@@ -298,7 +277,6 @@ class _$TranscriptModelImpl implements _TranscriptModel {
     runtimeType,
     id,
     text,
-    speaker,
     timestamp,
     state,
     confidence,
@@ -327,7 +305,6 @@ abstract class _TranscriptModel implements TranscriptModel {
   const factory _TranscriptModel({
     required final String id,
     required final String text,
-    final String? speaker,
     required final DateTime timestamp,
     required final TranscriptionState state,
     final double? confidence,
@@ -345,10 +322,6 @@ abstract class _TranscriptModel implements TranscriptModel {
   /// The transcribed text
   @override
   String get text;
-
-  /// Speaker label (e.g., "Speaker A", "Speaker B", or actual name if mapped)
-  @override
-  String? get speaker;
 
   /// Timestamp when this segment was spoken
   @override

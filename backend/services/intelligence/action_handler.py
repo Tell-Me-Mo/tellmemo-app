@@ -75,7 +75,6 @@ class ActionHandler:
             description = action_data.get("description", "")
             owner = action_data.get("owner")
             deadline = action_data.get("deadline")
-            speaker = action_data.get("speaker")
             timestamp_str = action_data.get("timestamp")
             confidence = action_data.get("confidence", 0.0)
             completeness = action_data.get("completeness", 0.0)
@@ -130,6 +129,7 @@ class ActionHandler:
             )
 
             # Create LiveMeetingInsight record
+            # Note: Speaker diarization not supported in streaming API
             action_insight = LiveMeetingInsight(
                 session_id=session_id,
                 recording_id=uuid.UUID(recording_id) if recording_id else None,
@@ -137,7 +137,6 @@ class ActionHandler:
                 organization_id=uuid.UUID(organization_id) if organization_id else None,
                 insight_type=InsightType.ACTION,
                 detected_at=detected_at,
-                speaker=speaker,
                 content=description,
                 status=InsightStatus.TRACKED.value,
                 insight_metadata={

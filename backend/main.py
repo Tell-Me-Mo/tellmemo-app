@@ -20,6 +20,11 @@ from services.scheduling.scheduler_service import scheduler_service
 from services.scheduler.digest_scheduler import digest_scheduler
 from services.llm.multi_llm_client import get_multi_llm_client
 from middleware.auth_middleware import AuthMiddleware
+from observability.telemetry import (
+    init_telemetry,
+    shutdown_telemetry,
+    instrument_specialized_libraries,
+)
 
 settings = get_settings()
 configure_logging(settings)
@@ -46,7 +51,21 @@ async def lifespan(app: FastAPI):
     logger.info("Starting PM Master V2 Backend...")
     logger.info(f"Environment: {settings.api_env}")
     logger.info(f"API running at http://{settings.api_host}:{settings.api_port}")
-    
+
+    # Initialize OpenTelemetry (Grafana Cloud) - 2025 Distro Approach
+    try:
+        if init_telemetry(settings):
+            # Instrument specialized libraries (asyncpg, Qdrant)
+            # Note: Common frameworks (FastAPI, SQLAlchemy, Redis, httpx, aiohttp)
+            # are auto-instrumented by opentelemetry-distro via bootstrap
+            instrument_specialized_libraries()
+            logger.info("🎉 OpenTelemetry instrumentation complete!")
+        else:
+            logger.info("OpenTelemetry not initialized (disabled or not configured)")
+    except Exception as e:
+        logger.error(f"Failed to initialize OpenTelemetry: {e}")
+        # Continue without telemetry - not critical for app functionality
+
     # Initialize database connections
     try:
         await init_database()
@@ -116,6 +135,21 @@ async def lifespan(app: FastAPI):
         logger.error("EmbeddingGemma model is required for the application to function")
         logger.error("Please check your HF_TOKEN and network connectivity")
         raise RuntimeError(f"Cannot start application without embedding service: {e}")
+
+    # Initialize zero-shot validator (MANDATORY - app will not start without it)
+    if settings.enable_zeroshot_validation:
+        try:
+            from services.intelligence.zeroshot_validator_service import init_zeroshot_validator
+            await init_zeroshot_validator()
+            logger.info("✅ ModernBERT zero-shot classifier initialized successfully")
+        except Exception as e:
+            logger.error(f"❌ CRITICAL: Failed to initialize zero-shot validator: {e}")
+            logger.error("ModernBERT classifier is required for question/action filtering")
+            logger.error("Please check your HF_TOKEN and network connectivity")
+            raise RuntimeError(f"Cannot start application without zero-shot validator: {e}")
+    else:
+        logger.warning("⚠️ Zero-shot validation is DISABLED - false positive filtering will not work")
+        logger.warning("   Set ENABLE_ZEROSHOT_VALIDATION=true in .env to enable")
 
     # Initialize language detection service (optional but recommended)
     try:
@@ -188,6 +222,12 @@ async def lifespan(app: FastAPI):
         logger.info("Email digest scheduler shutdown complete")
     except Exception as e:
         logger.error(f"Error shutting down digest scheduler: {e}")
+
+    # Shutdown OpenTelemetry (flush remaining traces/metrics)
+    try:
+        shutdown_telemetry()
+    except Exception as e:
+        logger.error(f"Error shutting down telemetry: {e}")
 
     await close_database()
     await multi_tenant_vector_store.close()

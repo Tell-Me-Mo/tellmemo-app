@@ -344,9 +344,6 @@ mixin _$LiveQuestion {
   /// The question text as spoken
   String get text => throw _privateConstructorUsedError;
 
-  /// Speaker who asked the question
-  String? get speaker => throw _privateConstructorUsedError;
-
   /// Timestamp when question was detected
   @DateTimeConverter()
   DateTime get timestamp => throw _privateConstructorUsedError;
@@ -358,7 +355,6 @@ mixin _$LiveQuestion {
   List<TierResult> get tierResults => throw _privateConstructorUsedError;
 
   /// Primary answer source (if answered)
-  @JsonKey(name: 'answer_source')
   AnswerSource? get answerSource => throw _privateConstructorUsedError;
 
   /// Question category
@@ -394,11 +390,10 @@ abstract class $LiveQuestionCopyWith<$Res> {
   $Res call({
     String id,
     String text,
-    String? speaker,
     @DateTimeConverter() DateTime timestamp,
     InsightStatus status,
     List<TierResult> tierResults,
-    @JsonKey(name: 'answer_source') AnswerSource? answerSource,
+    AnswerSource? answerSource,
     String category,
     double confidence,
     Map<String, dynamic> metadata,
@@ -423,7 +418,6 @@ class _$LiveQuestionCopyWithImpl<$Res, $Val extends LiveQuestion>
   $Res call({
     Object? id = null,
     Object? text = null,
-    Object? speaker = freezed,
     Object? timestamp = null,
     Object? status = null,
     Object? tierResults = null,
@@ -443,10 +437,6 @@ class _$LiveQuestionCopyWithImpl<$Res, $Val extends LiveQuestion>
                 ? _value.text
                 : text // ignore: cast_nullable_to_non_nullable
                       as String,
-            speaker: freezed == speaker
-                ? _value.speaker
-                : speaker // ignore: cast_nullable_to_non_nullable
-                      as String?,
             timestamp: null == timestamp
                 ? _value.timestamp
                 : timestamp // ignore: cast_nullable_to_non_nullable
@@ -497,11 +487,10 @@ abstract class _$$LiveQuestionImplCopyWith<$Res>
   $Res call({
     String id,
     String text,
-    String? speaker,
     @DateTimeConverter() DateTime timestamp,
     InsightStatus status,
     List<TierResult> tierResults,
-    @JsonKey(name: 'answer_source') AnswerSource? answerSource,
+    AnswerSource? answerSource,
     String category,
     double confidence,
     Map<String, dynamic> metadata,
@@ -525,7 +514,6 @@ class __$$LiveQuestionImplCopyWithImpl<$Res>
   $Res call({
     Object? id = null,
     Object? text = null,
-    Object? speaker = freezed,
     Object? timestamp = null,
     Object? status = null,
     Object? tierResults = null,
@@ -545,10 +533,6 @@ class __$$LiveQuestionImplCopyWithImpl<$Res>
             ? _value.text
             : text // ignore: cast_nullable_to_non_nullable
                   as String,
-        speaker: freezed == speaker
-            ? _value.speaker
-            : speaker // ignore: cast_nullable_to_non_nullable
-                  as String?,
         timestamp: null == timestamp
             ? _value.timestamp
             : timestamp // ignore: cast_nullable_to_non_nullable
@@ -592,11 +576,10 @@ class _$LiveQuestionImpl extends _LiveQuestion {
   const _$LiveQuestionImpl({
     required this.id,
     required this.text,
-    this.speaker,
     @DateTimeConverter() required this.timestamp,
     required this.status,
     final List<TierResult> tierResults = const [],
-    @JsonKey(name: 'answer_source') this.answerSource,
+    this.answerSource,
     this.category = 'factual',
     this.confidence = 0.0,
     final Map<String, dynamic> metadata = const {},
@@ -615,10 +598,6 @@ class _$LiveQuestionImpl extends _LiveQuestion {
   /// The question text as spoken
   @override
   final String text;
-
-  /// Speaker who asked the question
-  @override
-  final String? speaker;
 
   /// Timestamp when question was detected
   @override
@@ -643,7 +622,6 @@ class _$LiveQuestionImpl extends _LiveQuestion {
 
   /// Primary answer source (if answered)
   @override
-  @JsonKey(name: 'answer_source')
   final AnswerSource? answerSource;
 
   /// Question category
@@ -675,7 +653,7 @@ class _$LiveQuestionImpl extends _LiveQuestion {
 
   @override
   String toString() {
-    return 'LiveQuestion(id: $id, text: $text, speaker: $speaker, timestamp: $timestamp, status: $status, tierResults: $tierResults, answerSource: $answerSource, category: $category, confidence: $confidence, metadata: $metadata, answeredAt: $answeredAt)';
+    return 'LiveQuestion(id: $id, text: $text, timestamp: $timestamp, status: $status, tierResults: $tierResults, answerSource: $answerSource, category: $category, confidence: $confidence, metadata: $metadata, answeredAt: $answeredAt)';
   }
 
   @override
@@ -685,7 +663,6 @@ class _$LiveQuestionImpl extends _LiveQuestion {
             other is _$LiveQuestionImpl &&
             (identical(other.id, id) || other.id == id) &&
             (identical(other.text, text) || other.text == text) &&
-            (identical(other.speaker, speaker) || other.speaker == speaker) &&
             (identical(other.timestamp, timestamp) ||
                 other.timestamp == timestamp) &&
             (identical(other.status, status) || other.status == status) &&
@@ -710,7 +687,6 @@ class _$LiveQuestionImpl extends _LiveQuestion {
     runtimeType,
     id,
     text,
-    speaker,
     timestamp,
     status,
     const DeepCollectionEquality().hash(_tierResults),
@@ -739,11 +715,10 @@ abstract class _LiveQuestion extends LiveQuestion {
   const factory _LiveQuestion({
     required final String id,
     required final String text,
-    final String? speaker,
     @DateTimeConverter() required final DateTime timestamp,
     required final InsightStatus status,
     final List<TierResult> tierResults,
-    @JsonKey(name: 'answer_source') final AnswerSource? answerSource,
+    final AnswerSource? answerSource,
     final String category,
     final double confidence,
     final Map<String, dynamic> metadata,
@@ -762,10 +737,6 @@ abstract class _LiveQuestion extends LiveQuestion {
   @override
   String get text;
 
-  /// Speaker who asked the question
-  @override
-  String? get speaker;
-
   /// Timestamp when question was detected
   @override
   @DateTimeConverter()
@@ -781,7 +752,6 @@ abstract class _LiveQuestion extends LiveQuestion {
 
   /// Primary answer source (if answered)
   @override
-  @JsonKey(name: 'answer_source')
   AnswerSource? get answerSource;
 
   /// Question category
@@ -834,9 +804,6 @@ mixin _$LiveAction {
   /// Current status of the action
   InsightStatus get status => throw _privateConstructorUsedError;
 
-  /// Speaker who mentioned the action
-  String? get speaker => throw _privateConstructorUsedError;
-
   /// Timestamp when action was detected
   @DateTimeConverter()
   DateTime get timestamp => throw _privateConstructorUsedError;
@@ -875,7 +842,6 @@ abstract class $LiveActionCopyWith<$Res> {
     @DateTimeConverterNullable() DateTime? deadline,
     double completenessScore,
     InsightStatus status,
-    String? speaker,
     @DateTimeConverter() DateTime timestamp,
     double confidence,
     Map<String, dynamic> metadata,
@@ -904,7 +870,6 @@ class _$LiveActionCopyWithImpl<$Res, $Val extends LiveAction>
     Object? deadline = freezed,
     Object? completenessScore = null,
     Object? status = null,
-    Object? speaker = freezed,
     Object? timestamp = null,
     Object? confidence = null,
     Object? metadata = null,
@@ -936,10 +901,6 @@ class _$LiveActionCopyWithImpl<$Res, $Val extends LiveAction>
                 ? _value.status
                 : status // ignore: cast_nullable_to_non_nullable
                       as InsightStatus,
-            speaker: freezed == speaker
-                ? _value.speaker
-                : speaker // ignore: cast_nullable_to_non_nullable
-                      as String?,
             timestamp: null == timestamp
                 ? _value.timestamp
                 : timestamp // ignore: cast_nullable_to_non_nullable
@@ -978,7 +939,6 @@ abstract class _$$LiveActionImplCopyWith<$Res>
     @DateTimeConverterNullable() DateTime? deadline,
     double completenessScore,
     InsightStatus status,
-    String? speaker,
     @DateTimeConverter() DateTime timestamp,
     double confidence,
     Map<String, dynamic> metadata,
@@ -1006,7 +966,6 @@ class __$$LiveActionImplCopyWithImpl<$Res>
     Object? deadline = freezed,
     Object? completenessScore = null,
     Object? status = null,
-    Object? speaker = freezed,
     Object? timestamp = null,
     Object? confidence = null,
     Object? metadata = null,
@@ -1038,10 +997,6 @@ class __$$LiveActionImplCopyWithImpl<$Res>
             ? _value.status
             : status // ignore: cast_nullable_to_non_nullable
                   as InsightStatus,
-        speaker: freezed == speaker
-            ? _value.speaker
-            : speaker // ignore: cast_nullable_to_non_nullable
-                  as String?,
         timestamp: null == timestamp
             ? _value.timestamp
             : timestamp // ignore: cast_nullable_to_non_nullable
@@ -1073,7 +1028,6 @@ class _$LiveActionImpl extends _LiveAction {
     @DateTimeConverterNullable() this.deadline,
     this.completenessScore = 0.4,
     this.status = InsightStatus.tracked,
-    this.speaker,
     @DateTimeConverter() required this.timestamp,
     this.confidence = 0.0,
     final Map<String, dynamic> metadata = const {},
@@ -1111,10 +1065,6 @@ class _$LiveActionImpl extends _LiveAction {
   @JsonKey()
   final InsightStatus status;
 
-  /// Speaker who mentioned the action
-  @override
-  final String? speaker;
-
   /// Timestamp when action was detected
   @override
   @DateTimeConverter()
@@ -1144,7 +1094,7 @@ class _$LiveActionImpl extends _LiveAction {
 
   @override
   String toString() {
-    return 'LiveAction(id: $id, description: $description, owner: $owner, deadline: $deadline, completenessScore: $completenessScore, status: $status, speaker: $speaker, timestamp: $timestamp, confidence: $confidence, metadata: $metadata, completedAt: $completedAt)';
+    return 'LiveAction(id: $id, description: $description, owner: $owner, deadline: $deadline, completenessScore: $completenessScore, status: $status, timestamp: $timestamp, confidence: $confidence, metadata: $metadata, completedAt: $completedAt)';
   }
 
   @override
@@ -1161,7 +1111,6 @@ class _$LiveActionImpl extends _LiveAction {
             (identical(other.completenessScore, completenessScore) ||
                 other.completenessScore == completenessScore) &&
             (identical(other.status, status) || other.status == status) &&
-            (identical(other.speaker, speaker) || other.speaker == speaker) &&
             (identical(other.timestamp, timestamp) ||
                 other.timestamp == timestamp) &&
             (identical(other.confidence, confidence) ||
@@ -1181,7 +1130,6 @@ class _$LiveActionImpl extends _LiveAction {
     deadline,
     completenessScore,
     status,
-    speaker,
     timestamp,
     confidence,
     const DeepCollectionEquality().hash(_metadata),
@@ -1210,7 +1158,6 @@ abstract class _LiveAction extends LiveAction {
     @DateTimeConverterNullable() final DateTime? deadline,
     final double completenessScore,
     final InsightStatus status,
-    final String? speaker,
     @DateTimeConverter() required final DateTime timestamp,
     final double confidence,
     final Map<String, dynamic> metadata,
@@ -1245,10 +1192,6 @@ abstract class _LiveAction extends LiveAction {
   /// Current status of the action
   @override
   InsightStatus get status;
-
-  /// Speaker who mentioned the action
-  @override
-  String? get speaker;
 
   /// Timestamp when action was detected
   @override
@@ -1288,9 +1231,6 @@ mixin _$TranscriptSegment {
   /// The transcribed text
   String get text => throw _privateConstructorUsedError;
 
-  /// Speaker who spoke this segment
-  String? get speaker => throw _privateConstructorUsedError;
-
   /// Start timestamp of this segment
   @DateTimeConverter()
   DateTime get startTime => throw _privateConstructorUsedError;
@@ -1328,7 +1268,6 @@ abstract class $TranscriptSegmentCopyWith<$Res> {
   $Res call({
     String id,
     String text,
-    String? speaker,
     @DateTimeConverter() DateTime startTime,
     @DateTimeConverterNullable() DateTime? endTime,
     bool isFinal,
@@ -1354,7 +1293,6 @@ class _$TranscriptSegmentCopyWithImpl<$Res, $Val extends TranscriptSegment>
   $Res call({
     Object? id = null,
     Object? text = null,
-    Object? speaker = freezed,
     Object? startTime = null,
     Object? endTime = freezed,
     Object? isFinal = null,
@@ -1371,10 +1309,6 @@ class _$TranscriptSegmentCopyWithImpl<$Res, $Val extends TranscriptSegment>
                 ? _value.text
                 : text // ignore: cast_nullable_to_non_nullable
                       as String,
-            speaker: freezed == speaker
-                ? _value.speaker
-                : speaker // ignore: cast_nullable_to_non_nullable
-                      as String?,
             startTime: null == startTime
                 ? _value.startTime
                 : startTime // ignore: cast_nullable_to_non_nullable
@@ -1413,7 +1347,6 @@ abstract class _$$TranscriptSegmentImplCopyWith<$Res>
   $Res call({
     String id,
     String text,
-    String? speaker,
     @DateTimeConverter() DateTime startTime,
     @DateTimeConverterNullable() DateTime? endTime,
     bool isFinal,
@@ -1438,7 +1371,6 @@ class __$$TranscriptSegmentImplCopyWithImpl<$Res>
   $Res call({
     Object? id = null,
     Object? text = null,
-    Object? speaker = freezed,
     Object? startTime = null,
     Object? endTime = freezed,
     Object? isFinal = null,
@@ -1455,10 +1387,6 @@ class __$$TranscriptSegmentImplCopyWithImpl<$Res>
             ? _value.text
             : text // ignore: cast_nullable_to_non_nullable
                   as String,
-        speaker: freezed == speaker
-            ? _value.speaker
-            : speaker // ignore: cast_nullable_to_non_nullable
-                  as String?,
         startTime: null == startTime
             ? _value.startTime
             : startTime // ignore: cast_nullable_to_non_nullable
@@ -1490,7 +1418,6 @@ class _$TranscriptSegmentImpl extends _TranscriptSegment {
   const _$TranscriptSegmentImpl({
     required this.id,
     required this.text,
-    this.speaker,
     @DateTimeConverter() required this.startTime,
     @DateTimeConverterNullable() this.endTime,
     this.isFinal = false,
@@ -1509,10 +1436,6 @@ class _$TranscriptSegmentImpl extends _TranscriptSegment {
   /// The transcribed text
   @override
   final String text;
-
-  /// Speaker who spoke this segment
-  @override
-  final String? speaker;
 
   /// Start timestamp of this segment
   @override
@@ -1548,7 +1471,7 @@ class _$TranscriptSegmentImpl extends _TranscriptSegment {
 
   @override
   String toString() {
-    return 'TranscriptSegment(id: $id, text: $text, speaker: $speaker, startTime: $startTime, endTime: $endTime, isFinal: $isFinal, confidence: $confidence, metadata: $metadata)';
+    return 'TranscriptSegment(id: $id, text: $text, startTime: $startTime, endTime: $endTime, isFinal: $isFinal, confidence: $confidence, metadata: $metadata)';
   }
 
   @override
@@ -1558,7 +1481,6 @@ class _$TranscriptSegmentImpl extends _TranscriptSegment {
             other is _$TranscriptSegmentImpl &&
             (identical(other.id, id) || other.id == id) &&
             (identical(other.text, text) || other.text == text) &&
-            (identical(other.speaker, speaker) || other.speaker == speaker) &&
             (identical(other.startTime, startTime) ||
                 other.startTime == startTime) &&
             (identical(other.endTime, endTime) || other.endTime == endTime) &&
@@ -1574,7 +1496,6 @@ class _$TranscriptSegmentImpl extends _TranscriptSegment {
     runtimeType,
     id,
     text,
-    speaker,
     startTime,
     endTime,
     isFinal,
@@ -1603,7 +1524,6 @@ abstract class _TranscriptSegment extends TranscriptSegment {
   const factory _TranscriptSegment({
     required final String id,
     required final String text,
-    final String? speaker,
     @DateTimeConverter() required final DateTime startTime,
     @DateTimeConverterNullable() final DateTime? endTime,
     final bool isFinal,
@@ -1622,10 +1542,6 @@ abstract class _TranscriptSegment extends TranscriptSegment {
   /// The transcribed text
   @override
   String get text;
-
-  /// Speaker who spoke this segment
-  @override
-  String? get speaker;
 
   /// Start timestamp of this segment
   @override

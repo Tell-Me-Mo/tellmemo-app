@@ -336,6 +336,30 @@ class QueueConfig:
         except Exception as e:
             logger.error(f"Failed to publish job update for {job_id}: {e}")
 
+    def publish_live_insight(self, session_id: str, event_data: dict):
+        """
+        Publish a live meeting insight event to Redis pub/sub channel.
+
+        This enables cross-process communication between RQ workers (which detect
+        insights) and the main backend process (which manages WebSocket connections).
+
+        Args:
+            session_id: Meeting session identifier
+            event_data: Event data to publish (will be JSON serialized)
+                       Should include 'type' field (e.g., 'QUESTION_DETECTED', 'ACTION_TRACKED')
+        """
+        try:
+            import json
+            redis_conn = self.get_pubsub_connection()
+            channel = f"live_insights:{session_id}"
+            message = json.dumps(event_data)
+            redis_conn.publish(channel, message)
+
+            event_type = event_data.get('type', 'UNKNOWN')
+            logger.debug(f"Published live insight to Redis: session={session_id}, type={event_type}, channel={channel}")
+        except Exception as e:
+            logger.error(f"Failed to publish live insight for session {session_id}: {e}")
+
     def close(self):
         """Close Redis connections"""
         if self._redis_conn:

@@ -115,7 +115,6 @@ class AnswerHandler:
             # Extract fields
             question_gpt_id = answer_obj.get("question_id")
             answer_text = answer_obj.get("answer_text")
-            speaker = answer_obj.get("speaker")
             timestamp_str = answer_obj.get("timestamp")
             confidence = answer_obj.get("confidence", 0.9)
 
@@ -163,7 +162,6 @@ class AnswerHandler:
                 session_id=session_id,
                 question_gpt_id=question_gpt_id,
                 answer_text=answer_text,
-                speaker=speaker,
                 timestamp=timestamp,
                 confidence=confidence
             )
@@ -195,7 +193,6 @@ class AnswerHandler:
                 session_id=session_id,
                 question_id=str(db_question_id),
                 answer_text=answer_text,
-                speaker=speaker,
                 confidence=confidence
             )
 
@@ -219,7 +216,6 @@ class AnswerHandler:
         session_id: str,
         question_gpt_id: str,
         answer_text: str,
-        speaker: Optional[str],
         timestamp: datetime,
         confidence: float
     ) -> Optional[UUID]:
@@ -230,12 +226,13 @@ class AnswerHandler:
             session_id: Meeting session identifier
             question_gpt_id: GPT-generated question ID (e.g., "q_abc123...")
             answer_text: The answer text
-            speaker: Speaker who provided the answer
             timestamp: When the answer was detected
             confidence: Confidence score of the match
 
         Returns:
             Database question UUID if found and updated, None otherwise
+
+        Note: Speaker diarization not supported in streaming API.
         """
         try:
             async with get_db_context() as db_session:
@@ -268,11 +265,11 @@ class AnswerHandler:
                 )
 
                 # Add tier result with answer details
+                # Note: Speaker diarization not supported in streaming API
                 question.add_tier_result(
                     tier_type="live_conversation",
                     result_data={
                         "answer": answer_text,
-                        "speaker": speaker,
                         "timestamp": timestamp.isoformat(),
                         "confidence": confidence,
                         "source": "live_conversation"
@@ -298,7 +295,6 @@ class AnswerHandler:
         session_id: str,
         question_id: str,
         answer_text: str,
-        speaker: Optional[str],
         confidence: float
     ) -> None:
         """
@@ -312,8 +308,9 @@ class AnswerHandler:
             session_id: Meeting session identifier
             question_id: Database question UUID
             answer_text: The answer text
-            speaker: Speaker who provided the answer
             confidence: Confidence score
+
+        Note: Speaker diarization not supported in streaming API.
         """
         if not self._ws_broadcast_callback:
             logger.debug("No WebSocket callback configured, skipping broadcast")
@@ -326,12 +323,12 @@ class AnswerHandler:
             # Broadcast QUESTION_ANSWERED_LIVE (Tier 4 - live conversation monitoring)
             # This is distinct from ANSWER_FROM_MEETING (Tier 2) and provides clear
             # indication that the answer was found through live conversation monitoring
+            # Note: Speaker diarization not supported in streaming API
             event_data = {
                 "type": "QUESTION_ANSWERED_LIVE",
                 "question_id": question_id,
                 "data": {
                     "answer_text": answer_text,
-                    "speaker": speaker,
                     "confidence": confidence,
                     "source": "live_conversation",
                     "tier": "live_conversation",
