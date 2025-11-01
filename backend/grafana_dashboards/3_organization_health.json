@@ -7,6 +7,8 @@
   ],
   "timezone": "browser",
   "refresh": "1m",
+  "editable": true,
+  "graphTooltip": 1,
   "panels": [
     {
       "title": "Active Organizations",

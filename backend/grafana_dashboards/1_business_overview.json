@@ -7,6 +7,8 @@
   ],
   "timezone": "browser",
   "refresh": "30s",
+  "editable": true,
+  "graphTooltip": 1,
   "panels": [
     {
       "title": "Total Users",
@@ -36,7 +38,7 @@
       },
       "options": {
         "graphMode": "area",
-        "colorMode": "value",
+        "colorMode": "background_gradient",
         "orientation": "horizontal",
         "textMode": "value_and_name"
       }
@@ -69,7 +71,7 @@
       },
       "options": {
         "graphMode": "area",
-        "colorMode": "value",
+        "colorMode": "background_gradient",
         "orientation": "horizontal",
         "textMode": "value_and_name"
       }
@@ -102,7 +104,7 @@
       },
       "options": {
         "graphMode": "area",
-        "colorMode": "value",
+        "colorMode": "background_gradient",
         "orientation": "horizontal",
         "textMode": "value_and_name"
       }
@@ -151,8 +153,17 @@
         }
       },
       "options": {
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true,
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"]
+        },
+        "text": {
+          "titleSize": 16,
+          "valueSize": 32
+        }
       }
     },
     {
@@ -177,8 +188,25 @@
           "unit": "reqpm",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "smooth"
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "pointSize": 5
           }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["lastNotNull", "mean", "max"]
         }
       }
     },
@@ -209,8 +237,62 @@
           "unit": "short",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "smooth"
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 25,
+            "gradientMode": "opacity",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
           }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "With Results"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Without Results"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["lastNotNull", "mean", "sum"]
         }
       }
     },
@@ -242,7 +324,7 @@
       },
       "options": {
         "graphMode": "area",
-        "colorMode": "value",
+        "colorMode": "background_gradient",
         "orientation": "horizontal",
         "textMode": "value_and_name"
       }
@@ -275,7 +357,7 @@
       },
       "options": {
         "graphMode": "area",
-        "colorMode": "value",
+        "colorMode": "background_gradient",
         "orientation": "horizontal",
         "textMode": "value_and_name"
       }
@@ -308,7 +390,7 @@
       },
       "options": {
         "graphMode": "area",
-        "colorMode": "value",
+        "colorMode": "background_gradient",
         "orientation": "horizontal",
         "textMode": "value_and_name"
       }
