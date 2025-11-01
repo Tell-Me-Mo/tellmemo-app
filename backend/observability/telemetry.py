@@ -16,6 +16,10 @@ Setup:
 
 import logging
 from typing import Optional
+import urllib3
+import requests
+import ssl
+import os
 from opentelemetry import trace, metrics
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
@@ -75,11 +79,26 @@ def init_telemetry(settings: Settings) -> bool:
                     key, value = header.split("=", 1)
                     headers_dict[key.strip()] = value.strip()
 
+        # Disable SSL verification globally for development
+        # This is the most reliable way to disable SSL for OTLP exporters
+        if settings.api_env == "development":
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            # Monkey-patch requests to disable SSL verification globally
+            original_request = requests.Session.request
+
+            def patched_request(self, *args, **kwargs):
+                kwargs['verify'] = False
+                return original_request(self, *args, **kwargs)
+
+            requests.Session.request = patched_request
+            logger.info("🔓 SSL verification disabled globally for development environment")
+
         # Initialize Traces
         _tracer_provider = TracerProvider(resource=resource)
         trace_exporter = OTLPSpanExporter(
             endpoint=f"{settings.otel_exporter_otlp_endpoint}/v1/traces",
             headers=headers_dict,
+            timeout=10,  # 10 second timeout
         )
         _tracer_provider.add_span_processor(BatchSpanProcessor(trace_exporter))
         trace.set_tracer_provider(_tracer_provider)
@@ -90,6 +109,7 @@ def init_telemetry(settings: Settings) -> bool:
         metric_exporter = OTLPMetricExporter(
             endpoint=f"{settings.otel_exporter_otlp_endpoint}/v1/metrics",
             headers=headers_dict,
+            timeout=10,  # 10 second timeout
             preferred_temporality={
                 # All metric types use Cumulative for Grafana Cloud/Prometheus
                 Counter: AggregationTemporality.CUMULATIVE,
