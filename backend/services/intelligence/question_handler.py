@@ -658,10 +658,10 @@ class QuestionHandler:
             meeting_context_search = get_meeting_context_search()
 
             # Search meeting transcript for answer
+            # Note: Speaker diarization not supported in streaming API
             result = await meeting_context_search.search(
                 question=question_text,
                 session_id=session_id,
-                speaker=speaker,
                 organization_id=organization_id
             )
 
