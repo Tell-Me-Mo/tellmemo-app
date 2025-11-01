@@ -1338,7 +1338,7 @@ button:focus-visible {
     .hero-description {
         font-size: 17px;
         line-height: 1.6;
-        margin-bottom: 32px;
+        margin-bottom: 24px;
         max-width: 100%;
         padding: 0 20px;
     }
@@ -1346,7 +1346,7 @@ button:focus-visible {
     .open-source-badge {
         padding: 8px 18px;
         font-size: 13px;
-        margin-bottom: 28px;
+        margin-bottom: 20px;
         margin-top: 12px;
         border-radius: 24px;
     }
@@ -1356,7 +1356,7 @@ button:focus-visible {
         flex-direction: column;
         align-items: stretch;
         gap: 12px;
-        margin-bottom: 48px;
+        margin-bottom: 32px;
         padding: 0 20px;
     }
 
@@ -2033,7 +2033,7 @@ button:focus-visible {
     }
 
     .hero-grid {
-        gap: 48px;
+        gap: 32px;
     }
 
     .hero h1 {
@@ -2117,8 +2117,7 @@ button:focus-visible {
 
     .insights-section {
         padding: 20px;
-        min-height: 400px;
-        max-height: 500px;
+        height: 600px;
     }
 
     .insights-group {
@@ -2349,8 +2348,7 @@ button:focus-visible {
 .insights-section {
     padding: 28px;
     background: var(--bg-primary);
-    min-height: 450px;
-    max-height: 550px;
+    height: 550px;
     overflow-y: auto;
 }
 
