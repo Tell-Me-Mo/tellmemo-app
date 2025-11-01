@@ -119,7 +119,6 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
     return TranscriptModel(
       id: segment.id,
       text: segment.text,
-      speaker: segment.speaker,
       timestamp: segment.startTime,
       state: segment.isFinal ? TranscriptionState.final_ : TranscriptionState.partial,
       confidence: segment.confidence,
@@ -172,19 +171,17 @@ class _RecordingPanelState extends ConsumerState<RecordingPanel> with TickerProv
           final index = _questions.indexWhere((q) => q.id == question.id);
 
           if (index != -1) {
-            // Update existing question - preserve text, speaker, and timestamp if incoming is empty/null/changed
+            // Update existing question - preserve text and timestamp if incoming is empty/changed
             final existingQuestion = _questions[index];
             final preservedText = question.text.isEmpty ? existingQuestion.text : question.text;
-            final preservedSpeaker = question.speaker ?? existingQuestion.speaker;
             final preservedTimestamp = existingQuestion.timestamp; // Always keep original timestamp
 
             _questions[index] = question.copyWith(
               text: preservedText,
-              speaker: preservedSpeaker,
               timestamp: preservedTimestamp, // Preserve original question time
             );
 
-            debugPrint('[RecordingPanel] Updated question ${question.id}: preserved speaker="$preservedSpeaker", timestamp=$preservedTimestamp');
+            debugPrint('[RecordingPanel] Updated question ${question.id}: timestamp=$preservedTimestamp');
           } else {
             _questions.add(question);
             debugPrint('[RecordingPanel] Added new question ${question.id}');

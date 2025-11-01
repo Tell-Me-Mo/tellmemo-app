@@ -385,7 +385,6 @@ class StreamingIntelligenceOrchestrator:
             sentence = TranscriptionSentence(
                 sentence_id=str(uuid.uuid4()),
                 text=text,
-                speaker=speaker or "Unknown",
                 timestamp=current_timestamp,
                 start_time=current_timestamp,
                 end_time=current_timestamp,
@@ -403,7 +402,6 @@ class StreamingIntelligenceOrchestrator:
             transcript_context = await self.buffer_service.get_formatted_context(
                 session_id=self.session_id,
                 include_timestamps=True,
-                include_speakers=True,
                 max_age_seconds=60  # Last 60 seconds
             )
             logger.info(f"Retrieved transcript context for session {self.session_id}: length={len(transcript_context)} chars")

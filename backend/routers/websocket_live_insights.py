@@ -784,10 +784,10 @@ async def handle_transcription_result(session_id: str, result: TranscriptionResu
         end_time = base_time + timedelta(milliseconds=result.audio_end) if result.audio_end > 0 else None
 
         # Prepare transcript data for broadcasting (Flutter-compatible format)
+        # Note: speaker field removed - not supported in Universal-Streaming v3
         transcript_data = {
             "id": transcript_id,
             "text": result.text,
-            "speaker": result.speaker,  # Can be null
             "startTime": start_time.isoformat(),
             "endTime": end_time.isoformat() if end_time else None,
             "isFinal": result.is_final,

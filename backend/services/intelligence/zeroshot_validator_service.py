@@ -167,7 +167,7 @@ class ZeroShotValidatorService:
                 device=device,
                 token=hf_token,
                 trust_remote_code=True,  # Pass at pipeline level
-                torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,  # bf16 for 2x speed on GPU
+                dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,  # bf16 for 2x speed on GPU (updated from torch_dtype)
                 model_kwargs={
                     "cache_dir": str(self.cache_dir)
                 }

@@ -13,7 +13,6 @@ void main() {
       testQuestion = LiveQuestion(
         id: 'q1',
         text: 'What is the Q4 budget?',
-        speaker: 'John Doe',
         timestamp: now.subtract(const Duration(minutes: 2)),
         status: InsightStatus.searching,
       );
@@ -43,27 +42,15 @@ void main() {
         expect(find.text('What is the Q4 budget?'), findsOneWidget);
       });
 
-      testWidgets('displays speaker name', (WidgetTester tester) async {
-        await tester.pumpWidget(buildWidget(testQuestion));
-
-        expect(find.text('John Doe'), findsOneWidget);
-      });
-
       testWidgets('displays timestamp', (WidgetTester tester) async {
         await tester.pumpWidget(buildWidget(testQuestion));
 
         // Check for time ago text (should show "2m ago" or similar)
+        // Speaker diarization removed - only timestamp shown
         expect(
           find.textContaining('ago', findRichText: true),
           findsOneWidget,
         );
-      });
-
-      testWidgets('displays unknown speaker when speaker is null', (WidgetTester tester) async {
-        final questionNoSpeaker = testQuestion.copyWith(speaker: null);
-        await tester.pumpWidget(buildWidget(questionNoSpeaker));
-
-        expect(find.text('Unknown Speaker'), findsOneWidget);
       });
     });
 

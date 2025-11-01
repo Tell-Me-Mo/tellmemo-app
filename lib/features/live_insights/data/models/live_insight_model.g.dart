@@ -37,7 +37,6 @@ _$LiveQuestionImpl _$$LiveQuestionImplFromJson(Map<String, dynamic> json) =>
     _$LiveQuestionImpl(
       id: json['id'] as String,
       text: json['text'] as String,
-      speaker: json['speaker'] as String?,
       timestamp: const DateTimeConverter().fromJson(json['timestamp']),
       status: $enumDecode(_$InsightStatusEnumMap, json['status']),
       tierResults:
@@ -62,7 +61,6 @@ Map<String, dynamic> _$$LiveQuestionImplToJson(
 ) => <String, dynamic>{
   'id': instance.id,
   'text': instance.text,
-  'speaker': instance.speaker,
   'timestamp': const DateTimeConverter().toJson(instance.timestamp),
   'status': _$InsightStatusEnumMap[instance.status]!,
   'tierResults': instance.tierResults,
@@ -102,7 +100,6 @@ _$LiveActionImpl _$$LiveActionImplFromJson(Map<String, dynamic> json) =>
       status:
           $enumDecodeNullable(_$InsightStatusEnumMap, json['status']) ??
           InsightStatus.tracked,
-      speaker: json['speaker'] as String?,
       timestamp: const DateTimeConverter().fromJson(json['timestamp']),
       confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
       metadata: json['metadata'] as Map<String, dynamic>? ?? const {},
@@ -120,7 +117,6 @@ Map<String, dynamic> _$$LiveActionImplToJson(
   'deadline': const DateTimeConverterNullable().toJson(instance.deadline),
   'completenessScore': instance.completenessScore,
   'status': _$InsightStatusEnumMap[instance.status]!,
-  'speaker': instance.speaker,
   'timestamp': const DateTimeConverter().toJson(instance.timestamp),
   'confidence': instance.confidence,
   'metadata': instance.metadata,
@@ -132,7 +128,6 @@ _$TranscriptSegmentImpl _$$TranscriptSegmentImplFromJson(
 ) => _$TranscriptSegmentImpl(
   id: json['id'] as String,
   text: json['text'] as String,
-  speaker: json['speaker'] as String?,
   startTime: const DateTimeConverter().fromJson(json['startTime']),
   endTime: const DateTimeConverterNullable().fromJson(json['endTime']),
   isFinal: json['isFinal'] as bool? ?? false,
@@ -145,7 +140,6 @@ Map<String, dynamic> _$$TranscriptSegmentImplToJson(
 ) => <String, dynamic>{
   'id': instance.id,
   'text': instance.text,
-  'speaker': instance.speaker,
   'startTime': const DateTimeConverter().toJson(instance.startTime),
   'endTime': const DateTimeConverterNullable().toJson(instance.endTime),
   'isFinal': instance.isFinal,

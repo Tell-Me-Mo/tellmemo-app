@@ -12,7 +12,7 @@ enum TranscriptionState {
 }
 
 /// Model for a single transcript segment
-/// Represents a transcribed piece of audio with speaker attribution
+/// Note: Speaker diarization not supported in Universal-Streaming v3 API
 @freezed
 class TranscriptModel with _$TranscriptModel {
   const factory TranscriptModel({
@@ -21,9 +21,6 @@ class TranscriptModel with _$TranscriptModel {
 
     /// The transcribed text
     required String text,
-
-    /// Speaker label (e.g., "Speaker A", "Speaker B", or actual name if mapped)
-    String? speaker,
 
     /// Timestamp when this segment was spoken
     required DateTime timestamp,
@@ -52,9 +49,6 @@ extension TranscriptModelX on TranscriptModel {
 
   /// Check if this is a final (stable) transcript
   bool get isFinal => state == TranscriptionState.final_;
-
-  /// Get a display-friendly speaker label
-  String get displaySpeaker => speaker ?? 'Unknown Speaker';
 
   /// Get confidence percentage for display
   String get confidenceDisplay =>

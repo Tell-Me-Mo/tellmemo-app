@@ -156,25 +156,14 @@ class _LiveActionCardState extends State<LiveActionCard>
         ),
         const SizedBox(width: LayoutConstants.spacingSm),
 
-        // Speaker and timestamp
+        // Timestamp only (speaker diarization not supported in streaming API)
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                widget.action.displaySpeaker,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: colorScheme.onSurface,
-                ),
-              ),
-              Text(
-                DateTimeUtils.formatTimeAgo(widget.action.timestamp),
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
+          child: Text(
+            DateTimeUtils.formatTimeAgo(widget.action.timestamp),
+            style: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: colorScheme.onSurface,
+            ),
           ),
         ),
 

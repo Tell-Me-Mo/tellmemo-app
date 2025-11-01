@@ -45,27 +45,14 @@ void main() {
         expect(find.text('Update project documentation'), findsOneWidget);
       });
 
-      testWidgets('displays speaker name when provided', (WidgetTester tester) async {
-        final action = testAction.copyWith(speaker: 'Sarah Johnson');
-        await tester.pumpWidget(buildWidget(action));
-
-        expect(find.text('Sarah Johnson'), findsOneWidget);
-      });
-
       testWidgets('displays timestamp', (WidgetTester tester) async {
         await tester.pumpWidget(buildWidget(testAction));
 
-        // Check for time ago text
+        // Check for time ago text (speaker diarization removed)
         expect(
           find.textContaining('ago', findRichText: true),
           findsOneWidget,
         );
-      });
-
-      testWidgets('displays unknown speaker when speaker is null', (WidgetTester tester) async {
-        await tester.pumpWidget(buildWidget(testAction));
-
-        expect(find.text('Unknown Speaker'), findsOneWidget);
       });
     });
 
