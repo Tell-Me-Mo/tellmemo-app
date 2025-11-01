@@ -323,12 +323,12 @@ class AnswerHandler:
             # Broadcast QUESTION_ANSWERED_LIVE (Tier 4 - live conversation monitoring)
             # This is distinct from ANSWER_FROM_MEETING (Tier 2) and provides clear
             # indication that the answer was found through live conversation monitoring
+            # Note: Speaker diarization not supported in streaming API
             event_data = {
                 "type": "QUESTION_ANSWERED_LIVE",
                 "question_id": question_id,
                 "data": {
                     "answer_text": answer_text,
-                    "speaker": speaker,
                     "confidence": confidence,
                     "source": "live_conversation",
                     "tier": "live_conversation",
