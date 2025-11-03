@@ -96,4 +96,5 @@ sentry.properties
 
 # Temporary audio files
 backend/temp_audio/
+backend/uploads/temp_audio/
 
