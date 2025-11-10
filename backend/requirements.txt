@@ -69,7 +69,7 @@ opentelemetry-instrumentation-asyncpg>=0.59b0  # PostgreSQL async driver (asyncp
 opentelemetry-instrumentation-qdrant>=0.17.0   # Qdrant vector database (OpenLLMetry)
 
 # Authentication
-supabase==2.22.4
+supabase==2.24.0
 gotrue==2.12.4
 pyjwt==2.10.1
 
