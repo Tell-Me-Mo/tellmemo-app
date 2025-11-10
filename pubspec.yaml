@@ -69,7 +69,7 @@ dependencies:
 
   # Firebase
   firebase_core: ^4.1.1
-  firebase_analytics: ^12.0.2
+  firebase_analytics: ^12.0.4
   
   # Audio Recording & Streaming
   record: ^6.1.2
