@@ -28,7 +28,7 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
-  sentry_flutter: ^9.7.0
+  sentry_flutter: ^9.8.0
   flutter:
     sdk: flutter
 
