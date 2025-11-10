@@ -2,7 +2,7 @@
 # Python 3.13 compatible versions
 
 # Core Framework
-fastapi==0.120.2
+fastapi==0.121.1
 uvicorn[standard]==0.38.0
 gunicorn==23.0.0
 python-multipart==0.0.20
