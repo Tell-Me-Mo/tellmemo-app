@@ -87,7 +87,7 @@ sendgrid==6.12.5  # SendGrid for transactional emails
 jinja2==3.1.6  # HTML email template rendering
 
 # Development & Testing
-pytest==8.4.2
+pytest==9.0.0
 pytest-asyncio==0.25.0
 fakeredis==2.32.0  # In-memory Redis for testing (no workers needed)
 black==25.9.0
