@@ -55,7 +55,7 @@ openai==2.6.1
 purgatory==3.0.1  # Circuit breaker for resilient API calls
 
 # Observability
-langfuse==3.8.1
+langfuse==3.9.1
 sentry-sdk[fastapi]==2.43.0
 
 # OpenTelemetry (2025 Distro Approach - includes API, SDK, and bootstrap tool)
