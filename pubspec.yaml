@@ -47,7 +47,7 @@ dependencies:
   dio: ^5.9.0
   dio_retry_plus: ^2.0.8
   retrofit: ^4.7.3
-  http: ^1.5.0
+  http: ^1.6.0
   
   # UI & Design
   animated_tree_view: ^2.3.0
