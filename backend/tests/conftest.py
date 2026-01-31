@@ -3,6 +3,12 @@ Pytest configuration and shared fixtures for backend tests.
 
 This module provides test fixtures following the integration-first testing strategy
 outlined in TESTING_BACKEND.md.
+
+Testing Strategy:
+- Uses nested transactions (savepoints) for test isolation
+- Each test runs in a savepoint that is rolled back after the test
+- Tables are created once at session scope and dropped at the end
+- get_db_context is patched to use the test session
 """
 
 import os
@@ -22,6 +28,13 @@ os.environ["DATABASE_URL"] = os.getenv(
     "TEST_DATABASE_URL",
     "postgresql+asyncpg://pm_master:pm_master_pass@localhost:5432/pm_master_test"
 )
+
+# Also set POSTGRES_DB since config.py builds database_url from individual env vars
+os.environ["POSTGRES_DB"] = "pm_master_test"
+
+# Clear cached settings to ensure test config is used
+from config import get_settings
+get_settings.cache_clear()
 
 # Set consistent JWT secret for tests (ONLY allowed when TESTING=1)
 os.environ["JWT_SECRET"] = "test_jwt_secret_key_for_testing_only_do_not_use_in_production"
@@ -52,22 +65,33 @@ import models  # noqa: F401
 # The service was already initialized with a random secret before we set the env var
 native_auth_service.jwt_secret = os.environ["JWT_SECRET"]
 
-# Test database engine
-TEST_DATABASE_URL = os.environ["DATABASE_URL"]
-
-engine = create_async_engine(
-    TEST_DATABASE_URL,
+# Create a dedicated test engine - separate from the db_manager used by services
+# This gives us full control over the test database lifecycle
+settings = get_settings()
+test_engine = create_async_engine(
+    settings.database_url,
     echo=False,
-    poolclass=NullPool,  # Disable connection pooling for tests
+    poolclass=NullPool,
+    pool_pre_ping=True,
 )
 
 TestSessionLocal = async_sessionmaker(
-    engine,
+    test_engine,
     class_=AsyncSession,
     expire_on_commit=False,
-    autocommit=False,
     autoflush=False,
+    autocommit=False
 )
+
+# For backward compatibility, keep engine reference
+engine = test_engine
+
+# CRITICAL: Replace db_manager's engine and sessionmaker with our test versions
+# This ensures any service that uses db_manager.engine or db_manager.sessionmaker
+# will use the test database instead of the production database
+from db.database import db_manager
+db_manager._engine = test_engine
+db_manager._sessionmaker = TestSessionLocal
 
 
 def is_server_running(host: str = "localhost", port: int = 8000) -> bool:
@@ -101,29 +125,21 @@ def pytest_collection_modifyitems(config, items):
 
 
 @pytest.fixture(scope="session")
-def event_loop() -> Generator:
-    """Create an event loop for the test session."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
+def event_loop_policy():
+    """Return the event loop policy for the test session."""
+    return asyncio.get_event_loop_policy()
 
 
-@pytest.fixture(scope="function", autouse=False)
-async def db_session() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Create a fresh database session for each test.
+# Track whether tables have been created in this session
+_tables_created = False
 
-    This fixture:
-    - Creates all tables before the test
-    - Yields a database session
-    - Drops all tables after the test to ensure clean state
-    """
+
+async def _async_setup_database():
+    """Async helper to set up the database."""
     from sqlalchemy import text
 
-    # Drop all tables using CASCADE to handle foreign key dependencies
-    # Use raw SQL to avoid errors when tables don't exist
-    async with engine.begin() as conn:
-        # Drop all tables in the public schema with CASCADE
+    # Drop all existing tables and types to start fresh
+    async with test_engine.begin() as conn:
         await conn.execute(text("""
             DO $$
             DECLARE
@@ -132,45 +148,193 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
                 FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
                     EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE';
                 END LOOP;
-                -- Also drop custom types
                 FOR r IN (SELECT typname FROM pg_type WHERE typnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public') AND typtype = 'e') LOOP
                     EXECUTE 'DROP TYPE IF EXISTS ' || quote_ident(r.typname) || ' CASCADE';
                 END LOOP;
             END $$;
         """))
 
-    # Create tables
-    async with engine.begin() as conn:
+    # Create all tables
+    async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    # Create session
-    try:
+
+async def _async_teardown_database():
+    """Async helper to tear down the database."""
+    from sqlalchemy import text
+
+    async with test_engine.begin() as conn:
+        await conn.execute(text("""
+            DO $$
+            DECLARE
+                r RECORD;
+            BEGIN
+                FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+                    EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE';
+                END LOOP;
+                FOR r IN (SELECT typname FROM pg_type WHERE typnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public') AND typtype = 'e') LOOP
+                    EXECUTE 'DROP TYPE IF EXISTS ' || quote_ident(r.typname) || ' CASCADE';
+                END LOOP;
+            END $$;
+        """))
+
+
+@pytest.fixture(scope="session")
+def setup_database():
+    """
+    Session-scoped fixture that sets up and tears down the test database.
+
+    Creates all tables once at the start of the test session and drops them at the end.
+    This is more efficient than creating/dropping tables for each test.
+    """
+    global _tables_created
+
+    # Run async setup synchronously
+    asyncio.run(_async_setup_database())
+    _tables_created = True
+
+    yield
+
+    # Run async teardown synchronously
+    asyncio.run(_async_teardown_database())
+    _tables_created = False
+
+
+@pytest.fixture(scope="function", autouse=False)
+async def db_session(setup_database, request) -> AsyncGenerator[AsyncSession, None]:
+    """
+    Create a database session for each test with proper isolation.
+
+    Uses nested transactions (savepoints) for test isolation:
+    1. Start a connection
+    2. Begin a transaction
+    3. Create a savepoint
+    4. Yield the session for the test
+    5. Rollback to the savepoint (undoing all test changes)
+    6. Close the connection
+
+    This approach is more reliable than DROP/CREATE per test because:
+    - No race conditions with concurrent tests
+    - Faster (no DDL operations per test)
+    - Tests can commit without affecting other tests
+
+    For concurrent_db marked tests, uses a different approach:
+    - Data is committed so concurrent sessions can see it
+    - Tables are truncated after the test for cleanup
+    """
+    from sqlalchemy import text
+
+    # Check if this is a concurrent_db test
+    is_concurrent = request.node.get_closest_marker("concurrent_db") is not None
+
+    if is_concurrent:
+        # For concurrent tests, use direct commits (no transaction wrapping)
+        # so that concurrent sessions can see the data
         async with TestSessionLocal() as session:
+            # Set up patching for get_db_context
+            @asynccontextmanager
+            async def concurrent_get_db_context():
+                """Create a new session for concurrent operations."""
+                async with TestSessionLocal() as new_session:
+                    try:
+                        yield new_session
+                        await new_session.commit()
+                    except Exception:
+                        await new_session.rollback()
+                        raise
+
+            # Patch get_db_context in all known locations
+            patches = [
+                patch("db.database.get_db_context", concurrent_get_db_context),
+                patch("middleware.auth_middleware.get_db_context", concurrent_get_db_context),
+            ]
+
+            # Start all patches
+            for p in patches:
+                p.start()
+
             try:
                 yield session
             finally:
-                # Always rollback, even if test/fixtures fail
-                await session.rollback()
-    finally:
-        # Always drop tables to ensure clean state for next test
-        async with engine.begin() as conn:
-            await conn.execute(text("""
-                DO $$
-                DECLARE
-                    r RECORD;
-                BEGIN
-                    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
-                        EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE';
-                    END LOOP;
-                    FOR r IN (SELECT typname FROM pg_type WHERE typnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public') AND typtype = 'e') LOOP
-                        EXECUTE 'DROP TYPE IF EXISTS ' || quote_ident(r.typname) || ' CASCADE';
-                    END LOOP;
-                END $$;
-            """))
+                # Stop all patches
+                for p in patches:
+                    p.stop()
+
+                # Close the session first to release any locks
+                await session.close()
+
+                # Give a small delay for any pending async operations to complete
+                await asyncio.sleep(0.1)
+
+                # Dispose all connections in the pool to force close any lingering connections
+                await test_engine.dispose()
+
+                # Recreate engine for truncation (dispose closes all connections)
+                async with test_engine.begin() as conn:
+                    # Disable foreign key checks temporarily
+                    await conn.execute(text("SET CONSTRAINTS ALL DEFERRED"))
+                    # Truncate all tables
+                    await conn.execute(text("""
+                        DO $$
+                        DECLARE
+                            r RECORD;
+                        BEGIN
+                            FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+                                EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' CASCADE';
+                            END LOOP;
+                        END $$;
+                    """))
+    else:
+        # For normal tests, use nested transactions (savepoints) for isolation
+        # Create a new connection
+        connection = await test_engine.connect()
+
+        # Start an outer transaction
+        transaction = await connection.begin()
+
+        # Create a session bound to this connection
+        session = AsyncSession(bind=connection, expire_on_commit=False)
+
+        # Create a savepoint (nested transaction)
+        nested = await connection.begin_nested()
+
+        # Set up patching for get_db_context
+        @asynccontextmanager
+        async def override_get_db_context():
+            yield session
+
+        # Patch get_db_context in all known locations
+        patches = [
+            patch("db.database.get_db_context", override_get_db_context),
+            patch("middleware.auth_middleware.get_db_context", override_get_db_context),
+        ]
+
+        # Start all patches
+        for p in patches:
+            p.start()
+
+        try:
+            yield session
+        finally:
+            # Stop all patches
+            for p in patches:
+                p.stop()
+
+            # Rollback the savepoint (this undoes any changes made in the test)
+            if nested is not None and nested.is_active:
+                await nested.rollback()
+
+            # Rollback the outer transaction
+            if transaction.is_active:
+                await transaction.rollback()
+
+            # Close the session and connection
+            await session.close()
+            await connection.close()
 
 
 @pytest.fixture(scope="function")
-async def client_factory(db_session: AsyncSession, monkeypatch):
+async def client_factory(db_session: AsyncSession):
     """
     Create a factory for generating multiple independent HTTP clients.
 
@@ -182,13 +346,6 @@ async def client_factory(db_session: AsyncSession, monkeypatch):
         yield db_session
 
     app.dependency_overrides[get_db] = override_get_db
-
-    @asynccontextmanager
-    async def override_get_db_context():
-        yield db_session
-
-    monkeypatch.setattr("db.database.get_db_context", override_get_db_context)
-    monkeypatch.setattr("middleware.auth_middleware.get_db_context", override_get_db_context)
 
     # Create a shared transport for all clients (important for sharing app state)
     transport = ASGITransport(app=app)

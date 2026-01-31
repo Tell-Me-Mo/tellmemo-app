@@ -1,7 +1,7 @@
 services:
   # PostgreSQL 18.0 - Main database for project metadata
   postgres:
-    image: postgres:18.0
+    image: postgres:18.1
     container_name: pm_master_postgres
     restart: unless-stopped
     environment:
@@ -12,7 +12,7 @@ services:
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"  # Localhost only - not exposed to internet
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
       - ./backend/db/init:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pm_master} -d ${POSTGRES_DB:-pm_master_db}"]
@@ -29,7 +29,7 @@ services:
 
   # Qdrant v1.15.5 - Vector database for semantic search
   qdrant:
-    image: qdrant/qdrant:v1.15.5
+    image: qdrant/qdrant:v1.16.3
     container_name: pm_master_qdrant
     restart: unless-stopped
     environment:
@@ -64,7 +64,7 @@ services:
 
   # Redis 8 - Required for Langfuse v3 queue and caching
   redis:
-    image: redis:8.2.2-alpine
+    image: redis:8.4.0-alpine
     container_name: pm_master_redis
     restart: unless-stopped
     command: >
@@ -511,7 +511,7 @@ services:
   # ===== ELK STACK =====
   # Elasticsearch - Search and analytics engine
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:9.1.5
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.2.4
     container_name: pm_master_elasticsearch
     restart: unless-stopped
     environment:
@@ -554,7 +554,7 @@ services:
 
   # Logstash - Data processing pipeline
   logstash:
-    image: docker.elastic.co/logstash/logstash:9.1.5
+    image: docker.elastic.co/logstash/logstash:9.2.4
     container_name: pm_master_logstash
     restart: unless-stopped
     depends_on:
@@ -584,7 +584,7 @@ services:
 
   # Kibana - Visualization and exploration
   kibana:
-    image: docker.elastic.co/kibana/kibana:9.1.5
+    image: docker.elastic.co/kibana/kibana:9.2.4
     container_name: pm_master_kibana
     restart: unless-stopped
     depends_on:

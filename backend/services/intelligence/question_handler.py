@@ -58,6 +58,9 @@ class QuestionHandler:
         # Active questions being monitored (session_id -> {question_id -> task})
         self._active_monitoring: Dict[str, Dict[str, asyncio.Task]] = {}
 
+        # Discovery tasks (session_id -> {question_id -> task}) - tracks _parallel_answer_discovery
+        self._discovery_tasks: Dict[str, Dict[str, asyncio.Task]] = {}
+
         # Answer detection events for Tier 4 live monitoring (session_id -> {question_id -> Event})
         self._answer_events: Dict[str, Dict[str, asyncio.Event]] = {}
 
@@ -221,7 +224,7 @@ class QuestionHandler:
 
             # Start parallel answer discovery (Tiers 1, 2, and 4)
             # Note: Tier 3 (GPT-generated) will be triggered only if other tiers fail
-            asyncio.create_task(
+            discovery_task = asyncio.create_task(
                 self._parallel_answer_discovery(
                     session_id=session_id,
                     question_id=db_question_id,
@@ -230,6 +233,10 @@ class QuestionHandler:
                     organization_id=organization_id
                 )
             )
+            # Track discovery task for cleanup
+            if session_id not in self._discovery_tasks:
+                self._discovery_tasks[session_id] = {}
+            self._discovery_tasks[session_id][db_question_id] = discovery_task
 
             await session.commit()
 
@@ -1054,17 +1061,32 @@ class QuestionHandler:
     async def cleanup_session(self, session_id: str) -> None:
         """Cleanup resources for a meeting session.
 
-        Cancels all active monitoring tasks and clears answer detection events.
+        Cancels all active monitoring and discovery tasks, and clears answer detection events.
 
         Args:
             session_id: Meeting session ID
         """
+        tasks_to_await = []
+
+        # Cancel all discovery tasks (main _parallel_answer_discovery tasks)
+        if session_id in self._discovery_tasks:
+            for question_id, task in self._discovery_tasks[session_id].items():
+                if not task.done():
+                    task.cancel()
+                    tasks_to_await.append(task)
+            del self._discovery_tasks[session_id]
+
         # Cancel all active monitoring tasks
         if session_id in self._active_monitoring:
             for question_id, task in self._active_monitoring[session_id].items():
                 if not task.done():
                     task.cancel()
+                    tasks_to_await.append(task)
             del self._active_monitoring[session_id]
+
+        # Wait for all cancelled tasks to actually complete
+        if tasks_to_await:
+            await asyncio.gather(*tasks_to_await, return_exceptions=True)
 
         # Clean up answer detection events
         if session_id in self._answer_events:

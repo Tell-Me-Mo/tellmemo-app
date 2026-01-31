@@ -16,7 +16,6 @@ from qdrant_client.models import (
     ScalarQuantizationConfig,
     ScalarType,
     HnswConfigDiff,
-    SearchRequest,
     SearchParams,
     QuantizationSearchParams,
     PayloadFieldSchema,
@@ -313,7 +312,7 @@ class MultiTenantVectorStore:
                             "name": col.name,
                             "organization_id": parsed["organization_id"],
                             "collection_type": parsed["collection_type"],
-                            "vectors_count": info.vectors_count,
+                            "indexed_vectors_count": info.indexed_vectors_count,
                             "points_count": info.points_count,
                             "status": info.status.value,
                         })
@@ -445,12 +444,12 @@ class MultiTenantVectorStore:
                 # Extract points from QueryResponse
                 results = response.points if hasattr(response, 'points') else response
             else:
-                # For single vector, use the search method
-                results = await asyncio.get_event_loop().run_in_executor(
+                # For single vector, use query_points (search method deprecated in qdrant-client 1.16+)
+                response = await asyncio.get_event_loop().run_in_executor(
                     None,
-                    lambda: self.client.search(
+                    lambda: self.client.query_points(
                         collection_name=collection_name,
-                        query_vector=query_vector,
+                        query=query_vector,
                         limit=limit,
                         query_filter=filter_obj,
                         search_params=search_params,
@@ -459,6 +458,8 @@ class MultiTenantVectorStore:
                         with_vectors=with_vectors
                     )
                 )
+                # Extract points from QueryResponse
+                results = response.points if hasattr(response, 'points') else response
 
             # Convert results to list of dicts
             return [
@@ -775,10 +776,9 @@ class MultiTenantVectorStore:
                 "organization_id": str(organization_id),
                 "collection_type": collection_type,
                 "status": info.status.value,
-                "vectors_count": info.vectors_count,
                 "indexed_vectors_count": info.indexed_vectors_count,
                 "points_count": info.points_count,
-                "segments_count": getattr(info, 'segments_count', 0),
+                "segments_count": info.segments_count,
                 "config": config_dict
             }
         except Exception as e:

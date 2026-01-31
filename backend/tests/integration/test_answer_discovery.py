@@ -59,10 +59,8 @@ def question_id():
 
 
 @pytest.fixture
-async def test_organization() -> Organization:
-    """Create test organization with independent session for true database commit."""
-    from db.database import get_db_context
-
+async def test_organization(db_session) -> Organization:
+    """Create test organization using shared db_session fixture."""
     # Use unique slug per test to avoid conflicts
     unique_slug = f"test-org-ad-{uuid.uuid4().hex[:8]}"
 
@@ -72,19 +70,16 @@ async def test_organization() -> Organization:
         is_active=True
     )
 
-    async with get_db_context() as session:
-        session.add(organization)
-        await session.commit()
-        await session.refresh(organization)
+    db_session.add(organization)
+    await db_session.commit()
+    await db_session.refresh(organization)
 
     return organization
 
 
 @pytest.fixture
-async def test_project(test_organization: Organization) -> Project:
-    """Create test project with independent session for true database commit."""
-    from db.database import get_db_context
-
+async def test_project(db_session, test_organization: Organization) -> Project:
+    """Create test project using shared db_session fixture."""
     project = Project(
         name="Test Project for Answer Discovery",
         description="Test project for answer discovery integration tests",
@@ -93,24 +88,16 @@ async def test_project(test_organization: Organization) -> Project:
         created_by=str(test_organization.created_by)
     )
 
-    async with get_db_context() as session:
-        session.add(project)
-        await session.commit()
-        await session.refresh(project)
+    db_session.add(project)
+    await db_session.commit()
+    await db_session.refresh(project)
 
     return project
 
 
 @pytest.fixture
-async def test_recording(test_project: Project) -> Recording:
-    """Create test recording with independent session for true database commit.
-
-    This fixture uses its own database session to ensure the recording is truly
-    committed and visible to other sessions, which is necessary for testing code
-    that creates its own database contexts.
-    """
-    from db.database import get_db_context
-
+async def test_recording(db_session, test_project: Project) -> Recording:
+    """Create test recording using shared db_session fixture."""
     now = datetime.utcnow()
     recording = Recording(
         id=uuid.uuid4(),
@@ -126,10 +113,9 @@ async def test_recording(test_project: Project) -> Recording:
         created_at=now
     )
 
-    async with get_db_context() as session:
-        session.add(recording)
-        await session.commit()
-        await session.refresh(recording)
+    db_session.add(recording)
+    await db_session.commit()
+    await db_session.refresh(recording)
 
     return recording
 
@@ -223,11 +209,36 @@ async def mock_broadcast_callback():
 
 
 @pytest.fixture
-def question_handler(mock_broadcast_callback):
+async def question_handler(mock_broadcast_callback):
     """Create QuestionHandler instance with mocked dependencies."""
     handler = QuestionHandler()
     handler.set_websocket_callback(mock_broadcast_callback)
-    return handler
+    yield handler
+    # Cleanup: cancel ALL tasks (both discovery and monitoring) and WAIT for completion
+    tasks_to_cancel = []
+
+    # Cancel discovery tasks first (main _parallel_answer_discovery tasks)
+    for session_id in list(handler._discovery_tasks.keys()):
+        for question_id, task in handler._discovery_tasks[session_id].items():
+            if not task.done():
+                task.cancel()
+                tasks_to_cancel.append(task)
+
+    # Cancel monitoring tasks (tier4 live monitoring)
+    for session_id in list(handler._active_monitoring.keys()):
+        for question_id, task in handler._active_monitoring[session_id].items():
+            if not task.done():
+                task.cancel()
+                tasks_to_cancel.append(task)
+
+    # Wait for all cancelled tasks to actually complete (handle CancelledError)
+    if tasks_to_cancel:
+        await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
+
+    # Clear internal state
+    handler._discovery_tasks.clear()
+    handler._active_monitoring.clear()
+    handler._answer_events.clear()
 
 
 # ============================================================================
@@ -421,6 +432,7 @@ class TestFullAnswerDiscoveryFlow:
         assert "meeting_context" in meeting_answer.get("tier", "")
         assert len(meeting_answer["quotes"]) == 1
 
+    @pytest.mark.concurrent_db
     async def test_tier3_live_monitoring_detects_answer(
         self,
         db_session: AsyncSession,
@@ -934,6 +946,7 @@ class TestGracefulDegradation:
 class TestConcurrentQuestions:
     """Test handling multiple questions simultaneously."""
 
+    @pytest.mark.concurrent_db
     async def test_multiple_questions_processed_in_parallel(
         self,
         db_session: AsyncSession,
