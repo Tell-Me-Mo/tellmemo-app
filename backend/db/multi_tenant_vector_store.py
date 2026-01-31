@@ -312,7 +312,7 @@ class MultiTenantVectorStore:
                             "name": col.name,
                             "organization_id": parsed["organization_id"],
                             "collection_type": parsed["collection_type"],
-                            "vectors_count": info.vectors_count,
+                            "indexed_vectors_count": info.indexed_vectors_count,
                             "points_count": info.points_count,
                             "status": info.status.value,
                         })
@@ -776,10 +776,9 @@ class MultiTenantVectorStore:
                 "organization_id": str(organization_id),
                 "collection_type": collection_type,
                 "status": info.status.value,
-                "vectors_count": info.vectors_count,
                 "indexed_vectors_count": info.indexed_vectors_count,
                 "points_count": info.points_count,
-                "segments_count": getattr(info, 'segments_count', 0),
+                "segments_count": info.segments_count,
                 "config": config_dict
             }
         except Exception as e:

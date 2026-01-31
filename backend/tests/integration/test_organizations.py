@@ -157,8 +157,8 @@ class TestOrganizationCreation:
             json=org_data
         )
 
-        # Assert
-        assert response.status_code == 403
+        # Assert - 401 for unauthenticated requests
+        assert response.status_code == 401
 
     @pytest.mark.asyncio
     async def test_creator_becomes_admin_and_active_org_updated(
@@ -275,8 +275,8 @@ class TestOrganizationList:
         # Act
         response = await client.get("/api/v1/organizations")
 
-        # Assert
-        assert response.status_code == 403
+        # Assert - 401 for unauthenticated requests
+        assert response.status_code == 401
 
 
 class TestGetOrganization:

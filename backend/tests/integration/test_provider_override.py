@@ -20,7 +20,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.project import Project
 from services.summaries.summary_service_refactored import summary_service
-from config import Settings
+from services.llm.multi_llm_client import (
+    ClaudeProviderClient,
+    OpenAIProviderClient,
+    MultiProviderLLMClient,
+    get_multi_llm_client
+)
+from config import Settings, get_settings
 
 
 @pytest.fixture
@@ -41,13 +47,51 @@ def mock_openai_response():
     return response
 
 
+@pytest.fixture
+def real_provider_clients():
+    """
+    Create real provider client instances for testing provider selection logic.
+
+    This fixture creates actual ClaudeProviderClient and OpenAIProviderClient
+    instances (they don't need real API keys since we mock create_message).
+    This allows isinstance() checks to pass in the service code.
+    """
+    settings = get_settings()
+
+    # Create real provider clients with dummy API keys (won't be used since we mock create_message)
+    claude_client = ClaudeProviderClient(api_key="test-claude-key", settings=settings)
+    openai_client = OpenAIProviderClient(api_key="test-openai-key", settings=settings)
+
+    # Store original llm_client
+    original_llm_client = summary_service.llm_client
+
+    # Create a mock MultiProviderLLMClient with real provider instances
+    mock_llm_client = Mock(spec=MultiProviderLLMClient)
+    # Set primary as OpenAI and secondary as Claude (matching typical test config)
+    mock_llm_client.primary_provider_client = openai_client
+    mock_llm_client.secondary_provider_client = claude_client
+
+    # Replace summary_service's llm_client
+    summary_service.llm_client = mock_llm_client
+
+    yield {
+        "claude_client": claude_client,
+        "openai_client": openai_client,
+        "mock_llm_client": mock_llm_client
+    }
+
+    # Restore original llm_client
+    summary_service.llm_client = original_llm_client
+
+
 class TestProviderOverride:
     """Integration tests for LLM provider override functionality."""
 
     @pytest.mark.asyncio
     async def test_provider_override_routes_to_claude_when_openai_is_primary(
         self,
-        mock_claude_response
+        mock_claude_response,
+        real_provider_clients
     ):
         """
         Critical path: Verify provider_override='claude' uses Claude client.
@@ -58,25 +102,11 @@ class TestProviderOverride:
         This test would have caught the bug where provider_override was
         logged but not actually used to select the provider.
         """
-        # Arrange: Get the actual summary service with real provider clients
-        llm_client = summary_service.llm_client
+        # Arrange: Use the real provider clients from fixture
+        claude_client = real_provider_clients["claude_client"]
+        openai_client = real_provider_clients["openai_client"]
 
-        # Verify test preconditions (based on actual .env configuration)
-        # PRIMARY_LLM_PROVIDER=openai, FALLBACK_LLM_PROVIDER=claude
-        assert llm_client.primary_provider_client is not None
-        assert llm_client.secondary_provider_client is not None
-
-        # Get references to the actual provider clients
-        from services.llm.multi_llm_client import ClaudeProviderClient, OpenAIProviderClient
-
-        # Identify which client is which
-        if isinstance(llm_client.primary_provider_client, OpenAIProviderClient):
-            openai_client = llm_client.primary_provider_client
-            claude_client = llm_client.secondary_provider_client
-        else:
-            claude_client = llm_client.primary_provider_client
-            openai_client = llm_client.secondary_provider_client
-
+        # Verify test preconditions
         assert isinstance(claude_client, ClaudeProviderClient), "Claude client should be available"
         assert isinstance(openai_client, OpenAIProviderClient), "OpenAI client should be available"
 
@@ -110,25 +140,17 @@ class TestProviderOverride:
     @pytest.mark.asyncio
     async def test_provider_override_routes_to_openai_when_claude_is_primary(
         self,
-        mock_openai_response
+        mock_openai_response,
+        real_provider_clients
     ):
         """
         Verify provider_override='openai' uses OpenAI client.
 
         This tests the reverse scenario to ensure the logic works both ways.
         """
-        # Arrange
-        llm_client = summary_service.llm_client
-
-        from services.llm.multi_llm_client import ClaudeProviderClient, OpenAIProviderClient
-
-        # Identify which client is which
-        if isinstance(llm_client.primary_provider_client, OpenAIProviderClient):
-            openai_client = llm_client.primary_provider_client
-            claude_client = llm_client.secondary_provider_client
-        else:
-            claude_client = llm_client.primary_provider_client
-            openai_client = llm_client.secondary_provider_client
+        # Arrange: Use the real provider clients from fixture
+        claude_client = real_provider_clients["claude_client"]
+        openai_client = real_provider_clients["openai_client"]
 
         # Mock only the HTTP/API layer
         with patch.object(openai_client, 'create_message', new_callable=AsyncMock) as mock_openai, \
@@ -152,7 +174,7 @@ class TestProviderOverride:
             assert call_kwargs['model'] == 'gpt-4-turbo-preview'
 
     @pytest.mark.asyncio
-    async def test_provider_override_with_unavailable_provider_raises_error(self):
+    async def test_provider_override_with_unavailable_provider_raises_error(self, real_provider_clients):
         """
         Error path: Verify clear error when requested provider not available.
 
@@ -174,7 +196,8 @@ class TestProviderOverride:
     @pytest.mark.asyncio
     async def test_no_provider_override_uses_default_routing(
         self,
-        mock_openai_response
+        mock_openai_response,
+        real_provider_clients
     ):
         """
         Verify that when no provider_override is specified, default routing is used.
@@ -207,7 +230,8 @@ class TestProviderOverride:
         self,
         db_session: AsyncSession,
         test_project: Project,
-        mock_claude_response
+        mock_claude_response,
+        real_provider_clients
     ):
         """
         End-to-end test: Verify generate_project_summary uses manual_summary config.
@@ -222,25 +246,9 @@ class TestProviderOverride:
         Expected:
         - Project summary generation should use Claude, not OpenAI
         """
-        # Arrange
-        from config import get_settings
-        settings = get_settings()
-
-        # Verify test preconditions match our configuration
-        assert settings.primary_llm_provider.lower() == "openai"
-        assert settings.manual_summary_llm_provider.lower() == "claude"
-        assert settings.manual_summary_llm_model == "claude-3-5-haiku-latest"
-
-        llm_client = summary_service.llm_client
-        from services.llm.multi_llm_client import ClaudeProviderClient, OpenAIProviderClient
-
-        # Identify providers
-        if isinstance(llm_client.primary_provider_client, OpenAIProviderClient):
-            openai_client = llm_client.primary_provider_client
-            claude_client = llm_client.secondary_provider_client
-        else:
-            claude_client = llm_client.primary_provider_client
-            openai_client = llm_client.secondary_provider_client
+        # Arrange: Use the real provider clients from fixture
+        claude_client = real_provider_clients["claude_client"]
+        openai_client = real_provider_clients["openai_client"]
 
         # Mock only the HTTP layer
         with patch.object(claude_client, 'create_message', new_callable=AsyncMock) as mock_claude, \
@@ -280,7 +288,7 @@ class TestProviderConfigurationScenarios:
     """Test different provider configuration scenarios."""
 
     @pytest.mark.asyncio
-    async def test_provider_override_warns_for_unknown_provider(self):
+    async def test_provider_override_warns_for_unknown_provider(self, real_provider_clients):
         """Verify unknown provider override raises appropriate error."""
         with pytest.raises(ValueError, match="not available"):
             await summary_service._call_claude_api_with_retry(
@@ -290,16 +298,9 @@ class TestProviderConfigurationScenarios:
             )
 
     @pytest.mark.asyncio
-    async def test_provider_override_case_insensitive(self, mock_claude_response):
+    async def test_provider_override_case_insensitive(self, mock_claude_response, real_provider_clients):
         """Verify provider_override is case-insensitive."""
-        llm_client = summary_service.llm_client
-
-        from services.llm.multi_llm_client import ClaudeProviderClient, OpenAIProviderClient
-
-        if isinstance(llm_client.primary_provider_client, OpenAIProviderClient):
-            claude_client = llm_client.secondary_provider_client
-        else:
-            claude_client = llm_client.primary_provider_client
+        claude_client = real_provider_clients["claude_client"]
 
         with patch.object(claude_client, 'create_message', new_callable=AsyncMock) as mock_claude:
             mock_claude.return_value = mock_claude_response
