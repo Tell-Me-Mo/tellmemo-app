@@ -118,8 +118,8 @@ class TestProjectCreation:
             json=project_data
         )
 
-        # Assert - Returns 403 (backend behavior)
-        assert response.status_code == 403
+        # Assert - 401 for unauthenticated requests
+        assert response.status_code == 401
 
     @pytest.mark.asyncio
     async def test_create_project_without_organization_fails(

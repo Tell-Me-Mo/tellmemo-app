@@ -1,96 +1,105 @@
 # PM Master V2 Backend Dependencies
-# Python 3.13 compatible versions
+# Python 3.14 compatible versions
+
+# Extra index for onnxruntime nightly (Python 3.14 support)
+--extra-index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/ORT-Nightly/pypi/simple/
+--pre
+
+# ONNX Runtime (required by faster-whisper, nightly for Python 3.14)
+onnxruntime>=1.19.0
+flatbuffers
+coloredlogs
 
 # Core Framework
-fastapi==0.120.2
-uvicorn[standard]==0.38.0
-gunicorn==23.0.0
-python-multipart==0.0.20
-websockets==15.0.1
+fastapi==0.128.0
+uvicorn[standard]==0.40.0
+gunicorn==24.1.1
+python-multipart==0.0.22
+websockets==15.0.1  # Pinned to 15.x for supabase realtime compatibility
 
 # Database
-asyncpg==0.30.0
-sqlalchemy[asyncio]==2.0.44
-alembic==1.17.1
+asyncpg==0.31.0
+sqlalchemy[asyncio]==2.0.46
+alembic==1.18.3
 
 # Cache & Job Queue
-redis[hiredis]==7.0.1
-rq==2.6.0  # Redis Queue for background job processing (latest)
-rq-dashboard==0.8.5
+redis[hiredis]==7.1.0
+rq==2.6.1  # Redis Queue for background job processing (latest)
+rq-dashboard==0.8.6
 
 # Validation & Settings
-pydantic==2.12.3
-pydantic-settings==2.11.0
+pydantic==2.12.5
+pydantic-settings==2.12.0
 email-validator==2.3.0
 python-dotenv==1.2.1
 
 # Vector Database
-qdrant-client==1.15.1
+qdrant-client==1.16.2
 
 # Embeddings & ML
-sentence-transformers==5.1.2
-torch==2.9.0  # CPU version
-numpy==2.3.4
+sentence-transformers==5.2.2
+torch==2.10.0  # CPU version
+numpy==2.4.1
 
 # Audio Processing & Transcription
-faster-whisper==1.2.0
+faster-whisper==1.2.1
 # pyaudio==0.2.14  # Only needed for local audio recording, not on server
 soundfile==0.13.1
 replicate==1.0.7  # Replicate API for cloud-based Whisper transcription
 
 # NLP & Text Processing
-spacy==3.8.7
+spacy==3.8.11
 en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
-scikit-learn==1.7.2
+scikit-learn==1.8.0
 nltk==3.9.2
-transformers==4.57.1
+transformers==5.0.0
 rank-bm25==0.2.2
 fast-langdetect==1.0.0
 
 # LLM Integration
-anthropic==0.72.0
-openai==2.6.1
+anthropic==0.77.0
+openai==2.16.0
 
 # Circuit Breaker
 purgatory==3.0.1  # Circuit breaker for resilient API calls
 
 # Observability
-langfuse==3.8.1
-sentry-sdk[fastapi]==2.43.0
+langfuse==3.12.1
+sentry-sdk[fastapi]==2.51.0
 
 # OpenTelemetry (2025 Distro Approach - includes API, SDK, and bootstrap tool)
 # After pip install, run: opentelemetry-bootstrap -a install
 # This will auto-detect and install instrumentations for: FastAPI, SQLAlchemy, Redis, httpx, aiohttp
-opentelemetry-distro>=0.59b0
-opentelemetry-exporter-otlp>=1.38.0
+opentelemetry-distro>=0.60b1
+opentelemetry-exporter-otlp>=1.39.1
 
 # OpenTelemetry Specialized Instrumentations (not auto-detected by bootstrap)
-opentelemetry-instrumentation-asyncpg>=0.59b0  # PostgreSQL async driver (asyncpg)
-opentelemetry-instrumentation-qdrant>=0.17.0   # Qdrant vector database (OpenLLMetry)
+opentelemetry-instrumentation-asyncpg>=0.60b1  # PostgreSQL async driver (asyncpg)
+opentelemetry-instrumentation-qdrant>=0.51.1   # Qdrant vector database (OpenLLMetry)
 
 # Authentication
-supabase==2.22.4
+supabase==2.27.2
 gotrue==2.12.4
 pyjwt==2.10.1
 
 # Utilities
 httpx>=0.26,<0.28
 aiofiles==25.1.0
-aiohttp==3.13.2
+aiohttp==3.13.3
 python-jose[cryptography]==3.5.0
 
 # Scheduling
-apscheduler==3.11.0
+apscheduler==3.11.2
 
 # Email Services
 sendgrid==6.12.5  # SendGrid for transactional emails
 jinja2==3.1.6  # HTML email template rendering
 
 # Development & Testing
-pytest==8.4.2
-pytest-asyncio==0.25.0
-fakeredis==2.32.0  # In-memory Redis for testing (no workers needed)
-black==25.9.0
-ruff==0.14.2
+pytest==9.0.2
+pytest-asyncio==1.3.0
+fakeredis==2.33.0  # In-memory Redis for testing (no workers needed)
+black==26.1.0
+ruff==0.14.14
 cryptography>=46.0.3
 bcrypt>=5.0.0  # Direct bcrypt for password hashing
