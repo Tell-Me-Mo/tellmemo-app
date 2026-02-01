@@ -11,6 +11,10 @@ from enum import Enum
 import json
 
 from sentence_transformers import SentenceTransformer, CrossEncoder
+from transformers import logging as transformers_logging
+
+# Suppress verbose transformers/safetensors output during model loading
+transformers_logging.set_verbosity_error()
 
 from utils.logger import get_logger, sanitize_for_log
 from services.rag.embedding_service import embedding_service
@@ -161,15 +165,7 @@ class HybridSearchService:
 
             # Load cross-encoder for re-ranking (from settings)
             try:
-                import sys
-                from io import StringIO
-                # Suppress safetensors LOAD REPORT output
-                old_stdout = sys.stdout
-                sys.stdout = StringIO()
-                try:
-                    self.cross_encoder = CrossEncoder(self.settings.cross_encoder_model)
-                finally:
-                    sys.stdout = old_stdout
+                self.cross_encoder = CrossEncoder(self.settings.cross_encoder_model)
                 logger.info(f"Loaded CrossEncoder ({self.settings.cross_encoder_model}) for result re-ranking")
             except Exception as e:
                 logger.warning(f"Failed to load CrossEncoder: {e}")
