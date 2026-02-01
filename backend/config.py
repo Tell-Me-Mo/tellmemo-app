@@ -54,13 +54,13 @@ class Settings(BaseSettings):
 
     # LLM Provider Configuration
     # Primary provider: which provider to use first (claude, openai, or deepseek)
-    primary_llm_provider: str = Field(default="deepseek", env="PRIMARY_LLM_PROVIDER")
-    # Primary model: which model to use for the primary provider
-    primary_llm_model: str = Field(default="deepseek-chat", env="PRIMARY_LLM_MODEL")
+    primary_llm_provider: str = Field(default="openai", env="PRIMARY_LLM_PROVIDER")
+    # Primary model: GPT-4.1-mini - beats GPT-4o, 1M context, fast inference
+    primary_llm_model: str = Field(default="gpt-4.1-mini", env="PRIMARY_LLM_MODEL")
     # Fallback provider: which provider to fallback to if primary fails (claude, openai, or deepseek)
-    fallback_llm_provider: str = Field(default="openai", env="FALLBACK_LLM_PROVIDER")
-    # Fallback model: which model to use for the fallback provider
-    fallback_llm_model: str = Field(default="gpt-4o", env="FALLBACK_LLM_MODEL")
+    fallback_llm_provider: str = Field(default="claude", env="FALLBACK_LLM_PROVIDER")
+    # Fallback model: Claude Haiku 4.5 - Sonnet-4 level quality, fast, cost-effective
+    fallback_llm_model: str = Field(default="claude-haiku-4-5", env="FALLBACK_LLM_MODEL")
 
     # LLM Fallback Configuration
     enable_llm_fallback: bool = Field(default=True, env="ENABLE_LLM_FALLBACK")
@@ -72,8 +72,9 @@ class Settings(BaseSettings):
     # Manual Summary Generation LLM Configuration
     # Override LLM settings for manual summary generation (project/program/portfolio summaries)
     manual_summary_llm_provider: str = Field(default="claude", env="MANUAL_SUMMARY_LLM_PROVIDER")
-    manual_summary_llm_model: str = Field(default="claude-3-5-haiku-latest", env="MANUAL_SUMMARY_LLM_MODEL")
-    manual_summary_max_tokens: int = Field(default=8192, env="MANUAL_SUMMARY_MAX_TOKENS")  # Claude 3.5 Haiku limit
+    # Claude Haiku 4.5: Sonnet-4 level quality for summaries
+    manual_summary_llm_model: str = Field(default="claude-haiku-4-5", env="MANUAL_SUMMARY_LLM_MODEL")
+    manual_summary_max_tokens: int = Field(default=16384, env="MANUAL_SUMMARY_MAX_TOKENS")  # Haiku 4.5 supports up to 64K
 
     # Circuit Breaker Configuration
     enable_circuit_breaker: bool = Field(default=True, env="ENABLE_CIRCUIT_BREAKER")
@@ -131,9 +132,10 @@ class Settings(BaseSettings):
     embedding_dimension: int = Field(default=768, env="EMBEDDING_DIMENSION")
     top_k_chunks: int = Field(default=5, env="TOP_K_CHUNKS")
 
-    # Zero-Shot Classification for Question/Action Validation (ModernBERT)
-    zeroshot_model: str = Field(default="MoritzLaurer/ModernBERT-base-zeroshot-v2.0", env="ZEROSHOT_MODEL")
-    zeroshot_question_threshold: float = Field(default=0.70, env="ZEROSHOT_QUESTION_THRESHOLD")  # 70% confidence for questions (good false positive filtering)
+    # Zero-Shot Classification for Question/Action Validation (ModernBERT NLI)
+    # tasksource/ModernBERT-large-nli: 8K context, better reasoning than llama 3.1 8B on ANLI
+    zeroshot_model: str = Field(default="tasksource/ModernBERT-large-nli", env="ZEROSHOT_MODEL")
+    zeroshot_question_threshold: float = Field(default=0.60, env="ZEROSHOT_QUESTION_THRESHOLD")  # 60% confidence for questions (adjusted for ModernBERT-large-nli)
     zeroshot_action_threshold: float = Field(default=0.60, env="ZEROSHOT_ACTION_THRESHOLD")  # 60% confidence for actions (more lenient)
     enable_zeroshot_validation: bool = Field(default=True, env="ENABLE_ZEROSHOT_VALIDATION")  # Enable/disable validation
 
@@ -207,7 +209,8 @@ class Settings(BaseSettings):
     # NLP Model Settings
     spacy_model: str = Field(default="en_core_web_sm", env="SPACY_MODEL")
     sentence_transformer_model: str = Field(default="google/embeddinggemma-300m", env="SENTENCE_TRANSFORMER_MODEL")
-    cross_encoder_model: str = Field(default="cross-encoder/ms-marco-MiniLM-L-2-v2", env="CROSS_ENCODER_MODEL")
+    # cross-encoder/ms-marco-MiniLM-L-6-v2: Better accuracy than L-2 with minimal speed loss
+    cross_encoder_model: str = Field(default="cross-encoder/ms-marco-MiniLM-L-6-v2", env="CROSS_ENCODER_MODEL")
     enable_advanced_nlp: bool = Field(default=True, env="ENABLE_ADVANCED_NLP")
     
     # Performance Settings

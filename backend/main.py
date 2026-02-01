@@ -1,6 +1,15 @@
 import os
-# Set environment variable to suppress tokenizers parallelism warning
+# Load environment variables BEFORE any other imports
+from dotenv import load_dotenv
+load_dotenv()
+
+# Set environment variables to suppress warnings
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["SAFETENSORS_FAST_GPU"] = "1"  # Suppress safetensors warnings
+
+import warnings
+warnings.filterwarnings("ignore", message=".*position_ids.*")
+warnings.filterwarnings("ignore", category=FutureWarning)
 
 import asyncio
 import logging
