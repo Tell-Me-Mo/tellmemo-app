@@ -159,7 +159,7 @@ class HybridSearchService:
             except Exception as e:
                 logger.warning(f"Failed to load SentenceTransformer: {e}")
 
-            # Load cross-encoder for re-ranking
+            # Load cross-encoder for re-ranking (from settings)
             try:
                 import sys
                 from io import StringIO
@@ -167,10 +167,10 @@ class HybridSearchService:
                 old_stdout = sys.stdout
                 sys.stdout = StringIO()
                 try:
-                    self.cross_encoder = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-2-v2')
+                    self.cross_encoder = CrossEncoder(self.settings.cross_encoder_model)
                 finally:
                     sys.stdout = old_stdout
-                logger.info("Loaded CrossEncoder for result re-ranking")
+                logger.info(f"Loaded CrossEncoder ({self.settings.cross_encoder_model}) for result re-ranking")
             except Exception as e:
                 logger.warning(f"Failed to load CrossEncoder: {e}")
                 self.cross_encoder = None

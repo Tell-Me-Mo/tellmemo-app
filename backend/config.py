@@ -131,9 +131,10 @@ class Settings(BaseSettings):
     embedding_dimension: int = Field(default=768, env="EMBEDDING_DIMENSION")
     top_k_chunks: int = Field(default=5, env="TOP_K_CHUNKS")
 
-    # Zero-Shot Classification for Question/Action Validation (ModernBERT)
-    zeroshot_model: str = Field(default="MoritzLaurer/ModernBERT-base-zeroshot-v2.0", env="ZEROSHOT_MODEL")
-    zeroshot_question_threshold: float = Field(default=0.70, env="ZEROSHOT_QUESTION_THRESHOLD")  # 70% confidence for questions (good false positive filtering)
+    # Zero-Shot Classification for Question/Action Validation (ModernBERT NLI)
+    # tasksource/ModernBERT-large-nli: 8K context, better reasoning than llama 3.1 8B on ANLI
+    zeroshot_model: str = Field(default="tasksource/ModernBERT-large-nli", env="ZEROSHOT_MODEL")
+    zeroshot_question_threshold: float = Field(default=0.60, env="ZEROSHOT_QUESTION_THRESHOLD")  # 60% confidence for questions (adjusted for ModernBERT-large-nli)
     zeroshot_action_threshold: float = Field(default=0.60, env="ZEROSHOT_ACTION_THRESHOLD")  # 60% confidence for actions (more lenient)
     enable_zeroshot_validation: bool = Field(default=True, env="ENABLE_ZEROSHOT_VALIDATION")  # Enable/disable validation
 
@@ -207,7 +208,8 @@ class Settings(BaseSettings):
     # NLP Model Settings
     spacy_model: str = Field(default="en_core_web_sm", env="SPACY_MODEL")
     sentence_transformer_model: str = Field(default="google/embeddinggemma-300m", env="SENTENCE_TRANSFORMER_MODEL")
-    cross_encoder_model: str = Field(default="cross-encoder/ms-marco-MiniLM-L-2-v2", env="CROSS_ENCODER_MODEL")
+    # cross-encoder/ms-marco-MiniLM-L-6-v2: Better accuracy than L-2 with minimal speed loss
+    cross_encoder_model: str = Field(default="cross-encoder/ms-marco-MiniLM-L-6-v2", env="CROSS_ENCODER_MODEL")
     enable_advanced_nlp: bool = Field(default=True, env="ENABLE_ADVANCED_NLP")
     
     # Performance Settings
