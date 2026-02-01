@@ -40,7 +40,9 @@ class AIProvider(str, enum.Enum):
 
 class AIModel(str, enum.Enum):
     """AI models for different providers."""
-    # Claude 4.5 models
+    # Claude 4.5 models (latest aliases)
+    CLAUDE_HAIKU_4_5_LATEST = "claude-haiku-4-5"
+    # Claude 4.5 models (dated versions)
     CLAUDE_HAIKU_4_5 = "claude-haiku-4-5-20251001"
     # Claude 4 models
     CLAUDE_OPUS_4_1 = "claude-opus-4-1-20250514"
@@ -53,7 +55,11 @@ class AIModel(str, enum.Enum):
     GPT_5 = "gpt-5"
     GPT_5_MINI = "gpt-5-mini"
     GPT_5_NANO = "gpt-5-nano"
-    # OpenAI GPT-4 models
+    # OpenAI GPT-4.1 models (Released April 2025)
+    GPT_4_1 = "gpt-4.1"
+    GPT_4_1_MINI = "gpt-4.1-mini"
+    GPT_4_1_NANO = "gpt-4.1-nano"
+    # OpenAI GPT-4 models (Legacy)
     GPT_4O = "gpt-4o"
     GPT_4O_MINI = "gpt-4o-mini"
     GPT_4_TURBO = "gpt-4-turbo"
@@ -66,6 +72,7 @@ class AIModel(str, enum.Enum):
 # Mapping of models to their providers
 MODEL_PROVIDER_MAP = {
     # Claude models
+    AIModel.CLAUDE_HAIKU_4_5_LATEST: AIProvider.CLAUDE,
     AIModel.CLAUDE_HAIKU_4_5: AIProvider.CLAUDE,
     AIModel.CLAUDE_OPUS_4_1: AIProvider.CLAUDE,
     AIModel.CLAUDE_OPUS_4: AIProvider.CLAUDE,
@@ -76,7 +83,11 @@ MODEL_PROVIDER_MAP = {
     AIModel.GPT_5: AIProvider.OPENAI,
     AIModel.GPT_5_MINI: AIProvider.OPENAI,
     AIModel.GPT_5_NANO: AIProvider.OPENAI,
-    # OpenAI GPT-4 models
+    # OpenAI GPT-4.1 models
+    AIModel.GPT_4_1: AIProvider.OPENAI,
+    AIModel.GPT_4_1_MINI: AIProvider.OPENAI,
+    AIModel.GPT_4_1_NANO: AIProvider.OPENAI,
+    # OpenAI GPT-4 models (Legacy)
     AIModel.GPT_4O: AIProvider.OPENAI,
     AIModel.GPT_4O_MINI: AIProvider.OPENAI,
     AIModel.GPT_4_TURBO: AIProvider.OPENAI,
@@ -91,8 +102,9 @@ MODEL_PROVIDER_MAP = {
 # Maps each model to its closest equivalent in the other provider
 MODEL_EQUIVALENCE_MAP = {
     # Claude → OpenAI equivalents (based on capability & cost)
-    AIModel.CLAUDE_HAIKU_4_5: AIModel.GPT_5_MINI,       # Latest Haiku → GPT-5 Mini (cost/speed optimized)
-    AIModel.CLAUDE_3_5_HAIKU: AIModel.GPT_5_MINI,       # Cost/speed optimized
+    AIModel.CLAUDE_HAIKU_4_5_LATEST: AIModel.GPT_4_1_MINI,  # Haiku 4.5 latest → GPT-4.1 Mini (cost/speed optimized)
+    AIModel.CLAUDE_HAIKU_4_5: AIModel.GPT_4_1_MINI,    # Haiku 4.5 → GPT-4.1 Mini (cost/speed optimized)
+    AIModel.CLAUDE_3_5_HAIKU: AIModel.GPT_4_1_MINI,    # Cost/speed optimized
     AIModel.CLAUDE_3_5_SONNET: AIModel.GPT_5,           # Balanced performance → GPT-5
     AIModel.CLAUDE_SONNET_4: AIModel.GPT_5,             # Latest Sonnet → GPT-5
     AIModel.CLAUDE_OPUS_4: AIModel.GPT_5,               # High capability flagship → GPT-5
@@ -102,6 +114,11 @@ MODEL_EQUIVALENCE_MAP = {
     AIModel.GPT_5: AIModel.CLAUDE_SONNET_4,             # GPT-5 → Claude Sonnet 4 (flagship to flagship)
     AIModel.GPT_5_MINI: AIModel.CLAUDE_HAIKU_4_5,       # GPT-5 Mini → Latest Haiku (cost optimized)
     AIModel.GPT_5_NANO: AIModel.CLAUDE_HAIKU_4_5,       # GPT-5 Nano → Latest Haiku (smallest)
+
+    # OpenAI GPT-4.1 → Claude equivalents
+    AIModel.GPT_4_1: AIModel.CLAUDE_SONNET_4,           # GPT-4.1 → Claude Sonnet 4 (flagship)
+    AIModel.GPT_4_1_MINI: AIModel.CLAUDE_HAIKU_4_5_LATEST,  # GPT-4.1 Mini → Haiku 4.5 latest (cost optimized)
+    AIModel.GPT_4_1_NANO: AIModel.CLAUDE_HAIKU_4_5_LATEST,  # GPT-4.1 Nano → Haiku 4.5 latest (smallest)
 
     # OpenAI GPT-4 → Claude equivalents (legacy support)
     AIModel.GPT_4O_MINI: AIModel.CLAUDE_HAIKU_4_5,      # Cost optimized → Latest Haiku
