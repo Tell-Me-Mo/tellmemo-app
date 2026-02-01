@@ -1,5 +1,6 @@
 """Meeting Intelligence Service for extracting insights and patterns from meetings."""
 
+import os
 import re
 import asyncio
 from typing import List, Dict, Any, Optional, Tuple, Set
@@ -523,7 +524,12 @@ class MeetingIntelligenceService:
             
             # Load sentence transformer
             try:
-                self.sentence_transformer = SentenceTransformer(self.settings.sentence_transformer_model)
+                hf_token = os.environ.get("HF_TOKEN")
+                self.sentence_transformer = SentenceTransformer(
+                    self.settings.sentence_transformer_model,
+                    token=hf_token,
+                    trust_remote_code=True
+                )
                 logger.info("Loaded SentenceTransformer for semantic analysis")
             except Exception as e:
                 logger.warning(f"Failed to load SentenceTransformer: {e}")

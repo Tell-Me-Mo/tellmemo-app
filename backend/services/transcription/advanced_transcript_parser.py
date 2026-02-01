@@ -1,5 +1,6 @@
 """Advanced transcript processing service with meeting intelligence extraction."""
 
+import os
 import json
 import re
 from typing import List, Dict, Any, Optional, Tuple, Set
@@ -153,7 +154,12 @@ class AdvancedTranscriptProcessor:
             
             # Load sentence transformer for semantic analysis
             try:
-                self.sentence_transformer = SentenceTransformer(self.settings.sentence_transformer_model)
+                hf_token = os.environ.get("HF_TOKEN")
+                self.sentence_transformer = SentenceTransformer(
+                    self.settings.sentence_transformer_model,
+                    token=hf_token,
+                    trust_remote_code=True
+                )
                 logger.info(f"Loaded SentenceTransformer: {self.settings.sentence_transformer_model}")
             except Exception as e:
                 logger.warning(f"Failed to load SentenceTransformer: {e}")

@@ -1,5 +1,6 @@
 """Hybrid Search & Re-ranking Service combining semantic and keyword search."""
 
+import os
 import re
 import math
 import asyncio
@@ -148,14 +149,27 @@ class HybridSearchService:
         try:
             # Load sentence transformer for semantic search
             try:
-                self.sentence_transformer = SentenceTransformer(self.settings.sentence_transformer_model)
+                hf_token = os.environ.get("HF_TOKEN")
+                self.sentence_transformer = SentenceTransformer(
+                    self.settings.sentence_transformer_model,
+                    token=hf_token,
+                    trust_remote_code=True
+                )
                 logger.info("Loaded SentenceTransformer for hybrid search")
             except Exception as e:
                 logger.warning(f"Failed to load SentenceTransformer: {e}")
 
             # Load cross-encoder for re-ranking
             try:
-                self.cross_encoder = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-2-v2')
+                import sys
+                from io import StringIO
+                # Suppress safetensors LOAD REPORT output
+                old_stdout = sys.stdout
+                sys.stdout = StringIO()
+                try:
+                    self.cross_encoder = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-2-v2')
+                finally:
+                    sys.stdout = old_stdout
                 logger.info("Loaded CrossEncoder for result re-ranking")
             except Exception as e:
                 logger.warning(f"Failed to load CrossEncoder: {e}")

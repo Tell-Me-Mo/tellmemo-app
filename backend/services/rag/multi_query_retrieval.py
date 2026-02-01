@@ -1,5 +1,6 @@
 """Multi-Query Retrieval Service with query expansion and intent classification."""
 
+import os
 import re
 import asyncio
 from typing import List, Dict, Any, Optional, Tuple, Set
@@ -194,7 +195,12 @@ class MultiQueryRetrievalService:
             
             # Load sentence transformer for semantic similarity
             try:
-                self.sentence_transformer = SentenceTransformer(self.settings.sentence_transformer_model)
+                hf_token = os.environ.get("HF_TOKEN")
+                self.sentence_transformer = SentenceTransformer(
+                    self.settings.sentence_transformer_model,
+                    token=hf_token,
+                    trust_remote_code=True
+                )
                 logger.info("Loaded SentenceTransformer for query similarity")
             except Exception as e:
                 logger.warning(f"Failed to load SentenceTransformer: {e}")

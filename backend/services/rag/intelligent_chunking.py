@@ -1,5 +1,6 @@
 """Intelligent chunking service with content-aware and semantic boundary detection."""
 
+import os
 import re
 import math
 from typing import List, Dict, Any, Optional, Tuple, Set
@@ -156,7 +157,12 @@ class IntelligentChunkingService:
     def _initialize_models(self):
         """Initialize ML models for semantic analysis."""
         try:
-            self.sentence_transformer = SentenceTransformer(self.settings.sentence_transformer_model)
+            hf_token = os.environ.get("HF_TOKEN")
+            self.sentence_transformer = SentenceTransformer(
+                self.settings.sentence_transformer_model,
+                token=hf_token,
+                trust_remote_code=True
+            )
             logger.info("Initialized SentenceTransformer for intelligent chunking")
         except Exception as e:
             logger.warning(f"Failed to initialize SentenceTransformer: {e}")
