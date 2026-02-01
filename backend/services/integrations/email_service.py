@@ -199,7 +199,7 @@ class EmailService:
         Send custom emails (like weekly reports) via Supabase Edge Functions
 
         For custom emails not handled by Supabase Auth, we would typically:
-        1. Create a Supabase Edge Function that uses an email provider (Resend, SendGrid, etc.)
+        1. Create a Supabase Edge Function that uses an email provider (Resend, etc.)
         2. Call that function from here
 
         For now, this is a placeholder that logs in development mode
@@ -318,7 +318,7 @@ CONFIGURATION NOTES:
 4. Edge Functions for Custom Emails:
    For emails not handled by Supabase Auth (like weekly reports):
    - Create a Supabase Edge Function
-   - Use an email service like Resend, SendGrid, or AWS SES
+   - Use an email service like Resend or AWS SES
    - Call the function from this service
 
 5. Development vs Production:

@@ -92,7 +92,7 @@ python-jose[cryptography]==3.5.0
 apscheduler==3.11.2
 
 # Email Services
-sendgrid==6.12.5  # SendGrid for transactional emails
+resend>=2.0.0  # Resend for transactional emails (free tier: 3,000 emails/month)
 jinja2==3.1.6  # HTML email template rendering
 
 # Development & Testing

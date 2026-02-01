@@ -1,5 +1,5 @@
 # Backend Dockerfile for PM Master V2
-FROM python:3.14.2-slim
+FROM python:3.13.11-slim
 
 # Set working directory
 WORKDIR /app

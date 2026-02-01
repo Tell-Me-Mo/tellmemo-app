@@ -106,8 +106,8 @@ class Settings(BaseSettings):
     # Application Configuration
     frontend_url: str = Field(default="http://localhost:8100", env="FRONTEND_URL")
 
-    # SendGrid Email Configuration
-    sendgrid_api_key: str = Field(default="", env="SENDGRID_API_KEY")
+    # Resend Email Configuration (migrated from SendGrid for cost savings)
+    resend_api_key: str = Field(default="", env="RESEND_API_KEY")
     email_from_address: str = Field(default="noreply@tellmemo.io", env="EMAIL_FROM_ADDRESS")
     email_from_name: str = Field(default="TellMeMo", env="EMAIL_FROM_NAME")
     email_digest_enabled: bool = Field(default=True, env="EMAIL_DIGEST_ENABLED")
