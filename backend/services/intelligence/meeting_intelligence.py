@@ -524,10 +524,9 @@ class MeetingIntelligenceService:
             
             # Load sentence transformer
             try:
-                hf_token = os.environ.get("HF_TOKEN")
                 self.sentence_transformer = SentenceTransformer(
                     self.settings.sentence_transformer_model,
-                    token=hf_token,
+                    token=self.settings.hf_token,
                     trust_remote_code=True
                 )
                 logger.info("Loaded SentenceTransformer for semantic analysis")
