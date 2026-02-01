@@ -69,8 +69,8 @@ class TestModelTranslation:
 
     def test_claude_to_openai_translation(self):
         """Test Claude models translate to correct OpenAI equivalents."""
-        # Cost-optimized tier
-        assert get_equivalent_model("claude-3-5-haiku-latest", AIProvider.OPENAI) == "gpt-5-mini"
+        # Cost-optimized tier (Claude 3.5 Haiku → GPT-4.1 Mini)
+        assert get_equivalent_model("claude-3-5-haiku-latest", AIProvider.OPENAI) == "gpt-4.1-mini"
 
         # Balanced tier (Claude 3.5 Sonnet → GPT-5)
         assert get_equivalent_model("claude-3-5-sonnet-20241022", AIProvider.OPENAI) == "gpt-5"
@@ -176,7 +176,7 @@ class TestProviderCascade:
         assert metadata["fallback_reason"] == "overloaded"
         assert metadata["provider_used"] == "OpenAI"
         assert metadata["primary_model"] == "claude-3-5-haiku-latest"
-        assert metadata["fallback_model"] == "gpt-5-mini"  # Translated model
+        assert metadata["fallback_model"] == "gpt-4.1-mini"  # Translated model
         assert len(metadata["attempts"]) == 2  # Primary + fallback
 
         # Verify both were called
@@ -185,7 +185,7 @@ class TestProviderCascade:
 
         # Verify OpenAI was called with translated model
         openai_call_args = mock_openai_client.create_message.call_args
-        assert openai_call_args[1]["model"] == "gpt-5-mini"
+        assert openai_call_args[1]["model"] == "gpt-4.1-mini"
 
     @pytest.mark.asyncio
     async def test_fallback_disabled_raises_error(self, mock_settings, mock_claude_client, mock_openai_client):

@@ -1,6 +1,7 @@
 """Zero-Shot Classification Service for Question/Action Validation.
 
-Uses ModernBERT-base-zeroshot-v2.0 to classify questions and actions as meaningful or not.
+Uses tasksource/ModernBERT-large-nli to classify questions and actions as meaningful or not.
+Supports 8K context window with strong reasoning capabilities.
 Initialized at app startup, blocks if model fails to load.
 """
 
@@ -56,7 +57,8 @@ class ZeroShotValidatorService:
     """
     Service for validating questions and actions using zero-shot classification.
 
-    Uses ModernBERT-base-zeroshot-v2.0 for fast, accurate classification without training data.
+    Uses tasksource/ModernBERT-large-nli for fast, accurate NLI-based classification.
+    Supports 8K context window with better reasoning than llama 3.1 8B on ANLI.
     Follows singleton pattern similar to EmbeddingService.
     """
 
