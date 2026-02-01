@@ -154,9 +154,9 @@ async def project_with_summaries(db_session: AsyncSession, test_organization, te
 # Mock fixtures for email sending
 
 @pytest.fixture
-def mock_sendgrid_service():
-    """Mock SendGrid service to prevent actual email sending."""
-    with patch('services.email.digest_service.sendgrid_service') as mock:
+def mock_resend_service():
+    """Mock Resend service to prevent actual email sending."""
+    with patch('services.email.digest_service.resend_service') as mock:
         mock.send_email.return_value = {
             "success": True,
             "message_id": "test-message-id-123"
@@ -297,7 +297,7 @@ class TestDigestPreview:
         user_with_digest_enabled: User,
         test_organization,
         project_with_summaries: Project,
-        mock_sendgrid_service,
+        mock_resend_service,
         mock_template_service
     ):
         """Test previewing a weekly digest without sending."""
@@ -320,7 +320,7 @@ class TestDigestPreview:
         assert "user_name" in data["digest_data"]
 
         # Verify email was NOT sent (mock should not be called)
-        mock_sendgrid_service.send_email.assert_not_called()
+        mock_resend_service.send_email.assert_not_called()
 
     @pytest.mark.integration
     async def test_preview_daily_digest(
@@ -357,7 +357,7 @@ class TestSendTestDigest:
     async def test_send_test_digest(
         self,
         authenticated_client: AsyncClient,
-        mock_sendgrid_service,
+        mock_resend_service,
         mock_template_service
     ):
         """Test sending a test digest email."""
@@ -469,7 +469,7 @@ class TestAdminEmailEndpoints:
         self,
         authenticated_client: AsyncClient,
         user_with_digest_enabled: User,
-        mock_sendgrid_service
+        mock_resend_service
     ):
         """Test manually triggering daily digest generation."""
         response = await authenticated_client.post(
@@ -487,7 +487,7 @@ class TestAdminEmailEndpoints:
         self,
         authenticated_client: AsyncClient,
         user_with_digest_enabled: User,
-        mock_sendgrid_service
+        mock_resend_service
     ):
         """Test manually triggering weekly digest generation."""
         response = await authenticated_client.post(
@@ -504,7 +504,7 @@ class TestAdminEmailEndpoints:
     async def test_trigger_monthly_digest(
         self,
         authenticated_client: AsyncClient,
-        mock_sendgrid_service
+        mock_resend_service
     ):
         """Test manually triggering monthly digest generation."""
         response = await authenticated_client.post(
@@ -521,7 +521,7 @@ class TestAdminEmailEndpoints:
         self,
         authenticated_client: AsyncClient,
         inactive_digest_user: User,
-        mock_sendgrid_service
+        mock_resend_service
     ):
         """Test manually triggering inactive user check."""
         response = await authenticated_client.post(
@@ -539,7 +539,7 @@ class TestAdminEmailEndpoints:
         self,
         authenticated_client: AsyncClient,
         user_with_digest_enabled: User,
-        mock_sendgrid_service
+        mock_resend_service
     ):
         """Test sending digest to a specific user."""
         response = await authenticated_client.post(
@@ -586,25 +586,26 @@ class TestAdminEmailEndpoints:
             assert isinstance(data["jobs"], list)
 
     @pytest.mark.integration
-    async def test_get_sendgrid_status(
+    async def test_get_email_status(
         self,
         authenticated_client: AsyncClient,
-        mock_sendgrid_service
+        mock_resend_service
     ):
-        """Test getting SendGrid service status."""
-        mock_sendgrid_service.get_rate_limit_status.return_value = {
+        """Test getting email service status (Resend)."""
+        mock_resend_service.get_rate_limit_status.return_value = {
             "remaining": 95,
             "limit": 100,
             "reset_at": datetime.utcnow().isoformat()
         }
 
-        response = await authenticated_client.get("/api/v1/admin/email/sendgrid-status")
+        response = await authenticated_client.get("/api/v1/admin/email/email-status")
 
         assert response.status_code == 200
         data = response.json()
 
         assert "configured" in data
         assert "rate_limit" in data
+        assert data.get("provider") == "resend"
 
 
 class TestOnboardingEmail:
@@ -614,7 +615,7 @@ class TestOnboardingEmail:
     async def test_onboarding_email_on_signup(
         self,
         client: AsyncClient,
-        mock_sendgrid_service,
+        mock_resend_service,
         mock_template_service
     ):
         """Test that onboarding email is queued on user registration."""
@@ -748,24 +749,19 @@ class TestEmailDigestRateLimiting:
     """Tests for rate limiting functionality."""
 
     @pytest.mark.integration
-    async def test_rate_limit_tracking(
-        self,
-        mock_sendgrid_service
-    ):
+    async def test_rate_limit_tracking(self):
         """Test that rate limiting is properly tracked."""
-        mock_sendgrid_service.get_rate_limit_status.return_value = {
-            "remaining": 50,
-            "limit": 100,
-            "reset_at": datetime.utcnow().isoformat()
-        }
+        from services.email.resend_service import resend_service
 
-        from services.email.sendgrid_service import sendgrid_service
+        status = resend_service.get_rate_limit_status()
 
-        status = sendgrid_service.get_rate_limit_status()
-
-        assert "remaining" in status
-        assert "limit" in status
-        assert status["limit"] == 100
+        # Verify Resend rate limit structure
+        assert status["provider"] == "resend"
+        assert "rate_limit" in status
+        assert "limits" in status
+        assert status["limits"]["free_daily"] == 100
+        assert status["limits"]["free_monthly"] == 3000
+        assert status["limits"]["max_recipients_per_email"] == 50
 
 
 class TestEdgeCases:
@@ -775,7 +771,7 @@ class TestEdgeCases:
     async def test_digest_generation_with_no_users(
         self,
         db_session: AsyncSession,
-        mock_sendgrid_service
+        mock_resend_service
     ):
         """Test digest generation when no users have digests enabled."""
         from services.email.digest_service import digest_service

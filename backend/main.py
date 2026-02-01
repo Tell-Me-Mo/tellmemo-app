@@ -187,10 +187,10 @@ async def lifespan(app: FastAPI):
     logger.info("Scheduler service initialized (manual weekly report triggers available)")
 
     # Validate email digest configuration before starting scheduler
-    if settings.email_digest_enabled and not settings.sendgrid_api_key.strip():
+    if settings.email_digest_enabled and not settings.resend_api_key.strip():
         logger.warning("⚠️ EMAIL DIGEST CONFIGURATION WARNING:")
         logger.warning("   Email digest is enabled (EMAIL_DIGEST_ENABLED=true)")
-        logger.warning("   but SendGrid API key is missing (SENDGRID_API_KEY is empty)")
+        logger.warning("   but Resend API key is missing (RESEND_API_KEY is empty)")
         logger.warning("   Email notifications will not be sent until API key is configured")
         logger.warning("   To disable email digest, set EMAIL_DIGEST_ENABLED=false in .env")
 

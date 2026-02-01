@@ -14,7 +14,7 @@ from typing import Optional
 from datetime import datetime, timedelta
 from rq import get_current_job
 
-from services.email.sendgrid_service import sendgrid_service
+from services.email.resend_service import resend_service
 from services.email.template_service import template_service
 from services.email.digest_service import digest_service
 from models.notification import NotificationCategory
@@ -99,7 +99,7 @@ async def _send_digest_email_async(
     1. Fetch user from database
     2. Aggregate digest data
     3. Render email templates
-    4. Send via SendGrid
+    4. Send via Resend
     5. Create notification record
     6. Update user preferences with last_sent_at
     """
@@ -183,7 +183,7 @@ async def _send_digest_email_async(
             html_content = template_service.render_digest_email(context)
             text_content = template_service.render_digest_email_text(context)
 
-            # 4. Send via SendGrid
+            # 4. Send via Resend
             if rq_job:
                 rq_job.meta['progress'] = 70.0
                 rq_job.meta['step'] = 'Sending email'
@@ -197,7 +197,7 @@ async def _send_digest_email_async(
             else:
                 subject = f"Monthly Summary - {datetime.utcnow().strftime('%B %Y')}"
 
-            send_result = sendgrid_service.send_email(
+            send_result = resend_service.send_email(
                 to_email=user.email,
                 subject=subject,
                 html_content=html_content,
@@ -209,7 +209,7 @@ async def _send_digest_email_async(
             )
 
             if not send_result['success']:
-                raise Exception(f"SendGrid error: {send_result.get('error')}")
+                raise Exception(f"Resend error: {send_result.get('error')}")
 
             # 5. Create notification record
             if rq_job:
@@ -351,7 +351,7 @@ async def _send_onboarding_email_async(user_id: str, rq_job) -> dict:
             text_content = template_service.render_onboarding_email_text(context)
 
             # Send email
-            send_result = sendgrid_service.send_email(
+            send_result = resend_service.send_email(
                 to_email=user.email,
                 subject="Welcome to TellMeMo!",
                 html_content=html_content,
@@ -360,7 +360,7 @@ async def _send_onboarding_email_async(user_id: str, rq_job) -> dict:
             )
 
             if not send_result['success']:
-                raise Exception(f"SendGrid error: {send_result.get('error')}")
+                raise Exception(f"Resend error: {send_result.get('error')}")
 
             # Create notification
             notification = Notification(
@@ -477,7 +477,7 @@ async def _send_inactive_reminder_async(user_id: str, rq_job) -> dict:
             text_content = template_service.render_inactive_reminder_email_text(context)
 
             # Send email
-            send_result = sendgrid_service.send_email(
+            send_result = resend_service.send_email(
                 to_email=user.email,
                 subject="Ready to get started with TellMeMo?",
                 html_content=html_content,
@@ -486,7 +486,7 @@ async def _send_inactive_reminder_async(user_id: str, rq_job) -> dict:
             )
 
             if not send_result['success']:
-                raise Exception(f"SendGrid error: {send_result.get('error')}")
+                raise Exception(f"Resend error: {send_result.get('error')}")
 
             # Create notification
             notification = Notification(
