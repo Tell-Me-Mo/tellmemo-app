@@ -234,12 +234,12 @@ async def get_scheduler_status(
         raise HTTPException(status_code=500, detail=f"Failed to get scheduler status: {str(e)}")
 
 
-@router.get("/sendgrid-status")
-async def get_sendgrid_status(
+@router.get("/email-status")
+async def get_email_status(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Get SendGrid service status (admin only).
+    Get email service status (admin only).
 
     Returns rate limit information and service health.
 
@@ -247,15 +247,16 @@ async def get_sendgrid_status(
         current_user: Current authenticated user (must be admin)
 
     Returns:
-        SendGrid service status
+        Email service status (Resend)
     """
     try:
-        from services.email.sendgrid_service import sendgrid_service
+        from services.email.resend_service import resend_service
 
         return {
-            "configured": sendgrid_service.is_configured(),
-            "rate_limit": sendgrid_service.get_rate_limit_status()
+            "provider": "resend",
+            "configured": resend_service.is_configured(),
+            "rate_limit": resend_service.get_rate_limit_status()
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get SendGrid status: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get email status: {str(e)}")

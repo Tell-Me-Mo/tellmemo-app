@@ -21,7 +21,7 @@ from models.notification import Notification, NotificationCategory
 from models.organization_member import OrganizationMember
 
 # Import email services for use in this module
-from services.email.sendgrid_service import sendgrid_service
+from services.email.resend_service import resend_service
 from services.email.template_service import template_service
 
 logger = logging.getLogger(__name__)
