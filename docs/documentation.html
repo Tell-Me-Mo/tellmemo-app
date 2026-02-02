@@ -58,6 +58,42 @@
         page_path: window.location.pathname
       });
     </script>
+
+    <!-- Structured Data - TechArticle -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "headline": "TellMeMo Documentation - Installation & User Guide",
+      "description": "Complete guide for installing TellMeMo on-premise and using the AI-powered meeting intelligence platform.",
+      "url": "https://tellmemo.io/documentation.html",
+      "datePublished": "2025-10-31",
+      "dateModified": "2026-02-02",
+      "author": {
+        "@type": "Organization",
+        "name": "TellMeMo"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "TellMeMo",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://tellmemo.io/assets/logo.png"
+        }
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://tellmemo.io/documentation.html"
+      },
+      "about": {
+        "@type": "SoftwareApplication",
+        "name": "TellMeMo",
+        "applicationCategory": "BusinessApplication"
+      },
+      "proficiencyLevel": "Beginner",
+      "dependencies": "Docker, Docker Compose, Anthropic API Key"
+    }
+    </script>
 </head>
 <body>
     <!-- Navigation -->
@@ -1582,7 +1618,7 @@ docker exec -i pm_master_postgres psql -U pm_master pm_master_db < backup.sql</c
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2025 TellMeMo. All rights reserved.</p>
+                <p>&copy; 2026 TellMeMo. All rights reserved.</p>
             </div>
         </div>
     </footer>
