@@ -58,11 +58,8 @@ class ContentService:
 
         try:
             # Use centralized language detection service
+            # Note: detect() handles lazy initialization, so we don't need to check is_available() first
             from services.llm.langdetect_service import language_detection_service
-
-            if not language_detection_service.is_available():
-                logger.debug("Language detection service not available")
-                return {'language': 'en', 'confidence': 0.0}
 
             result = language_detection_service.detect(text)
             return result

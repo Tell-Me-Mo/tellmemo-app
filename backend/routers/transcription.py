@@ -93,15 +93,19 @@ async def transcribe_audio(
             # Save original path for cleanup before converting to container path
             temp_file_path_for_cleanup = temp_file_path
 
-            # Only convert to container path if RQ worker is in Docker
+            # Determine if we need to convert the path for the RQ worker
             # Check if we're in a Docker environment by looking for /.dockerenv
-            is_docker = os.path.exists('/.dockerenv')
+            is_api_in_docker = os.path.exists('/.dockerenv')
 
-            if not is_docker and not temp_file_path.startswith("/app/"):
+            # Convert to container path ONLY if:
+            # 1. API is NOT in Docker AND
+            # 2. Worker IS in Docker (configured via RQ_WORKER_IN_DOCKER) AND
+            # 3. Path doesn't already start with /app/
+            if not is_api_in_docker and settings.rq_worker_in_docker and not temp_file_path.startswith("/app/"):
                 # Backend running on host, worker is in Docker - convert to container path
                 temp_file_name = Path(temp_file_path).name
                 temp_file_path = f"/app/uploads/temp_audio/{temp_file_name}"
-            # If both FastAPI and RQ worker are on host, keep the local path as-is
+            # If both FastAPI and RQ worker are in the same environment, keep the path as-is
 
             # Check file size
             if file_size > max_size_bytes:

@@ -260,6 +260,11 @@ class Settings(BaseSettings):
     # Replicate API credentials (only needed if using Replicate for post-meeting transcription)
     replicate_api_key: str = Field(default="", env="REPLICATE_API_KEY")
 
+    # RQ Worker Environment Configuration
+    # Set to True when RQ worker runs in Docker container while API runs locally
+    # Set to False (default) when both API and worker run in the same environment (both local OR both Docker)
+    rq_worker_in_docker: bool = Field(default=False, env="RQ_WORKER_IN_DOCKER")
+
     # AssemblyAI API credentials (required for real-time live meeting transcription)
     # Used exclusively for live meeting intelligence with speaker diarization
     assemblyai_api_key: str = Field(default="", env="ASSEMBLYAI_API_KEY")
