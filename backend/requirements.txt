@@ -80,7 +80,7 @@ opentelemetry-instrumentation-qdrant>=0.51.1   # Qdrant vector database (OpenLLM
 # Authentication
 supabase==2.27.2
 gotrue==2.12.4
-pyjwt==2.10.1
+pyjwt==2.11.0
 
 # Utilities
 httpx>=0.26,<0.28
