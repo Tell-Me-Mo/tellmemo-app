@@ -141,6 +141,16 @@ services:
       # Hugging Face
       HF_TOKEN: ${HF_TOKEN}
 
+      # Resend Email Configuration
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-noreply@tellmemo.io}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-TellMeMo}
+      EMAIL_DIGEST_ENABLED: ${EMAIL_DIGEST_ENABLED:-true}
+
+      # Authentication
+      JWT_SECRET: ${JWT_SECRET:-}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8100}
+
       # Application
       API_ENV: ${API_ENV:-development}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
