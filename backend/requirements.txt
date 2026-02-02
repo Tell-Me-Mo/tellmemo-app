@@ -39,7 +39,7 @@ qdrant-client==1.16.2
 # Embeddings & ML
 sentence-transformers==5.2.2
 torch==2.10.0  # CPU version
-numpy==2.4.1
+numpy==2.4.2
 
 # Audio Processing & Transcription
 faster-whisper==1.2.1
