@@ -68,6 +68,48 @@
       ]
     }
     </script>
+
+    <!-- FAQ Schema for Rich Results -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How do you calculate the cost of a meeting?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Meeting cost = (Number of Attendees) × (Meeting Duration in hours) × (Average Hourly Rate). For example, a 1-hour meeting with 8 people at $150/hour fully loaded cost = $1,200. Most companies don't realize how expensive meetings really are."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How much do meetings really cost a company?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "A typical company spends $500K+ annually on internal meetings. Just four recurring meetings (standup, sprint planning, all-hands, product sync) can cost $229K/year. Most of this is recoverable waste."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How can I reduce meeting costs?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Four rules: 1) Calculate and display meeting costs, 2) Halve the attendees (send AI summaries to others), 3) Default to 25-minute meetings, 4) Go async first—only meet when real-time discussion is essential."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Should I cancel recurring meetings?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, audit them regularly. Ask: would I pay this much to a consultant to solve this problem? Many status meetings can be replaced with async updates. Teams that cut meeting time 45% see 32% productivity gains."
+          }
+        }
+      ]
+    }
+    </script>
 </head>
 <body>
     <nav class="navbar">
@@ -280,6 +322,34 @@
                 <p>
                     And you save a fortune.
                 </p>
+
+                <h2>Frequently Asked Questions</h2>
+
+                <div class="faq-section" style="margin: 2rem 0;">
+                    <div class="faq-item" style="margin-bottom: 1.5rem; padding: 1.5rem; background: rgba(255, 255, 255, 0.02); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <h3 style="margin-bottom: 0.75rem; font-size: 1.1rem;">How do you calculate the cost of a meeting?</h3>
+                        <p style="color: var(--text-secondary); margin: 0;">Meeting cost = (Number of Attendees) × (Meeting Duration in hours) × (Average Hourly Rate). For example, a 1-hour meeting with 8 people at $150/hour fully loaded cost = $1,200. Most companies don't realize how expensive meetings really are.</p>
+                    </div>
+                    <div class="faq-item" style="margin-bottom: 1.5rem; padding: 1.5rem; background: rgba(255, 255, 255, 0.02); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <h3 style="margin-bottom: 0.75rem; font-size: 1.1rem;">How much do meetings really cost a company?</h3>
+                        <p style="color: var(--text-secondary); margin: 0;">A typical company spends $500K+ annually on internal meetings. Just four recurring meetings (standup, sprint planning, all-hands, product sync) can cost $229K/year. Most of this is recoverable waste.</p>
+                    </div>
+                    <div class="faq-item" style="margin-bottom: 1.5rem; padding: 1.5rem; background: rgba(255, 255, 255, 0.02); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <h3 style="margin-bottom: 0.75rem; font-size: 1.1rem;">How can I reduce meeting costs?</h3>
+                        <p style="color: var(--text-secondary); margin: 0;">Four rules: 1) Calculate and display meeting costs, 2) Halve the attendees (send AI summaries to others), 3) Default to 25-minute meetings, 4) Go async first—only meet when real-time discussion is essential.</p>
+                    </div>
+                    <div class="faq-item" style="margin-bottom: 1.5rem; padding: 1.5rem; background: rgba(255, 255, 255, 0.02); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <h3 style="margin-bottom: 0.75rem; font-size: 1.1rem;">Should I cancel recurring meetings?</h3>
+                        <p style="color: var(--text-secondary); margin: 0;">Yes, audit them regularly. Ask: would I pay this much to a consultant to solve this problem? Many status meetings can be replaced with async updates. Teams that cut meeting time 45% see 32% productivity gains.</p>
+                    </div>
+                </div>
+
+                <h2>Related Articles</h2>
+                <ul>
+                    <li><a href="death-of-action-items.html" style="color: #6366F1;">The Death of the Action Item Email</a> - Eliminating wasteful follow-up processes</li>
+                    <li><a href="remote-work-success.html" style="color: #6366F1;">Remote Work Actually Works</a> - How distributed teams thrive with less meetings</li>
+                    <li><a href="rag-revolution.html" style="color: #6366F1;">How I Got My Fridays Back</a> - Reclaiming 10+ hours every week</li>
+                </ul>
 
                 <div class="article-cta">
                     <h3>Cut meeting time without losing information</h3>

@@ -100,6 +100,48 @@
       ]
     }
     </script>
+
+    <!-- FAQ Schema for Rich Results -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How does real-time meeting intelligence work?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Real-time meeting intelligence uses AI to detect questions as they're spoken during meetings. It then searches your knowledge base, earlier meeting context, and listens for natural answers—all within seconds. The system provides answers with source citations so you can verify the information."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How much does real-time meeting transcription cost?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "TellMeMo's real-time meeting intelligence costs approximately $1.05 per hour ($0.90 for AssemblyAI transcription + $0.15 for AI processing). This is roughly 10x cheaper than enterprise alternatives like Otter.ai Business at $20/user/month."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can AI answer questions during live meetings?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, TellMeMo's AI detects questions in real-time and provides answers within 2 seconds. It searches uploaded documents, earlier meeting context, monitors for natural responses, and can use AI generation as a fallback—always with source transparency."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does TellMeMo track action items automatically?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, while monitoring for questions, the AI also detects action items and commitments in real-time. It extracts the task description, owner, and deadline, then scores completeness from 40% to 100% based on available details."
+          }
+        }
+      ]
+    }
+    </script>
 </head>
 <body>
     <nav class="navbar">
@@ -454,6 +496,34 @@
                 <p>
                     That's what we built.
                 </p>
+
+                <h2>Frequently Asked Questions</h2>
+
+                <div class="faq-section" style="margin: 2rem 0;">
+                    <div class="faq-item" style="margin-bottom: 1.5rem; padding: 1.5rem; background: rgba(255, 255, 255, 0.02); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <h3 style="margin-bottom: 0.75rem; font-size: 1.1rem;">How does real-time meeting intelligence work?</h3>
+                        <p style="color: var(--text-secondary); margin: 0;">Real-time meeting intelligence uses AI to detect questions as they're spoken during meetings. It then searches your knowledge base, earlier meeting context, and listens for natural answers—all within seconds. The system provides answers with source citations so you can verify the information.</p>
+                    </div>
+                    <div class="faq-item" style="margin-bottom: 1.5rem; padding: 1.5rem; background: rgba(255, 255, 255, 0.02); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <h3 style="margin-bottom: 0.75rem; font-size: 1.1rem;">How much does real-time meeting transcription cost?</h3>
+                        <p style="color: var(--text-secondary); margin: 0;">TellMeMo's real-time meeting intelligence costs approximately $1.05 per hour ($0.90 for AssemblyAI transcription + $0.15 for AI processing). This is roughly 10x cheaper than enterprise alternatives like Otter.ai Business at $20/user/month.</p>
+                    </div>
+                    <div class="faq-item" style="margin-bottom: 1.5rem; padding: 1.5rem; background: rgba(255, 255, 255, 0.02); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <h3 style="margin-bottom: 0.75rem; font-size: 1.1rem;">Can AI answer questions during live meetings?</h3>
+                        <p style="color: var(--text-secondary); margin: 0;">Yes, TellMeMo's AI detects questions in real-time and provides answers within 2 seconds. It searches uploaded documents, earlier meeting context, monitors for natural responses, and can use AI generation as a fallback—always with source transparency.</p>
+                    </div>
+                    <div class="faq-item" style="margin-bottom: 1.5rem; padding: 1.5rem; background: rgba(255, 255, 255, 0.02); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <h3 style="margin-bottom: 0.75rem; font-size: 1.1rem;">Does TellMeMo track action items automatically?</h3>
+                        <p style="color: var(--text-secondary); margin: 0;">Yes, while monitoring for questions, the AI also detects action items and commitments in real-time. It extracts the task description, owner, and deadline, then scores completeness from 40% to 100% based on available details.</p>
+                    </div>
+                </div>
+
+                <h2>Related Articles</h2>
+                <ul>
+                    <li><a href="ai-assistant-memory.html" style="color: #6366F1;">My AI Assistant Knows More Than I Do</a> - How AI remembers every decision with context</li>
+                    <li><a href="rag-revolution.html" style="color: #6366F1;">How I Got My Fridays Back</a> - Reclaiming 10 hours/week with meeting automation</li>
+                    <li><a href="stopped-taking-notes.html" style="color: #6366F1;">Why I Stopped Taking Meeting Notes</a> - The productivity gains from letting AI handle documentation</li>
+                </ul>
 
                 <hr style="margin: 3rem 0; border: none; border-top: 1px solid rgba(255, 255, 255, 0.1);">
 

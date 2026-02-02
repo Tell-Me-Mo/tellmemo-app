@@ -69,6 +69,48 @@
       ]
     }
     </script>
+
+    <!-- FAQ Schema for Rich Results -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Does remote work actually increase productivity?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, when done right. Companies that design for remote (async-first, documented decisions, trust over surveillance) see 30-40% productivity gains. The key is communication infrastructure, not location."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do you maintain company culture with remote teams?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Culture isn't ping pong tables—it's how people work together, how decisions get made, how information flows. Document everything, be intentional about connections, and ensure everyone has equal access to information regardless of timezone."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What tools do remote teams need to succeed?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Beyond Slack and Zoom, remote teams need: AI meeting summaries (so everyone stays informed without attending everything), searchable decision history, async-first communication tools, and clear documentation systems."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do you onboard employees remotely?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Give new hires access to searchable meeting summaries, decision docs, and discussion threads. They can 'read themselves in' to organizational context instead of relying on people to remember to tell them things."
+          }
+        }
+      ]
+    }
+    </script>
 </head>
 <body>
     <nav class="navbar">
@@ -245,6 +287,34 @@
                 <p>
                     Our productivity didn't increase despite remote work. It increased because of it.
                 </p>
+
+                <h2>Frequently Asked Questions</h2>
+
+                <div class="faq-section" style="margin: 2rem 0;">
+                    <div class="faq-item" style="margin-bottom: 1.5rem; padding: 1.5rem; background: rgba(255, 255, 255, 0.02); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <h3 style="margin-bottom: 0.75rem; font-size: 1.1rem;">Does remote work actually increase productivity?</h3>
+                        <p style="color: var(--text-secondary); margin: 0;">Yes, when done right. Companies that design for remote (async-first, documented decisions, trust over surveillance) see 30-40% productivity gains. The key is communication infrastructure, not location.</p>
+                    </div>
+                    <div class="faq-item" style="margin-bottom: 1.5rem; padding: 1.5rem; background: rgba(255, 255, 255, 0.02); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <h3 style="margin-bottom: 0.75rem; font-size: 1.1rem;">How do you maintain company culture with remote teams?</h3>
+                        <p style="color: var(--text-secondary); margin: 0;">Culture isn't ping pong tables—it's how people work together, how decisions get made, how information flows. Document everything, be intentional about connections, and ensure everyone has equal access to information regardless of timezone.</p>
+                    </div>
+                    <div class="faq-item" style="margin-bottom: 1.5rem; padding: 1.5rem; background: rgba(255, 255, 255, 0.02); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <h3 style="margin-bottom: 0.75rem; font-size: 1.1rem;">What tools do remote teams need to succeed?</h3>
+                        <p style="color: var(--text-secondary); margin: 0;">Beyond Slack and Zoom, remote teams need: AI meeting summaries (so everyone stays informed without attending everything), searchable decision history, async-first communication tools, and clear documentation systems.</p>
+                    </div>
+                    <div class="faq-item" style="margin-bottom: 1.5rem; padding: 1.5rem; background: rgba(255, 255, 255, 0.02); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <h3 style="margin-bottom: 0.75rem; font-size: 1.1rem;">How do you onboard employees remotely?</h3>
+                        <p style="color: var(--text-secondary); margin: 0;">Give new hires access to searchable meeting summaries, decision docs, and discussion threads. They can 'read themselves in' to organizational context instead of relying on people to remember to tell them things.</p>
+                    </div>
+                </div>
+
+                <h2>Related Articles</h2>
+                <ul>
+                    <li><a href="stopped-taking-notes.html" style="color: #6366F1;">Why I Stopped Taking Meeting Notes</a> - Freeing remote workers from documentation burden</li>
+                    <li><a href="death-of-action-items.html" style="color: #6366F1;">The Death of the Action Item Email</a> - Async accountability that works</li>
+                    <li><a href="ai-assistant-memory.html" style="color: #6366F1;">My AI Assistant Knows More Than I Do</a> - Building searchable organizational memory</li>
+                </ul>
 
                 <div class="article-cta">
                     <h3>Build a remote culture that actually works</h3>
