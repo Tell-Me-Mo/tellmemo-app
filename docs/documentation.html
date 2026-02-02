@@ -430,7 +430,7 @@
                                 <ul>
                                     <li>Sign up for an account</li>
                                     <li>Navigate to API Keys section</li>
-                                    <li>Create a new API key (starts with <code>sk-ant-api03-</code>)</li>
+                                    <li>Create a new API key</li>
                                 </ul>
                             </li>
                             <li><strong>Hugging Face Token</strong> (Optional) - Get it from <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener">Hugging Face Settings</a>
@@ -460,8 +460,8 @@ cd tellmemo-app
 
 # 3. Create .env file with your API keys
 cat > .env << EOF
-ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
-HF_TOKEN=your-huggingface-token-here
+ANTHROPIC_API_KEY=YOUR_ANTHROPIC_API_KEY_HERE
+HF_TOKEN=YOUR_HUGGINGFACE_TOKEN_HERE
 EOF
 
 # 4. Start all services
@@ -496,10 +496,10 @@ docker compose up -d
 
                         <div class="code-block">
                             <pre><code># Required - Anthropic API Key
-ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
+ANTHROPIC_API_KEY=YOUR_ANTHROPIC_API_KEY_HERE
 
 # Required - Hugging Face Token (for embedding model)
-HF_TOKEN=your-huggingface-token-here</code></pre>
+HF_TOKEN=YOUR_HUGGINGFACE_TOKEN_HERE</code></pre>
                         </div>
 
                         <div class="warning-box">
@@ -584,10 +584,10 @@ ENABLE_LOGSTASH=false</code></pre>
 DEFAULT_TRANSCRIPTION_SERVICE=replicate
 
 # Replicate (recommended - 242x faster than local Whisper)
-REPLICATE_API_TOKEN=your-replicate-token-here
+REPLICATE_API_TOKEN=YOUR_REPLICATE_API_TOKEN_HERE
 
 # Salad Cloud (cost-effective for batch processing)
-SALAD_API_KEY=your-salad-api-key
+SALAD_API_KEY=YOUR_SALAD_API_KEY_HERE
 SALAD_ORGANIZATION_NAME=your-org-name
 
 # Performance comparison (30-min audio):
@@ -633,7 +633,7 @@ DETECT_LANGUAGE=true</code></pre>
                         <h4>Email Digest Configuration</h4>
                         <div class="code-block">
                             <pre><code># SendGrid Configuration (required for email digests)
-SENDGRID_API_KEY=SG.your-sendgrid-api-key-here
+SENDGRID_API_KEY=YOUR_SENDGRID_API_KEY_HERE
 EMAIL_FROM_ADDRESS=noreply@tellmemo.io  # Must be verified in SendGrid
 EMAIL_FROM_NAME=TellMeMo
 
@@ -983,8 +983,8 @@ EMAIL_DIGEST_RATE_LIMIT=100  # Free tier: 100 emails/day</code></pre>
 
                         <div class="code-block">
                             <pre><code># Add to your .env file
-OPENAI_API_KEY=sk-proj-your-key-here
-ASSEMBLYAI_API_KEY=your-assemblyai-key-here</code></pre>
+OPENAI_API_KEY=YOUR_OPENAI_API_KEY_HERE
+ASSEMBLYAI_API_KEY=YOUR_ASSEMBLYAI_API_KEY_HERE</code></pre>
                         </div>
 
                         <h3>Cost Per Meeting</h3>
@@ -1332,7 +1332,6 @@ curl http://localhost:6333/collections</code></pre>
                             <pre><code># Verify API key in .env
 cat .env | grep ANTHROPIC_API_KEY
 
-# Format should be: sk-ant-api03-xxxxx
 # Get your key at: https://console.anthropic.com/
 
 # After updating .env, restart backend
