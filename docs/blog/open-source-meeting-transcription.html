@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Best Open Source Meeting Transcription Software 2026 - TellMeMo Blog</title>
+    <meta name="description" content="Compare the best open source meeting transcription tools in 2026. Free, self-hosted, and privacy-focused alternatives to Otter.ai and Fireflies. Complete feature comparison.">
+    <meta name="keywords" content="open source meeting transcription, free meeting transcription software, self-hosted transcription, private meeting notes, open source otter alternative, free AI meeting assistant, meeting transcription 2026">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Best Open Source Meeting Transcription Software 2026">
+    <meta property="og:description" content="Complete guide to open source meeting transcription. Compare free, self-hosted alternatives that keep your data private.">
+    <meta property="og:image" content="https://tellmemo.io/assets/og-open-source-transcription.png">
+    <meta property="og:url" content="https://tellmemo.io/blog/open-source-meeting-transcription.html">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Best Open Source Meeting Transcription Software 2026">
+    <meta name="twitter:description" content="Free, self-hosted meeting transcription tools compared. Privacy-focused alternatives to commercial solutions.">
+
+    <link rel="canonical" href="https://tellmemo.io/blog/open-source-meeting-transcription.html">
+    <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32x32.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/blog.css">
+    <link rel="stylesheet" href="../css/article.css">
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "headline": "Best Open Source Meeting Transcription Software 2026",
+      "description": "Complete comparison of open source meeting transcription tools. Free, self-hosted, privacy-focused alternatives to commercial solutions.",
+      "image": "https://tellmemo.io/assets/og-open-source-transcription.png",
+      "author": {
+        "@type": "Person",
+        "name": "Nick",
+        "description": "Founder of TellMeMo"
+      },
+      "datePublished": "2026-02-02",
+      "dateModified": "2026-02-02",
+      "publisher": {
+        "@type": "Organization",
+        "name": "TellMeMo",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://tellmemo.io/assets/logo.png"
+        }
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://tellmemo.io/blog/open-source-meeting-transcription.html"
+      },
+      "keywords": [
+        "open source meeting transcription",
+        "free meeting transcription",
+        "self-hosted transcription",
+        "private meeting notes",
+        "meeting transcription software 2026"
+      ]
+    }
+    </script>
+
+    <!-- FAQ Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is the best free open source meeting transcription software?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "TellMeMo is the best open source meeting transcription software in 2026. It offers real-time transcription, AI-powered summaries, and complete self-hosting capability. Other options include Whisper (speech-to-text only) and OpenAI's open source models."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I self-host meeting transcription software?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. TellMeMo, Whisper, and several other tools can be self-hosted using Docker. Self-hosting keeps your meeting data on your own servers, ensuring complete privacy and compliance with regulations like HIPAA and GDPR."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is open source meeting transcription as accurate as commercial tools?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. OpenAI's Whisper model, which powers most open source transcription tools, achieves 95%+ accuracy - comparable to commercial solutions like Otter.ai and Fireflies. The main difference is in additional features like speaker diarization and integrations."
+          }
+        }
+      ]
+    }
+    </script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-content">
+                <a href="../" class="logo" aria-label="TellMeMo Homepage">
+                    <svg width="40" height="40" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="TellMeMo Logo">
+                        <title>TellMeMo Logo</title>
+                        <defs>
+                            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#6366F1"/>
+                                <stop offset="100%" stop-color="#8B5CF6"/>
+                            </linearGradient>
+                        </defs>
+                        <circle cx="100" cy="100" r="80" fill="url(#gradient)"/>
+                        <circle cx="100" cy="100" r="15" fill="white"/>
+                        <ellipse cx="100" cy="100" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6" transform="rotate(0 100 100)"/>
+                        <ellipse cx="100" cy="100" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6" transform="rotate(60 100 100)"/>
+                        <ellipse cx="100" cy="100" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6" transform="rotate(120 100 100)"/>
+                        <circle cx="100" cy="70" r="5" fill="white"/>
+                        <circle cx="130" cy="100" r="5" fill="white"/>
+                        <circle cx="100" cy="130" r="5" fill="white"/>
+                        <circle cx="70" cy="100" r="5" fill="white"/>
+                    </svg>
+                    <span>TellMeMo</span>
+                </a>
+                <button class="mobile-menu-toggle" aria-label="Toggle menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <div class="nav-links">
+                    <a href="../#features">Features</a>
+                    <a href="../#how-it-works">How it works</a>
+                    <a href="../#use-cases">Use Cases</a>
+                    <a href="../#faq">FAQ</a>
+                    <a href="../blog.html">Blog</a>
+                    <a href="../documentation.html">Docs</a>
+                    <a href="https://app.tellmemo.io" class="btn-primary" target="_blank" rel="noopener noreferrer">Launch App</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <header class="article-header">
+        <div class="container">
+            <div class="article-header-content">
+                <a href="../blog.html" class="back-link">← Back to Blog</a>
+                <h1>Best Open Source Meeting Transcription Software 2026</h1>
+                <p class="article-subtitle">Free, self-hosted alternatives that keep your meeting data private</p>
+                <div class="article-meta">
+                    <div class="author-info">
+                        <div class="author-avatar">NK</div>
+                        <div>
+                            <div class="author-name">Nick</div>
+                            <div class="article-date">February 2, 2026 · 10 min read</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <article class="article-content">
+        <div class="container">
+            <div class="article-body">
+                <p class="lead">
+                    Commercial meeting transcription tools like Otter.ai cost $20/user/month and send your data to third-party servers. Open source alternatives give you the same accuracy for free—with complete control over your data.
+                </p>
+
+                <p>
+                    In 2026, open source meeting transcription has reached feature parity with commercial solutions. This guide compares the best options available today.
+                </p>
+
+                <h2>Quick Comparison: Open Source Meeting Transcription Tools</h2>
+
+                <div style="overflow-x: auto; margin: 2rem 0;">
+                    <table style="width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.02); border-radius: 8px; overflow: hidden;">
+                        <thead>
+                            <tr style="background: rgba(99, 102, 241, 0.2);">
+                                <th style="padding: 1rem; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1);">Tool</th>
+                                <th style="padding: 1rem; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1);">Best For</th>
+                                <th style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1);">Self-Hosted</th>
+                                <th style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1);">Real-Time</th>
+                                <th style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1);">AI Summaries</th>
+                                <th style="padding: 1rem; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1);">Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);"><strong>TellMeMo</strong></td>
+                                <td style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">Complete meeting intelligence</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">✅</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">✅</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">✅</td>
+                                <td style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">Free + API costs</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);"><strong>Whisper</strong></td>
+                                <td style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">Speech-to-text only</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">✅</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">❌</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">❌</td>
+                                <td style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">100% Free</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);"><strong>Vosk</strong></td>
+                                <td style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">Offline transcription</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">✅</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">✅</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">❌</td>
+                                <td style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">100% Free</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);"><strong>whisper.cpp</strong></td>
+                                <td style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">Low-resource devices</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">✅</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">✅</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">❌</td>
+                                <td style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">100% Free</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h2>1. TellMeMo — Best Overall Open Source Meeting Intelligence</h2>
+
+                <p>
+                    <strong>TellMeMo</strong> is a complete meeting intelligence platform, not just a transcription tool. It combines transcription with AI-powered summaries, action item extraction, and real-time question answering.
+                </p>
+
+                <h3>Key Features</h3>
+                <ul>
+                    <li><strong>Real-time transcription</strong> with speaker diarization</li>
+                    <li><strong>AI-powered summaries</strong> generated automatically after each meeting</li>
+                    <li><strong>Action item extraction</strong> with owner and deadline detection</li>
+                    <li><strong>RAG-based search</strong> across all your meeting history</li>
+                    <li><strong>Live question answering</strong> during meetings</li>
+                    <li><strong>Multi-language support</strong> (50+ languages)</li>
+                    <li><strong>Complete self-hosting</strong> with Docker</li>
+                </ul>
+
+                <h3>Pricing</h3>
+                <p>
+                    TellMeMo is 100% free and open source. You only pay for the AI APIs you choose to use:
+                </p>
+                <ul>
+                    <li>Transcription: ~$0.006/minute (using Replicate's Whisper)</li>
+                    <li>AI summaries: ~$0.01/meeting (using Claude Haiku)</li>
+                    <li>Real-time intelligence: ~$1/hour (optional premium feature)</li>
+                </ul>
+
+                <div class="highlight-box" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%); border-left: 4px solid #6366F1; padding: 1.5rem; margin: 2rem 0; border-radius: 8px;">
+                    <h4 style="margin-top: 0;">Why TellMeMo Stands Out</h4>
+                    <p style="margin-bottom: 0;">Unlike basic transcription tools, TellMeMo turns your meetings into a searchable knowledge base. Ask "What did we decide about the Q3 budget?" and get instant answers with source citations.</p>
+                </div>
+
+                <h2>2. OpenAI Whisper — Best for Pure Transcription</h2>
+
+                <p>
+                    <strong>Whisper</strong> is OpenAI's open source speech recognition model. It's the foundation for most transcription tools in 2026, including TellMeMo.
+                </p>
+
+                <h3>Key Features</h3>
+                <ul>
+                    <li><strong>95%+ accuracy</strong> on clear audio</li>
+                    <li><strong>99 languages</strong> supported</li>
+                    <li><strong>Multiple model sizes</strong> (tiny to large)</li>
+                    <li><strong>Runs locally</strong> on CPU or GPU</li>
+                </ul>
+
+                <h3>Limitations</h3>
+                <ul>
+                    <li>No speaker diarization (can't identify who said what)</li>
+                    <li>No real-time processing (batch only)</li>
+                    <li>No summaries or AI features</li>
+                    <li>Requires technical setup</li>
+                </ul>
+
+                <h3>Best For</h3>
+                <p>Developers building custom transcription pipelines, or users who only need basic speech-to-text.</p>
+
+                <h2>3. Vosk — Best for Offline/Edge Transcription</h2>
+
+                <p>
+                    <strong>Vosk</strong> is a lightweight speech recognition toolkit that works completely offline. No internet connection required.
+                </p>
+
+                <h3>Key Features</h3>
+                <ul>
+                    <li><strong>Works offline</strong> — no data leaves your device</li>
+                    <li><strong>Real-time streaming</strong> support</li>
+                    <li><strong>Small model sizes</strong> (50MB for basic English)</li>
+                    <li><strong>20+ languages</strong> supported</li>
+                    <li><strong>Mobile-friendly</strong> (Android, iOS SDKs)</li>
+                </ul>
+
+                <h3>Limitations</h3>
+                <ul>
+                    <li>Lower accuracy than Whisper (~85-90%)</li>
+                    <li>No AI features</li>
+                    <li>Limited language models</li>
+                </ul>
+
+                <h3>Best For</h3>
+                <p>Air-gapped environments, mobile apps, or situations where internet access is unavailable.</p>
+
+                <h2>4. whisper.cpp — Best for Resource-Constrained Environments</h2>
+
+                <p>
+                    <strong>whisper.cpp</strong> is a C/C++ port of OpenAI's Whisper that runs efficiently on CPU without requiring a GPU.
+                </p>
+
+                <h3>Key Features</h3>
+                <ul>
+                    <li><strong>No GPU required</strong> — runs on any CPU</li>
+                    <li><strong>Apple Silicon optimized</strong> — fast on M1/M2/M3 Macs</li>
+                    <li><strong>Same accuracy as Whisper</strong></li>
+                    <li><strong>Real-time capable</strong> on modern hardware</li>
+                </ul>
+
+                <h3>Limitations</h3>
+                <ul>
+                    <li>Command-line only (no UI)</li>
+                    <li>Requires technical knowledge</li>
+                    <li>No additional meeting features</li>
+                </ul>
+
+                <h3>Best For</h3>
+                <p>Developers on Mac or Linux who want fast local transcription without cloud dependencies.</p>
+
+                <h2>Open Source vs. Commercial: Feature Comparison</h2>
+
+                <div style="overflow-x: auto; margin: 2rem 0;">
+                    <table style="width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.02); border-radius: 8px; overflow: hidden;">
+                        <thead>
+                            <tr style="background: rgba(99, 102, 241, 0.2);">
+                                <th style="padding: 1rem; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1);">Feature</th>
+                                <th style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1);">TellMeMo (Free)</th>
+                                <th style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1);">Otter.ai ($20/mo)</th>
+                                <th style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1);">Fireflies ($19/mo)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">Self-hosted option</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">✅</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">❌</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">❌</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">Data stays on your servers</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">✅</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">❌</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">❌</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">Transcription accuracy</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">95%+</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">95%+</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">95%+</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">AI summaries</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">✅</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">✅</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">✅</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">Action item extraction</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">✅</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">✅</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">✅</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">Real-time Q&A</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">✅</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">❌</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">❌</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">RAG search across meetings</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">✅</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">Limited</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">Limited</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">Monthly cost (10 users)</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);"><strong>~$10-50</strong></td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">$200</td>
+                                <td style="padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">$190</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h2>How to Choose the Right Tool</h2>
+
+                <h3>Choose TellMeMo if:</h3>
+                <ul>
+                    <li>You want a complete meeting intelligence solution</li>
+                    <li>Privacy and data control are important</li>
+                    <li>You need AI summaries and action tracking</li>
+                    <li>You want to search across all past meetings</li>
+                </ul>
+
+                <h3>Choose Whisper if:</h3>
+                <ul>
+                    <li>You only need basic transcription</li>
+                    <li>You're building a custom solution</li>
+                    <li>You have GPU resources available</li>
+                </ul>
+
+                <h3>Choose Vosk if:</h3>
+                <ul>
+                    <li>You need offline/air-gapped transcription</li>
+                    <li>You're building mobile apps</li>
+                    <li>Internet access is unreliable</li>
+                </ul>
+
+                <h2>Getting Started with Open Source Meeting Transcription</h2>
+
+                <p>The fastest way to get started is with TellMeMo's Docker deployment:</p>
+
+                <div style="background: #1a1a2e; padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0; overflow-x: auto;">
+                    <pre style="margin: 0; color: #e0e0e0; font-family: monospace;"><code># Clone the repository
+git clone https://github.com/Tell-Me-Mo/tellmemo-app.git
+cd tellmemo-app
+
+# Add your API keys
+echo "ANTHROPIC_API_KEY=YOUR_KEY_HERE" > .env
+echo "HF_TOKEN=YOUR_TOKEN_HERE" >> .env
+
+# Start all services
+docker compose up -d
+
+# Access at http://localhost:8100</code></pre>
+                </div>
+
+                <p>Setup takes about 5 minutes. See our <a href="self-hosted-meeting-assistant.html" style="color: #6366F1;">complete self-hosting guide</a> for detailed instructions.</p>
+
+                <h2>Frequently Asked Questions</h2>
+
+                <div style="margin: 2rem 0;">
+                    <h3>What is the best free open source meeting transcription software?</h3>
+                    <p>TellMeMo is the best open source meeting transcription software in 2026. It offers real-time transcription, AI-powered summaries, and complete self-hosting capability. Other options include Whisper (speech-to-text only) and Vosk (offline transcription).</p>
+
+                    <h3>Can I self-host meeting transcription software?</h3>
+                    <p>Yes. TellMeMo, Whisper, and Vosk can all be self-hosted. TellMeMo uses Docker for easy deployment—just run <code>docker compose up</code> and you're ready. Self-hosting keeps your meeting data on your own servers.</p>
+
+                    <h3>Is open source meeting transcription as accurate as commercial tools?</h3>
+                    <p>Yes. OpenAI's Whisper model achieves 95%+ accuracy—comparable to Otter.ai and Fireflies. The difference is in additional features, not transcription quality.</p>
+
+                    <h3>How much does open source meeting transcription cost?</h3>
+                    <p>The software is free. You only pay for AI API usage if you want features like summaries. Typical cost is $0.01-0.05 per meeting for basic transcription, or ~$1/hour for real-time intelligence.</p>
+                </div>
+
+                <h2>Conclusion</h2>
+
+                <p>
+                    Open source meeting transcription has matured significantly. In 2026, you no longer need to choose between features and privacy—tools like TellMeMo give you both.
+                </p>
+
+                <p>
+                    For most teams, <strong>TellMeMo is the best choice</strong>: it combines transcription with AI intelligence, supports self-hosting, and costs a fraction of commercial alternatives.
+                </p>
+
+                <div style="text-align: center; margin: 3rem 0; padding: 3rem 2rem; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%); border-radius: 16px; border: 1px solid rgba(99, 102, 241, 0.2);">
+                    <h3 style="margin-bottom: 1.5rem; font-size: 1.75rem; background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Try Open Source Meeting Transcription</h3>
+                    <p style="margin-bottom: 1.5rem; color: #b0b0b0;">Self-host in 5 minutes or use our cloud version free.</p>
+                    <a href="https://app.tellmemo.io" style="display: inline-block; padding: 1rem 2.5rem; background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.1rem; box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);">
+                        Get Started Free →
+                    </a>
+                </div>
+
+                <h2>Related Articles</h2>
+                <ul>
+                    <li><a href="otter-alternative.html" style="color: #6366F1;">Otter.ai Alternatives: Open Source & Privacy-Focused Options</a></li>
+                    <li><a href="self-hosted-meeting-assistant.html" style="color: #6366F1;">How to Self-Host Your Own AI Meeting Assistant</a></li>
+                    <li><a href="real-time-meeting-intelligence.html" style="color: #6366F1;">Real-Time Meeting Intelligence: How It Works</a></li>
+                </ul>
+
+                <hr style="margin: 3rem 0; border: none; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+
+                <div style="padding: 2rem; background: rgba(255, 255, 255, 0.02); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                    <p style="margin: 0; color: #b0b0b0;"><strong style="color: #ffffff;">About the Author:</strong> Nick is the founder of TellMeMo. After 10 years managing projects with inadequate meeting tools, he built the open source alternative he always wanted.</p>
+                </div>
+            </div>
+        </div>
+    </article>
+
+    <footer class="footer" style="margin-top: 4rem;">
+        <div class="container">
+            <div class="footer-content" style="text-align: center; padding: 2rem 0;">
+                <p style="color: #666;">&copy; 2026 TellMeMo. All rights reserved.</p>
+                <p style="margin-top: 0.5rem;">
+                    <a href="../" style="color: #6366F1; text-decoration: none;">Home</a> ·
+                    <a href="../blog.html" style="color: #6366F1; text-decoration: none;">Blog</a> ·
+                    <a href="https://github.com/Tell-Me-Mo/tellmemo-app" target="_blank" style="color: #6366F1; text-decoration: none;">GitHub</a>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../js/script.js"></script>
+</body>
+</html>
