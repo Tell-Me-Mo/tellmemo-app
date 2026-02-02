@@ -199,14 +199,18 @@ services:
       # Hugging Face
       HF_TOKEN: ${HF_TOKEN}
 
-      # SendGrid Email Configuration
-      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      # Resend Email Configuration (migrated from SendGrid)
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-noreply@tellmemo.io}
       EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-TellMeMo}
       EMAIL_DIGEST_ENABLED: ${EMAIL_DIGEST_ENABLED:-true}
       EMAIL_DIGEST_BATCH_SIZE: ${EMAIL_DIGEST_BATCH_SIZE:-50}
       EMAIL_DIGEST_RATE_LIMIT: ${EMAIL_DIGEST_RATE_LIMIT:-100}
       DIGEST_SEND_HOUR_UTC: ${DIGEST_SEND_HOUR_UTC:-8}
+
+      # Authentication (required for email unsubscribe tokens)
+      JWT_SECRET: ${JWT_SECRET}
+      FRONTEND_URL: ${FRONTEND_URL:-https://app.tellmemo.io}
 
       # OpenTelemetry Observability (Grafana Cloud)
       OTEL_ENABLED: ${OTEL_ENABLED:-true}
