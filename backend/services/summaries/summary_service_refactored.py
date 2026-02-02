@@ -1551,8 +1551,9 @@ class SummaryService:
             cost = self._calculate_cost(input_tokens, output_tokens)
 
             # Parse structured response with detailed logging
-            logger.info(f"DEBUG: Full GPT-5 response length: {len(response_text)} chars")
-            logger.info(f"DEBUG: Full GPT-5 response:\n{response_text}")
+            model_name = getattr(response, 'model', 'unknown')
+            logger.info(f"DEBUG: Full LLM response ({model_name}) length: {len(response_text)} chars")
+            logger.info(f"DEBUG: Full LLM response ({model_name}):\n{response_text}")
 
             summary_data = self._parse_claude_response(response_text, content_type, content_title)
             logger.info(f"DEBUG: Parsed summary_data keys: {summary_data.keys()}")

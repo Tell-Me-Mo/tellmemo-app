@@ -125,19 +125,51 @@ def detect_language(text: str) -> Dict[str, Any]:
         # Limit text length for detection
         sample_text = text[:5000] if len(text) > 5000 else text
 
-        # Detect language
-        result = detect(sample_text)
+        # Detect language - request top 3 candidates
+        result = detect(sample_text, k=3)
 
         if isinstance(result, list) and len(result) > 0:
             # Get the first (most likely) result
-            language = result[0].get('lang', 'en')
-            confidence = result[0].get('score', 0.0)
+            first_result = result[0]
+
+            # Handle different possible return formats from fast_langdetect
+            if isinstance(first_result, dict):
+                # Dict format: {'lang': 'en', 'score': 0.95} or {'lang': 'en'}
+                language = first_result.get('lang', first_result.get('language', 'en'))
+                confidence = first_result.get('score', first_result.get('confidence', first_result.get('prob', 0.95)))
+            elif isinstance(first_result, tuple):
+                # Tuple format: ('en', 0.95)
+                language = first_result[0] if len(first_result) > 0 else 'en'
+                confidence = first_result[1] if len(first_result) > 1 else 0.95
+            elif isinstance(first_result, str):
+                # Simple string format: 'en' or 'EN'
+                language = first_result.lower()
+                confidence = 0.95  # High confidence since it's the top result
+            else:
+                language = 'en'
+                confidence = 0.0
+
+            # Normalize language code to lowercase
+            language = language.lower()
 
             # Get top 3 candidates
-            all_detected = [
-                {"lang": lang.get('lang', ''), "prob": lang.get('score', 0.0)}
-                for lang in result[:3]
-            ]
+            all_detected = []
+            for i, lang_result in enumerate(result[:3]):
+                if isinstance(lang_result, dict):
+                    all_detected.append({
+                        "lang": lang_result.get('lang', lang_result.get('language', '')).lower(),
+                        "prob": lang_result.get('score', lang_result.get('confidence', lang_result.get('prob', 0.9 - i * 0.1)))
+                    })
+                elif isinstance(lang_result, tuple):
+                    all_detected.append({
+                        "lang": lang_result[0].lower() if lang_result else '',
+                        "prob": lang_result[1] if len(lang_result) > 1 else 0.9 - i * 0.1
+                    })
+                elif isinstance(lang_result, str):
+                    all_detected.append({
+                        "lang": lang_result.lower(),
+                        "prob": 0.9 - i * 0.1  # Estimate probability based on ranking
+                    })
         else:
             language = 'en'
             confidence = 0.0
@@ -145,6 +177,8 @@ def detect_language(text: str) -> Dict[str, Any]:
 
         # Check if language is supported
         is_supported = language in settings.supported_languages_list
+
+        logger.debug(f"Language detection result: {language} (confidence: {confidence:.2f})")
 
         return {
             'language': language,
