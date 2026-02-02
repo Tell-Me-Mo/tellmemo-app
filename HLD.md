@@ -142,7 +142,7 @@ TellMeMo helps teams extract insights from project content using AI:
 | **Monitoring** | Sentry + Langfuse | Error & LLM tracking |
 | **Queue Dashboard** | RQ Dashboard | Job queue visualization and management |
 | **Scheduling** | APScheduler 3.11+ | Email digest automation |
-| **Email Service** | SendGrid 6.12+ | Transactional email delivery |
+| **Email Service** | Resend | Transactional email delivery |
 | **Templates** | Jinja2 3.1+ | HTML email rendering |
 | **Circuit Breaker** | Purgatory 3.0+ | API resilience pattern |
 
@@ -167,7 +167,7 @@ TellMeMo helps teams extract insights from project content using AI:
 - **Vector Database**: Qdrant Cloud
 - **Job Queue**: Redis (required - not optional)
 - **Queue Dashboard**: RQ Dashboard for job monitoring
-- **Email Delivery**: SendGrid API
+- **Email Delivery**: Resend API
 - **Deployment**: Git-based with automated migrations
 
 ---
@@ -688,7 +688,7 @@ CREATE TABLE live_meeting_insights (
 
 ### 15. Email Digest System
 
-**Technology**: APScheduler + SendGrid + Jinja2
+**Technology**: APScheduler + Resend + Jinja2
 
 **Features:**
 - **Automated Digests**: Daily, weekly, and monthly email summaries
@@ -705,15 +705,15 @@ CREATE TABLE live_meeting_insights (
 **Architecture:**
 - APScheduler runs background jobs (daily 8 AM UTC, weekly Monday, monthly 1st)
 - Redis Queue processes email generation jobs
-- SendGrid API handles delivery (100 emails/day free tier)
+- Resend API handles delivery (100 emails/day, 3,000/month free tier)
 - Jinja2 renders responsive HTML templates
 - User preferences stored in `users.preferences` JSONB column
 
 **Configuration:**
 ```env
 EMAIL_DIGEST_ENABLED=true
-SENDGRID_API_KEY=your-key-here
-SENDGRID_FROM_EMAIL=noreply@tellmemo.io
+RESEND_API_KEY=your-key-here
+EMAIL_FROM_ADDRESS=noreply@tellmemo.io
 ```
 
 **Database:**
@@ -1241,7 +1241,7 @@ Return to user
 ### Current Limitations
 
 - **Single Server**: Not load-balanced (can be scaled horizontally)
-- **Email Delivery**: SendGrid configured (100 emails/day free tier limit)
+- **Email Delivery**: Resend configured (100 emails/day, 3,000/month free tier)
 - **Fireflies Integration**: Basic implementation (production testing ongoing)
 - **Mobile**: Web-first (Flutter supports native mobile but not production-deployed)
 - **Export**: Limited export capabilities (no bulk export yet)
@@ -1273,11 +1273,11 @@ Return to user
 - Cost-effective disaster recovery
 - Transparent to application code
 
-**Why SendGrid (Email Delivery):**
-- Reliable transactional email service
-- 100 emails/day free tier (suitable for MVP/small deployments)
-- Easy API integration
-- Email template support
+**Why Resend (Email Delivery):**
+- Modern, developer-friendly transactional email service
+- 3,000 emails/month free tier (suitable for MVP/small deployments)
+- Simple REST API with excellent SDK
+- Built-in idempotency support
 - Delivery tracking and analytics
 
 **Why Qdrant:**

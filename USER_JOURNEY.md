@@ -931,7 +931,7 @@ TellMeMo can send automated email digests to keep you informed without requiring
 
 **Privacy & Data:**
 - Digest includes all projects you have access to across all organizations
-- Email content sent securely via SendGrid with TLS encryption
+- Email content sent securely via Resend with TLS encryption
 - Unsubscribe anytime via link in email footer
 - No email content stored permanently (delivery tracking only)
 

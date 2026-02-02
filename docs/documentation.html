@@ -668,9 +668,9 @@ DETECT_LANGUAGE=true</code></pre>
 
                         <h4>Email Digest Configuration</h4>
                         <div class="code-block">
-                            <pre><code># SendGrid Configuration (required for email digests)
-SENDGRID_API_KEY=YOUR_SENDGRID_API_KEY_HERE
-EMAIL_FROM_ADDRESS=noreply@tellmemo.io  # Must be verified in SendGrid
+                            <pre><code># Resend Configuration (required for email digests)
+RESEND_API_KEY=YOUR_RESEND_API_KEY_HERE
+EMAIL_FROM_ADDRESS=noreply@tellmemo.io  # Must be verified in Resend
 EMAIL_FROM_NAME=TellMeMo
 
 # Email Digest Settings
@@ -680,15 +680,15 @@ EMAIL_DIGEST_RATE_LIMIT=100  # Free tier: 100 emails/day</code></pre>
                         </div>
 
                         <div class="info-box">
-                            <h4>📧 Setting Up SendGrid</h4>
+                            <h4>📧 Setting Up Resend</h4>
                             <ol>
-                                <li>Sign up for free at <a href="https://signup.sendgrid.com/" target="_blank" rel="noopener">SendGrid</a> (100 emails/day free)</li>
-                                <li>Verify your sender email address in SendGrid dashboard</li>
-                                <li>Create an API key with "Mail Send" permissions</li>
+                                <li>Sign up for free at <a href="https://resend.com/" target="_blank" rel="noopener">Resend</a> (3,000 emails/month free)</li>
+                                <li>Verify your sender domain in Resend dashboard</li>
+                                <li>Create an API key</li>
                                 <li>Add the API key to your <code>.env</code> file</li>
                                 <li>Restart the backend: <code>docker compose restart backend</code></li>
                             </ol>
-                            <p><strong>Without SendGrid:</strong> Email digests will be disabled but all other features work normally.</p>
+                            <p><strong>Without Resend:</strong> Email digests will be disabled but all other features work normally.</p>
                         </div>
 
                         <div class="info-box">
@@ -1208,8 +1208,8 @@ ASSEMBLYAI_API_KEY=YOUR_ASSEMBLYAI_API_KEY_HERE</code></pre>
                             <p><strong>Privacy considerations:</strong></p>
                             <ul>
                                 <li>Email content may contain sensitive project information</li>
-                                <li>Emails are sent securely via SendGrid with TLS encryption</li>
-                                <li>Email delivery tracking data stored temporarily in SendGrid</li>
+                                <li>Emails are sent securely via Resend with TLS encryption</li>
+                                <li>Email delivery tracking data stored temporarily in Resend</li>
                                 <li>No permanent storage of email content on TellMeMo servers</li>
                             </ul>
                         </div>
@@ -1242,14 +1242,14 @@ ASSEMBLYAI_API_KEY=YOUR_ASSEMBLYAI_API_KEY_HERE</code></pre>
 
                         <div class="info-box">
                             <h4>📊 Rate Limiting</h4>
-                            <p>TellMeMo respects SendGrid's free tier limits (100 emails/day). If you have a large team, consider upgrading to SendGrid's paid tier or implementing email batching strategies.</p>
+                            <p>TellMeMo respects Resend's free tier limits (100 emails/day, 3,000/month). If you have a large team, consider upgrading to Resend's paid tier or implementing email batching strategies.</p>
                         </div>
 
                         <h3>Technical Details</h3>
 
                         <p><strong>Delivery Infrastructure:</strong></p>
                         <ul>
-                            <li><strong>Email Provider:</strong> SendGrid (free tier: 100 emails/day)</li>
+                            <li><strong>Email Provider:</strong> Resend (free tier: 100 emails/day, 3,000/month)</li>
                             <li><strong>Scheduler:</strong> APScheduler (runs in background)</li>
                             <li><strong>Templates:</strong> Responsive HTML with plain text fallback</li>
                             <li><strong>Authentication:</strong> JWT-based unsubscribe tokens (90-day expiration)</li>
