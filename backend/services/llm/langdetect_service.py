@@ -178,7 +178,7 @@ def detect_language(text: str) -> Dict[str, Any]:
         # Check if language is supported
         is_supported = language in settings.supported_languages_list
 
-        logger.debug(f"Language detection result: {language} (confidence: {confidence:.2f})")
+        logger.info(f"Language detection result: {language} (confidence: {confidence:.2f}, supported: {is_supported})")
 
         return {
             'language': language,
