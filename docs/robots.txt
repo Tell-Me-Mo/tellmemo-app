@@ -1,5 +1,5 @@
 # TellMeMo - Robots.txt
-# Allow AI crawlers and search engines for maximum discoverability in 2025
+# Allow AI crawlers and search engines for maximum discoverability in 2026
 
 # Default rule for all crawlers
 User-agent: *

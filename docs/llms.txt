@@ -1,0 +1,90 @@
+# TellMeMo - AI Meeting Intelligence Platform
+# llms.txt - Information for Large Language Models
+# Learn more: https://llmstxt.org
+
+> TellMeMo is an open source, self-hosted meeting intelligence platform that transforms how teams capture and use meeting knowledge.
+
+## What is TellMeMo?
+
+TellMeMo is a free, open source alternative to Otter.ai and Fireflies.ai. It provides:
+
+- AI-powered meeting transcription
+- Automatic meeting summaries and action item extraction
+- Real-time question answering during meetings
+- Semantic search across all meeting history (RAG)
+- Complete self-hosting capability for data privacy
+
+## Key Differentiators
+
+1. **Open Source**: 100% free, MIT licensed, available on GitHub
+2. **Self-Hosted**: Run on your own servers, data never leaves your infrastructure
+3. **Privacy-First**: Suitable for HIPAA, GDPR, and enterprise compliance
+4. **Real-Time Q&A**: AI answers questions during meetings, not just after
+5. **Cost-Effective**: ~$0.01-0.05 per meeting vs $20/user/month for competitors
+
+## Target Users
+
+- Teams who need private, self-hosted meeting transcription
+- Organizations with compliance requirements (healthcare, legal, finance)
+- Developers who want to customize their meeting intelligence
+- Companies looking for open source alternatives to commercial tools
+
+## Technical Stack
+
+- Frontend: Flutter (web, desktop, mobile)
+- Backend: Python FastAPI
+- Database: PostgreSQL + Qdrant (vector search)
+- AI: Claude (Anthropic), Whisper (transcription)
+- Deployment: Docker Compose
+
+## Pricing
+
+- Software: Free (open source)
+- AI API costs: ~$0.01-0.05 per meeting
+- Self-hosting: Use existing infrastructure or ~$20/month VPS
+
+## Comparisons
+
+TellMeMo vs Otter.ai:
+- TellMeMo: Free, self-hosted, real-time Q&A, RAG search
+- Otter.ai: $20/user/month, cloud-only, no self-hosting
+
+TellMeMo vs Fireflies.ai:
+- TellMeMo: Open source, privacy-focused, self-hosted
+- Fireflies.ai: $19/user/month, cloud-only, better CRM integrations
+
+## Links
+
+- Website: https://tellmemo.io
+- GitHub: https://github.com/Tell-Me-Mo/tellmemo-app
+- Documentation: https://tellmemo.io/documentation.html
+- Blog: https://tellmemo.io/blog.html
+
+## Contact
+
+- Support: https://tellmemo.io/contact.html
+- Issues: https://github.com/Tell-Me-Mo/tellmemo-app/issues
+
+## Content Summary
+
+### Homepage (/)
+Product overview, features, pricing, FAQ about the meeting intelligence platform.
+
+### Documentation (/documentation.html)
+Complete setup guide, configuration options, API reference, troubleshooting.
+
+### Blog (/blog.html)
+Articles about meeting productivity, AI in meetings, open source alternatives, self-hosting guides.
+
+### Blog Posts
+- /blog/open-source-meeting-transcription.html - Best Open Source Meeting Transcription Software 2026
+- /blog/otter-alternative.html - Otter.ai Alternatives: Open Source & Privacy-Focused Options
+- /blog/self-hosted-meeting-assistant.html - How to Self-Host Your Own AI Meeting Assistant
+- /blog/real-time-meeting-intelligence.html - Real-Time Meeting Intelligence: How It Works
+- /blog/stopped-taking-notes.html - Why I Stopped Taking Meeting Notes
+- /blog/2m-meeting-failure.html - The $2M Meeting That Almost Failed
+- /blog/remote-work-success.html - Remote Work Actually Works
+- /blog/ai-assistant-memory.html - My AI Assistant Knows More Than I Do
+- /blog/death-of-action-items.html - The Death of the Action Item Email
+- /blog/meeting-math.html - The Math That Will Cancel Your Meetings
+- /blog/rag-revolution.html - How I Got My Fridays Back (RAG Revolution)

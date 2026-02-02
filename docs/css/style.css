@@ -672,7 +672,7 @@ body {
 }
 
 .mobile-menu-toggle {
-    display: flex;
+    display: none;
     flex-direction: column;
     justify-content: space-between;
     width: 28px;
@@ -1281,6 +1281,10 @@ button:focus-visible {
     }
 
     .mobile-header-actions {
+        display: flex;
+    }
+
+    .mobile-menu-toggle {
         display: flex;
     }
 
