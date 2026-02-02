@@ -382,6 +382,7 @@ class OpenAIProviderClient(BaseProviderClient):
             def __init__(self, openai_response):
                 self.content = [WrappedContent(openai_response.choices[0].message.content)]
                 self.usage = WrappedUsage(openai_response.usage)
+                self.model = openai_response.model  # Include model name for logging
                 self._raw = openai_response
 
         return WrappedResponse(response)
@@ -579,6 +580,7 @@ class DeepSeekProviderClient(BaseProviderClient):
                 try:
                     self.content = [WrappedContent(deepseek_response.choices[0].message.content)]
                     self.usage = WrappedUsage(deepseek_response.usage)
+                    self.model = deepseek_response.model  # Include model name for logging
                     self._raw = deepseek_response
                 except (AttributeError, IndexError) as e:
                     logger.error(f"Failed to parse DeepSeek response: {e}, response type: {type(deepseek_response)}")
