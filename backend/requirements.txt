@@ -65,7 +65,7 @@ purgatory==3.0.1  # Circuit breaker for resilient API calls
 
 # Observability
 langfuse==3.12.1
-sentry-sdk[fastapi]==2.51.0
+sentry-sdk[fastapi]==2.52.0
 
 # OpenTelemetry (2025 Distro Approach - includes API, SDK, and bootstrap tool)
 # After pip install, run: opentelemetry-bootstrap -a install
