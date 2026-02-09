@@ -11,7 +11,7 @@ flatbuffers
 coloredlogs
 
 # Core Framework
-fastapi==0.128.0
+fastapi==0.128.5
 uvicorn[standard]==0.40.0
 gunicorn==24.1.1
 python-multipart==0.0.22
