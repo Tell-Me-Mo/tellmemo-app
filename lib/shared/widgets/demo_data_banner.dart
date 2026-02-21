@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/services/notification_service.dart';
 import '../../features/organizations/presentation/providers/demo_data_provider.dart';
 
 class DemoDataBanner extends ConsumerWidget {
@@ -58,10 +59,8 @@ class _DemoBannerContentState extends ConsumerState<_DemoBannerContent> {
       await ref.read(demoDataProvider.notifier).clearDemoData();
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to clear demo data. Please try again.'),
-          ),
+        ref.read(notificationServiceProvider.notifier).showError(
+          'Failed to clear demo data. Please try again.',
         );
       }
     } finally {
