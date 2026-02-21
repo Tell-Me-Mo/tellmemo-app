@@ -215,9 +215,12 @@ class RecordingNotifier extends _$RecordingNotifier {
     await _streamingStatusSubscription?.cancel();
     _streamingStatusSubscription = null;
     if (_liveAudioStreamingService != null) {
-      _liveAudioStreamingService!.stopStreaming();
-      _liveAudioStreamingService!.dispose();
-      _liveAudioStreamingService = null;
+      try {
+        _liveAudioStreamingService!.stopStreaming();
+      } finally {
+        _liveAudioStreamingService!.dispose();
+        _liveAudioStreamingService = null;
+      }
     }
     debugPrint('[RecordingProvider] Live streaming cleaned up, recording continues');
   }
