@@ -90,6 +90,7 @@ async def get_full_hierarchy(
                 'name': portfolio.name,
                 'description': portfolio.description,
                 'type': 'portfolio',
+                'is_demo': getattr(portfolio, 'is_demo', False),
                 'children': []
             }
             
@@ -102,6 +103,7 @@ async def get_full_hierarchy(
                     'description': program.description,
                     'type': 'program',
                     'portfolio_id': str(portfolio.id),
+                    'is_demo': getattr(program, 'is_demo', False),
                     'children': [
                         {
                             'id': str(p.id),
@@ -111,6 +113,7 @@ async def get_full_hierarchy(
                             'portfolio_id': str(p.portfolio_id) if p.portfolio_id else None,
                             'program_id': str(p.program_id) if p.program_id else None,
                             'status': p.status.value,
+                            'is_demo': getattr(p, 'is_demo', False),
                             'children': []
                         } for p in program_projects
                     ]
@@ -127,6 +130,7 @@ async def get_full_hierarchy(
                     'portfolio_id': str(project.portfolio_id),
                     'program_id': None,
                     'status': project.status.value,
+                    'is_demo': getattr(project, 'is_demo', False),
                     'children': []
                 })
             
@@ -142,6 +146,7 @@ async def get_full_hierarchy(
                 'description': program.description,
                 'type': 'program',
                 'portfolio_id': None,
+                'is_demo': getattr(program, 'is_demo', False),
                 'children': [
                     {
                         'id': str(p.id),
@@ -151,6 +156,7 @@ async def get_full_hierarchy(
                         'portfolio_id': str(p.portfolio_id) if p.portfolio_id else None,
                         'program_id': str(p.program_id),
                         'status': p.status.value,
+                        'is_demo': getattr(p, 'is_demo', False),
                         'children': []
                     } for p in program_projects
                 ]
@@ -167,6 +173,7 @@ async def get_full_hierarchy(
                 'portfolio_id': None,
                 'program_id': None,
                 'status': project.status.value,
+                'is_demo': getattr(project, 'is_demo', False),
                 'children': []
             })
         

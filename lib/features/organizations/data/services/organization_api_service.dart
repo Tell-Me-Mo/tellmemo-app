@@ -73,4 +73,10 @@ abstract class OrganizationApiService {
     @Path('id') String organizationId,
     @Body() Map<String, dynamic> invitation,
   );
+
+  @GET('/api/v1/organizations/{id}/demo-data/status')
+  Future<dynamic> checkDemoDataStatus(@Path('id') String organizationId);
+
+  @DELETE('/api/v1/organizations/{id}/demo-data')
+  Future<dynamic> clearDemoData(@Path('id') String organizationId);
 }

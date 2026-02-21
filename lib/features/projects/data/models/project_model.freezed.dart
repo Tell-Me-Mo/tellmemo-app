@@ -37,6 +37,8 @@ mixin _$ProjectModel {
   String? get programId => throw _privateConstructorUsedError;
   @JsonKey(name: 'member_count')
   int? get memberCount => throw _privateConstructorUsedError;
+  @JsonKey(name: 'is_demo')
+  bool get isDemo => throw _privateConstructorUsedError;
 
   /// Serializes this ProjectModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -66,6 +68,7 @@ abstract class $ProjectModelCopyWith<$Res> {
     @JsonKey(name: 'portfolio_id') String? portfolioId,
     @JsonKey(name: 'program_id') String? programId,
     @JsonKey(name: 'member_count') int? memberCount,
+    @JsonKey(name: 'is_demo') bool isDemo,
   });
 }
 
@@ -94,6 +97,7 @@ class _$ProjectModelCopyWithImpl<$Res, $Val extends ProjectModel>
     Object? portfolioId = freezed,
     Object? programId = freezed,
     Object? memberCount = freezed,
+    Object? isDemo = null,
   }) {
     return _then(
       _value.copyWith(
@@ -137,6 +141,10 @@ class _$ProjectModelCopyWithImpl<$Res, $Val extends ProjectModel>
                 ? _value.memberCount
                 : memberCount // ignore: cast_nullable_to_non_nullable
                       as int?,
+            isDemo: null == isDemo
+                ? _value.isDemo
+                : isDemo // ignore: cast_nullable_to_non_nullable
+                      as bool,
           )
           as $Val,
     );
@@ -163,6 +171,7 @@ abstract class _$$ProjectModelImplCopyWith<$Res>
     @JsonKey(name: 'portfolio_id') String? portfolioId,
     @JsonKey(name: 'program_id') String? programId,
     @JsonKey(name: 'member_count') int? memberCount,
+    @JsonKey(name: 'is_demo') bool isDemo,
   });
 }
 
@@ -190,6 +199,7 @@ class __$$ProjectModelImplCopyWithImpl<$Res>
     Object? portfolioId = freezed,
     Object? programId = freezed,
     Object? memberCount = freezed,
+    Object? isDemo = null,
   }) {
     return _then(
       _$ProjectModelImpl(
@@ -233,6 +243,10 @@ class __$$ProjectModelImplCopyWithImpl<$Res>
             ? _value.memberCount
             : memberCount // ignore: cast_nullable_to_non_nullable
                   as int?,
+        isDemo: null == isDemo
+            ? _value.isDemo
+            : isDemo // ignore: cast_nullable_to_non_nullable
+                  as bool,
       ),
     );
   }
@@ -252,6 +266,7 @@ class _$ProjectModelImpl implements _ProjectModel {
     @JsonKey(name: 'portfolio_id') this.portfolioId,
     @JsonKey(name: 'program_id') this.programId,
     @JsonKey(name: 'member_count') this.memberCount,
+    @JsonKey(name: 'is_demo') this.isDemo = false,
   });
 
   factory _$ProjectModelImpl.fromJson(Map<String, dynamic> json) =>
@@ -283,10 +298,13 @@ class _$ProjectModelImpl implements _ProjectModel {
   @override
   @JsonKey(name: 'member_count')
   final int? memberCount;
+  @override
+  @JsonKey(name: 'is_demo')
+  final bool isDemo;
 
   @override
   String toString() {
-    return 'ProjectModel(id: $id, name: $name, description: $description, createdBy: $createdBy, createdAt: $createdAt, updatedAt: $updatedAt, status: $status, portfolioId: $portfolioId, programId: $programId, memberCount: $memberCount)';
+    return 'ProjectModel(id: $id, name: $name, description: $description, createdBy: $createdBy, createdAt: $createdAt, updatedAt: $updatedAt, status: $status, portfolioId: $portfolioId, programId: $programId, memberCount: $memberCount, isDemo: $isDemo)';
   }
 
   @override
@@ -310,7 +328,8 @@ class _$ProjectModelImpl implements _ProjectModel {
             (identical(other.programId, programId) ||
                 other.programId == programId) &&
             (identical(other.memberCount, memberCount) ||
-                other.memberCount == memberCount));
+                other.memberCount == memberCount) &&
+            (identical(other.isDemo, isDemo) || other.isDemo == isDemo));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -327,6 +346,7 @@ class _$ProjectModelImpl implements _ProjectModel {
     portfolioId,
     programId,
     memberCount,
+    isDemo,
   );
 
   /// Create a copy of ProjectModel
@@ -355,6 +375,7 @@ abstract class _ProjectModel implements ProjectModel {
     @JsonKey(name: 'portfolio_id') final String? portfolioId,
     @JsonKey(name: 'program_id') final String? programId,
     @JsonKey(name: 'member_count') final int? memberCount,
+    @JsonKey(name: 'is_demo') final bool isDemo,
   }) = _$ProjectModelImpl;
 
   factory _ProjectModel.fromJson(Map<String, dynamic> json) =
@@ -386,6 +407,9 @@ abstract class _ProjectModel implements ProjectModel {
   @override
   @JsonKey(name: 'member_count')
   int? get memberCount;
+  @override
+  @JsonKey(name: 'is_demo')
+  bool get isDemo;
 
   /// Create a copy of ProjectModel
   /// with the given fields replaced by the non-null parameter values.

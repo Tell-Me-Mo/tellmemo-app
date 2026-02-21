@@ -14,6 +14,7 @@ class Project {
   final String? portfolioId;
   final String? programId;
   final int? memberCount;
+  final bool isDemo;
 
   const Project({
     required this.id,
@@ -26,6 +27,7 @@ class Project {
     this.portfolioId,
     this.programId,
     this.memberCount,
+    this.isDemo = false,
   });
 
   Project copyWith({
@@ -39,6 +41,7 @@ class Project {
     String? portfolioId,
     String? programId,
     int? memberCount,
+    bool? isDemo,
   }) {
     return Project(
       id: id ?? this.id,
@@ -51,6 +54,7 @@ class Project {
       portfolioId: portfolioId ?? this.portfolioId,
       programId: programId ?? this.programId,
       memberCount: memberCount ?? this.memberCount,
+      isDemo: isDemo ?? this.isDemo,
     );
   }
 

@@ -355,6 +355,22 @@ class MockOrganizationApiService extends _i1.Mock
             returnValue: _i4.Future<dynamic>.value(),
           )
           as _i4.Future<dynamic>);
+
+  @override
+  _i4.Future<dynamic> checkDemoDataStatus(String? organizationId) =>
+      (super.noSuchMethod(
+            Invocation.method(#checkDemoDataStatus, [organizationId]),
+            returnValue: _i4.Future<dynamic>.value(),
+          )
+          as _i4.Future<dynamic>);
+
+  @override
+  _i4.Future<dynamic> clearDemoData(String? organizationId) =>
+      (super.noSuchMethod(
+            Invocation.method(#clearDemoData, [organizationId]),
+            returnValue: _i4.Future<dynamic>.value(),
+          )
+          as _i4.Future<dynamic>);
 }
 
 /// A class which mocks [SecureStorage].

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../shared/widgets/responsive.dart';
+import '../../shared/widgets/demo_data_banner.dart';
 import '../../features/jobs/presentation/widgets/upload_progress_indicator.dart';
 import '../../core/utils/screen_info.dart';
 import '../../core/widgets/notifications/notification_center.dart';
@@ -143,7 +144,12 @@ class _ResponsiveShellState extends ConsumerState<ResponsiveShell> {
       onDestinationSelected: _onDestinationSelected,
       onProfileSelected: _onProfileSelected,
       body: GlobalUploadProgressOverlay(
-        child: widget.child,
+        child: Column(
+          children: [
+            const DemoDataBanner(),
+            Expanded(child: widget.child),
+          ],
+        ),
       ),
       showAppBar: false,
     );

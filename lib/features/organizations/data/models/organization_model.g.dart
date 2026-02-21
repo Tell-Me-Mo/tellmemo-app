@@ -24,6 +24,7 @@ _$OrganizationModelImpl _$$OrganizationModelImplFromJson(
   currentUserId: json['current_user_id'] as String?,
   projectCount: (json['project_count'] as num?)?.toInt(),
   documentCount: (json['document_count'] as num?)?.toInt(),
+  hasDemoData: json['has_demo_data'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$$OrganizationModelImplToJson(
@@ -44,4 +45,5 @@ Map<String, dynamic> _$$OrganizationModelImplToJson(
   'current_user_id': instance.currentUserId,
   'project_count': instance.projectCount,
   'document_count': instance.documentCount,
+  'has_demo_data': instance.hasDemoData,
 };

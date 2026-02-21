@@ -46,6 +46,8 @@ mixin _$OrganizationModel {
   int? get projectCount => throw _privateConstructorUsedError;
   @JsonKey(name: 'document_count')
   int? get documentCount => throw _privateConstructorUsedError;
+  @JsonKey(name: 'has_demo_data')
+  bool get hasDemoData => throw _privateConstructorUsedError;
 
   /// Serializes this OrganizationModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -80,6 +82,7 @@ abstract class $OrganizationModelCopyWith<$Res> {
     @JsonKey(name: 'current_user_id') String? currentUserId,
     @JsonKey(name: 'project_count') int? projectCount,
     @JsonKey(name: 'document_count') int? documentCount,
+    @JsonKey(name: 'has_demo_data') bool hasDemoData,
   });
 }
 
@@ -113,6 +116,7 @@ class _$OrganizationModelCopyWithImpl<$Res, $Val extends OrganizationModel>
     Object? currentUserId = freezed,
     Object? projectCount = freezed,
     Object? documentCount = freezed,
+    Object? hasDemoData = null,
   }) {
     return _then(
       _value.copyWith(
@@ -176,6 +180,10 @@ class _$OrganizationModelCopyWithImpl<$Res, $Val extends OrganizationModel>
                 ? _value.documentCount
                 : documentCount // ignore: cast_nullable_to_non_nullable
                       as int?,
+            hasDemoData: null == hasDemoData
+                ? _value.hasDemoData
+                : hasDemoData // ignore: cast_nullable_to_non_nullable
+                      as bool,
           )
           as $Val,
     );
@@ -207,6 +215,7 @@ abstract class _$$OrganizationModelImplCopyWith<$Res>
     @JsonKey(name: 'current_user_id') String? currentUserId,
     @JsonKey(name: 'project_count') int? projectCount,
     @JsonKey(name: 'document_count') int? documentCount,
+    @JsonKey(name: 'has_demo_data') bool hasDemoData,
   });
 }
 
@@ -239,6 +248,7 @@ class __$$OrganizationModelImplCopyWithImpl<$Res>
     Object? currentUserId = freezed,
     Object? projectCount = freezed,
     Object? documentCount = freezed,
+    Object? hasDemoData = null,
   }) {
     return _then(
       _$OrganizationModelImpl(
@@ -302,6 +312,10 @@ class __$$OrganizationModelImplCopyWithImpl<$Res>
             ? _value.documentCount
             : documentCount // ignore: cast_nullable_to_non_nullable
                   as int?,
+        hasDemoData: null == hasDemoData
+            ? _value.hasDemoData
+            : hasDemoData // ignore: cast_nullable_to_non_nullable
+                  as bool,
       ),
     );
   }
@@ -326,6 +340,7 @@ class _$OrganizationModelImpl extends _OrganizationModel {
     @JsonKey(name: 'current_user_id') this.currentUserId,
     @JsonKey(name: 'project_count') this.projectCount,
     @JsonKey(name: 'document_count') this.documentCount,
+    @JsonKey(name: 'has_demo_data') this.hasDemoData = false,
   }) : _settings = settings,
        super._();
 
@@ -379,10 +394,13 @@ class _$OrganizationModelImpl extends _OrganizationModel {
   @override
   @JsonKey(name: 'document_count')
   final int? documentCount;
+  @override
+  @JsonKey(name: 'has_demo_data')
+  final bool hasDemoData;
 
   @override
   String toString() {
-    return 'OrganizationModel(id: $id, name: $name, slug: $slug, description: $description, logoUrl: $logoUrl, settings: $settings, isActive: $isActive, createdBy: $createdBy, createdAt: $createdAt, updatedAt: $updatedAt, memberCount: $memberCount, currentUserRole: $currentUserRole, currentUserId: $currentUserId, projectCount: $projectCount, documentCount: $documentCount)';
+    return 'OrganizationModel(id: $id, name: $name, slug: $slug, description: $description, logoUrl: $logoUrl, settings: $settings, isActive: $isActive, createdBy: $createdBy, createdAt: $createdAt, updatedAt: $updatedAt, memberCount: $memberCount, currentUserRole: $currentUserRole, currentUserId: $currentUserId, projectCount: $projectCount, documentCount: $documentCount, hasDemoData: $hasDemoData)';
   }
 
   @override
@@ -414,7 +432,9 @@ class _$OrganizationModelImpl extends _OrganizationModel {
             (identical(other.projectCount, projectCount) ||
                 other.projectCount == projectCount) &&
             (identical(other.documentCount, documentCount) ||
-                other.documentCount == documentCount));
+                other.documentCount == documentCount) &&
+            (identical(other.hasDemoData, hasDemoData) ||
+                other.hasDemoData == hasDemoData));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -436,6 +456,7 @@ class _$OrganizationModelImpl extends _OrganizationModel {
     currentUserId,
     projectCount,
     documentCount,
+    hasDemoData,
   );
 
   /// Create a copy of OrganizationModel
@@ -472,6 +493,7 @@ abstract class _OrganizationModel extends OrganizationModel {
     @JsonKey(name: 'current_user_id') final String? currentUserId,
     @JsonKey(name: 'project_count') final int? projectCount,
     @JsonKey(name: 'document_count') final int? documentCount,
+    @JsonKey(name: 'has_demo_data') final bool hasDemoData,
   }) = _$OrganizationModelImpl;
   const _OrganizationModel._() : super._();
 
@@ -518,6 +540,9 @@ abstract class _OrganizationModel extends OrganizationModel {
   @override
   @JsonKey(name: 'document_count')
   int? get documentCount;
+  @override
+  @JsonKey(name: 'has_demo_data')
+  bool get hasDemoData;
 
   /// Create a copy of OrganizationModel
   /// with the given fields replaced by the non-null parameter values.

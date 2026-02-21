@@ -24,6 +24,7 @@ class HierarchyItem with _$HierarchyItem {
     required DateTime updatedAt,
     @Default([]) List<HierarchyItem> children,
     Map<String, dynamic>? metadata,
+    @Default(false) bool isDemo,
   }) = _HierarchyItem;
   
   const HierarchyItem._();

@@ -2392,6 +2392,8 @@ mixin _$SummaryModel {
   @JsonKey(name: 'llm_cost')
   double? get llmCost => throw _privateConstructorUsedError;
   String get format => throw _privateConstructorUsedError;
+  @JsonKey(name: 'is_demo')
+  bool get isDemo => throw _privateConstructorUsedError;
 
   /// Serializes this SummaryModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -2449,6 +2451,7 @@ abstract class $SummaryModelCopyWith<$Res> {
     @JsonKey(name: 'generation_time_ms') int? generationTimeMs,
     @JsonKey(name: 'llm_cost') double? llmCost,
     String format,
+    @JsonKey(name: 'is_demo') bool isDemo,
   });
 
   $CommunicationInsightsCopyWith<$Res>? get communicationInsights;
@@ -2493,6 +2496,7 @@ class _$SummaryModelCopyWithImpl<$Res, $Val extends SummaryModel>
     Object? generationTimeMs = freezed,
     Object? llmCost = freezed,
     Object? format = null,
+    Object? isDemo = null,
   }) {
     return _then(
       _value.copyWith(
@@ -2592,6 +2596,10 @@ class _$SummaryModelCopyWithImpl<$Res, $Val extends SummaryModel>
                 ? _value.format
                 : format // ignore: cast_nullable_to_non_nullable
                       as String,
+            isDemo: null == isDemo
+                ? _value.isDemo
+                : isDemo // ignore: cast_nullable_to_non_nullable
+                      as bool,
           )
           as $Val,
     );
@@ -2662,6 +2670,7 @@ abstract class _$$SummaryModelImplCopyWith<$Res>
     @JsonKey(name: 'generation_time_ms') int? generationTimeMs,
     @JsonKey(name: 'llm_cost') double? llmCost,
     String format,
+    @JsonKey(name: 'is_demo') bool isDemo,
   });
 
   @override
@@ -2706,6 +2715,7 @@ class __$$SummaryModelImplCopyWithImpl<$Res>
     Object? generationTimeMs = freezed,
     Object? llmCost = freezed,
     Object? format = null,
+    Object? isDemo = null,
   }) {
     return _then(
       _$SummaryModelImpl(
@@ -2805,6 +2815,10 @@ class __$$SummaryModelImplCopyWithImpl<$Res>
             ? _value.format
             : format // ignore: cast_nullable_to_non_nullable
                   as String,
+        isDemo: null == isDemo
+            ? _value.isDemo
+            : isDemo // ignore: cast_nullable_to_non_nullable
+                  as bool,
       ),
     );
   }
@@ -2852,6 +2866,7 @@ class _$SummaryModelImpl extends _SummaryModel {
     @JsonKey(name: 'generation_time_ms') this.generationTimeMs,
     @JsonKey(name: 'llm_cost') this.llmCost,
     this.format = 'general',
+    @JsonKey(name: 'is_demo') this.isDemo = false,
   }) : _keyPoints = keyPoints,
        _decisions = decisions,
        _actionItems = actionItems,
@@ -3017,10 +3032,13 @@ class _$SummaryModelImpl extends _SummaryModel {
   @override
   @JsonKey()
   final String format;
+  @override
+  @JsonKey(name: 'is_demo')
+  final bool isDemo;
 
   @override
   String toString() {
-    return 'SummaryModel(id: $id, projectId: $projectId, contentId: $contentId, summaryType: $summaryType, subject: $subject, body: $body, keyPoints: $keyPoints, decisions: $decisions, actionItems: $actionItems, lessonsLearned: $lessonsLearned, sentimentAnalysis: $sentimentAnalysis, risks: $risks, blockers: $blockers, communicationInsights: $communicationInsights, crossMeetingInsights: $crossMeetingInsights, nextMeetingAgenda: $nextMeetingAgenda, createdAt: $createdAt, createdBy: $createdBy, dateRangeStart: $dateRangeStart, dateRangeEnd: $dateRangeEnd, tokenCount: $tokenCount, generationTimeMs: $generationTimeMs, llmCost: $llmCost, format: $format)';
+    return 'SummaryModel(id: $id, projectId: $projectId, contentId: $contentId, summaryType: $summaryType, subject: $subject, body: $body, keyPoints: $keyPoints, decisions: $decisions, actionItems: $actionItems, lessonsLearned: $lessonsLearned, sentimentAnalysis: $sentimentAnalysis, risks: $risks, blockers: $blockers, communicationInsights: $communicationInsights, crossMeetingInsights: $crossMeetingInsights, nextMeetingAgenda: $nextMeetingAgenda, createdAt: $createdAt, createdBy: $createdBy, dateRangeStart: $dateRangeStart, dateRangeEnd: $dateRangeEnd, tokenCount: $tokenCount, generationTimeMs: $generationTimeMs, llmCost: $llmCost, format: $format, isDemo: $isDemo)';
   }
 
   @override
@@ -3082,7 +3100,8 @@ class _$SummaryModelImpl extends _SummaryModel {
             (identical(other.generationTimeMs, generationTimeMs) ||
                 other.generationTimeMs == generationTimeMs) &&
             (identical(other.llmCost, llmCost) || other.llmCost == llmCost) &&
-            (identical(other.format, format) || other.format == format));
+            (identical(other.format, format) || other.format == format) &&
+            (identical(other.isDemo, isDemo) || other.isDemo == isDemo));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -3113,6 +3132,7 @@ class _$SummaryModelImpl extends _SummaryModel {
     generationTimeMs,
     llmCost,
     format,
+    isDemo,
   ]);
 
   /// Create a copy of SummaryModel
@@ -3171,6 +3191,7 @@ abstract class _SummaryModel extends SummaryModel {
     @JsonKey(name: 'generation_time_ms') final int? generationTimeMs,
     @JsonKey(name: 'llm_cost') final double? llmCost,
     final String format,
+    @JsonKey(name: 'is_demo') final bool isDemo,
   }) = _$SummaryModelImpl;
   const _SummaryModel._() : super._();
 
@@ -3252,6 +3273,9 @@ abstract class _SummaryModel extends SummaryModel {
   double? get llmCost;
   @override
   String get format;
+  @override
+  @JsonKey(name: 'is_demo')
+  bool get isDemo;
 
   /// Create a copy of SummaryModel
   /// with the given fields replaced by the non-null parameter values.

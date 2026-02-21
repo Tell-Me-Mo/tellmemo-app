@@ -64,6 +64,7 @@ class LessonLearnedResponse(BaseModel):
     identified_date: Optional[datetime]
     last_updated: Optional[datetime]
     updated_by: Optional[str]
+    is_demo: bool = False
 
 
 @router.get("/projects/{project_id}/lessons-learned", response_model=List[LessonLearnedResponse])
@@ -122,7 +123,8 @@ async def get_project_lessons_learned(
                 source_content_id=str(lesson.source_content_id) if lesson.source_content_id else None,
                 identified_date=lesson.identified_date,
                 last_updated=lesson.last_updated,
-                updated_by=lesson.updated_by
+                updated_by=lesson.updated_by,
+                is_demo=getattr(lesson, 'is_demo', False)
             )
             for lesson in lessons
         ]

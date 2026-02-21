@@ -53,6 +53,8 @@ mixin _$TaskModel {
   String? get lastUpdated => throw _privateConstructorUsedError;
   @JsonKey(name: 'updated_by')
   String? get updatedBy => throw _privateConstructorUsedError;
+  @JsonKey(name: 'is_demo')
+  bool get isDemo => throw _privateConstructorUsedError;
 
   /// Serializes this TaskModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -89,6 +91,7 @@ abstract class $TaskModelCopyWith<$Res> {
     @JsonKey(name: 'created_date') String? createdDate,
     @JsonKey(name: 'last_updated') String? lastUpdated,
     @JsonKey(name: 'updated_by') String? updatedBy,
+    @JsonKey(name: 'is_demo') bool isDemo,
   });
 }
 
@@ -126,6 +129,7 @@ class _$TaskModelCopyWithImpl<$Res, $Val extends TaskModel>
     Object? createdDate = freezed,
     Object? lastUpdated = freezed,
     Object? updatedBy = freezed,
+    Object? isDemo = null,
   }) {
     return _then(
       _value.copyWith(
@@ -205,6 +209,10 @@ class _$TaskModelCopyWithImpl<$Res, $Val extends TaskModel>
                 ? _value.updatedBy
                 : updatedBy // ignore: cast_nullable_to_non_nullable
                       as String?,
+            isDemo: null == isDemo
+                ? _value.isDemo
+                : isDemo // ignore: cast_nullable_to_non_nullable
+                      as bool,
           )
           as $Val,
     );
@@ -240,6 +248,7 @@ abstract class _$$TaskModelImplCopyWith<$Res>
     @JsonKey(name: 'created_date') String? createdDate,
     @JsonKey(name: 'last_updated') String? lastUpdated,
     @JsonKey(name: 'updated_by') String? updatedBy,
+    @JsonKey(name: 'is_demo') bool isDemo,
   });
 }
 
@@ -276,6 +285,7 @@ class __$$TaskModelImplCopyWithImpl<$Res>
     Object? createdDate = freezed,
     Object? lastUpdated = freezed,
     Object? updatedBy = freezed,
+    Object? isDemo = null,
   }) {
     return _then(
       _$TaskModelImpl(
@@ -355,6 +365,10 @@ class __$$TaskModelImplCopyWithImpl<$Res>
             ? _value.updatedBy
             : updatedBy // ignore: cast_nullable_to_non_nullable
                   as String?,
+        isDemo: null == isDemo
+            ? _value.isDemo
+            : isDemo // ignore: cast_nullable_to_non_nullable
+                  as bool,
       ),
     );
   }
@@ -383,6 +397,7 @@ class _$TaskModelImpl implements _TaskModel {
     @JsonKey(name: 'created_date') this.createdDate,
     @JsonKey(name: 'last_updated') this.lastUpdated,
     @JsonKey(name: 'updated_by') this.updatedBy,
+    @JsonKey(name: 'is_demo') this.isDemo = false,
   });
 
   factory _$TaskModelImpl.fromJson(Map<String, dynamic> json) =>
@@ -439,10 +454,13 @@ class _$TaskModelImpl implements _TaskModel {
   @override
   @JsonKey(name: 'updated_by')
   final String? updatedBy;
+  @override
+  @JsonKey(name: 'is_demo')
+  final bool isDemo;
 
   @override
   String toString() {
-    return 'TaskModel(id: $id, projectId: $projectId, title: $title, description: $description, status: $status, priority: $priority, assignee: $assignee, dueDate: $dueDate, completedDate: $completedDate, progressPercentage: $progressPercentage, blockerDescription: $blockerDescription, questionToAsk: $questionToAsk, aiGenerated: $aiGenerated, aiConfidence: $aiConfidence, sourceContentId: $sourceContentId, dependsOnRiskId: $dependsOnRiskId, createdDate: $createdDate, lastUpdated: $lastUpdated, updatedBy: $updatedBy)';
+    return 'TaskModel(id: $id, projectId: $projectId, title: $title, description: $description, status: $status, priority: $priority, assignee: $assignee, dueDate: $dueDate, completedDate: $completedDate, progressPercentage: $progressPercentage, blockerDescription: $blockerDescription, questionToAsk: $questionToAsk, aiGenerated: $aiGenerated, aiConfidence: $aiConfidence, sourceContentId: $sourceContentId, dependsOnRiskId: $dependsOnRiskId, createdDate: $createdDate, lastUpdated: $lastUpdated, updatedBy: $updatedBy, isDemo: $isDemo)';
   }
 
   @override
@@ -483,7 +501,8 @@ class _$TaskModelImpl implements _TaskModel {
             (identical(other.lastUpdated, lastUpdated) ||
                 other.lastUpdated == lastUpdated) &&
             (identical(other.updatedBy, updatedBy) ||
-                other.updatedBy == updatedBy));
+                other.updatedBy == updatedBy) &&
+            (identical(other.isDemo, isDemo) || other.isDemo == isDemo));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -509,6 +528,7 @@ class _$TaskModelImpl implements _TaskModel {
     createdDate,
     lastUpdated,
     updatedBy,
+    isDemo,
   ]);
 
   /// Create a copy of TaskModel
@@ -546,6 +566,7 @@ abstract class _TaskModel implements TaskModel {
     @JsonKey(name: 'created_date') final String? createdDate,
     @JsonKey(name: 'last_updated') final String? lastUpdated,
     @JsonKey(name: 'updated_by') final String? updatedBy,
+    @JsonKey(name: 'is_demo') final bool isDemo,
   }) = _$TaskModelImpl;
 
   factory _TaskModel.fromJson(Map<String, dynamic> json) =
@@ -602,6 +623,9 @@ abstract class _TaskModel implements TaskModel {
   @override
   @JsonKey(name: 'updated_by')
   String? get updatedBy;
+  @override
+  @JsonKey(name: 'is_demo')
+  bool get isDemo;
 
   /// Create a copy of TaskModel
   /// with the given fields replaced by the non-null parameter values.

@@ -57,6 +57,7 @@ class ContentResponse(BaseModel):
     processed_at: Optional[datetime]
     processing_error: Optional[str]
     content: Optional[str] = None  # Include actual content text when requested
+    is_demo: bool = False
 
 
 @router.post("/{project_id}/upload", response_model=UploadResponse)
@@ -388,7 +389,8 @@ async def get_project_content(
                 chunk_count=content.chunk_count,
                 summary_generated=content.summary_generated,
                 processed_at=content.processed_at,
-                processing_error=content.processing_error
+                processing_error=content.processing_error,
+                is_demo=getattr(content, 'is_demo', False)
             )
             for content in content_list
         ]
@@ -443,7 +445,8 @@ async def get_content_by_id(
             summary_generated=content.summary_generated,
             processed_at=content.processed_at,
             processing_error=content.processing_error,
-            content=content.content  # Include the actual content text
+            content=content.content,  # Include the actual content text
+            is_demo=getattr(content, 'is_demo', False)
         )
         
     except HTTPException:

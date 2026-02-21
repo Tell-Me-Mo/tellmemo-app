@@ -32,6 +32,8 @@ class Content(Base):
     chunk_count = Column(Integer, default=0, nullable=False)
     summary_generated = Column(Boolean, default=False, nullable=False)
     
+    is_demo = Column(Boolean, default=False, nullable=False, server_default="false")
+
     # Metadata for tracking processing status
     processed_at = Column(DateTime, nullable=True)
     processing_error = Column(Text, nullable=True)

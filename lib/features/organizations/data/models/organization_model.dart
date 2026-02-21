@@ -24,6 +24,7 @@ class OrganizationModel with _$OrganizationModel {
     @JsonKey(name: 'current_user_id') String? currentUserId,
     @JsonKey(name: 'project_count') int? projectCount,
     @JsonKey(name: 'document_count') int? documentCount,
+    @JsonKey(name: 'has_demo_data') @Default(false) bool hasDemoData,
   }) = _OrganizationModel;
 
   factory OrganizationModel.fromJson(Map<String, dynamic> json) =>
@@ -46,6 +47,7 @@ class OrganizationModel with _$OrganizationModel {
       currentUserId: currentUserId,
       projectCount: projectCount,
       documentCount: documentCount,
+      hasDemoData: hasDemoData,
     );
   }
 
@@ -66,6 +68,7 @@ class OrganizationModel with _$OrganizationModel {
       currentUserId: entity.currentUserId,
       projectCount: entity.projectCount,
       documentCount: entity.documentCount,
+      hasDemoData: entity.hasDemoData,
     );
   }
 }

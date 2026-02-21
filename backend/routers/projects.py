@@ -54,6 +54,7 @@ class ProjectResponse(BaseModel):
     members: List[ProjectMemberModel]
     portfolio_id: Optional[str] = None
     program_id: Optional[str] = None
+    is_demo: bool = False
 
 
 class AddMemberRequest(BaseModel):
@@ -106,7 +107,8 @@ async def create_project(
                 ) for member in project.members
             ],
             portfolio_id=str(project.portfolio_id) if project.portfolio_id else None,
-            program_id=str(project.program_id) if project.program_id else None
+            program_id=str(project.program_id) if project.program_id else None,
+            is_demo=getattr(project, 'is_demo', False)
         )
     except ValueError as e:
         # Handle duplicate project name error
@@ -199,7 +201,8 @@ async def get_project(
                 ) for member in project.members
             ],
             portfolio_id=str(project.portfolio_id) if project.portfolio_id else None,
-            program_id=str(project.program_id) if project.program_id else None
+            program_id=str(project.program_id) if project.program_id else None,
+            is_demo=getattr(project, 'is_demo', False)
         )
     except HTTPException:
         raise
@@ -281,7 +284,8 @@ async def update_project(
                 ) for member in project.members
             ],
             portfolio_id=str(project.portfolio_id) if project.portfolio_id else None,
-            program_id=str(project.program_id) if project.program_id else None
+            program_id=str(project.program_id) if project.program_id else None,
+            is_demo=getattr(project, 'is_demo', False)
         )
     except HTTPException:
         raise

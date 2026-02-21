@@ -18,6 +18,7 @@ _$ProjectModelImpl _$$ProjectModelImplFromJson(Map<String, dynamic> json) =>
       portfolioId: json['portfolio_id'] as String?,
       programId: json['program_id'] as String?,
       memberCount: (json['member_count'] as num?)?.toInt(),
+      isDemo: json['is_demo'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$$ProjectModelImplToJson(_$ProjectModelImpl instance) =>
@@ -32,4 +33,5 @@ Map<String, dynamic> _$$ProjectModelImplToJson(_$ProjectModelImpl instance) =>
       'portfolio_id': instance.portfolioId,
       'program_id': instance.programId,
       'member_count': instance.memberCount,
+      'is_demo': instance.isDemo,
     };

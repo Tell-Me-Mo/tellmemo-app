@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Integer, Enum as SQLEnum
+from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Integer, Enum as SQLEnum, Boolean
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 import enum
@@ -67,6 +67,7 @@ class Summary(Base):
     token_count = Column(Integer, nullable=True)
     generation_time_ms = Column(Integer, nullable=True)
     format = Column(String, default="general", nullable=False)  # Summary format type
+    is_demo = Column(Boolean, default=False, nullable=False, server_default="false")
 
     # Relationships
     organization = relationship("Organization", back_populates="summaries")

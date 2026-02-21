@@ -222,6 +222,7 @@ _$SummaryModelImpl _$$SummaryModelImplFromJson(Map<String, dynamic> json) =>
       generationTimeMs: (json['generation_time_ms'] as num?)?.toInt(),
       llmCost: (json['llm_cost'] as num?)?.toDouble(),
       format: json['format'] as String? ?? 'general',
+      isDemo: json['is_demo'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$$SummaryModelImplToJson(_$SummaryModelImpl instance) =>
@@ -254,6 +255,7 @@ Map<String, dynamic> _$$SummaryModelImplToJson(_$SummaryModelImpl instance) =>
       'generation_time_ms': instance.generationTimeMs,
       'llm_cost': instance.llmCost,
       'format': instance.format,
+      'is_demo': instance.isDemo,
     };
 
 const _$SummaryTypeEnumMap = {

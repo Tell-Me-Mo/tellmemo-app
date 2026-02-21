@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/utils/datetime_utils.dart';
 import '../../../../app/router/routes.dart';
+import '../../../../shared/widgets/demo_badge.dart';
 import '../../../projects/presentation/providers/projects_provider.dart';
 import '../../../projects/domain/entities/project.dart';
 import '../../../meetings/presentation/providers/meetings_provider.dart';
@@ -1004,6 +1005,10 @@ class _DashboardScreenV2State extends ConsumerState<DashboardScreenV2> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        if (project.isDemo) ...[
+                          const SizedBox(width: 6),
+                          const DemoBadge(),
+                        ],
                       ],
                     ),
                     if (project.description?.isNotEmpty == true) ...[
