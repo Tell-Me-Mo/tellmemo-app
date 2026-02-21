@@ -16,6 +16,7 @@ from models.content import ContentType
 from services.core.content_service import ContentService
 from services.intelligence.project_matcher_service import project_matcher_service
 from utils.logger import get_logger
+from utils.content_validation import sanitize_text_content
 from config import get_settings
 
 settings = get_settings()
@@ -76,25 +77,8 @@ async def upload_content_with_ai_matching(
                 detail=f"Content exceeds maximum size of {settings.max_file_size_mb}MB"
             )
 
-        # Sanitize content: strip null bytes that break PostgreSQL UTF-8
-        sanitized_content = request.content.replace('\x00', '')
-
-        # Detect binary content (e.g., someone uploading a PNG/image as text)
-        binary_signatures = ['\x89PNG', '\xff\xd8\xff', 'GIF8', '%PDF']
-        content_start = sanitized_content[:20]
-        if any(sig in content_start for sig in binary_signatures):
-            raise HTTPException(
-                status_code=400,
-                detail="Binary file content detected. Please upload a text file or paste text content."
-            )
-
-        # Check for high ratio of non-printable characters (indicates binary content)
-        non_printable = sum(1 for c in sanitized_content[:1000] if ord(c) < 32 and c not in '\n\r\t')
-        if len(sanitized_content[:1000]) > 0 and non_printable / len(sanitized_content[:1000]) > 0.1:
-            raise HTTPException(
-                status_code=400,
-                detail="Content appears to be binary data, not text. Please upload a valid text transcript."
-            )
+        # Sanitize content: strip null bytes and reject binary data
+        sanitized_content = sanitize_text_content(request.content)
 
         # Use AI to match content to project
         match_result = await project_matcher_service.match_transcript_to_project(

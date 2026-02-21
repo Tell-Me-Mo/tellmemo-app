@@ -171,7 +171,7 @@ class RecordingNotifier extends _$RecordingNotifier {
   }
 
   /// Handle streaming status events from the backend (duration warnings, limits)
-  void _handleStreamingStatusEvent(StreamingStatusEvent event) {
+  Future<void> _handleStreamingStatusEvent(StreamingStatusEvent event) async {
     switch (event.type) {
       case StreamingStatusType.durationWarning:
         // Show warning notification: ~1 minute remaining
@@ -189,7 +189,7 @@ class RecordingNotifier extends _$RecordingNotifier {
           title: 'Live transcription stopped',
         );
         debugPrint('[RecordingProvider] Streaming limit reached, cleaning up live streaming');
-        _cleanupLiveStreaming();
+        await _cleanupLiveStreaming();
         break;
 
       case StreamingStatusType.stopped:
@@ -199,7 +199,7 @@ class RecordingNotifier extends _$RecordingNotifier {
           title: 'Live transcription interrupted',
         );
         debugPrint('[RecordingProvider] Streaming stopped: connection lost');
-        _cleanupLiveStreaming();
+        await _cleanupLiveStreaming();
         break;
 
       case StreamingStatusType.error:
@@ -209,10 +209,10 @@ class RecordingNotifier extends _$RecordingNotifier {
   }
 
   /// Clean up live streaming resources without stopping the recording
-  void _cleanupLiveStreaming() {
-    _audioChunkSubscription?.cancel();
+  Future<void> _cleanupLiveStreaming() async {
+    await _audioChunkSubscription?.cancel();
     _audioChunkSubscription = null;
-    _streamingStatusSubscription?.cancel();
+    await _streamingStatusSubscription?.cancel();
     _streamingStatusSubscription = null;
     if (_liveAudioStreamingService != null) {
       _liveAudioStreamingService!.stopStreaming();
@@ -468,7 +468,7 @@ class RecordingNotifier extends _$RecordingNotifier {
           // 1. Cancel audio chunk and streaming status subscriptions
           await _audioChunkSubscription?.cancel();
           _audioChunkSubscription = null;
-          _streamingStatusSubscription?.cancel();
+          await _streamingStatusSubscription?.cancel();
           _streamingStatusSubscription = null;
           debugPrint('[RecordingProvider] Cancelled audio chunk and streaming status subscriptions');
 
@@ -717,7 +717,7 @@ class RecordingNotifier extends _$RecordingNotifier {
         // Cancel subscriptions
         await _audioChunkSubscription?.cancel();
         _audioChunkSubscription = null;
-        _streamingStatusSubscription?.cancel();
+        await _streamingStatusSubscription?.cancel();
         _streamingStatusSubscription = null;
 
         // Stop and dispose audio streaming service
