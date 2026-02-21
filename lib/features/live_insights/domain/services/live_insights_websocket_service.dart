@@ -20,6 +20,7 @@ class LiveInsightsWebSocketService {
   final _actionsController = StreamController<LiveAction>.broadcast();
   final _transcriptionsController = StreamController<TranscriptSegment>.broadcast();
   final _connectionStateController = StreamController<bool>.broadcast();
+  final _streamingStatusController = StreamController<StreamingStatusEvent>.broadcast();
 
   // Reconnection settings
   Timer? _reconnectTimer;
@@ -37,6 +38,8 @@ class LiveInsightsWebSocketService {
   Stream<TranscriptSegment> get transcriptionUpdates =>
       _transcriptionsController.stream;
   Stream<bool> get connectionState => _connectionStateController.stream;
+  Stream<StreamingStatusEvent> get streamingStatusUpdates =>
+      _streamingStatusController.stream;
   bool get isConnected => _isConnected;
 
   // Generate WebSocket URL
@@ -186,6 +189,22 @@ class LiveInsightsWebSocketService {
         case 'SEGMENT_TRANSITION':
           // Segment transition events for meeting phase detection
           debugPrint('[LiveInsightsWebSocket] Segment transition: $data');
+          break;
+
+        case 'STREAMING_DURATION_WARNING':
+          _handleStreamingStatus(data, StreamingStatusType.durationWarning);
+          break;
+
+        case 'STREAMING_LIMIT_REACHED':
+          _handleStreamingStatus(data, StreamingStatusType.limitReached);
+          break;
+
+        case 'STREAMING_STOPPED':
+          _handleStreamingStatus(data, StreamingStatusType.stopped);
+          break;
+
+        case 'TRANSCRIPTION_ERROR':
+          _handleStreamingStatus(data, StreamingStatusType.error);
           break;
 
         case 'pong':
@@ -453,6 +472,25 @@ class LiveInsightsWebSocketService {
     }
   }
 
+  /// Handle streaming status events (duration warning, limit reached, stopped)
+  void _handleStreamingStatus(Map<String, dynamic> data, StreamingStatusType statusType) {
+    try {
+      final eventData = data['data'] as Map<String, dynamic>? ?? {};
+      final message = eventData['message'] as String? ?? '';
+      final remainingSeconds = eventData['remaining_seconds'] as int?;
+
+      debugPrint('[LiveInsightsWebSocket] Streaming status: $statusType - $message');
+
+      _streamingStatusController.add(StreamingStatusEvent(
+        type: statusType,
+        message: message,
+        remainingSeconds: remainingSeconds,
+      ));
+    } catch (e) {
+      debugPrint('[LiveInsightsWebSocket] Error handling streaming status: $e');
+    }
+  }
+
   /// Handle state synchronization on reconnect
   void _handleSyncState(Map<String, dynamic> data) {
     try {
@@ -646,5 +684,31 @@ class LiveInsightsWebSocketService {
     await _actionsController.close();
     await _transcriptionsController.close();
     await _connectionStateController.close();
+    await _streamingStatusController.close();
   }
+}
+
+/// Types of streaming status events from the backend
+enum StreamingStatusType {
+  /// Warning: session approaching 15-minute limit
+  durationWarning,
+  /// Session has reached the 15-minute limit, streaming stopped
+  limitReached,
+  /// Streaming stopped due to connection issues
+  stopped,
+  /// Transcription error
+  error,
+}
+
+/// Event representing a change in streaming status
+class StreamingStatusEvent {
+  final StreamingStatusType type;
+  final String message;
+  final int? remainingSeconds;
+
+  const StreamingStatusEvent({
+    required this.type,
+    required this.message,
+    this.remainingSeconds,
+  });
 }

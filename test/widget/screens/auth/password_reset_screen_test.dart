@@ -63,7 +63,7 @@ void main() {
       );
 
       final fields = find.byType(TextFormField);
-      await tester.enterText(fields.first, 'password123');
+      await tester.enterText(fields.first, 'Password123');
       await tester.enterText(fields.last, 'different');
       await tester.pump();
 
@@ -86,7 +86,7 @@ void main() {
         }
       };
 
-      when(mockAuthRepository.updatePassword('newpassword123'))
+      when(mockAuthRepository.updatePassword('NewPassword123'))
           .thenAnswer((_) async => createMockAuthResult());
 
       await pumpWidgetWithProviders(
@@ -98,14 +98,14 @@ void main() {
       );
 
       final fields = find.byType(TextFormField);
-      await tester.enterText(fields.first, 'newpassword123');
-      await tester.enterText(fields.last, 'newpassword123');
+      await tester.enterText(fields.first, 'NewPassword123');
+      await tester.enterText(fields.last, 'NewPassword123');
       await tester.pump();
 
       await tester.tap(find.widgetWithText(FilledButton, 'Reset Password'));
       await tester.pumpAndSettle();
 
-      verify(mockAuthRepository.updatePassword('newpassword123')).called(1);
+      verify(mockAuthRepository.updatePassword('NewPassword123')).called(1);
 
       FlutterError.onError = originalOnError;
       await tester.binding.setSurfaceSize(null);

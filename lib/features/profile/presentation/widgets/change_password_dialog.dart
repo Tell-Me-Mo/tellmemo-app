@@ -279,7 +279,7 @@ class _ChangePasswordDialogState extends ConsumerState<ChangePasswordDialog> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    '• At least 6 characters long',
+                                    '• At least 8 characters, with uppercase, lowercase, and a number',
                                     style: theme.textTheme.bodySmall?.copyWith(
                                       color: colorScheme.onSurfaceVariant,
                                     ),

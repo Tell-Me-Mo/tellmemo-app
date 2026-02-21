@@ -21,6 +21,7 @@ import 'recording_preferences_provider.dart';
 import '../../../../features/live_insights/presentation/providers/live_insights_provider.dart';
 import '../../../../features/live_insights/presentation/providers/tier_settings_provider.dart';
 import '../../../../features/live_insights/domain/models/tier_settings.dart';
+import '../../../../features/live_insights/domain/services/live_insights_websocket_service.dart';
 
 part 'recording_provider.g.dart';
 
@@ -110,6 +111,7 @@ class RecordingNotifier extends _$RecordingNotifier {
   StreamSubscription? _durationSubscription;
   StreamSubscription? _stateSubscription;
   StreamSubscription? _warningSubscription;
+  StreamSubscription? _streamingStatusSubscription;
 
   // Live insights services (initialized when AI Assistant is enabled)
   LiveAudioStreamingService? _liveAudioStreamingService;
@@ -166,6 +168,61 @@ class RecordingNotifier extends _$RecordingNotifier {
     _warningSubscription = _audioService.warningStream.listen((showWarning) {
       state = state.copyWith(showDurationWarning: showWarning);
     });
+  }
+
+  /// Handle streaming status events from the backend (duration warnings, limits)
+  Future<void> _handleStreamingStatusEvent(StreamingStatusEvent event) async {
+    switch (event.type) {
+      case StreamingStatusType.durationWarning:
+        // Show warning notification: ~1 minute remaining
+        ref.read(notificationServiceProvider.notifier).showWarning(
+          event.message,
+          title: 'Live transcription ending soon',
+        );
+        debugPrint('[RecordingProvider] Streaming duration warning: ${event.remainingSeconds}s remaining');
+        break;
+
+      case StreamingStatusType.limitReached:
+        // Live transcription stopped, but recording continues
+        ref.read(notificationServiceProvider.notifier).showInfo(
+          event.message,
+          title: 'Live transcription stopped',
+        );
+        debugPrint('[RecordingProvider] Streaming limit reached, cleaning up live streaming');
+        await _cleanupLiveStreaming();
+        break;
+
+      case StreamingStatusType.stopped:
+        // Connection lost
+        ref.read(notificationServiceProvider.notifier).showWarning(
+          event.message,
+          title: 'Live transcription interrupted',
+        );
+        debugPrint('[RecordingProvider] Streaming stopped: connection lost');
+        await _cleanupLiveStreaming();
+        break;
+
+      case StreamingStatusType.error:
+        debugPrint('[RecordingProvider] Streaming error: ${event.message}');
+        break;
+    }
+  }
+
+  /// Clean up live streaming resources without stopping the recording
+  Future<void> _cleanupLiveStreaming() async {
+    await _audioChunkSubscription?.cancel();
+    _audioChunkSubscription = null;
+    await _streamingStatusSubscription?.cancel();
+    _streamingStatusSubscription = null;
+    if (_liveAudioStreamingService != null) {
+      try {
+        _liveAudioStreamingService!.stopStreaming();
+      } finally {
+        _liveAudioStreamingService!.dispose();
+        _liveAudioStreamingService = null;
+      }
+    }
+    debugPrint('[RecordingProvider] Live streaming cleaned up, recording continues');
   }
 
   // Start recording (audio only, transcription happens after stopping)
@@ -256,6 +313,19 @@ class RecordingNotifier extends _$RecordingNotifier {
                   },
                 );
                 debugPrint('[RecordingProvider] Audio chunk pipeline established');
+
+                // 6. Listen for streaming status events (duration warnings, limits)
+                _streamingStatusSubscription?.cancel();
+                _streamingStatusSubscription = liveInsightsService.streamingStatusUpdates.listen(
+                  (event) async {
+                    try {
+                      await _handleStreamingStatusEvent(event);
+                    } catch (e) {
+                      debugPrint('[RecordingProvider] Error handling streaming status: $e');
+                    }
+                  },
+                );
+                debugPrint('[RecordingProvider] Streaming status listener established');
               } else {
                 // SILENT FAILURE: Audio streaming failed to start
                 debugPrint('[RecordingProvider] Failed to start audio streaming');
@@ -402,10 +472,12 @@ class RecordingNotifier extends _$RecordingNotifier {
       if (state.aiAssistantEnabled) {
         debugPrint('[RecordingProvider] Cleaning up live insights services');
         try {
-          // 1. Cancel audio chunk subscription
+          // 1. Cancel audio chunk and streaming status subscriptions
           await _audioChunkSubscription?.cancel();
           _audioChunkSubscription = null;
-          debugPrint('[RecordingProvider] Cancelled audio chunk subscription');
+          await _streamingStatusSubscription?.cancel();
+          _streamingStatusSubscription = null;
+          debugPrint('[RecordingProvider] Cancelled audio chunk and streaming status subscriptions');
 
           // 2. Stop audio streaming service
           if (_liveAudioStreamingService != null) {
@@ -649,9 +721,11 @@ class RecordingNotifier extends _$RecordingNotifier {
     if (state.aiAssistantEnabled) {
       debugPrint('[RecordingProvider] Cancelling recording - cleaning up live insights');
       try {
-        // Cancel audio chunk subscription
+        // Cancel subscriptions
         await _audioChunkSubscription?.cancel();
         _audioChunkSubscription = null;
+        await _streamingStatusSubscription?.cancel();
+        _streamingStatusSubscription = null;
 
         // Stop and dispose audio streaming service
         if (_liveAudioStreamingService != null) {
@@ -772,5 +846,6 @@ class RecordingNotifier extends _$RecordingNotifier {
     _durationSubscription?.cancel();
     _stateSubscription?.cancel();
     _warningSubscription?.cancel();
+    _streamingStatusSubscription?.cancel();
   }
 }

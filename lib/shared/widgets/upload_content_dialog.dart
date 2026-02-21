@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show Uint8List, kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:desktop_drop/desktop_drop.dart';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
 import '../../features/projects/domain/entities/project.dart';
@@ -34,7 +35,7 @@ class _DialogConstants {
   static const double minimalOpacity = 0.05;
 
   // Supported file extensions
-  static const List<String> textExtensions = ['txt', 'pdf', 'doc', 'docx', 'json'];
+  static const List<String> textExtensions = ['txt', 'pdf', 'doc', 'docx', 'json', 'md'];
   static const List<String> audioExtensions = ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'wma', 'flac'];
   static List<String> get allExtensions => [...textExtensions, ...audioExtensions];
 }
@@ -234,7 +235,7 @@ class _UploadContentDialogState extends ConsumerState<UploadContentDialog> {
         if (_isTextInput) {
           contentToUpload = _contentController.text;
         } else if (_selectedFileBytes != null) {
-          contentToUpload = String.fromCharCodes(_selectedFileBytes!);
+          contentToUpload = utf8.decode(_selectedFileBytes!, allowMalformed: true).replaceAll('\x00', '');
         } else if (_selectedFilePath != null) {
           final file = File(_selectedFilePath!);
           contentToUpload = await file.readAsString();

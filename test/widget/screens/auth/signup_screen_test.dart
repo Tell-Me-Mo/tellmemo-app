@@ -65,7 +65,7 @@ void main() {
       );
 
       final fields = find.byType(TextFormField);
-      await tester.enterText(fields.at(2), 'password123');
+      await tester.enterText(fields.at(2), 'Password123');
       await tester.enterText(fields.at(3), 'different');
       await tester.pump();
 
@@ -90,7 +90,7 @@ void main() {
 
       when(mockAuthRepository.signUp(
         email: 'test@example.com',
-        password: 'password123',
+        password: 'Password123',
         metadata: {'name': 'John Doe'},
       )).thenAnswer((_) async => createMockAuthResult());
 
@@ -105,8 +105,8 @@ void main() {
       final fields = find.byType(TextFormField);
       await tester.enterText(fields.at(0), 'John Doe');
       await tester.enterText(fields.at(1), 'test@example.com');
-      await tester.enterText(fields.at(2), 'password123');
-      await tester.enterText(fields.at(3), 'password123');
+      await tester.enterText(fields.at(2), 'Password123');
+      await tester.enterText(fields.at(3), 'Password123');
       await tester.pump();
 
       await tester.tap(find.widgetWithText(FilledButton, 'Create Account'));
@@ -114,7 +114,7 @@ void main() {
 
       verify(mockAuthRepository.signUp(
         email: 'test@example.com',
-        password: 'password123',
+        password: 'Password123',
         metadata: {'name': 'John Doe'},
       )).called(1);
 
