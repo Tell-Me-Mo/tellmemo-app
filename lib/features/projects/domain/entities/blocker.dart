@@ -34,6 +34,7 @@ class Blocker {
   final DateTime? identifiedDate;
   final DateTime? lastUpdated;
   final String? updatedBy;
+  final bool isDemo;
 
   const Blocker({
     required this.id,
@@ -57,6 +58,7 @@ class Blocker {
     this.identifiedDate,
     this.lastUpdated,
     this.updatedBy,
+    this.isDemo = false,
   });
 
   Blocker copyWith({
@@ -81,6 +83,7 @@ class Blocker {
     DateTime? identifiedDate,
     DateTime? lastUpdated,
     String? updatedBy,
+    bool? isDemo,
   }) {
     return Blocker(
       id: id ?? this.id,
@@ -104,6 +107,7 @@ class Blocker {
       identifiedDate: identifiedDate ?? this.identifiedDate,
       lastUpdated: lastUpdated ?? this.lastUpdated,
       updatedBy: updatedBy ?? this.updatedBy,
+      isDemo: isDemo ?? this.isDemo,
     );
   }
 
@@ -177,6 +181,7 @@ class Blocker {
       'identified_date': identifiedDate?.toIso8601String(),
       'last_updated': lastUpdated?.toIso8601String(),
       'updated_by': updatedBy,
+      'is_demo': isDemo,
     };
   }
 
@@ -221,6 +226,7 @@ class Blocker {
           ? DateTime.parse(json['last_updated'] as String)
           : null,
       updatedBy: json['updated_by'] as String?,
+      isDemo: json['is_demo'] as bool? ?? false,
     );
   }
 }

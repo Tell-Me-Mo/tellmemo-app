@@ -26,6 +26,7 @@ _$RiskModelImpl _$$RiskModelImplFromJson(Map<String, dynamic> json) =>
       updatedBy: json['updated_by'] as String?,
       assignedTo: json['assigned_to'] as String?,
       assignedToEmail: json['assigned_to_email'] as String?,
+      isDemo: json['is_demo'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$$RiskModelImplToJson(_$RiskModelImpl instance) =>
@@ -48,4 +49,5 @@ Map<String, dynamic> _$$RiskModelImplToJson(_$RiskModelImpl instance) =>
       'updated_by': instance.updatedBy,
       'assigned_to': instance.assignedTo,
       'assigned_to_email': instance.assignedToEmail,
+      'is_demo': instance.isDemo,
     };

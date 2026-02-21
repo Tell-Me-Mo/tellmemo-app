@@ -27,6 +27,7 @@ _$TaskModelImpl _$$TaskModelImplFromJson(Map<String, dynamic> json) =>
       createdDate: json['created_date'] as String?,
       lastUpdated: json['last_updated'] as String?,
       updatedBy: json['updated_by'] as String?,
+      isDemo: json['is_demo'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$$TaskModelImplToJson(_$TaskModelImpl instance) =>
@@ -50,4 +51,5 @@ Map<String, dynamic> _$$TaskModelImplToJson(_$TaskModelImpl instance) =>
       'created_date': instance.createdDate,
       'last_updated': instance.lastUpdated,
       'updated_by': instance.updatedBy,
+      'is_demo': instance.isDemo,
     };

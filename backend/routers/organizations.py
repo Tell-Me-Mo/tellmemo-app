@@ -244,17 +244,20 @@ async def create_organization(
             from services.demo.demo_data_service import DemoDataService
             async with db_manager.sessionmaker() as seed_session:
                 try:
-                    success = await DemoDataService.seed_demo_data(
-                        seed_session,
-                        organization.id,
-                        current_user.email,
-                    )
-                    if success:
-                        await seed_session.commit()
-                        has_demo = True
-                        logger.info(f"Demo data seeded for organization {organization.id}")
+                    if await DemoDataService.has_demo_data(seed_session, organization.id):
+                        logger.info(f"Demo data already exists for organization {organization.id}, skipping")
                     else:
-                        await seed_session.rollback()
+                        success = await DemoDataService.seed_demo_data(
+                            seed_session,
+                            organization.id,
+                            current_user.email,
+                        )
+                        if success:
+                            await seed_session.commit()
+                            has_demo = True
+                            logger.info(f"Demo data seeded for organization {organization.id}")
+                        else:
+                            await seed_session.rollback()
                 except Exception:
                     await seed_session.rollback()
                     logger.warning(f"Demo data seeding failed for org {organization.id}, continuing")

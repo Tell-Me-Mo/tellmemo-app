@@ -22,6 +22,7 @@ class BlockerModel {
   final String? identifiedDate;
   final String? lastUpdated;
   final String? updatedBy;
+  final bool isDemo;
 
   BlockerModel({
     required this.id,
@@ -45,6 +46,7 @@ class BlockerModel {
     this.identifiedDate,
     this.lastUpdated,
     this.updatedBy,
+    this.isDemo = false,
   });
 
   factory BlockerModel.fromJson(Map<String, dynamic> json) {
@@ -72,6 +74,7 @@ class BlockerModel {
       identifiedDate: json['identified_date'] as String?,
       lastUpdated: json['last_updated'] as String?,
       updatedBy: json['updated_by'] as String?,
+      isDemo: json['is_demo'] as bool? ?? false,
     );
   }
 
@@ -98,6 +101,7 @@ class BlockerModel {
       'identified_date': identifiedDate,
       'last_updated': lastUpdated,
       'updated_by': updatedBy,
+      'is_demo': isDemo,
     };
   }
 
@@ -130,6 +134,7 @@ class BlockerModel {
       identifiedDate: identifiedDate != null ? DateTime.parse(identifiedDate!) : null,
       lastUpdated: lastUpdated != null ? DateTime.parse(lastUpdated!) : null,
       updatedBy: updatedBy,
+      isDemo: isDemo,
     );
   }
 
@@ -156,6 +161,7 @@ class BlockerModel {
       identifiedDate: blocker.identifiedDate?.toIso8601String(),
       lastUpdated: blocker.lastUpdated?.toIso8601String(),
       updatedBy: blocker.updatedBy,
+      isDemo: blocker.isDemo,
     );
   }
 }

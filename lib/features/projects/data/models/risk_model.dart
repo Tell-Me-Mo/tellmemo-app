@@ -25,6 +25,7 @@ class RiskModel with _$RiskModel {
     @JsonKey(name: 'updated_by') String? updatedBy,
     @JsonKey(name: 'assigned_to') String? assignedTo,
     @JsonKey(name: 'assigned_to_email') String? assignedToEmail,
+    @JsonKey(name: 'is_demo') @Default(false) bool isDemo,
   }) = _RiskModel;
 
   factory RiskModel.fromJson(Map<String, dynamic> json) =>
@@ -64,6 +65,7 @@ extension RiskModelX on RiskModel {
       updatedBy: updatedBy,
       assignedTo: assignedTo,
       assignedToEmail: assignedToEmail,
+      isDemo: isDemo,
     );
   }
 }
@@ -89,6 +91,7 @@ extension RiskX on Risk {
       updatedBy: updatedBy,
       assignedTo: assignedTo,
       assignedToEmail: assignedToEmail,
+      isDemo: isDemo,
     );
   }
 }

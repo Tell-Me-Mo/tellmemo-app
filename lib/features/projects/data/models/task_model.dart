@@ -26,6 +26,7 @@ class TaskModel with _$TaskModel {
     @JsonKey(name: 'created_date') String? createdDate,
     @JsonKey(name: 'last_updated') String? lastUpdated,
     @JsonKey(name: 'updated_by') String? updatedBy,
+    @JsonKey(name: 'is_demo') @Default(false) bool isDemo,
   }) = _TaskModel;
 
   factory TaskModel.fromJson(Map<String, dynamic> json) =>
@@ -68,6 +69,7 @@ extension TaskModelX on TaskModel {
         ? DateTime.parse(lastUpdated! + (lastUpdated!.endsWith('Z') ? '' : 'Z')).toLocal()
         : null,
       updatedBy: updatedBy,
+      isDemo: isDemo,
     );
   }
 
@@ -104,6 +106,7 @@ extension TaskX on Task {
       createdDate: createdDate?.toUtc().toIso8601String(),
       lastUpdated: lastUpdated?.toUtc().toIso8601String(),
       updatedBy: updatedBy,
+      isDemo: isDemo,
     );
   }
 

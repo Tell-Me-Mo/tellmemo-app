@@ -32,6 +32,7 @@ class Risk {
   final String? updatedBy;
   final String? assignedTo;
   final String? assignedToEmail;
+  final bool isDemo;
 
   const Risk({
     required this.id,
@@ -52,6 +53,7 @@ class Risk {
     this.updatedBy,
     this.assignedTo,
     this.assignedToEmail,
+    this.isDemo = false,
   });
 
   Risk copyWith({
@@ -73,6 +75,7 @@ class Risk {
     String? updatedBy,
     String? assignedTo,
     String? assignedToEmail,
+    bool? isDemo,
   }) {
     return Risk(
       id: id ?? this.id,
@@ -93,6 +96,7 @@ class Risk {
       updatedBy: updatedBy ?? this.updatedBy,
       assignedTo: assignedTo ?? this.assignedTo,
       assignedToEmail: assignedToEmail ?? this.assignedToEmail,
+      isDemo: isDemo ?? this.isDemo,
     );
   }
 

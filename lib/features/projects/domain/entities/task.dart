@@ -33,6 +33,7 @@ class Task {
   final DateTime? createdDate;
   final DateTime? lastUpdated;
   final String? updatedBy;
+  final bool isDemo;
 
   const Task({
     required this.id,
@@ -54,6 +55,7 @@ class Task {
     this.createdDate,
     this.lastUpdated,
     this.updatedBy,
+    this.isDemo = false,
   });
 
   Task copyWith({
@@ -76,6 +78,7 @@ class Task {
     DateTime? createdDate,
     DateTime? lastUpdated,
     String? updatedBy,
+    bool? isDemo,
   }) {
     return Task(
       id: id ?? this.id,
@@ -97,6 +100,7 @@ class Task {
       createdDate: createdDate ?? this.createdDate,
       lastUpdated: lastUpdated ?? this.lastUpdated,
       updatedBy: updatedBy ?? this.updatedBy,
+      isDemo: isDemo ?? this.isDemo,
     );
   }
 

@@ -49,6 +49,8 @@ mixin _$RiskModel {
   String? get assignedTo => throw _privateConstructorUsedError;
   @JsonKey(name: 'assigned_to_email')
   String? get assignedToEmail => throw _privateConstructorUsedError;
+  @JsonKey(name: 'is_demo')
+  bool get isDemo => throw _privateConstructorUsedError;
 
   /// Serializes this RiskModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -84,6 +86,7 @@ abstract class $RiskModelCopyWith<$Res> {
     @JsonKey(name: 'updated_by') String? updatedBy,
     @JsonKey(name: 'assigned_to') String? assignedTo,
     @JsonKey(name: 'assigned_to_email') String? assignedToEmail,
+    @JsonKey(name: 'is_demo') bool isDemo,
   });
 }
 
@@ -120,6 +123,7 @@ class _$RiskModelCopyWithImpl<$Res, $Val extends RiskModel>
     Object? updatedBy = freezed,
     Object? assignedTo = freezed,
     Object? assignedToEmail = freezed,
+    Object? isDemo = null,
   }) {
     return _then(
       _value.copyWith(
@@ -195,6 +199,10 @@ class _$RiskModelCopyWithImpl<$Res, $Val extends RiskModel>
                 ? _value.assignedToEmail
                 : assignedToEmail // ignore: cast_nullable_to_non_nullable
                       as String?,
+            isDemo: null == isDemo
+                ? _value.isDemo
+                : isDemo // ignore: cast_nullable_to_non_nullable
+                      as bool,
           )
           as $Val,
     );
@@ -229,6 +237,7 @@ abstract class _$$RiskModelImplCopyWith<$Res>
     @JsonKey(name: 'updated_by') String? updatedBy,
     @JsonKey(name: 'assigned_to') String? assignedTo,
     @JsonKey(name: 'assigned_to_email') String? assignedToEmail,
+    @JsonKey(name: 'is_demo') bool isDemo,
   });
 }
 
@@ -264,6 +273,7 @@ class __$$RiskModelImplCopyWithImpl<$Res>
     Object? updatedBy = freezed,
     Object? assignedTo = freezed,
     Object? assignedToEmail = freezed,
+    Object? isDemo = null,
   }) {
     return _then(
       _$RiskModelImpl(
@@ -339,6 +349,10 @@ class __$$RiskModelImplCopyWithImpl<$Res>
             ? _value.assignedToEmail
             : assignedToEmail // ignore: cast_nullable_to_non_nullable
                   as String?,
+        isDemo: null == isDemo
+            ? _value.isDemo
+            : isDemo // ignore: cast_nullable_to_non_nullable
+                  as bool,
       ),
     );
   }
@@ -366,6 +380,7 @@ class _$RiskModelImpl implements _RiskModel {
     @JsonKey(name: 'updated_by') this.updatedBy,
     @JsonKey(name: 'assigned_to') this.assignedTo,
     @JsonKey(name: 'assigned_to_email') this.assignedToEmail,
+    @JsonKey(name: 'is_demo') this.isDemo = false,
   });
 
   factory _$RiskModelImpl.fromJson(Map<String, dynamic> json) =>
@@ -417,10 +432,13 @@ class _$RiskModelImpl implements _RiskModel {
   @override
   @JsonKey(name: 'assigned_to_email')
   final String? assignedToEmail;
+  @override
+  @JsonKey(name: 'is_demo')
+  final bool isDemo;
 
   @override
   String toString() {
-    return 'RiskModel(id: $id, projectId: $projectId, title: $title, description: $description, severity: $severity, status: $status, mitigation: $mitigation, impact: $impact, probability: $probability, aiGenerated: $aiGenerated, aiConfidence: $aiConfidence, sourceContentId: $sourceContentId, identifiedDate: $identifiedDate, resolvedDate: $resolvedDate, lastUpdated: $lastUpdated, updatedBy: $updatedBy, assignedTo: $assignedTo, assignedToEmail: $assignedToEmail)';
+    return 'RiskModel(id: $id, projectId: $projectId, title: $title, description: $description, severity: $severity, status: $status, mitigation: $mitigation, impact: $impact, probability: $probability, aiGenerated: $aiGenerated, aiConfidence: $aiConfidence, sourceContentId: $sourceContentId, identifiedDate: $identifiedDate, resolvedDate: $resolvedDate, lastUpdated: $lastUpdated, updatedBy: $updatedBy, assignedTo: $assignedTo, assignedToEmail: $assignedToEmail, isDemo: $isDemo)';
   }
 
   @override
@@ -459,12 +477,13 @@ class _$RiskModelImpl implements _RiskModel {
             (identical(other.assignedTo, assignedTo) ||
                 other.assignedTo == assignedTo) &&
             (identical(other.assignedToEmail, assignedToEmail) ||
-                other.assignedToEmail == assignedToEmail));
+                other.assignedToEmail == assignedToEmail) &&
+            (identical(other.isDemo, isDemo) || other.isDemo == isDemo));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     runtimeType,
     id,
     projectId,
@@ -484,7 +503,8 @@ class _$RiskModelImpl implements _RiskModel {
     updatedBy,
     assignedTo,
     assignedToEmail,
-  );
+    isDemo,
+  ]);
 
   /// Create a copy of RiskModel
   /// with the given fields replaced by the non-null parameter values.
@@ -520,6 +540,7 @@ abstract class _RiskModel implements RiskModel {
     @JsonKey(name: 'updated_by') final String? updatedBy,
     @JsonKey(name: 'assigned_to') final String? assignedTo,
     @JsonKey(name: 'assigned_to_email') final String? assignedToEmail,
+    @JsonKey(name: 'is_demo') final bool isDemo,
   }) = _$RiskModelImpl;
 
   factory _RiskModel.fromJson(Map<String, dynamic> json) =
@@ -571,6 +592,9 @@ abstract class _RiskModel implements RiskModel {
   @override
   @JsonKey(name: 'assigned_to_email')
   String? get assignedToEmail;
+  @override
+  @JsonKey(name: 'is_demo')
+  bool get isDemo;
 
   /// Create a copy of RiskModel
   /// with the given fields replaced by the non-null parameter values.
