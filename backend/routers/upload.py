@@ -76,11 +76,31 @@ async def upload_content_with_ai_matching(
                 detail=f"Content exceeds maximum size of {settings.max_file_size_mb}MB"
             )
 
+        # Sanitize content: strip null bytes that break PostgreSQL UTF-8
+        sanitized_content = request.content.replace('\x00', '')
+
+        # Detect binary content (e.g., someone uploading a PNG/image as text)
+        binary_signatures = ['\x89PNG', '\xff\xd8\xff', 'GIF8', '%PDF']
+        content_start = sanitized_content[:20]
+        if any(sig in content_start for sig in binary_signatures):
+            raise HTTPException(
+                status_code=400,
+                detail="Binary file content detected. Please upload a text file or paste text content."
+            )
+
+        # Check for high ratio of non-printable characters (indicates binary content)
+        non_printable = sum(1 for c in sanitized_content[:1000] if ord(c) < 32 and c not in '\n\r\t')
+        if len(sanitized_content[:1000]) > 0 and non_printable / len(sanitized_content[:1000]) > 0.1:
+            raise HTTPException(
+                status_code=400,
+                detail="Content appears to be binary data, not text. Please upload a valid text transcript."
+            )
+
         # Use AI to match content to project
         match_result = await project_matcher_service.match_transcript_to_project(
             session=session,
             organization_id=current_org.id,
-            transcript=request.content,
+            transcript=sanitized_content,
             meeting_title=request.title,
             meeting_date=datetime.combine(request.date, datetime.min.time()) if request.date else None,
             participants=[]  # Could be extracted from content if needed
@@ -100,7 +120,7 @@ async def upload_content_with_ai_matching(
             project_id=project_uuid,
             content_type=content_type_enum,
             title=request.title,
-            content=request.content,
+            content=sanitized_content,
             content_date=request.date,
             uploaded_by=None  # No auth in MVP
         )

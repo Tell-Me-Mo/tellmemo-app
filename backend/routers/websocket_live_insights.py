@@ -859,6 +859,67 @@ async def handle_assemblyai_error(session_id: str, error: str):
         logger.warning(f"Failed to publish AssemblyAI error to Redis for session {sanitize_for_log(session_id)}: {e}")
 
 
+async def handle_session_duration_warning(session_id: str, remaining_seconds: int):
+    """
+    Handle warning when live streaming session approaches the 15-minute limit.
+
+    Notifies connected clients so they can show a countdown warning.
+
+    Args:
+        session_id: The meeting session identifier
+        remaining_seconds: Seconds remaining before limit is reached
+    """
+    logger.warning(
+        f"Live streaming session {sanitize_for_log(session_id)} "
+        f"approaching limit: {remaining_seconds}s remaining"
+    )
+
+    try:
+        event_data = {
+            "type": "STREAMING_DURATION_WARNING",
+            "data": {
+                "remaining_seconds": remaining_seconds,
+                "max_duration_minutes": 15,
+                "message": f"Live transcription will stop in {remaining_seconds} seconds. "
+                           "Your recording will continue normally."
+            },
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        await _publish_to_redis(session_id, event_data)
+    except Exception as e:
+        logger.warning(f"Failed to publish duration warning for session {sanitize_for_log(session_id)}: {e}")
+
+
+async def handle_session_limit_reached(session_id: str):
+    """
+    Handle when live streaming session reaches the 15-minute limit.
+
+    Notifies connected clients that live transcription has stopped.
+    The recording itself continues — only the AssemblyAI streaming stops.
+
+    Args:
+        session_id: The meeting session identifier
+    """
+    logger.info(
+        f"Live streaming session {sanitize_for_log(session_id)} "
+        f"reached 15-minute limit, stopping live transcription"
+    )
+
+    try:
+        event_data = {
+            "type": "STREAMING_LIMIT_REACHED",
+            "data": {
+                "max_duration_minutes": 15,
+                "message": "Live transcription has stopped (15-minute limit reached). "
+                           "Your recording continues — it will be fully transcribed when you stop recording."
+            },
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        await _publish_to_redis(session_id, event_data)
+    except Exception as e:
+        logger.warning(f"Failed to publish limit reached for session {sanitize_for_log(session_id)}: {e}")
+
+
 # =============================================================================
 # WebSocket Endpoints
 # =============================================================================
@@ -919,7 +980,9 @@ async def websocket_audio_stream(
         assemblyai_connection = await assemblyai_manager.get_or_create_connection(
             session_id=session_id,
             on_transcription=handle_transcription_result,
-            on_error=handle_assemblyai_error
+            on_error=handle_assemblyai_error,
+            on_session_warning=handle_session_duration_warning,
+            on_session_limit_reached=handle_session_limit_reached
         )
 
         if not assemblyai_connection:
@@ -932,6 +995,8 @@ async def websocket_audio_stream(
             return
 
         # Audio streaming loop
+        _consecutive_send_failures = 0
+        _max_failures_before_stop = 50  # ~5 seconds of failures at ~100ms/chunk
         while True:
             try:
                 # Receive message from client
@@ -946,7 +1011,35 @@ async def websocket_audio_stream(
                     success = await assemblyai_manager.send_audio(session_id, audio_data)
 
                     if not success:
-                        logger.warning(f"Failed to send audio to AssemblyAI for session {sanitize_for_log(session_id)}")
+                        _consecutive_send_failures += 1
+                        # Only log periodically to avoid spam (every 50 failures ~= 5 seconds)
+                        if _consecutive_send_failures == 1 or _consecutive_send_failures % 50 == 0:
+                            logger.warning(
+                                f"Failed to send audio to AssemblyAI for session {sanitize_for_log(session_id)} "
+                                f"(failure #{_consecutive_send_failures})"
+                            )
+                        if _consecutive_send_failures >= _max_failures_before_stop:
+                            logger.warning(
+                                f"Too many consecutive audio send failures ({_consecutive_send_failures}) "
+                                f"for session {sanitize_for_log(session_id)}, stopping audio forwarding"
+                            )
+                            # Notify client that live transcription stopped
+                            try:
+                                await websocket.send_json({
+                                    "type": "STREAMING_STOPPED",
+                                    "data": {
+                                        "reason": "connection_lost",
+                                        "message": "Live transcription connection lost. "
+                                                   "Your recording continues — it will be fully transcribed when you stop."
+                                    },
+                                    "timestamp": datetime.utcnow().isoformat()
+                                })
+                            except Exception:
+                                pass
+                            # Keep receiving audio (don't break) but stop forwarding
+                            # The recording still continues client-side
+                    else:
+                        _consecutive_send_failures = 0
 
                 elif "text" in message:
                     # JSON control message
@@ -1004,10 +1097,13 @@ async def websocket_audio_stream(
         logger.error(f"Audio stream error for session {sanitize_for_log(session_id)}: {e}")
 
     finally:
-        # Check if this was the last client for this session
-        # If no other audio streams are active, we can close the AssemblyAI connection
-        # For now, we'll keep the connection open until explicitly stopped
-        # This will be improved in Task 4.3 (State Synchronization)
+        # Close AssemblyAI connection when audio stream disconnects
+        # This prevents zombie connections that keep running (and billing) indefinitely
+        try:
+            await assemblyai_manager.close_connection(session_id)
+            logger.info(f"AssemblyAI connection closed for session {sanitize_for_log(session_id)}")
+        except Exception as e:
+            logger.error(f"Error closing AssemblyAI connection in finally block: {e}")
 
         # Cleanup orchestrator on disconnect
         try:
