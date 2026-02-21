@@ -1018,11 +1018,13 @@ async def websocket_audio_stream(
                                 f"Failed to send audio to AssemblyAI for session {sanitize_for_log(session_id)} "
                                 f"(failure #{_consecutive_send_failures})"
                             )
-                        if _consecutive_send_failures >= _max_failures_before_stop:
+                        if _consecutive_send_failures == _max_failures_before_stop:
                             logger.warning(
                                 f"Too many consecutive audio send failures ({_consecutive_send_failures}) "
                                 f"for session {sanitize_for_log(session_id)}, stopping audio forwarding"
                             )
+                            # Cap counter to prevent indefinite incrementing
+                            _consecutive_send_failures = _max_failures_before_stop
                             # Notify client that live transcription stopped
                             try:
                                 await websocket.send_json({

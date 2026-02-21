@@ -314,8 +314,12 @@ class RecordingNotifier extends _$RecordingNotifier {
                 // 6. Listen for streaming status events (duration warnings, limits)
                 _streamingStatusSubscription?.cancel();
                 _streamingStatusSubscription = liveInsightsService.streamingStatusUpdates.listen(
-                  (event) {
-                    _handleStreamingStatusEvent(event);
+                  (event) async {
+                    try {
+                      await _handleStreamingStatusEvent(event);
+                    } catch (e) {
+                      debugPrint('[RecordingProvider] Error handling streaming status: $e');
+                    }
                   },
                 );
                 debugPrint('[RecordingProvider] Streaming status listener established');

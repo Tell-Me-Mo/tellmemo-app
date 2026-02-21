@@ -20,9 +20,8 @@ def sanitize_text_content(content: str) -> str:
     # Strip null bytes that break PostgreSQL UTF-8
     sanitized = content.replace('\x00', '')
 
-    # Detect binary file signatures
-    content_start = sanitized[:20]
-    if any(sig in content_start for sig in _BINARY_SIGNATURES):
+    # Detect binary file signatures at start of content
+    if any(sanitized.startswith(sig) for sig in _BINARY_SIGNATURES):
         raise HTTPException(
             status_code=400,
             detail="Binary file content detected. Please upload a text file or paste text content."
