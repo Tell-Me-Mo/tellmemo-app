@@ -39,6 +39,7 @@ _$HierarchyNodeModelImpl _$$HierarchyNodeModelImplFromJson(
   updatedAt: json['updated_at'] as String?,
   status: json['status'] as String?,
   memberCount: (json['member_count'] as num?)?.toInt(),
+  isDemo: json['is_demo'] as bool? ?? false,
   children:
       (json['children'] as List<dynamic>?)
           ?.map((e) => HierarchyNodeModel.fromJson(e as Map<String, dynamic>))
@@ -74,6 +75,7 @@ Map<String, dynamic> _$$HierarchyNodeModelImplToJson(
   'updated_at': instance.updatedAt,
   'status': instance.status,
   'member_count': instance.memberCount,
+  'is_demo': instance.isDemo,
   'children': instance.children,
   'programs': instance.programs,
   'direct_projects': instance.directProjects,

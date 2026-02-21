@@ -142,6 +142,15 @@ Contains 35 detailed development tasks with:
 - flutter_markdown (rich text display)
 - file_picker (file uploads)
 
+## Known Dependency Constraints
+
+### retrofit is capped at <4.9.1
+`retrofit 4.9.1+` added a `Parser.DartMappable` enum value. `retrofit_generator 9.x` does not handle this value, causing build_runner to fail with a non-exhaustive switch error. The fix requires `retrofit_generator 10.x`, which depends on `build ^4.0.0`. However, `riverpod_generator 2.x` requires `build ^2.0.0`, creating an unresolvable conflict.
+
+**Resolution**: Cap retrofit at `<4.9.1` until the project upgrades to `riverpod_generator 3.x+` (which supports `build ^4.0.0`). The constraint is documented in `pubspec.yaml`.
+
+**To lift this cap**: Upgrade `flutter_riverpod`, `riverpod_annotation`, and `riverpod_generator` to v3+, then upgrade `retrofit_generator` to `^10.2.3` and uncap `retrofit`.
+
 ## Testing Approach
 
 - **Widget tests**: In `test/` directory

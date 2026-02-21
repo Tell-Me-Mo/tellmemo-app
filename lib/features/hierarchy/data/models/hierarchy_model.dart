@@ -34,6 +34,8 @@ class HierarchyNodeModel with _$HierarchyNodeModel {
     String? status, // For projects
     @JsonKey(name: 'member_count') int? memberCount,
     
+    @JsonKey(name: 'is_demo') @Default(false) bool isDemo,
+
     // Nested content
     @Default([]) List<HierarchyNodeModel> children,
     @Default([]) List<HierarchyNodeModel> programs,
@@ -202,6 +204,7 @@ extension HierarchyNodeModelX on HierarchyNodeModel {
         'childCount': childItems.length,
         'type': type,
       },
+      isDemo: isDemo,
     );
   }
 

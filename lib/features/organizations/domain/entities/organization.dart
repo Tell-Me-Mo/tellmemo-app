@@ -16,6 +16,7 @@ class Organization extends Equatable {
   final String? currentUserId;
   final int? projectCount;
   final int? documentCount;
+  final bool hasDemoData;
 
   const Organization({
     required this.id,
@@ -33,6 +34,7 @@ class Organization extends Equatable {
     this.currentUserId,
     this.projectCount,
     this.documentCount,
+    this.hasDemoData = false,
   });
 
   @override
@@ -52,5 +54,6 @@ class Organization extends Equatable {
         currentUserId,
         projectCount,
         documentCount,
+        hasDemoData,
       ];
 }

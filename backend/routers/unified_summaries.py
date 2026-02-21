@@ -72,6 +72,7 @@ class UnifiedSummaryResponse(BaseModel):
     created_by: Optional[str] = None
     date_range_start: Optional[str] = None
     date_range_end: Optional[str] = None
+    is_demo: bool = False
 
 
 class SummaryFilters(BaseModel):
@@ -298,7 +299,8 @@ async def generate_summary(
             "created_at": datetime.now().isoformat(),
             "created_by": request.created_by,
             "date_range_start": request.date_range_start.isoformat() if request.date_range_start else None,
-            "date_range_end": request.date_range_end.isoformat() if request.date_range_end else None
+            "date_range_end": request.date_range_end.isoformat() if request.date_range_end else None,
+            "is_demo": False
         }
 
         # Add project_id field for Flutter model compatibility
@@ -402,7 +404,8 @@ async def get_summary(
             created_at=summary.created_at.isoformat(),
             created_by=summary.created_by,
             date_range_start=summary.date_range_start.isoformat() if summary.date_range_start else None,
-            date_range_end=summary.date_range_end.isoformat() if summary.date_range_end else None
+            date_range_end=summary.date_range_end.isoformat() if summary.date_range_end else None,
+            is_demo=getattr(summary, 'is_demo', False)
         )
 
     except HTTPException:
@@ -530,7 +533,8 @@ async def list_summaries(
                 created_at=summary.created_at.isoformat(),
                 created_by=summary.created_by,
                 date_range_start=summary.date_range_start.isoformat() if summary.date_range_start else None,
-                date_range_end=summary.date_range_end.isoformat() if summary.date_range_end else None
+                date_range_end=summary.date_range_end.isoformat() if summary.date_range_end else None,
+                is_demo=getattr(summary, 'is_demo', False)
             ))
 
         return response_summaries
@@ -726,7 +730,8 @@ async def update_summary(
             created_at=summary.created_at.isoformat() if summary.created_at else "",
             created_by=summary.created_by,
             date_range_start=summary.date_range_start.isoformat() if summary.date_range_start else None,
-            date_range_end=summary.date_range_end.isoformat() if summary.date_range_end else None
+            date_range_end=summary.date_range_end.isoformat() if summary.date_range_end else None,
+            is_demo=getattr(summary, 'is_demo', False)
         )
 
     except HTTPException:

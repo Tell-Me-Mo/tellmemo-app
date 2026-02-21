@@ -181,6 +181,7 @@ class SummaryModel with _$SummaryModel {
     @JsonKey(name: 'generation_time_ms') int? generationTimeMs,
     @JsonKey(name: 'llm_cost') double? llmCost,
     @Default('general') String format,
+    @JsonKey(name: 'is_demo') @Default(false) bool isDemo,
   }) = _SummaryModel;
 
   factory SummaryModel.fromJson(Map<String, dynamic> json) =>

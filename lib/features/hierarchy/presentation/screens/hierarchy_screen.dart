@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:animated_tree_view/animated_tree_view.dart';
 import '../../../../core/utils/datetime_utils.dart';
+import '../../../../shared/widgets/demo_badge.dart';
 import '../providers/hierarchy_providers.dart';
 import '../providers/favorites_provider.dart';
 import '../../domain/entities/hierarchy_item.dart';
@@ -927,6 +928,11 @@ class _HierarchyScreenState extends ConsumerState<HierarchyScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        if (item.isDemo) ...[
+                          const SizedBox(width: 6),
+                          const DemoBadge(),
+                          const SizedBox(width: 6),
+                        ],
                         // Type Badge
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -1238,18 +1244,28 @@ class _HierarchyScreenState extends ConsumerState<HierarchyScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          item.name,
-                          style: isMobile
-                            ? textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                height: 1.3,
-                              )
-                            : textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w600,
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                item.name,
+                                style: isMobile
+                                  ? textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      height: 1.3,
+                                    )
+                                  : textTheme.titleSmall?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                maxLines: isMobile ? 2 : 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                          maxLines: isMobile ? 2 : 1,
-                          overflow: TextOverflow.ellipsis,
+                            ),
+                            if (item.isDemo) ...[
+                              const SizedBox(width: 6),
+                              const DemoBadge(),
+                            ],
+                          ],
                         ),
                         if (item.description?.isNotEmpty == true && !isMobile) ...[
                           const SizedBox(height: 2),

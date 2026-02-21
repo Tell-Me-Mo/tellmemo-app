@@ -289,7 +289,9 @@ mixin _$HierarchyNodeModel {
   String? get updatedAt => throw _privateConstructorUsedError;
   String? get status => throw _privateConstructorUsedError; // For projects
   @JsonKey(name: 'member_count')
-  int? get memberCount => throw _privateConstructorUsedError; // Nested content
+  int? get memberCount => throw _privateConstructorUsedError;
+  @JsonKey(name: 'is_demo')
+  bool get isDemo => throw _privateConstructorUsedError; // Nested content
   List<HierarchyNodeModel> get children => throw _privateConstructorUsedError;
   List<HierarchyNodeModel> get programs => throw _privateConstructorUsedError;
   @JsonKey(name: 'direct_projects')
@@ -325,6 +327,7 @@ abstract class $HierarchyNodeModelCopyWith<$Res> {
     @JsonKey(name: 'updated_at') String? updatedAt,
     String? status,
     @JsonKey(name: 'member_count') int? memberCount,
+    @JsonKey(name: 'is_demo') bool isDemo,
     List<HierarchyNodeModel> children,
     List<HierarchyNodeModel> programs,
     @JsonKey(name: 'direct_projects') List<HierarchyNodeModel> directProjects,
@@ -357,6 +360,7 @@ class _$HierarchyNodeModelCopyWithImpl<$Res, $Val extends HierarchyNodeModel>
     Object? updatedAt = freezed,
     Object? status = freezed,
     Object? memberCount = freezed,
+    Object? isDemo = null,
     Object? children = null,
     Object? programs = null,
     Object? directProjects = null,
@@ -404,6 +408,10 @@ class _$HierarchyNodeModelCopyWithImpl<$Res, $Val extends HierarchyNodeModel>
                 ? _value.memberCount
                 : memberCount // ignore: cast_nullable_to_non_nullable
                       as int?,
+            isDemo: null == isDemo
+                ? _value.isDemo
+                : isDemo // ignore: cast_nullable_to_non_nullable
+                      as bool,
             children: null == children
                 ? _value.children
                 : children // ignore: cast_nullable_to_non_nullable
@@ -446,6 +454,7 @@ abstract class _$$HierarchyNodeModelImplCopyWith<$Res>
     @JsonKey(name: 'updated_at') String? updatedAt,
     String? status,
     @JsonKey(name: 'member_count') int? memberCount,
+    @JsonKey(name: 'is_demo') bool isDemo,
     List<HierarchyNodeModel> children,
     List<HierarchyNodeModel> programs,
     @JsonKey(name: 'direct_projects') List<HierarchyNodeModel> directProjects,
@@ -477,6 +486,7 @@ class __$$HierarchyNodeModelImplCopyWithImpl<$Res>
     Object? updatedAt = freezed,
     Object? status = freezed,
     Object? memberCount = freezed,
+    Object? isDemo = null,
     Object? children = null,
     Object? programs = null,
     Object? directProjects = null,
@@ -524,6 +534,10 @@ class __$$HierarchyNodeModelImplCopyWithImpl<$Res>
             ? _value.memberCount
             : memberCount // ignore: cast_nullable_to_non_nullable
                   as int?,
+        isDemo: null == isDemo
+            ? _value.isDemo
+            : isDemo // ignore: cast_nullable_to_non_nullable
+                  as bool,
         children: null == children
             ? _value._children
             : children // ignore: cast_nullable_to_non_nullable
@@ -559,6 +573,7 @@ class _$HierarchyNodeModelImpl implements _HierarchyNodeModel {
     @JsonKey(name: 'updated_at') this.updatedAt,
     this.status,
     @JsonKey(name: 'member_count') this.memberCount,
+    @JsonKey(name: 'is_demo') this.isDemo = false,
     final List<HierarchyNodeModel> children = const [],
     final List<HierarchyNodeModel> programs = const [],
     @JsonKey(name: 'direct_projects')
@@ -599,6 +614,9 @@ class _$HierarchyNodeModelImpl implements _HierarchyNodeModel {
   @override
   @JsonKey(name: 'member_count')
   final int? memberCount;
+  @override
+  @JsonKey(name: 'is_demo')
+  final bool isDemo;
   // Nested content
   final List<HierarchyNodeModel> _children;
   // Nested content
@@ -639,7 +657,7 @@ class _$HierarchyNodeModelImpl implements _HierarchyNodeModel {
 
   @override
   String toString() {
-    return 'HierarchyNodeModel(id: $id, name: $name, description: $description, type: $type, portfolioId: $portfolioId, programId: $programId, createdAt: $createdAt, updatedAt: $updatedAt, status: $status, memberCount: $memberCount, children: $children, programs: $programs, directProjects: $directProjects, projects: $projects)';
+    return 'HierarchyNodeModel(id: $id, name: $name, description: $description, type: $type, portfolioId: $portfolioId, programId: $programId, createdAt: $createdAt, updatedAt: $updatedAt, status: $status, memberCount: $memberCount, isDemo: $isDemo, children: $children, programs: $programs, directProjects: $directProjects, projects: $projects)';
   }
 
   @override
@@ -663,6 +681,7 @@ class _$HierarchyNodeModelImpl implements _HierarchyNodeModel {
             (identical(other.status, status) || other.status == status) &&
             (identical(other.memberCount, memberCount) ||
                 other.memberCount == memberCount) &&
+            (identical(other.isDemo, isDemo) || other.isDemo == isDemo) &&
             const DeepCollectionEquality().equals(other._children, _children) &&
             const DeepCollectionEquality().equals(other._programs, _programs) &&
             const DeepCollectionEquality().equals(
@@ -686,6 +705,7 @@ class _$HierarchyNodeModelImpl implements _HierarchyNodeModel {
     updatedAt,
     status,
     memberCount,
+    isDemo,
     const DeepCollectionEquality().hash(_children),
     const DeepCollectionEquality().hash(_programs),
     const DeepCollectionEquality().hash(_directProjects),
@@ -721,6 +741,7 @@ abstract class _HierarchyNodeModel implements HierarchyNodeModel {
     @JsonKey(name: 'updated_at') final String? updatedAt,
     final String? status,
     @JsonKey(name: 'member_count') final int? memberCount,
+    @JsonKey(name: 'is_demo') final bool isDemo,
     final List<HierarchyNodeModel> children,
     final List<HierarchyNodeModel> programs,
     @JsonKey(name: 'direct_projects')
@@ -755,7 +776,10 @@ abstract class _HierarchyNodeModel implements HierarchyNodeModel {
   String? get status; // For projects
   @override
   @JsonKey(name: 'member_count')
-  int? get memberCount; // Nested content
+  int? get memberCount;
+  @override
+  @JsonKey(name: 'is_demo')
+  bool get isDemo; // Nested content
   @override
   List<HierarchyNodeModel> get children;
   @override

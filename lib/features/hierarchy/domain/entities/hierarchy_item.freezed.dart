@@ -27,6 +27,7 @@ mixin _$HierarchyItem {
   DateTime get updatedAt => throw _privateConstructorUsedError;
   List<HierarchyItem> get children => throw _privateConstructorUsedError;
   Map<String, dynamic>? get metadata => throw _privateConstructorUsedError;
+  bool get isDemo => throw _privateConstructorUsedError;
 
   /// Create a copy of HierarchyItem
   /// with the given fields replaced by the non-null parameter values.
@@ -53,6 +54,7 @@ abstract class $HierarchyItemCopyWith<$Res> {
     DateTime updatedAt,
     List<HierarchyItem> children,
     Map<String, dynamic>? metadata,
+    bool isDemo,
   });
 }
 
@@ -81,6 +83,7 @@ class _$HierarchyItemCopyWithImpl<$Res, $Val extends HierarchyItem>
     Object? updatedAt = null,
     Object? children = null,
     Object? metadata = freezed,
+    Object? isDemo = null,
   }) {
     return _then(
       _value.copyWith(
@@ -124,6 +127,10 @@ class _$HierarchyItemCopyWithImpl<$Res, $Val extends HierarchyItem>
                 ? _value.metadata
                 : metadata // ignore: cast_nullable_to_non_nullable
                       as Map<String, dynamic>?,
+            isDemo: null == isDemo
+                ? _value.isDemo
+                : isDemo // ignore: cast_nullable_to_non_nullable
+                      as bool,
           )
           as $Val,
     );
@@ -150,6 +157,7 @@ abstract class _$$HierarchyItemImplCopyWith<$Res>
     DateTime updatedAt,
     List<HierarchyItem> children,
     Map<String, dynamic>? metadata,
+    bool isDemo,
   });
 }
 
@@ -177,6 +185,7 @@ class __$$HierarchyItemImplCopyWithImpl<$Res>
     Object? updatedAt = null,
     Object? children = null,
     Object? metadata = freezed,
+    Object? isDemo = null,
   }) {
     return _then(
       _$HierarchyItemImpl(
@@ -220,6 +229,10 @@ class __$$HierarchyItemImplCopyWithImpl<$Res>
             ? _value._metadata
             : metadata // ignore: cast_nullable_to_non_nullable
                   as Map<String, dynamic>?,
+        isDemo: null == isDemo
+            ? _value.isDemo
+            : isDemo // ignore: cast_nullable_to_non_nullable
+                  as bool,
       ),
     );
   }
@@ -239,6 +252,7 @@ class _$HierarchyItemImpl extends _HierarchyItem {
     required this.updatedAt,
     final List<HierarchyItem> children = const [],
     final Map<String, dynamic>? metadata,
+    this.isDemo = false,
   }) : _children = children,
        _metadata = metadata,
        super._();
@@ -279,8 +293,12 @@ class _$HierarchyItemImpl extends _HierarchyItem {
   }
 
   @override
+  @JsonKey()
+  final bool isDemo;
+
+  @override
   String toString() {
-    return 'HierarchyItem(id: $id, name: $name, description: $description, type: $type, portfolioId: $portfolioId, programId: $programId, createdAt: $createdAt, updatedAt: $updatedAt, children: $children, metadata: $metadata)';
+    return 'HierarchyItem(id: $id, name: $name, description: $description, type: $type, portfolioId: $portfolioId, programId: $programId, createdAt: $createdAt, updatedAt: $updatedAt, children: $children, metadata: $metadata, isDemo: $isDemo)';
   }
 
   @override
@@ -302,7 +320,8 @@ class _$HierarchyItemImpl extends _HierarchyItem {
             (identical(other.updatedAt, updatedAt) ||
                 other.updatedAt == updatedAt) &&
             const DeepCollectionEquality().equals(other._children, _children) &&
-            const DeepCollectionEquality().equals(other._metadata, _metadata));
+            const DeepCollectionEquality().equals(other._metadata, _metadata) &&
+            (identical(other.isDemo, isDemo) || other.isDemo == isDemo));
   }
 
   @override
@@ -318,6 +337,7 @@ class _$HierarchyItemImpl extends _HierarchyItem {
     updatedAt,
     const DeepCollectionEquality().hash(_children),
     const DeepCollectionEquality().hash(_metadata),
+    isDemo,
   );
 
   /// Create a copy of HierarchyItem
@@ -341,6 +361,7 @@ abstract class _HierarchyItem extends HierarchyItem {
     required final DateTime updatedAt,
     final List<HierarchyItem> children,
     final Map<String, dynamic>? metadata,
+    final bool isDemo,
   }) = _$HierarchyItemImpl;
   const _HierarchyItem._() : super._();
 
@@ -364,6 +385,8 @@ abstract class _HierarchyItem extends HierarchyItem {
   List<HierarchyItem> get children;
   @override
   Map<String, dynamic>? get metadata;
+  @override
+  bool get isDemo;
 
   /// Create a copy of HierarchyItem
   /// with the given fields replaced by the non-null parameter values.

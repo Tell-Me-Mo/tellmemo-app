@@ -39,7 +39,7 @@ final uploadContentProvider =
     );
 
 typedef _$UploadContent = AutoDisposeNotifier<UploadState>;
-String _$multiFileUploadHash() => r'add8bb1c577d687f801674846f9023e9d239870e';
+String _$multiFileUploadHash() => r'd471ae918c9471a7e5a20bbbbc440850dea7105e';
 
 /// See also [MultiFileUpload].
 @ProviderFor(MultiFileUpload)

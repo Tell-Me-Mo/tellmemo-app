@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, Enum, Text, Float, JSON
+from sqlalchemy import Column, String, DateTime, ForeignKey, Enum, Text, Float, JSON, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from db.database import Base
@@ -56,6 +56,7 @@ class LessonLearned(Base):
     identified_date = Column(DateTime, default=datetime.utcnow)
     last_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     updated_by = Column(String(50))  # 'ai' or 'manual'
+    is_demo = Column(Boolean, default=False, nullable=False, server_default="false")
 
     # Relationships
     project = relationship("Project", back_populates="lessons_learned")
@@ -79,5 +80,6 @@ class LessonLearned(Base):
             "identified_date": self.identified_date.isoformat() if self.identified_date else None,
             "last_updated": self.last_updated.isoformat() if self.last_updated else None,
             "updated_by": self.updated_by,
-            "title_embedding": self.title_embedding
+            "title_embedding": self.title_embedding,
+            "is_demo": self.is_demo
         }

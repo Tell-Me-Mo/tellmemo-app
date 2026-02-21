@@ -94,6 +94,7 @@ class OrganizationResponse(BaseModel):
     updated_at: datetime
     member_count: Optional[int] = None
     current_user_role: Optional[str] = None
+    has_demo_data: bool = False
 
 
 class OrganizationListResponse(BaseModel):
@@ -237,6 +238,29 @@ async def create_organization(
         await db.commit()
         await db.refresh(organization)
 
+        # Seed demo data (best-effort, separate transaction)
+        has_demo = False
+        try:
+            from services.demo.demo_data_service import DemoDataService
+            async with db_manager.sessionmaker() as seed_session:
+                try:
+                    success = await DemoDataService.seed_demo_data(
+                        seed_session,
+                        organization.id,
+                        current_user.email,
+                    )
+                    if success:
+                        await seed_session.commit()
+                        has_demo = True
+                        logger.info(f"Demo data seeded for organization {organization.id}")
+                    else:
+                        await seed_session.rollback()
+                except Exception:
+                    await seed_session.rollback()
+                    logger.warning(f"Demo data seeding failed for org {organization.id}, continuing")
+        except Exception as e:
+            logger.warning(f"Could not start demo data seeding session: {e}")
+
         return OrganizationResponse(
             id=str(organization.id),
             name=organization.name,
@@ -249,7 +273,8 @@ async def create_organization(
             created_at=organization.created_at,
             updated_at=organization.updated_at,
             member_count=1,
-            current_user_role=OrganizationRole.ADMIN.value
+            current_user_role=OrganizationRole.ADMIN.value,
+            has_demo_data=has_demo
         )
 
     except HTTPException:
@@ -390,6 +415,10 @@ async def get_organization(
         # Get member count
         member_count = len(organization.members)
 
+        # Check for demo data
+        from services.demo.demo_data_service import DemoDataService
+        has_demo = await DemoDataService.has_demo_data(db, organization.id)
+
         return OrganizationResponse(
             id=str(organization.id),
             name=organization.name,
@@ -402,7 +431,8 @@ async def get_organization(
             created_at=organization.created_at,
             updated_at=organization.updated_at,
             member_count=member_count,
-            current_user_role=membership.role  # role is already a string
+            current_user_role=membership.role,  # role is already a string
+            has_demo_data=has_demo
         )
 
     except HTTPException:
@@ -1101,4 +1131,78 @@ async def remove_member(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to remove member"
+        )
+
+
+# =============================================================================
+# Demo Data Endpoints
+# =============================================================================
+
+
+@router.get("/{organization_id}/demo-data/status")
+async def check_demo_data_status(
+    organization_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Check if the organization has demo data."""
+    # Verify user is a member
+    membership_check = await db.execute(
+        select(OrganizationMember).where(
+            and_(
+                OrganizationMember.organization_id == organization_id,
+                OrganizationMember.user_id == current_user.id,
+            )
+        )
+    )
+    if not membership_check.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found or you are not a member",
+        )
+
+    from services.demo.demo_data_service import DemoDataService
+    has_demo = await DemoDataService.has_demo_data(db, organization_id)
+    return {"has_demo_data": has_demo}
+
+
+@router.delete("/{organization_id}/demo-data")
+async def clear_demo_data(
+    organization_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Clear all demo data from the organization. Only admins can do this."""
+    # Verify user is admin
+    result = await db.execute(
+        select(OrganizationMember).where(
+            and_(
+                OrganizationMember.organization_id == organization_id,
+                OrganizationMember.user_id == current_user.id,
+            )
+        )
+    )
+    membership = result.scalar_one_or_none()
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found or you are not a member",
+        )
+    if membership.role != OrganizationRole.ADMIN.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only organization admins can clear demo data",
+        )
+
+    try:
+        from services.demo.demo_data_service import DemoDataService
+        counts = await DemoDataService.clear_demo_data(db, organization_id)
+        await db.commit()
+        return {"message": "Demo data cleared successfully", "deleted_counts": counts}
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error clearing demo data: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to clear demo data",
         )

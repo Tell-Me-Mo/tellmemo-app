@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime, Text, Enum as SQLEnum, ForeignKey
+from sqlalchemy import Column, String, DateTime, Text, Enum as SQLEnum, ForeignKey, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 import enum
@@ -33,7 +33,8 @@ class Portfolio(Base):
     created_by = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    
+    is_demo = Column(Boolean, default=False, nullable=False, server_default="false")
+
     # Relationships
     programs = relationship("Program", back_populates="portfolio")
     projects = relationship("Project", back_populates="portfolio")  # Direct projects without a program

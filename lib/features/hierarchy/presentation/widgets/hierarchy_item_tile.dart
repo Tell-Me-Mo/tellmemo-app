@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/hierarchy_item.dart';
 import '../../../../core/constants/ui_constants.dart';
+import '../../../../shared/widgets/demo_badge.dart';
 
 class HierarchyItemTile extends ConsumerWidget {
   final HierarchyItem item;
@@ -112,14 +113,24 @@ class HierarchyItemTile extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  item.name,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    height: 1.3,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        item.name,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          height: 1.3,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (item.isDemo) ...[
+                      const SizedBox(width: 6),
+                      const DemoBadge(),
+                    ],
+                  ],
                 ),
                 if (item.metadata != null && item.metadata!['count'] != null)
                   Padding(
@@ -271,11 +282,21 @@ class HierarchyItemTile extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  item.name,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        item.name,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    if (item.isDemo) ...[
+                      const SizedBox(width: 6),
+                      const DemoBadge(),
+                    ],
+                  ],
                 ),
                 if (item.description != null && item.description!.isNotEmpty)
                   Padding(

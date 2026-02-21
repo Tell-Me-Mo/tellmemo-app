@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Enum as SQLEnum
+from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Enum as SQLEnum, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 import uuid
@@ -30,7 +30,8 @@ class Activity(Base):
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
     user_id = Column(String(255))
     user_name = Column(String(255))
-    
+    is_demo = Column(Boolean, default=False, nullable=False, server_default="false")
+
     # Relationships
     project = relationship("Project", back_populates="activities")
     
@@ -44,5 +45,6 @@ class Activity(Base):
             "metadata": self.activity_metadata,
             "timestamp": self.timestamp.isoformat(),
             "user_id": self.user_id,
-            "user_name": self.user_name
+            "user_name": self.user_name,
+            "is_demo": self.is_demo
         }

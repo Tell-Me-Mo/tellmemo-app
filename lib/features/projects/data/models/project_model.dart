@@ -17,6 +17,7 @@ class ProjectModel with _$ProjectModel {
     @JsonKey(name: 'portfolio_id') String? portfolioId,
     @JsonKey(name: 'program_id') String? programId,
     @JsonKey(name: 'member_count') int? memberCount,
+    @JsonKey(name: 'is_demo') @Default(false) bool isDemo,
   }) = _ProjectModel;
 
   factory ProjectModel.fromJson(Map<String, dynamic> json) =>
@@ -43,6 +44,7 @@ extension ProjectModelX on ProjectModel {
       portfolioId: portfolioId,
       programId: programId,
       memberCount: memberCount,
+      isDemo: isDemo,
     );
   }
 }
@@ -60,6 +62,7 @@ extension ProjectX on Project {
       portfolioId: portfolioId,
       programId: programId,
       memberCount: memberCount,
+      isDemo: isDemo,
     );
   }
 }
