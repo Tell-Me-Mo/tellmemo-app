@@ -16,6 +16,7 @@ from models.content import ContentType
 from services.core.content_service import ContentService
 from services.intelligence.project_matcher_service import project_matcher_service
 from utils.logger import get_logger
+from utils.content_validation import sanitize_text_content
 from config import get_settings
 
 settings = get_settings()
@@ -76,11 +77,14 @@ async def upload_content_with_ai_matching(
                 detail=f"Content exceeds maximum size of {settings.max_file_size_mb}MB"
             )
 
+        # Sanitize content: strip null bytes and reject binary data
+        sanitized_content = sanitize_text_content(request.content)
+
         # Use AI to match content to project
         match_result = await project_matcher_service.match_transcript_to_project(
             session=session,
             organization_id=current_org.id,
-            transcript=request.content,
+            transcript=sanitized_content,
             meeting_title=request.title,
             meeting_date=datetime.combine(request.date, datetime.min.time()) if request.date else None,
             participants=[]  # Could be extracted from content if needed
@@ -100,7 +104,7 @@ async def upload_content_with_ai_matching(
             project_id=project_uuid,
             content_type=content_type_enum,
             title=request.title,
-            content=request.content,
+            content=sanitized_content,
             content_date=request.date,
             uploaded_by=None  # No auth in MVP
         )

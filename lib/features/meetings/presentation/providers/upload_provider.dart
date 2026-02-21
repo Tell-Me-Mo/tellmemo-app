@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -514,7 +515,7 @@ class MultiFileUpload extends _$MultiFileUpload {
             // Upload text/document file
             String contentToUpload;
             if (file.fileBytes != null) {
-              contentToUpload = String.fromCharCodes(file.fileBytes!);
+              contentToUpload = utf8.decode(file.fileBytes!, allowMalformed: true).replaceAll('\x00', '');
             } else if (file.filePath != null) {
               final fileObj = File(file.filePath!);
               contentToUpload = await fileObj.readAsString();

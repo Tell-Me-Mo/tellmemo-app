@@ -104,7 +104,9 @@ class AssemblyAIConnectionManager:
         self,
         session_id: str,
         on_transcription: Optional[Callable] = None,
-        on_error: Optional[Callable] = None
+        on_error: Optional[Callable] = None,
+        on_session_warning: Optional[Callable] = None,
+        on_session_limit_reached: Optional[Callable] = None
     ) -> Optional['AssemblyAIConnection']:
         """
         Get existing connection for session or create new one.
@@ -113,6 +115,8 @@ class AssemblyAIConnectionManager:
             session_id: The meeting session identifier
             on_transcription: Callback for transcription results
             on_error: Callback for errors
+            on_session_warning: Callback when session approaches duration limit (15 min)
+            on_session_limit_reached: Callback when session hits duration limit
 
         Returns:
             AssemblyAIConnection instance or None if creation failed
@@ -140,6 +144,8 @@ class AssemblyAIConnectionManager:
                 on_transcription=on_transcription,
                 on_error=on_error
             )
+            connection.on_session_warning = on_session_warning
+            connection.on_session_limit_reached = on_session_limit_reached
 
             # Connect to AssemblyAI
             success = await connection.connect()
@@ -213,6 +219,7 @@ class AssemblyAIConnection:
     - Transcription result parsing
     - Automatic reconnection
     - Metrics tracking
+    - Session duration limit (15 minutes max for live streaming)
     """
 
     # Universal-Streaming v3 endpoint (new API)
@@ -221,6 +228,10 @@ class AssemblyAIConnection:
     # Audio format: PCM 16kHz, 16-bit, mono (as per Flutter audio streaming spec)
     SAMPLE_RATE = 16000
     ENCODING = "pcm_s16le"
+
+    # Live streaming session duration limits
+    MAX_SESSION_DURATION_SECONDS = 15 * 60  # 15 minutes
+    SESSION_WARNING_SECONDS = 14 * 60  # Warn at 14 minutes (1 minute before limit)
 
     def __init__(
         self,
@@ -244,11 +255,18 @@ class AssemblyAIConnection:
         # Background tasks
         self.listener_task: Optional[asyncio.Task] = None
         self.heartbeat_task: Optional[asyncio.Task] = None
+        self._duration_limit_task: Optional[asyncio.Task] = None
 
         # Reconnection settings
         self.max_reconnect_attempts = 3
         self.reconnect_delay_seconds = [1, 2, 5]  # Exponential backoff
         self._reconnecting = False  # Flag to prevent concurrent reconnection attempts
+
+        # Duration limit tracking
+        self._warning_sent = False
+        self._duration_exceeded = False
+        self.on_session_warning: Optional[Callable] = None
+        self.on_session_limit_reached: Optional[Callable] = None
 
     async def connect(self) -> bool:
         """
@@ -309,6 +327,10 @@ class AssemblyAIConnection:
             # Start listener task for receiving transcriptions
             self.listener_task = asyncio.create_task(self._listen_for_transcriptions())
 
+            # Start duration limit monitoring
+            if not self._duration_limit_task or self._duration_limit_task.done():
+                self._duration_limit_task = asyncio.create_task(self._monitor_session_duration())
+
             return True
 
         except asyncio.TimeoutError:
@@ -330,6 +352,9 @@ class AssemblyAIConnection:
         Returns:
             True if sent successfully, False otherwise
         """
+        if self._duration_exceeded:
+            return False
+
         if self.state != ConnectionState.CONNECTED or not self.websocket:
             logger.warning(f"Cannot send audio: not connected for session {sanitize_for_log(self.session_id)}")
             return False
@@ -348,10 +373,10 @@ class AssemblyAIConnection:
 
             return True
 
-        except websockets.exceptions.ConnectionClosed:
+        except websockets.exceptions.ConnectionClosed as e:
             logger.warning(f"AssemblyAI connection closed while sending audio for session {sanitize_for_log(self.session_id)}")
             self.state = ConnectionState.ERROR
-            await self._attempt_reconnect()
+            await self._attempt_reconnect(close_code=e.code, close_reason=e.reason)
             return False
         except Exception as e:
             logger.error(f"Error sending audio to AssemblyAI for session {sanitize_for_log(self.session_id)}: {e}")
@@ -453,7 +478,7 @@ class AssemblyAIConnection:
                 except websockets.exceptions.ConnectionClosed as e:
                     logger.warning(f"AssemblyAI connection closed for session {sanitize_for_log(self.session_id)}: code={e.code}, reason={e.reason}")
                     self.state = ConnectionState.ERROR
-                    await self._attempt_reconnect()
+                    await self._attempt_reconnect(close_code=e.code, close_reason=e.reason)
                     break
 
         except Exception as e:
@@ -504,12 +529,85 @@ class AssemblyAIConnection:
             words=words
         )
 
-    async def _attempt_reconnect(self):
+    async def _monitor_session_duration(self):
+        """
+        Monitor session duration and enforce the 15-minute limit for live streaming.
+
+        Sends a warning callback at 14 minutes, then closes the connection at 15 minutes.
+        This limit applies only to live streaming sessions (AssemblyAI real-time),
+        not to regular recording uploads which have no limit.
+        """
+        try:
+            while self.state == ConnectionState.CONNECTED:
+                await asyncio.sleep(5)  # Check every 5 seconds
+
+                if not self.metrics.started_at:
+                    continue
+
+                elapsed = (datetime.utcnow() - self.metrics.started_at).total_seconds()
+
+                # Send warning at 14 minutes
+                if not self._warning_sent and elapsed >= self.SESSION_WARNING_SECONDS:
+                    self._warning_sent = True
+                    remaining = int(self.MAX_SESSION_DURATION_SECONDS - elapsed)
+                    logger.warning(
+                        f"Live streaming session {sanitize_for_log(self.session_id)} "
+                        f"approaching limit: {remaining}s remaining"
+                    )
+                    if self.on_session_warning:
+                        await self.on_session_warning(self.session_id, remaining)
+
+                # Enforce limit at 15 minutes
+                if elapsed >= self.MAX_SESSION_DURATION_SECONDS:
+                    self._duration_exceeded = True
+                    logger.info(
+                        f"Live streaming session {sanitize_for_log(self.session_id)} "
+                        f"reached {self.MAX_SESSION_DURATION_SECONDS // 60}-minute limit, closing connection"
+                    )
+                    if self.on_session_limit_reached:
+                        await self.on_session_limit_reached(self.session_id)
+                    await self.close()
+                    return
+
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logger.error(f"Error in session duration monitor for {sanitize_for_log(self.session_id)}: {e}")
+
+    async def _attempt_reconnect(self, close_code: Optional[int] = None, close_reason: Optional[str] = None):
         """
         Attempt to reconnect to AssemblyAI with exponential backoff.
 
+        Handles different disconnect codes appropriately:
+        - 3008 (Session Expired): Don't reconnect, session is done
+        - 1008 (Insufficient Funds): Don't reconnect, billing issue
+        - Other codes: Retry with backoff
+
         Prevents concurrent reconnection attempts using a flag.
         """
+        # Don't reconnect if session duration limit was reached
+        if self._duration_exceeded:
+            logger.info(f"Not reconnecting: session duration limit reached for {sanitize_for_log(self.session_id)}")
+            self.state = ConnectionState.FAILED
+            return
+
+        # Don't reconnect for non-recoverable errors
+        if close_code in (3005, 3008):
+            logger.info(f"Not reconnecting: session expired (code {close_code}) for {sanitize_for_log(self.session_id)}")
+            self.state = ConnectionState.FAILED
+            if self.on_error:
+                await self.on_error(self.session_id, "Session expired: maximum session duration exceeded")
+            return
+
+        if close_code == 1008:
+            reason_lower = (close_reason or "").lower()
+            if "insufficient funds" in reason_lower or "unauthorized" in reason_lower:
+                logger.error(f"Not reconnecting: billing issue (code 1008) for {sanitize_for_log(self.session_id)}: {close_reason}")
+                self.state = ConnectionState.FAILED
+                if self.on_error:
+                    await self.on_error(self.session_id, f"Transcription service unavailable: {close_reason}")
+                return
+
         # Prevent concurrent reconnection attempts
         if self._reconnecting:
             logger.debug(f"Reconnection already in progress for session {sanitize_for_log(self.session_id)}")
@@ -565,6 +663,13 @@ class AssemblyAIConnection:
             self.heartbeat_task.cancel()
             try:
                 await self.heartbeat_task
+            except asyncio.CancelledError:
+                pass
+
+        if self._duration_limit_task and not self._duration_limit_task.done():
+            self._duration_limit_task.cancel()
+            try:
+                await self._duration_limit_task
             except asyncio.CancelledError:
                 pass
 

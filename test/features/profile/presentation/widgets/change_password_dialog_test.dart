@@ -85,7 +85,7 @@ void main() {
       await tester.pumpWidget(createDialog());
 
       expect(find.text('Password Requirements'), findsOneWidget);
-      expect(find.text('• At least 6 characters long'), findsOneWidget);
+      expect(find.text('• At least 8 characters, with uppercase, lowercase, and a number'), findsOneWidget);
       expect(find.byIcon(Icons.info_outline), findsOneWidget);
     });
 
@@ -125,17 +125,17 @@ void main() {
       expect(find.text('Please enter a password'), findsOneWidget);
     });
 
-    testWidgets('validates short password (less than 6 characters)', (tester) async {
+    testWidgets('validates short password (less than 8 characters)', (tester) async {
       await tester.pumpWidget(createDialog());
 
       await tester.enterText(
         find.widgetWithText(TextFormField, 'New Password'),
-        '12345',
+        'Pass1',
       );
       await tester.tap(find.widgetWithText(FilledButton, 'Update Password'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Password must be at least 6 characters'), findsOneWidget);
+      expect(find.text('Password must be at least 8 characters'), findsOneWidget);
     });
 
     testWidgets('validates empty confirm password', (tester) async {
@@ -143,7 +143,7 @@ void main() {
 
       await tester.enterText(
         find.widgetWithText(TextFormField, 'New Password'),
-        'password123',
+        'Password123',
       );
       await tester.tap(find.widgetWithText(FilledButton, 'Update Password'));
       await tester.pumpAndSettle();
@@ -156,11 +156,11 @@ void main() {
 
       await tester.enterText(
         find.widgetWithText(TextFormField, 'New Password'),
-        'password123',
+        'Password123',
       );
       await tester.enterText(
         find.widgetWithText(TextFormField, 'Confirm New Password'),
-        'password456',
+        'Password456',
       );
       await tester.tap(find.widgetWithText(FilledButton, 'Update Password'));
       await tester.pumpAndSettle();
@@ -171,7 +171,7 @@ void main() {
     testWidgets('successfully updates password with valid input', (tester) async {
       await tester.pumpWidget(createDialog());
 
-      const newPassword = 'newpassword123';
+      const newPassword = 'NewPassword123';
 
       await tester.enterText(
         find.widgetWithText(TextFormField, 'New Password'),
@@ -192,7 +192,7 @@ void main() {
       testNotifier.shouldFail = true;
       await tester.pumpWidget(createDialog());
 
-      const newPassword = 'newpassword123';
+      const newPassword = 'NewPassword123';
 
       await tester.enterText(
         find.widgetWithText(TextFormField, 'New Password'),
@@ -215,10 +215,10 @@ void main() {
       expect(find.byIcon(Icons.lock_outline), findsWidgets);
     });
 
-    testWidgets('accepts password with exactly 6 characters', (tester) async {
+    testWidgets('accepts password meeting all requirements', (tester) async {
       await tester.pumpWidget(createDialog());
 
-      const newPassword = '123456';
+      const newPassword = 'Abcd1234';
 
       await tester.enterText(
         find.widgetWithText(TextFormField, 'New Password'),
@@ -238,7 +238,7 @@ void main() {
     testWidgets('accepts long passwords', (tester) async {
       await tester.pumpWidget(createDialog());
 
-      final newPassword = 'a' * 100;
+      final newPassword = 'Aa1${'x' * 97}';
 
       await tester.enterText(
         find.widgetWithText(TextFormField, 'New Password'),
@@ -302,7 +302,7 @@ void main() {
       // Enter password but click cancel
       await tester.enterText(
         find.widgetWithText(TextFormField, 'New Password'),
-        'password123',
+        'Password123',
       );
       await tester.tap(find.widgetWithText(OutlinedButton, 'Cancel'));
       await tester.pumpAndSettle();
@@ -340,7 +340,7 @@ void main() {
       // Enter password but click close
       await tester.enterText(
         find.widgetWithText(TextFormField, 'New Password'),
-        'password123',
+        'Password123',
       );
       await tester.tap(find.byIcon(Icons.close));
       await tester.pumpAndSettle();
@@ -367,7 +367,7 @@ void main() {
         ),
       );
 
-      const newPassword = 'password123';
+      const newPassword = 'Password123';
 
       await tester.enterText(
         find.widgetWithText(TextFormField, 'New Password'),

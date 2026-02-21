@@ -143,7 +143,10 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen>
 
   bool _isPasswordValid() {
     final password = _passwordController.text;
-    return password.length >= 6;
+    return password.length >= 8 &&
+        password.contains(RegExp(r'[A-Z]')) &&
+        password.contains(RegExp(r'[a-z]')) &&
+        password.contains(RegExp(r'[0-9]'));
   }
 
   Widget _buildPasswordRequirement(String text, bool isMet) {
@@ -184,7 +187,10 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen>
     final isTablet = screenWidth >= 600 && screenWidth < 1200;
 
     final password = _passwordController.text;
-    final hasMinLength = password.length >= 6;
+    final hasMinLength = password.length >= 8;
+    final hasUppercase = password.contains(RegExp(r'[A-Z]'));
+    final hasLowercase = password.contains(RegExp(r'[a-z]'));
+    final hasDigit = password.contains(RegExp(r'[0-9]'));
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -454,7 +460,10 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen>
                                     ),
                                   ),
                                   const SizedBox(height: 8),
-                                  _buildPasswordRequirement('At least 6 characters', hasMinLength),
+                                  _buildPasswordRequirement('At least 8 characters', hasMinLength),
+                                  _buildPasswordRequirement('One uppercase letter', hasUppercase),
+                                  _buildPasswordRequirement('One lowercase letter', hasLowercase),
+                                  _buildPasswordRequirement('One number', hasDigit),
                                 ],
                               ),
                             ),

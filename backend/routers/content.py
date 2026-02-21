@@ -13,6 +13,7 @@ from models.content import ContentType
 from services.core.content_service import ContentService
 from services.intelligence.project_matcher_service import project_matcher_service
 from utils.logger import get_logger, sanitize_for_log
+from utils.content_validation import sanitize_text_content
 from config import get_settings
 
 settings = get_settings()
@@ -226,13 +227,29 @@ async def upload_text_content(
                 detail="Invalid content type. Must be 'meeting' or 'email'"
             )
 
+        # Validate content
+        if not request.content or len(request.content.strip()) < 50:
+            raise HTTPException(
+                status_code=400,
+                detail="Content is too short. Please provide more detailed content."
+            )
+
+        if len(request.content) > settings.max_file_size_mb * 1024 * 1024:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Content exceeds maximum size of {settings.max_file_size_mb}MB"
+            )
+
+        # Sanitize content: strip null bytes and reject binary data
+        sanitized_content = sanitize_text_content(request.content)
+
         # Handle project ID - either use provided or match with AI
         if project_id == "auto" and request.use_ai_matching:
             # Use AI to match content to project
             match_result = await project_matcher_service.match_transcript_to_project(
                 session=session,
                 organization_id=current_org.id,
-                transcript=request.content,
+                transcript=sanitized_content,
                 meeting_title=request.title,
                 meeting_date=datetime.combine(request.date, datetime.min.time()) if request.date else None,
                 participants=[]  # Could be extracted from content if needed
@@ -252,20 +269,7 @@ async def upload_text_content(
                 project_match_info = None
             except ValueError:
                 raise HTTPException(status_code=400, detail="Invalid project ID format")
-        
-        # Validate content
-        if not request.content or len(request.content.strip()) < 50:
-            raise HTTPException(
-                status_code=400,
-                detail="Content is too short. Please provide more detailed content."
-            )
-        
-        if len(request.content) > settings.max_file_size_mb * 1024 * 1024:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Content exceeds maximum size of {settings.max_file_size_mb}MB"
-            )
-        
+
         # Create content entry
         content_type_enum = ContentType.MEETING if request.content_type == "meeting" else ContentType.EMAIL
         content = await ContentService.create_content(
@@ -273,7 +277,7 @@ async def upload_text_content(
             project_id=project_uuid,
             content_type=content_type_enum,
             title=request.title,
-            content=request.content,
+            content=sanitized_content,
             content_date=request.date,
             uploaded_by=current_user.email,
             uploaded_by_id=str(current_user.id)
@@ -282,7 +286,7 @@ async def upload_text_content(
         await session.commit()
         
         # Prepare metadata for RQ job
-        content_size = len(request.content.encode('utf-8'))
+        content_size = len(sanitized_content.encode('utf-8'))
         job_metadata = {
             "content_id": str(content.id),
             "title": request.title,

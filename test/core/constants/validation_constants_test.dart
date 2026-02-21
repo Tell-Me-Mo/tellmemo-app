@@ -464,23 +464,28 @@ void main() {
     });
 
     group('Password strength validation', () {
-      test('should return error when password is less than 6 characters', () {
-        final result = FormValidators.validatePassword('12345');
-        expect(result, 'Password must be at least 6 characters');
+      test('should return error when password is less than 8 characters', () {
+        final result = FormValidators.validatePassword('Pass1');
+        expect(result, 'Password must be at least 8 characters');
       });
 
-      test('should accept password with exactly 6 characters', () {
-        final result = FormValidators.validatePassword('123456');
-        expect(result, null);
+      test('should return error when password has no uppercase', () {
+        final result = FormValidators.validatePassword('abcd1234');
+        expect(result, 'Password must contain at least one uppercase letter');
       });
 
-      test('should accept password with more than 6 characters', () {
-        final result = FormValidators.validatePassword('12345678');
-        expect(result, null);
+      test('should return error when password has no lowercase', () {
+        final result = FormValidators.validatePassword('ABCD1234');
+        expect(result, 'Password must contain at least one lowercase letter');
       });
 
-      test('should accept password with letters and numbers', () {
-        final result = FormValidators.validatePassword('Pass123');
+      test('should return error when password has no digit', () {
+        final result = FormValidators.validatePassword('Abcdefgh');
+        expect(result, 'Password must contain at least one number');
+      });
+
+      test('should accept password meeting all requirements', () {
+        final result = FormValidators.validatePassword('Pass1234');
         expect(result, null);
       });
 
@@ -497,14 +502,13 @@ void main() {
 
     group('Edge cases', () {
       test('should not trim whitespace from password', () {
-        // Passwords should not be trimmed - whitespace can be part of password
-        final result = FormValidators.validatePassword('  123456  ');
-        expect(result, null); // 10 characters including spaces
+        final result = FormValidators.validatePassword('  Pass1234  ');
+        expect(result, null); // meets all requirements including spaces
       });
 
-      test('should accept password with only spaces if length >= 6', () {
-        final result = FormValidators.validatePassword('      ');
-        expect(result, null); // 6 spaces
+      test('should reject password with only spaces', () {
+        final result = FormValidators.validatePassword('        ');
+        expect(result, isNotNull); // no uppercase, lowercase, or digit
       });
     });
   });

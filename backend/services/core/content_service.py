@@ -165,13 +165,13 @@ class ContentService:
                 raise ValueError(f"File size {file_size_mb:.2f}MB exceeds maximum {settings.max_file_size_mb}MB")
             
             # Validate file type (only text files for MVP)
-            allowed_types = ["text/plain", "text/txt"]
-            allowed_extensions = [".txt", ".text"]
-            
+            allowed_types = ["text/plain", "text/txt", "text/markdown"]
+            allowed_extensions = [".txt", ".text", ".md"]
+
             file_extension = filename.lower().split('.')[-1] if '.' in filename else ''
-            
+
             if content_type not in allowed_types and f".{file_extension}" not in allowed_extensions:
-                raise ValueError(f"File type not supported. Please upload a .txt file")
+                raise ValueError(f"File type not supported. Please upload a .txt or .md file")
             
             # Extract text content
             try:
