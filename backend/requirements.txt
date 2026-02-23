@@ -24,7 +24,7 @@ alembic==1.18.3
 
 # Cache & Job Queue
 redis[hiredis]==7.1.0
-rq==2.6.1  # Redis Queue for background job processing (latest)
+rq==2.7.0  # Redis Queue for background job processing (latest)
 rq-dashboard==0.8.6
 
 # Validation & Settings
