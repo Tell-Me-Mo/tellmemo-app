@@ -68,7 +68,7 @@ dependencies:
   uuid: ^4.5.1
 
   # Firebase
-  firebase_core: ^4.4.0
+  firebase_core: ^4.5.0
   firebase_analytics: ^12.1.1
   
   # Audio Recording & Streaming
