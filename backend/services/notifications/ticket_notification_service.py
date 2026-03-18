@@ -161,7 +161,7 @@ class TicketNotificationService:
             User.id == OrganizationMember.user_id
         ).where(
             OrganizationMember.organization_id == org_id,
-            OrganizationMember.role.in_([OrganizationRole.admin, OrganizationRole.owner])
+            OrganizationMember.role.in_([OrganizationRole.ADMIN])
         )
 
         result = await db.execute(query)

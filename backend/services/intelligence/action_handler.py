@@ -128,6 +128,14 @@ class ActionHandler:
                 deadline=deadline
             )
 
+            # Validate required fields - project_id is NOT NULL in the database
+            if not project_id:
+                logger.error(
+                    f"Cannot create action insight for session {sanitize_for_log(session_id)}: "
+                    f"project_id is required but was None."
+                )
+                return None
+
             # Create LiveMeetingInsight record
             # Note: Speaker diarization not supported in streaming API
             action_insight = LiveMeetingInsight(

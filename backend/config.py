@@ -239,7 +239,7 @@ class Settings(BaseSettings):
     otel_exporter_otlp_protocol: str = Field(default="http/protobuf", env="OTEL_EXPORTER_OTLP_PROTOCOL")
     otel_traces_sampler: str = Field(default="always_on", env="OTEL_TRACES_SAMPLER")  # always_on, always_off, traceidratio
     otel_traces_sampler_arg: float = Field(default=1.0, env="OTEL_TRACES_SAMPLER_ARG")  # 1.0 = 100% sampling
-    otel_metrics_export_interval_millis: int = Field(default=60000, env="OTEL_METRICS_EXPORT_INTERVAL_MILLIS")  # 60s default
+    otel_metrics_export_interval_millis: int = Field(default=120000, env="OTEL_METRICS_EXPORT_INTERVAL_MILLIS")  # 120s default (reduced frequency to avoid Grafana rate limits)
     otel_logs_export_interval_millis: int = Field(default=60000, env="OTEL_LOGS_EXPORT_INTERVAL_MILLIS")  # 60s default
 
     # Logging Configuration
