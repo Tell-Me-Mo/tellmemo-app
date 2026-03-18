@@ -1,194 +1,65 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
-## Project Overview
+**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
-**PM Master V2** - A Flutter-based Meeting RAG System that uses Retrieval Augmented Generation to help teams extract insights from meeting transcripts and emails, generate summaries, and track project progress.
+## 1. Think Before Coding
 
-This is currently a starter Flutter project in early development phase, implementing an MVP of a meeting intelligence platform as described in HLD_MVP.md.
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
 
-DO NOT RUN FLUTTER APP! IT IS ALWAYS RUNNING LOCALLY ON PORT 8100 (but you can run flutter analyzer)
-DO NOT RUN PYTHON BACKEND, IT IS ALWAYS RUNNING LOCALLY
+Before implementing:
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them - don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
 
-DO NOT CREATE SUMMARY .md documents if I did not ask to do it
+## 2. Simplicity First
 
-IN Flutter - do not use hardcoded timers if need to wait for something. It is sounds like a workaround and not a clean solution.
+**Minimum code that solves the problem. Nothing speculative.**
 
-## Key Commands
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
 
-### Development Commands
-```bash
-# Run the Flutter app
-flutter run
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
 
-# Run on specific platform
-flutter run -d chrome  # Web
-flutter run -d macos   # macOS desktop
+## 3. Surgical Changes
 
-# Analyze code for issues
-flutter analyze
+**Touch only what you must. Clean up only your own mess.**
 
-# Run tests
-flutter test
+When editing existing code:
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it - don't delete it.
 
-# Build for production
-flutter build web
-flutter build macos
-flutter build ios
-flutter build apk
+When your changes create orphans:
+- Remove imports/variables/functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: Every changed line should trace directly to the user's request.
+
+## 4. Goal-Driven Execution
+
+**Define success criteria. Loop until verified.**
+
+Transform tasks into verifiable goals:
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Ensure tests pass before and after"
+
+For multi-step tasks, state a brief plan:
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
 ```
 
-### Code Quality
-```bash
-# Check for lint issues and code problems
-flutter analyze
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
-# Format code
-dart format .
+---
 
-# Run a single test file
-flutter test test/widget_test.dart
-```
-
-## Architecture & Structure
-
-### Current State
-The project is currently a basic Flutter starter template with:
-- Single `lib/main.dart` file containing the default counter app
-- Material Design theme configuration
-- Basic stateful widget implementation
-
-### Planned Architecture (from HLD_MVP.md)
-
-#### Backend Stack (To Be Implemented)
-- **FastAPI** - REST API & async processing
-- **PostgreSQL** - Project & meeting metadata  
-- **Qdrant** - Vector database for semantic search
-- **Claude 3.5 Haiku** - LLM for reasoning & generation
-- **SentenceTransformers** - Embeddings (all-MiniLM-L6-v2)
-- **Langfuse** - LLM observability & cost tracking
-
-#### Flutter Frontend Architecture (To Be Implemented)
-The frontend will follow a feature-based architecture with:
-- **State Management**: Provider or Riverpod (TBD)
-- **Routing**: go_router for navigation
-- **UI Framework**: Material Design 3
-- **Responsive Design**: Support for desktop, tablet, and mobile
-
-### Key Implementation Tasks (from TASKS.md)
-
-The project has 35 development tasks organized in phases:
-- **Phase 1-2**: Backend infrastructure & Core API (P0 priority)
-- **Phase 3-4**: RAG System & Summary Generation
-- **Phase 5-6**: Flutter Web Frontend
-- **Phase 7-8**: Observability & Testing
-- **Phase 9**: Deployment & DevOps
-
-Priority tasks currently focus on backend setup before Flutter UI development.
-
-## Development Workflow
-
-### Task Implementation (from .claude/commands/work_on_tasks.md)
-
-When implementing tasks:
-1. **Always read** CHANGELOG.md, TASKS.md, HLD_MVP.md, and USER_JOURNEY_MVP.md first
-2. **Select tasks by priority**: P0 → P1 → P2
-3. **Use specialized agents**:
-   - `flutter-code-searcher` - Analyze Flutter/Dart codebase patterns
-4. **Update documentation**: Mark completed tasks in TASKS.md and update CHANGELOG.md
-5. **Verify changes**: Run `flutter analyze` before committing
-
-### Code Standards
-- **Dart naming**: camelCase for variables/functions, PascalCase for classes
-- **Use const constructors** where possible
-- **Proper disposal** of controllers and subscriptions
-- **Follow existing patterns** in the codebase
-- **No hardcoded values** - use configuration files
-- **Input validation** on all user inputs
-
-## Key Design Documents
-
-### HLD_MVP.md
-Defines the complete MVP architecture including:
-- 3-step RAG reasoning system
-- Project and content management
-- Meeting summary generation
-- Weekly report compilation
-- Flutter Web dashboard specifications
-
-### USER_JOURNEY_MVP.md
-Outlines the user experience flow for the MVP (if exists).
-
-### TASKS.md
-Contains 35 detailed development tasks with:
-- Acceptance criteria for each task
-- Priority levels (P0, P1, P2)
-- Complexity ratings
-- Dependencies between tasks
-- Implementation timeline (8 weeks total)
-
-## Current Dependencies
-
-### Flutter/Dart
-- Flutter SDK: ^3.9.0
-- cupertino_icons: ^1.0.8
-- flutter_lints: ^5.0.0 (dev dependency)
-
-### Planned Dependencies (Not Yet Added)
-- go_router (navigation)
-- provider or riverpod (state management)
-- http or dio (API client)
-- flutter_markdown (rich text display)
-- file_picker (file uploads)
-
-## Known Dependency Constraints
-
-### retrofit is capped at <4.9.1
-`retrofit 4.9.1+` added a `Parser.DartMappable` enum value. `retrofit_generator 9.x` does not handle this value, causing build_runner to fail with a non-exhaustive switch error. The fix requires `retrofit_generator 10.x`, which depends on `build ^4.0.0`. However, `riverpod_generator 2.x` requires `build ^2.0.0`, creating an unresolvable conflict.
-
-**Resolution**: Cap retrofit at `<4.9.1` until the project upgrades to `riverpod_generator 3.x+` (which supports `build ^4.0.0`). The constraint is documented in `pubspec.yaml`.
-
-**To lift this cap**: Upgrade `flutter_riverpod`, `riverpod_annotation`, and `riverpod_generator` to v3+, then upgrade `retrofit_generator` to `^10.2.3` and uncap `retrofit`.
-
-## Testing Approach
-
-- **Widget tests**: In `test/` directory
-- **Integration tests**: To be added for complete user flows
-- **API tests**: Backend testing with pytest (when implemented)
-- **Target coverage**: 80% for Flutter widgets
-
-## MCP Servers
-
-### Dart and Flutter MCP Server
-
-The official Dart and Flutter MCP server is configured for this project, providing AI-powered development assistance.
-
-**Status**: ✓ Connected (local scope)
-
-**What it provides**:
-- Get current runtime errors from running applications
-- Search pub.dev for packages and add them as dependencies
-- Generate widget code and self-correct syntax errors
-- Access to Dart/Flutter SDK tools and diagnostics
-
-**When to use**:
-- Use the IDE MCP tools (`mcp__ide__getDiagnostics`, `mcp__ide__executeCode`) for accessing Flutter/Dart diagnostics and code execution
-- The MCP server runs automatically in the background when using Claude Code
-- Diagnostics are available for any Dart/Flutter files in the project
-
-**Requirements**:
-- Dart SDK 3.9+ / Flutter 3.35+ (✓ Currently: Dart 3.9.2, Flutter 3.35.6)
-
-**Configuration**:
-- Configured via: `claude mcp add dart --scope local -- dart mcp-server`
-- Verify status: `claude mcp list`
-- Config file: `~/.claude.json` (local scope for this project)
-
-## Important Notes
-
-1. **Project Phase**: Early development - currently only starter template exists
-2. **Backend First**: Backend infrastructure (Phases 1-4) should be completed before extensive Flutter work
-3. **No Authentication**: MVP is single-user without auth requirements
-4. **Docker-based Infrastructure**: All services run in Docker containers for local development
-5. **Cost Optimization**: Using free/open-source models where possible (embeddings run locally)
+**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.

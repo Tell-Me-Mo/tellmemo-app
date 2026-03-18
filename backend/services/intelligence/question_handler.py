@@ -188,6 +188,15 @@ class QuestionHandler:
                 )
                 return existing
 
+            # Validate required fields - project_id is NOT NULL in the database
+            if not project_id:
+                logger.error(
+                    f"Cannot create question insight for session {sanitize_for_log(session_id)}: "
+                    f"project_id is required but was None. Session may use an auto-generated ID "
+                    f"without a linked project."
+                )
+                return None
+
             # Create LiveMeetingInsight record
             # Note: Speaker diarization not supported in streaming API
             question_insight = LiveMeetingInsight(

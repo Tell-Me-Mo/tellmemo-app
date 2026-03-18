@@ -1358,7 +1358,8 @@ async def websocket_live_insights(
                 error_msg = str(e)
 
                 # Check if this is a disconnect/close error (expected during shutdown)
-                if "disconnect" in error_msg.lower() or "closed" in error_msg.lower() or "NO_STATUS_RCVD" in error_msg:
+                # WebSocket close code 1001 = "Going Away" (client navigated away)
+                if "disconnect" in error_msg.lower() or "closed" in error_msg.lower() or "NO_STATUS_RCVD" in error_msg or "(1001," in error_msg:
                     logger.info(f"WebSocket closed during message processing for session {sanitize_for_log(session_id)}")
                     break
 

@@ -109,7 +109,7 @@ def init_telemetry(settings: Settings) -> bool:
         metric_exporter = OTLPMetricExporter(
             endpoint=f"{settings.otel_exporter_otlp_endpoint}/v1/metrics",
             headers=headers_dict,
-            timeout=10,  # 10 second timeout
+            timeout=30,  # 30 second timeout (increased to avoid ReadTimeout with Grafana Cloud)
             preferred_temporality={
                 # All metric types use Cumulative for Grafana Cloud/Prometheus
                 Counter: AggregationTemporality.CUMULATIVE,
