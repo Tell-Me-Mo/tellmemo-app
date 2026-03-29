@@ -54,7 +54,7 @@ dependencies:
   flutter_markdown_plus: ^1.0.7
   file_picker: ^10.3.10
   image_picker: ^1.2.1
-  fl_chart: ^1.1.1
+  fl_chart: ^1.2.0
   
   # Authentication
   supabase_flutter: ^2.12.0
