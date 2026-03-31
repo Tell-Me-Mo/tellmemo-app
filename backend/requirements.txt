@@ -98,7 +98,7 @@ jinja2==3.1.6  # HTML email template rendering
 # Development & Testing
 pytest==9.0.2
 pytest-asyncio==1.3.0
-fakeredis==2.33.0  # In-memory Redis for testing (no workers needed)
+fakeredis==2.34.0  # In-memory Redis for testing (no workers needed)
 black==26.1.0
 ruff==0.14.14
 cryptography>=46.0.3
