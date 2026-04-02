@@ -20,7 +20,7 @@ websockets==15.0.1  # Pinned to 15.x for supabase realtime compatibility
 # Database
 asyncpg==0.31.0
 sqlalchemy[asyncio]==2.0.46
-alembic==1.18.3
+alembic==1.18.4
 
 # Cache & Job Queue
 redis[hiredis]==7.1.0
